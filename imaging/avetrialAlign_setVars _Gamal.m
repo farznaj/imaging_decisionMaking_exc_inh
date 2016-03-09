@@ -8,7 +8,7 @@
 mouse = 'fni17';
 imagingFolder = '151102'; % '151021';
 mdfFileNumber = 1; % or tif major
-signalCh = 2;
+signalCh = 2; % (1: tdTomato; 2: GcaMp channel)
 
 setInhibitExcit = true; % if 1, inhibit and excit traces will be set.
     sigTh = 1.2; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
@@ -43,7 +43,9 @@ frameLength = 1000/30.9; % sec.
 
 [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh);
 disp(pnevFileName)
-
+% % pnevFileName: output of eftychios algorithm
+% % imfilename: includes alldata which is behaviour matfile, plus other mat
+% % parameters for imaging.
 
 % begTrs = [0 cumsum(trials_per_session)]+1;
 % begTrs = begTrs(1:end-1);
