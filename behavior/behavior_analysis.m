@@ -1,4 +1,3 @@
-%% try edit
 % Preliminary analysis for the Lick paradigm.
 % Set vars, plot PMF and waitDur histogram.
 
