@@ -510,7 +510,9 @@ for ineu = 1:size(traceFU_toplot{1},2)
     pause
     
     figure(f1)
-%     if showitiFrNums, delete(t), end
+    if showitiFrNums, 
+%         delete(t), 
+    end
     cla
     %     delete(h)
     %     set(gca, 'tickdir','out', 'NextPlot', 'replacechildren');

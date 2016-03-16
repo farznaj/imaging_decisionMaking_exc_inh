@@ -69,6 +69,28 @@ ylim([-1 m+1])
 set(gca,'tickdir','out')
 
 
+%% THIS NEEDS WORK: important: take care of the issue that mouse may have made his decision before the end of the stimulus.
+% make sure you are looking at the stimulys epoch meaning that it is all
+% stimulus not choice or lack of stimulus
+%{
+diff([[alldata.waitDuration]', [alldata.stimDuration]'], [], 2)
+
+% this plot shows when flashes/clicked happened (their onset, remember they
+% last for alldata.eventDuration) during the stimulus
+xx = cumsum(alldata(6).auditoryIeis + alldata(6).eventDuration);
+xx = [0 xx(1:end-1)] * 1000 + 1; % ms
+yy = ones(1, length(alldata(6).auditoryIeis));
+figure; plot(xx, yy, 'o')
+
+% how many events were played (ie their onset had happened) when the waitDur happened.
+sum(xx < alldata(6).waitDuration * 1000)
+
+% trials with different stimdur than waitdur
+if any([alldata.stimDur_diff])
+    [alldata.stimDur_diff] ~= [alldata.waitDuration]
+end
+%}
+
 %% Load vars related to manual method
 
 if compareManual
@@ -130,6 +152,7 @@ spiking = S; % S_mcmc; % S2;
 clear C C_df S % ('C_mcmc', 'C_mcmc_df', 'S_mcmc')
 
 activity = temporalComp'; % frames x units
+% activity = activity_man;
 spikes = spiking'; % frames x units
 % Sdf = S_df';
 
@@ -137,7 +160,7 @@ if size(temporalDf,1) == size(temporalComp,1)+1
     temporalDf(end,:) = [];
 end
 dFOF = temporalDf';
-
+% dFOF = dFOF_man;
 clear temporalComp temporalDf spiking
 
 
@@ -178,7 +201,7 @@ if sum(~ismember(1:length(trialNumbers), trialNumbers))~=0
 end
 
 alldata = all_data(trialNumbers); % in case mscan crashed, you want to remove trials that were recorded in bcontrol but not in mscan.
-clear all_data
+% clear all_data
 
 % alldata = alldata(1:end-1);  % you commented it here and added it above. loadBehavData by default removes the last trial.   % alldata = removeBegEndTrs(alldata, thbeg);
 fprintf('Total number of imaged trials: %d\n', length(alldata))
@@ -263,7 +286,7 @@ cb = unique([alldata.categoryBoundaryHz]); % category boundary in hz
 
 
 %% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
-[timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
+[timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv);
 
@@ -331,7 +354,7 @@ end
 
 
 %% Set traces and choose good quality traces.
-
+% alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.activity}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
 alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.dFOF}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
 alldataSpikesGood = cellfun(@(x)x(:, goodinds), {alldata.spikes}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
 
@@ -406,6 +429,15 @@ if plotTraces1by1
 end
 
 
+%% Plot average traces across all neurons and all trials aligned on particular trial events. 
+
+avetrialAlign_plotAve_noTrGroup
+
+
+%% Plot average traces across all neurons for different trial groups aligned on particular trial events. 
+
+avetrialAlign_plotAve_trGroup
+
 
 %% Align traces on particular trial events
 
@@ -424,12 +456,6 @@ allTrs2rmv = find(squeeze(sum(isnan(traces_al_sm(:,1,:)))));
 outcomes(allTrs2rmv) = NaN; 
 allResp(allTrs2rmv) = NaN; 
 allResp_HR_LR(allTrs2rmv) = NaN;
-
-
-%% See the following two scripts for plotting aligned traces:
-
-% avetrialAlign_plotAve_trGroup
-% avetrialAlign_plotAve_noTrGroup
 
 
 %% Compute choice preference, 2*(auc-0.5), for each neuron at each frame.
@@ -457,6 +483,9 @@ choicePref_all = choicePref_ROC(traces_al_sm, ipsiTrs, contraTrs, makeplots, eve
 %% compute choicePref for the average of frames after the stim.
 traces_al_sm_aveFr = nanmean(traces_al_sm(eventI_stimOn:end,:,:), 1);
 choicePref_all = choicePref_ROC(traces_al_sm_aveFr, ipsiTrs, contraTrs, makeplots, eventI_stimOn, useEqualNumTrs);
+
+
+
 
 
 

@@ -5,7 +5,7 @@
 % clear all; home
 % clear n_days
 
-subject = 'fn18';
+subject = 'fn20';
 days = {'15-Jan-2016'};
 savefigs = 1;
 n_days = 1; %15; % specify number of days back (from days{1}) that you want to analyze. if you don't specify this, only days mentioned in days will be analyzed.

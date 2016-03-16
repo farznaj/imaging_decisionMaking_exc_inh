@@ -1,4 +1,4 @@
-function [activity, rois] = manualROIactivity(mousename, imagingFolder, mdfFileNumber, signalCh)
+function [activity, rois] = manualROIactivity(mousename, imagingFolder, mdfFileNumber, signalCh, roiCh)
 % activity = manualROIactivity(mousename, imagingFolder, mdfFileNumber, signalCh)
 %
 % Computes activity (ie mean pixel intensity of each ROI for each frame)
@@ -11,6 +11,11 @@ function [activity, rois] = manualROIactivity(mousename, imagingFolder, mdfFileN
 % imagingFolder = '151102';
 % mdfFileNumber = 1; 
 % signalCh = 2;
+
+if ~exist('roiCh', 'var')
+    roiCh = signalCh;
+end
+
 
 %% Set some initial parameters
 %
@@ -26,7 +31,7 @@ elseif ispc
 end
 
 tifFold = fullfile(dataPath, mousename, 'imaging', imagingFolder);
-pathToROIZip = fullfile(tifFold, sprintf('RoiSet_%s_%03d_ch%d_MCM.zip', imagingFolder, mdfFileNumber, signalCh));
+pathToROIZip = fullfile(tifFold, sprintf('RoiSet_%s_%03d_ch%d_MCM.zip', imagingFolder, mdfFileNumber, roiCh));
 %
 
 %{

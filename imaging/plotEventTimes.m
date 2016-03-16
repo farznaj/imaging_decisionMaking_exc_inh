@@ -1,3 +1,12 @@
+% mn: minimum y of the line that marks the events
+% mx: maximum y of the line that marks the events
+if ~exist('mn','var')
+    mn = -.5;
+end
+if ~exist('mx','var')
+    mx = .5;
+end
+
 % mn = min(toplot(:));
 % mx = max(toplot(:));
 

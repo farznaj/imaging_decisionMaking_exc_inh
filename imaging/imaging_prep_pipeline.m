@@ -5,10 +5,10 @@ hpc_dir = '\\sonas-hs.cshl.edu\churchland-hpc-home\fnajafi\matlab';
 if ispc, cd(hpc_dir), end
 
 %%
-mousename = 'fni17';
+mouse = 'fni17';
 imagingFolder = '151102';
 mdfFileNumber = 1; % or tif major
-outName = [mousename,'-',imagingFolder, '-', num2str(mdfFileNumber)]
+outName = [mouse,'-',imagingFolder, '-', num2str(mdfFileNumber)]
 
 P = struct;
 P.signalCh = 2; %2% channel whose signal activity you want to analyze (normally 2 for gcamp channel).
@@ -37,7 +37,7 @@ P.tempSub = 3;
 P.spaceSub = 2;
 P.save_merging_vars = true;
 
-P.parallelTempUpdate = true; % false;
+% P.parallelTempUpdate = true; % false;
 P.save4debug = false; % false;
 P.doPlots = false;
 
@@ -55,7 +55,7 @@ behavName = {behavdir.name};
 
 
 %%
-writeCaProcessParams(outName, mousename, imagingFolder, mdfFileNumber, P);
+writeCaProcessParams(outName, mouse, imagingFolder, mdfFileNumber, P);
 
 % writeCaProcessParams(outName, mousename, imagingFolder, mdfFileNumber, signalCh, regFileNums, noMotionTr,....
 %     behavName, '', headerBug, channelsToWrite, maxMaskWidth, motionCorrDone, analysisFolder, pmt_th, channelsToRead, saveGoodMovieStats, pnevActivity, tifMinor);
@@ -77,20 +77,20 @@ processCaImagingMCPnev(outName)
 % outName = 'fni17-151016';
 % load(fullfile(hpc_dir, 'improcparams',outName))
 
-mousename = 'fni17';
+mouse = 'fni17';
 imagingFolder = '151102'; % '151021';
 mdfFileNumber = 1; % or tif major
 signalCh = 2;
 
-[imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh);
+[imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh);
 
 % Set behavFile, binFiles, and framecountFiles (Related to behavior and
 % trialization).
 params.headerBug = 0;
-behavName = dir(fullfile(dataPath, mousename, 'behavior', [mousename, '_', datestr(datenum(imagingFolder(1:6), 'yymmdd')), '*.mat']));
+behavName = dir(fullfile(dataPath, mouse, 'behavior', [mouse, '_', datestr(datenum(imagingFolder(1:6), 'yymmdd')), '*.mat']));
 behavName = {behavName.name};
 behavName = behavName{mdfFileNumber};
-params.behavFile = fullfile(dataPath, mousename, 'behavior', behavName);
+params.behavFile = fullfile(dataPath, mouse, 'behavior', behavName);
 
 params.binFiles = {};
 params.framecountFiles = {};
@@ -159,7 +159,8 @@ end
 
 
 %% compute activity for manually selected ROIs
-[activity, rois] = manualROIactivity(mousename, imagingFolder, mdfFileNumber, signalCh);
+roiCh = 2; % channel on which ROIs was found. you can find activity on signalCh=1 using rois found roiCh=2;
+[activity, rois] = manualROIactivity(mouse, imagingFolder, mdfFileNumber, signalCh, roiCh);
 % activity(pmtOffFrames{signalCh},:) = NaN; % we are not doing this here, instead we will do it in 
 
 % plot ROIs found manually on the sdImage

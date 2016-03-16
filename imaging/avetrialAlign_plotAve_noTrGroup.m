@@ -1,309 +1,212 @@
-%% Align traces on eventTimes. (the earlier method which doesn't require nPre and nPost frames and will include all avaialble frames before and after the event of interest. But later you need to zoom just on frames with a large number of trials contributing to them.)
-
-eventTime = timeStimOnset; % timeStimOnset; %timeInitTone; % timeReward;  % eventTime = cellfun(@(x)x(1),timeInitTone); %timeInitTone; % first trial initi tone.
-traces = alldataDfofGood; % alldataSpikesGood; % traces to be aligned.
-traceTimeVec = {alldata.frameTimes}; % time vector of the trace that you want to realign.
-shiftTime = frameLength / 2;
-scaleTime = frameLength;
-
-% find the frame during which the event of interest (eg. time1stCenterLick) happened for each trial.
-eventInds_f = eventTimeToIdx(eventTime, traceTimeVec); % index of eventTime on traceTimeVec array for each trial.
-
-% Align dfof traces on particular events (like time1stCenterLick).
-[traceEventAlign, timeEventAlign] = triggerAlignTraces(traces, eventInds_f, shiftTime, scaleTime); % frames x units x trials. 
-
-%{
-% if you want to align on the first frame (when scanning started, this makes more sense than trial init. tone bc mice seem to use this bc of shutter sound).
-eventInds_f = ones(size(alldata)); 
-eventInds_f(trs2rmv) = NaN;
-%}
-
-
-% some checks
-numTrsWevent = sum(~isnan(eventInds_f))
-mnFrame0_mxFrame0_mxNumFrames = [min(eventInds_f) max(eventInds_f) max(framesPerTrial)]
-eventFrameNum = max(eventInds_f) % find(timeEventAlign==frameLength/2) % in what frame of traceEventAlign, the event exists.
-if ~isequal(max(eventInds_f), find(timeEventAlign==frameLength/2)), error('something wrong!'); end
-
-nvalidtrs = sum(~isnan(traceEventAlign),3); % frames x neurons; number of trials that contribute to each frame for each neuron.
-nvalidtrs = nvalidtrs(:,1);
-figure; plot(nvalidtrs(:,1)) % shows at each frame of traceEventAlign how many trials are contributing to the average.
-
-size(traceEventAlign)
-
-
-% traceTimeVec = framet;
-% eventInds = frame0s;
-%{
-if iscell(eventTime)
-    eventTime = cellfun(@(x)x(1), eventTime);
-end
-% frametimes and eventTime are relatie to bcontrol ttl onset. so we compare them to find on what frame eventTime happened.
-framet = {alldata.frameTimes}; 
-frame0s = findFrame0(framet, eventTime); 
-%}
-
-%{
-%% Align dfof traces on particular events (like time1stCenterLick).
-shiftTime = frameLength / 2;
-scaleTime = frameLength;
-% frames x units x trials
-% in timeEventAlign frame0 (ie the frame to align trials on) will be 0+frameLength/2.
-% in traceEventAlign, traces are shifted by max(frame0s) - frame0s(itr)
-[traceEventAlign, timeEventAlign] = triggerAlignTraces(alldataDfofGood, frame0s, shiftTime, scaleTime);
-%}
-% spikes
-% [traceEventAlign_s, timeEventAlign_s] = triggerAlignTraces(alldataSpikesGood, frame0s, shiftTime, scaleTime);
-
-
-%% Align wheelRev on eventTime
-
-wheelTimeRes = alldata(1).wheelSampleInt;
-shiftTime = wheelTimeRes / 2;
-scaleTime = wheelTimeRes;
-[traces_wheel, times_wheel] = wheelInfo(alldata);
-% shiftTime = times_wheel{1}(1);
-% scaleTime = times_wheel{1}(1)*2;
-
-% find the frame during which the event of interest (eg. time1stCenterLick) happened.
-eventInds_w = eventTimeToIdx(eventTime, times_wheel); % index of eventTime on traceTimeVec array for each trial.
-
-% Align dfof traces on particular events (like time1stCenterLick).
-[traceEventAlign_wheelRev, timeEventAlign_wheelRev] = triggerAlignTraces(traces_wheel, eventInds_w, shiftTime, scaleTime);
-
-% some checks
-numTrsWevent = sum(~isnan(eventInds_w))
-mnFrame0_mxFrame0_mxNumFrames = [min(eventInds_w) max(eventInds_w) max(framesPerTrial)]
-size(traceEventAlign_wheelRev)
-
-% compute how many trials contribute to each time point of
-% timeEventAlign_wheelRev
-nvalidtrs_wheel = sum(~isnan(traceEventAlign_wheelRev),3); % frames x neurons; number of trials that contribute to each frame for each neuron.
-nvalidtrs_wheel = nvalidtrs_wheel(:,1);
-figure; plot(nvalidtrs_wheel(:,1)) % shows at each frame of traceEventAlign how many trials are contributing to the average.
-
-% the following two should have small difference (eventTime, in ms, based on
-% wheelRev trace and ca trace):
-diff([max(eventInds_f)*frameLength  max(eventInds_w)*wheelTimeRes])
-
-% find where in wheelTimes, eventTime occurred. 
-% bint = {alldata.wheelTimes}; 
-% bin0s = findFrame0(bint, eventTime); 
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% start plotting
-
-%%
-% perhaps exclude some trs at the beg w extra stim, etc. you need to know
-% what's going in the average.
-
-% exclude parts of the trace w too few trials.
-
-% you need to look at the trace at a good zoom level
-
-% you perhaps need to find the baseline preced stim_on, only include trs w
-% stable baseline (preced stim_on), and shift the baselines to the same
-% value so you can make the comparison between lo and hi rate traces.
-
+% This script plots average traces across all neurons and all trials
+% aligned on particular trial events. 
+% It calls avetrialAlign_noTrGroup which calls triggerAlignTraces for
+% alignment : you don't specify prePost frames, it uses NaNs and takes all
+% frames into the average. Then you only look at portion of the trace that
+% has enough number of trials contributing to the average.
 
 
 %%
-aveTrsPerNeuron = nanmean(traceEventAlign,3); % frames x units, averaged across all trials. aligned on event time.
+evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
+'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',... 
+'timeReward', 'timeCommitIncorrResp'}; %,... 
+% 'centerLicks', 'leftLicks', 'rightLicks'};
 
-eventFrameNum = max(eventInds_f);
-respWinMs = [0 500]; % 0 to 500ms after the event we will look for a response.
-respWin = eventFrameNum + (round(respWinMs(1)/frameLength):round(respWinMs(2)/frameLength));
-
-
-%%
-sdTrsPerNeuron = nanstd(traceEventAlign,0,3);
-seTrsPerNeuron = sdTrsPerNeuron ./ repmat(sqrt(nvalidtrs), [1 size(sdTrsPerNeuron,2)]);
-% aveTrsPerNeuron_S = nanmean(traceEventAlign_s,3);
-
-frs2plot = nvalidtrs >= max(nvalidtrs)-2;
-t = timeEventAlign(frs2plot);
-plotwheelRev = false;
-plotmarkers = false;
-
-
-if plotwheelRev
-    aveTrsPerNeuron_wheel = nanmean(traceEventAlign_wheelRev,3); % average wheel movement across all trials aligned on eventTime.
-    frs2plot_wheel = nvalidtrs_wheel >= max(nvalidtrs_wheel);
-end
-
-
-blDfof = quantile(dfofGood, .1);
-if plotmarkers
-    % Compute mean and std of peaks of the dfofGood trace for each neuron.
-    peaksDfofTrace = cell(1, sum(goodNeurons));
-    for ineu = 1:sum(goodNeurons)
-        [pks,~, ~, ~] = findpeaks(dfofGood(:,ineu), 'minpeakheight', blDfof(ineu)+.05); %'minpeakdistance', 3, 'threshold', .005);    
-        peaksDfofTrace{ineu} = pks;
-    end
-    quant80Peaks = cellfun(@(x)quantile(x, .8), peaksDfofTrace);
-end
-
-
-%% set gaussian filter
-siz = 5;
-sig = 1;
-x = -floor(siz/2) : floor(siz/2);
-H = exp(-(x.^2/ (2 * sig^2)));
-H = H/sum(H);
+% time1stCenterLick, time1stCorrectResponse, timeStop
+% eventTime = cellfun(@(x)x(1),timeInitTone); %timeInitTone; % first trial initi tone.
 
 
 %%
-dofilter = 1;
+doplots = 0;
+f = figure;
 
-figure;
-cnt = 0;
+for i = 1:length(evT)
 
-for ineu = i_ttestp; % randperm(size(traceEventAlign,2)) % 1:size(traceEventAlign,2)
-    cnt = cnt+1;    
-    hold on
+    eventTime = eval(evT{i});   
     
-    toplot = aveTrsPerNeuron(frs2plot, ineu);
-%     toplot_b = sdTrsPerNeuron(frs2plot, ineu);
-    toplot_b = seTrsPerNeuron(frs2plot, ineu);
+    traces = alldataDfofGood; % alldataSpikesGood; %  traces to be aligned.
+    [traceEventAlign, timeEventAlign, nvalidtrs, traceEventAlign_wheelRev, ...
+        timeEventAlign_wheelRev, nvalidtrs_wheel] = ...
+        avetrialAlign_noTrGroup(eventTime, traces, alldata, frameLength, trs2rmv, doplots);
     
-    if dofilter
-        toplot = conv(toplot, H');
-        toplot_b = conv(toplot_b, H);
-        
-        toplot = toplot(ceil(siz/2) : end-ceil(siz/2)+1);
-        toplot_b = toplot_b(ceil(siz/2) : end-ceil(siz/2)+1);
-    end
+%     figure, hold on
+%     plot(timeEventAlign_wheelRev, nvalidtrs_wheel(:,1))
+%     plot(timeEventAlign, nvalidtrs(:,1))
     
-%     plot(t, toplot, 'color', [114 189 255]/256)
-%     plot(t, toplot+toplot_sd, ':', 'color', [114 189 255]/256)
-%     plot(t, toplot-toplot_sd, ':', 'color', [114 189 255]/256)
     
-    boundedline(t, toplot, toplot_b)
-    
-%     plot(t, aveTrsPerNeuron_S(frs2plot, ineu))
+    %% plot wheel revolution
 
-    %% plot the average wheel movement across trials aligned on eventTime.
-    if plotwheelRev
-        plot(timeEventAlign_wheelRev(frs2plot_wheel), -aveTrsPerNeuron_wheel(frs2plot_wheel), 'k:') 
-    end
+    subplot(3,length(evT),length(evT)*2+i), hold on
+    top = nanmean(traceEventAlign_wheelRev,3);
+    plot(top)
+%     plot(timeEventAlign_wheelRev, top)
+    
+    xl1 = find(nvalidtrs_wheel >= round(max(nvalidtrs)*3/4), 1, 'first'); % at least 3/4th of trials should contribute
+    xl2 = find(nvalidtrs_wheel >= round(max(nvalidtrs)*3/4), 1, 'last');
+    
+    xlim([xl1 xl2])
+%     xlim([timeEventAlign_wheelRev(xl1)  timeEventAlign_wheelRev(xl2)])
+    xlabel('time')
+    ylabel('wheel revolution')
+    
+%     plot([0 0],[min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
+    e = find(timeEventAlign_wheelRev > 0, 1);
+    plot([e e], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
     
     
-    %% put some markers
-    plot([t(1) t(end)], [blDfof(ineu)  blDfof(ineu)], 'r:')
-    if plotmarkers
-        % bl_th
-        bl_th = quant80Peaks(ineu);
-        plot([t(1) t(end)], [bl_th  bl_th], 'r:')
-        
+    %% plot DF/F
 
-        % a line at 0 (ie the event time)
-        plot([0 0], [min(toplot) max(toplot)])
-    end
+    figure(f)
+    subplot(3,length(evT),length(evT)*0+i), hold on
+    % subplot(223), hold on
+    top = nanmean(nanmean(traceEventAlign,3),2); % average across trials and neurons.
+    plot(top)
+%     plot(timeEventAlign, top)
+    % plot(timeEventAlign_wheelRev, -nanmean(traceEventAlign_wheelRev,3), 'k:')
     
-    %% response window
-    plot([respWinMs(1)  respWinMs(1)], [min(toplot-toplot_b) max(toplot+toplot_b)], 'g-.')
-    plot([respWinMs(2)  respWinMs(2)], [min(toplot-toplot_b) max(toplot+toplot_b)], 'g-.')
+    xl1 = find(nvalidtrs >= round(max(nvalidtrs)*3/4), 1, 'first'); % at least 3/4th of trials should contribute
+    xl2 = find(nvalidtrs >= round(max(nvalidtrs)*3/4), 1, 'last');
+    
+%     plot([0 0],[min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
+    e = find(timeEventAlign > 0, 1);
+    plot([e e], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
+    
+    xlim([xl1 xl2])
+%     xlim([timeEventAlign(xl1)  timeEventAlign(xl2)])
+    xlabel('time')
+    ylabel('DF/F')
+    title(evT{i})
     
     
     %%
-%     mn = min(bl_th, blDfof(ineu));
-%     mx = max([bl_th; blDfof(ineu); toplot(:)]);
+    traces = alldataSpikesGood; % alldataDfofGood; %  traces to be aligned.
+    [traceEventAlign, timeEventAlign, nvalidtrs, traceEventAlign_wheelRev, ...
+        timeEventAlign_wheelRev, nvalidtrs_wheel] = ...
+        avetrialAlign_noTrGroup(eventTime, traces, alldata, frameLength, trs2rmv, doplots);
+    
+    
+    %% plot spikes
+
+    figure(f)
+    subplot(3,length(evT),length(evT)*1+i), hold on
+    % subplot(223), hold on
+    top = nanmean(nanmean(traceEventAlign,3),2); % average across trials and neurons.
+    plot(top)
+%     plot(timeEventAlign, top)
+    % plot(timeEventAlign_wheelRev, -nanmean(traceEventAlign_wheelRev,3), 'k:')
+    
+    xl1 = find(nvalidtrs >= round(max(nvalidtrs)*3/4), 1, 'first'); % at least 3/4th of trials should contribute
+    xl2 = find(nvalidtrs >= round(max(nvalidtrs)*3/4), 1, 'last');
+    
+%     plot([0 0],[min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
+    e = find(timeEventAlign > 0, 1);
+    plot([e e], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
+    
+    xlim([xl1 xl2])
+%     xlim([timeEventAlign(xl1)  timeEventAlign(xl2)])
+    xlabel('time')
+    ylabel('Spiking')
+    
+%     pause
+    
+end
+
+%%
+load(imfilename, 'sdImage')
+im = sdImage{2}; % ROIs will be shown on im
+[CC2, mask2] = setCC_mask_manual(rois, im);
+
+
+%%
+a = nanmean(traceEventAlign,3); % average across trials
+% f = find(((4089*3 + 956) - cs)<0, 1);
+% a = squeeze(traceEventAlign(:,:,f)); % frames x units for trial f
+xl1 = find(nvalidtrs >= round(max(nvalidtrs)*3/4), 1, 'first'); % at least 3/4th of trials should contribute
+xl2 = find(nvalidtrs >= round(max(nvalidtrs)*3/4), 1, 'last');
+e = find(timeEventAlign>0, 1);
+
+mn = min(min(a(xl1:xl2, :)));
+mx = max(max(a(xl1:xl2, :)));
+
+
+
+f1 = figure; 
+f2 = figure; imagesc(im), % axis image
+for in = 1:size(a,2)
+    % plot the trace
+    figure(f1)
+    set(gcf,'name',num2str(in))
+    top = a(:,in);
+    h = plot(top);
+    hold on    
+    plot([e e],[min(top(xl1:xl2)) max(top(xl1:xl2))],'r:')
+    xlim([xl1 xl2])
 %     ylim([mn mx])
     
-    xlim([-500 500])
-    xlabel('Time since event onset (ms)')
-    ylabel('DF/F')
-    set(gca, 'tickdir', 'out')
-    set(gcf, 'name', sprintf('Neuron %d, P=%.2f', ineu, s_ttestp(cnt)))
-    
-    %%
+    % plot the roi
+    figure(f2), hold on
+    h = plot(CC2{in}(2,:), CC2{in}(1,:), 'color', 'r'); % colors(in, :));
+
     pause
-    delete(gca)
+    figure(f1), cla
+    figure(f2), delete(h)    
     
 end
 
- 
+top = nanmean(a(:,ff),2);
 
 
 
-%% group based on stim rate
-usr = unique(stimrate); 
-trs2ana_lo = find(ismember(stimrate, [usr(1:3)]));
-trs2ana_hi = find(ismember(stimrate, [usr(end-2:end)]));
+% find neurons that are 
+% [70 320]
+    956:959
+    
+% min(CC2{1}(1,:)) > 70
+% max(CC2{1}(1,:)) < 320
 
-% find(~[alldata.extraStimDuration], 1) % trs w extra stim that need to be excluded
-% also find what else you do at the begining and exclude those trials too.
-
-aveTrsLoPerNeur = NaN(size(traceEventAlign,1), size(traceEventAlign,2));
-aveTrsHiPerNeur = NaN(size(traceEventAlign,1), size(traceEventAlign,2)); 
-for ineu = 1:size(traceEventAlign,2)
-    aveTrsLoPerNeur(:,ineu) = nanmean(traceEventAlign(:, ineu, trs2ana_lo), 3);
-    aveTrsHiPerNeur(:,ineu) = nanmean(traceEventAlign(:, ineu, trs2ana_hi), 3);
+mnn = cellfun(@(x)min(x(1,:)) > 70, CC2);
+mxx = cellfun(@(x)max(x(1,:)) < 320, CC2);
+ff = find(mnn==1 & mxx==1);
+for in = ff
+    figure(f2), hold on
+    h = plot(CC2{in}(2,:), CC2{in}(1,:), 'color', 'r'); % colors(in, :));
 end
+
+
+ff = find(timeCommitCL_CR_Gotone > timeStimOffset+33);
+a = squeeze(traceEventAlign(:,:,ff)); % frames x units for trial f
+top = nanmean(nanmean(a,2),3);
+
+a = squeeze(traceEventAlign); % 
+top = nanmean(nanmean(a,2),3);
 
 
 %%
-figure;
-for ineu = 1:size(traceEventAlign,2)
+clear rois
+i = 1; 
+[X,Y] = meshgrid(66:90, 1:45);
+rois{i}.mnCoordinates = [Y(:), X(:)]';
+
+i = 2; 
+[X,Y] = meshgrid(373:398, 1:30);
+rois{i}.mnCoordinates = [Y(:), X(:)]';
+
+i = 3; 
+[X,Y] = meshgrid(195:210, 270:295);
+rois{i}.mnCoordinates = [Y(:), X(:)]';
+
+i = 4; 
+[X,Y] = meshgrid(244:260, 409:440);
+rois{i}.mnCoordinates = [Y(:), X(:)]';
+
+
+for in = 1:4
     hold on
-    plot(timeEventAlign, aveTrsLoPerNeur(:, ineu))
-    plot(timeEventAlign, aveTrsHiPerNeur(:, ineu))
-    
-    legend('loRate','hiRate')
-    pause
-    delete(gca)
+    h = plot(rois_custom2{in}.mnCoordinates(2,:), rois_custom2{in}.mnCoordinates(1,:), 'color', 'r'); % colors(in, :));
 end
 
 
-
-
-%%
-%{
-toplot = group1_aveTrace;
-
-figure; hold on
-imagesc(toplot)
-plot([eventFrameNum eventFrameNum],[1 size(toplot,1)])
-ylim([1 size(toplot,1)])
-xlim([1 size(toplot,2)])
-
-%%
-figure; hold on
-p1 = plot(timeEventAlign, nanmean(group1_ave,2));
-p2 = plot(timeEventAlign, nanmean(f_group2,2));
-plot([0 0],[-1 2], 'color', [.6 .6 .6])
-% ylim([0 1.2])
-xlim([-15000 15000])
-pause
-delete([p1,p2])
-
-for n = 1:size(group1_aveTrace)
-    f = find(timeEventAlign>0, 1);
-    baselineIndx = max(1,f-round(100/frameLength)):max(1,f-1);
-    basef_g1 = nanmean(f_group1(baselineIndx,n));
-    basef_g2 = nanmean(group2_ave(baselineIndx,n));
-    basef_g1 = 0;
-    basef_g2 = 0;
+activity = activity_custom2;
+dFOF = konnerthDeltaFOverF(activity, pmtOffFrames{gcampCh}, smoothPts, minPts);
     
-    hl = plot(timeEventAlign, f_group1(:,n)-basef_g1, 'color', [.6 .6 .6]);
-    hh = plot(timeEventAlign, group2_ave(:,n)-basef_g2, 'k');
-    title(n)
     
-    ff = round(10000/frameLength);
-    yl2 = max([f_group1(max(1,f-ff):f+ff,n)-basef_g1; ...
-        group2_ave(max(1,f-ff):f+ff,n)-basef_g2]);
-    
-    yl1 = min([f_group1(max(1,f-ff):f+ff,n)-basef_g1;...
-        group2_ave(max(1,f-ff):f+ff,n)-basef_g2]);
-    
-    ylim([yl1-.03 yl2+.03])
-    
-    pause
-    delete([hl hh])
-end
-%}
-
-

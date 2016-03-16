@@ -15,7 +15,7 @@ end
 
 %% Plot ROI contours on the image
 if exist('im', 'var')
-    colors = hot(2*size(spatialComp,2));
+    colors = hot(2*size(rois,2));
     colors = colors(end:-1:1,:);
     figure;
     imagesc(im);
@@ -29,7 +29,7 @@ end
 
 
 %% Set the ROI masks for manually found ROIs
-mask_manual = maskSet(CC_rois, imHeight, imWidth);
+mask_manual = maskSet(CC_rois, size(im,1), size(im,2));
 if (sum(mask_manual(:)>1))
     fprintf('mask has values >1... weird... check it!!\n')
 end

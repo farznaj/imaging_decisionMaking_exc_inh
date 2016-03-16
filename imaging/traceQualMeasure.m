@@ -5,12 +5,12 @@ function [avePks2sdS, aveProm2sdS, measQual] = traceQualMeasure(C_df, S_df)
 
 
 %%
-avePks2sdS = NaN(1, size(S_df,1));
-aveProm2sdS = NaN(1, size(S_df,1));
+avePks2sdS = NaN(1, size(C_df,1));
+aveProm2sdS = NaN(1, size(C_df,1));
 % avePks = NaN(1, size(S_df,1));
 % aveProm = NaN(1, size(S_df,1));
 
-for rr = 1:size(S_df,1)
+for rr = 1:size(C_df,1)
     bl = quantile(C_df(rr,:), .1);       
     [pks,~, ~, p] = findpeaks(C_df(rr,:), 'minpeakheight', bl+.05); %'minpeakdistance', 3, 'threshold', .005);
 
