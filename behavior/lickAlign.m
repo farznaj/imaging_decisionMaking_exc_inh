@@ -1,61 +1,10 @@
-%% Look at licks and mark event times for each trial
+% Align licks on trial events and look at the average across trials.
 
-figure('position', [440   508   864   290]);
-
-for itr = 1:length(alldata)
-    hold on,
-    set(gcf,'name', sprintf('trial %d, outcome %d ', itr, alldata(itr).outcome))
-    xlabel('Time since scopeTTL (ms)')
-    
-    plotEventTimes
-    
-    pause
-    clf
-end
-
-
-%% Plot histogram of duration of licks (on to off length in the pokes field).
-
-centLickDur =  cell(1, length(alldata));
-leftLickDur =  cell(1, length(alldata));
-rightLickDur =  cell(1, length(alldata));
-for tr = 1:length(alldata)
-    centLickDur{tr} = diff(alldata(tr).parsedEvents.pokes.C, [] ,2);
-    leftLickDur{tr} = diff(alldata(tr).parsedEvents.pokes.L, [] ,2);
-    rightLickDur{tr} = diff(alldata(tr).parsedEvents.pokes.R, [] ,2);
-    %     centLickDur{tr} = alldata(tr).parsedEvents.pokes.C(:,2);
-    %     leftLickDur{tr} = alldata(tr).parsedEvents.pokes.L(:,2);
-    %     rightLickDur{tr} = alldata(tr).parsedEvents.pokes.R(:,2);
-end
-
-allC = cell2mat(centLickDur(:));
-allL = cell2mat(leftLickDur(:));
-allR = cell2mat(rightLickDur(:));
-C_ave_min_max = [nanmean((allC))  min(allC)  max(allC)]
-L_ave_min_max = [nanmean((allL))  min(allL)  max(allL)]
-R_ave_min_max = [nanmean((allR))  min(allR)  max(allR)]
-a = [C_ave_min_max;L_ave_min_max;R_ave_min_max];
-ed = linspace(min(a(:,2)), max(a(:,3)), 100);
-% [m,i] = max(allL)
-% a = cellfun(@length, leftLickDur);
-% figure; plot(cumsum(a))
-
-[n1,ed1] = histcounts(allC, ed, 'normalization', 'probability');
-[n2,ed2] = histcounts(allL, ed, 'normalization', 'probability');
-[n3,ed3] = histcounts(allR, ed, 'normalization', 'probability');
-
-figure;
-
-subplot 211, hold on
-plot(ed(1:end-1), n1)
-plot(ed(1:end-1), n2)
-plot(ed(1:end-1), n3)
-legend('C','L','R')
-
-subplot 212, hold on
-plot(ed(1:end-1), cumsum(n1))
-plot(ed(1:end-1), cumsum(n2))
-plot(ed(1:end-1), cumsum(n3))
+% Choose below what licks you want to analyze.
+lickInds = [1,2,3]; % all licks
+% lickInds = [1]; % center lick
+% lickInds = [2]; % left lick
+% lickInds = [3]; % right lick
 
 
 %% Set the traces for licks (in time and frame resolution)
@@ -86,6 +35,7 @@ f = figure;
 for i = 1:length(evT)
     
     eventTime = eval(evT{i});     % eventTime = timeInitTone;
+    
     if length(eventTime)==1 && eventTime==1
         % align on the first frame (when scanning started).
         eventTime = ones(size(alldata));
@@ -95,11 +45,13 @@ for i = 1:length(evT)
         eventTime = cellfun(@(x)x(1), eventTime);
     end
     
+%     eventTime = round(eventTime);
+    
     
     %% Align lick trace on eventTime
     
     traces = traces_lick_time;
-    traces = cellfun(@(x)x~=0, traces, 'uniformoutput', 0); % assign all licks to 1. don't distinguish among licks.
+    traces = cellfun(@(x)ismember(x, lickInds), traces, 'uniformoutput', 0); % assign all licks to 1. don't distinguish among licks.
     
     % [traceEventAlign_licks, timeEventAlign_licks] = triggerAlignTraces(traces, eventTime);
     [traceEventAlign, timeEventAlign, nvalidtrs] = triggerAlignTraces(traces, eventTime);
@@ -108,7 +60,7 @@ for i = 1:length(evT)
     %% Plot
     
     figure(f)
-    subplot(3,length(evT),length(evT)*0+i), hold on
+    subplot(2,length(evT),length(evT)*0+i), hold on
     top = nanmean(nanmean(traceEventAlign,3),2); % average across trials and neurons.
     plot(top)
     %     plot(timeEventAlign, top)
@@ -117,7 +69,7 @@ for i = 1:length(evT)
     xl2 = find(nvalidtrs >= round(max(nvalidtrs)*3/4), 1, 'last');
     
     %     plot([0 0],[min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
-    e = find(timeEventAlign > 0, 1);
+    e = find(timeEventAlign >= 0, 1);
     plot([e e], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
     
 %     xlim([xl1 xl2])
@@ -162,14 +114,14 @@ scopeTTLOrigTime = 1;
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime);
 
 
-f = figure;
+% f = figure;
 doplots = 0;
 
 for i = 1:length(evT)
     
     eventTime = eval(evT{i});
     traces = traces_lick_frame; % alldataSpikesGood; %  traces to be aligned.
-    traces = cellfun(@(x)x~=0, traces, 'uniformoutput', 0); % assign all licks to 1. don't distinguish among licks.
+    traces = cellfun(@(x)ismember(x, lickInds), traces, 'uniformoutput', 0); % assign all licks to 1. don't distinguish among licks.
     
     [traceEventAlign, timeEventAlign, nvalidtrs, traceEventAlign_wheelRev, ...
         timeEventAlign_wheelRev, nvalidtrs_wheel] = ...
@@ -179,7 +131,7 @@ for i = 1:length(evT)
     %% plot licks
     
     figure(f)
-    subplot(3,length(evT),length(evT)*0+i), hold on
+    subplot(2,length(evT),length(evT)*1+i), hold on
     % subplot(223), hold on
     top = nanmean(nanmean(traceEventAlign,3),2); % average across trials and neurons.
     plot(top)
