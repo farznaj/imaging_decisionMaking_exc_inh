@@ -1,6 +1,10 @@
-function [data, trials_per_session] = loadBehavData(alldata_fileNames, defaultHelpedTrs, saveHelpedTrs)
+function [data, trials_per_session] = loadBehavData(alldata_fileNames, defaultHelpedTrs, saveHelpedTrs, doclean)
 %
 % [data, trials_per_session] = loadBehavData(alldata_fileNames);
+
+if ~exist('doclean', 'var') % if true, helpedTrs and inconsistent field names will be taken care of.
+    doclean = false;
+end
 
 
 %%
@@ -23,15 +27,22 @@ for f = 1:length(alldata_fileNames)
     load(alldata_fileNames{f})
     
     
-    %%  Take care of helped trials
-    
-    all_data = setHelpedTrs(all_data, defaultHelpedTrs, saveHelpedTrs, alldata_fileNames{f});
-    
-    
-    %% Take care of alldata fields that might be absent. (eg waitDurWarmup, adaptiveDurs, and startScopeDur) 
-    
-    all_data = cleanAlldataFields(all_data, alldata_fileNames{f});
+    if doclean
+        %%  Take care of helped trials
 
+        % show file names 
+        a = alldata_fileNames(cellfun(@(x)~isempty(x),cellfun(@(x)strfind(x, fn(1:end-4)), alldata_fileNames, 'uniformoutput', 0)))'; 
+        sort(cellfun(@(x)x(end-25:end), a, 'uniformoutput', 0))
+
+        all_data = setHelpedTrs(all_data, defaultHelpedTrs, saveHelpedTrs, alldata_fileNames{f});
+
+
+        %% Take care of alldata fields that might be absent. (eg waitDurWarmup, adaptiveDurs, and startScopeDur) 
+
+        all_data = cleanAlldataFields(all_data, alldata_fileNames{f});
+        
+    end
+    
     
     %% remove the last trial
     

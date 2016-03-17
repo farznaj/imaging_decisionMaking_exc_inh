@@ -47,6 +47,7 @@ else
 %         hold on; plot([all_data.helpedChoice])
         
         if logical(saveHelpedTrs)
+            warning('Overwriting all_data!!')
             save(alldata_fileNam, 'all_data', '-append')
         end
         

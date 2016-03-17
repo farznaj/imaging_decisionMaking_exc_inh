@@ -7,7 +7,7 @@
 
 subject = 'fn20';
 days = {'15-Jan-2016'};
-savefigs = 1;
+savefigs = 0;
 n_days = 1; %15; % specify number of days back (from days{1}) that you want to analyze. if you don't specify this, only days mentioned in days will be analyzed.
 
 exclude_Exclude = 1; % whether you want to exclude trials set to Exclude during experiment.
@@ -32,7 +32,7 @@ end
 figure(hpmf), clf
 
 
-%% go to the directory that contains the behavioral data
+%% Go to the directory that contains the behavioral data
 
 folder = fullfile(server_address, subject,'behavior');
 cd(folder)
@@ -81,7 +81,7 @@ for iday = 1:n_days
         days_loaded = [days_loaded {day}];
     end
     
-    %% load the behavioral data corresponding to day "day".
+    %% Load the behavioral data corresponding to day "day".
     
     for isess = 1:length(finalf)
         
@@ -94,7 +94,7 @@ for iday = 1:n_days
         
         all_data = removeBegEndTrs(all_data, thbeg);
         
-        %% clean fields
+        %% Clean fields
         
         cleanFields_behavior_analysis
         
@@ -105,7 +105,7 @@ for iday = 1:n_days
         
     end
     
-    %% go one day back
+    %% Go one day back
     
     day = datestr(datenum(day,'dd-mmm-yyyy')-1); % Farz
     
@@ -121,7 +121,8 @@ end
 cb = alldata(1).categoryBoundaryHz; % categ boundary in hz
 
 
-%% set event numbers and trial types: multi-sensory, only visual, only audio
+%% Set event numbers and trial types: multi-sensory, only visual, only audio
+
 % set stimulus rate for each trial
 [nevents, stimdur, stimrate, stimtype] = setStimRateType(alldata);
 
@@ -133,7 +134,7 @@ stimrate_0 = stimrate;
 num_multi_vis_aud = [sum(multisens) sum(onlyvis) sum(onlyaud)];
 
 
-%% set outcome and account for allow correction.
+%% Set outcome and account for allow correction.
 
 allowCorrectResp = 'change';
 uncommittedResp = 'nothing'; % 'change'; %'remove'; % % 'remove', 'change', 'nothing';
@@ -162,7 +163,7 @@ end
 ntrs_eachSession_sum = [all_ntrs sum(all_ntrs)]
 
 
-%% exclude some trials from analysis
+%% Exclude some trials from analysis
 
 waitdur = [alldata.waitDuration];
 invalid = sum(ismember(outcomes, [-3 -4 -1]));
@@ -200,7 +201,8 @@ num_LR_HR_CB_ratio = [sum(stimrate_0 < cb) , sum(stimrate_0 > cb) , ...
 
 num_multisens_vis_aud = [sum(multisens) sum(onlyvis) sum(onlyaud)]
 
-%% plot psychometric functions
+
+%% Plot psychometric functions
 
 wd = 2;
 vec_rates = sort([cb : -wd : min(stimrate_0)-wd  ,  cb+wd : wd : max(stimrate_0)+wd]); % make sure categ boundary doesn't go at the middle of a bin!
@@ -212,7 +214,7 @@ nss_all = NaN(length(vec_rates) , length(legstring));
 dolabs = 0;
 
 for imodality = 1:3 % {'multi', 'onlyvis', 'onlyaud'}
-    %%
+    
     switch imodality
         case 1
             allRespM = allResp_HR_LR(multisens);
@@ -231,6 +233,7 @@ for imodality = 1:3 % {'multi', 'onlyvis', 'onlyaud'}
     
     %%
     if ~isempty(allRespM) && ~all(isnan(allRespM))
+        
         dolabs = 1;
         figure(hpmf); subplot(211)
         shownumtrs = true;
@@ -302,6 +305,7 @@ end
 
 
 %% add figure name and title.
+
 % a = [days_loaded{:}];
 % a(:) % shows all files that were loaded.
 % day1 = a{1}(6:end-9);
@@ -323,6 +327,7 @@ title(figtitle)
 
 
 %% add labels to the figure
+
 if dolabs
     legstring_now = legstring(num_multisens_vis_aud~=0);
     legend(hmodal_all(~isnan(hmodal_all)), legstring_now, 'location', 'northwest')
@@ -355,6 +360,7 @@ end
 
 
 %% histogram of waitdur
+
 waitdurs = [alldata.waitDuration]'*1000; % in ms
 r = range(waitdurs);
 vec_waitdurs = min(waitdurs):r/10:max(waitdurs);

@@ -1,7 +1,7 @@
 function eventInds = eventTimeToIdx(eventTime, traceTimeVec)
 % eventInds = eventTimeToIdx(eventTime, traceTimeVec)
 %
-% eventInds: index of eventTime on traceTimeVec array for each trial.
+% eventInds: index of eventTime on array traceTimeVec for each trial.
 
 if iscell(eventTime)
     eventTime = cellfun(@(x)x(1), eventTime);

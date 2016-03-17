@@ -42,13 +42,20 @@ saveHelpedTrs = 0; % it will only take effect if defaultHelpedTrs is false. If 1
 frameLength = 1000/30.9; % sec.
 
 [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh);
-disp(pnevFileName)
-
+[~,f] = fileparts(pnevFileName);
+disp(f)
+cd(fileparts(imfilename))
 
 % load alldata from the imaging file.
 % load(imfilename, 'all_data'), all_data = all_data(1:end-1);     % alldata = removeBegEndTrs(alldata, thbeg);
 % use the following if you want to go with the alldata of the behavior folder
 [alldata_fileNames, ~] = setBehavFileNames(mouse, {datestr(datenum(imagingFolder, 'yymmdd'))});
+
+[~,fn] = fileparts(alldata_fileNames{1});
+a = alldata_fileNames(cellfun(@(x)~isempty(x),cellfun(@(x)strfind(x, fn(1:end-4)), alldata_fileNames, 'uniformoutput', 0)))';
+[~, isf] = sort(cellfun(@(x)x(end-25:end), a, 'uniformoutput', 0));
+alldata_fileNames = alldata_fileNames(isf);
+
 [all_data, ~] = loadBehavData(alldata_fileNames(mdfFileNumber), defaultHelpedTrs, saveHelpedTrs); % it removes the last trial too.
 fprintf('Total number of trials: %d\n', length(all_data))
 
@@ -251,7 +258,7 @@ length(trs_mouseRunning)
 
 %}
 
-%% Set trs2rmv 
+%% Set trs2rmv, stimrate, outcome and response side 
 % warning('You have to specify trs2rmv!!')
 
 load(imfilename, 'badAlignTrStartCode', 'trialStartMissing') % they get set in framesPerTrialStopStart3An_fn
@@ -259,7 +266,8 @@ load(imfilename, 'badAlignTrStartCode', 'trialStartMissing') % they get set in f
 % set the following as trs2rmv: trs_begWarmUp(:); trs_helpedInit(:); trs_helpedChoice(:), trs_extraStim, trs_shortWaitdur, trs_problemAlign, trs_badMotion_pmtOff 
 trs2rmv = setTrs2rmv(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, badAlignTrStartCode, trialStartMissing);
 
-% set stim rate: trials with stimrate=nan, must be added to trs2rmv as well
+
+%%%%%%% Set stim rate: trials with stimrate=nan, must be added to trs2rmv as well
 [~, stimdur, stimrate, stimtype] = setStimRateType(alldata); % stimtype = [multisens, onlyvis, onlyaud];
 trs2rmv = unique([trs2rmv; find(isnan(stimrate))]);
 
@@ -273,7 +281,8 @@ trs2rmv = unique([trs2rmv, trs_allowCorrectEntered, trs_errorlick_again_wait_ent
 fprintf('Number of trs2rmv: %d\n', length(trs2rmv))
 
 
-%% Set outcome and response side for each trial, taking into account allcorrection and uncommitted responses.
+%%%%%%%% Set outcome and response side for each trial, taking into account allcorrection and uncommitted responses.
+
 % Set some params related to behavior % behavior_info
 [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp);
 
@@ -286,6 +295,7 @@ cb = unique([alldata.categoryBoundaryHz]); % category boundary in hz
 
 
 %% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
+
 [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv);

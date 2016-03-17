@@ -1,4 +1,4 @@
-function [traceEventAlign, timeEventAlign] = triggerAlignTraces(traceOriginal, frame0s, shiftTime, scaleTime)
+function [traceEventAlign, timeEventAlign, nvalidtrs] = triggerAlignTraces(traceOriginal, frame0s, shiftTime, scaleTime)
 % INPUTS
 % frame0s -- the indeces of the events (triggeres) on which the traces will be aligned.
 % traceOriginal -- if an array, dimensions must be frames x units x trials.
@@ -9,10 +9,11 @@ function [traceEventAlign, timeEventAlign] = triggerAlignTraces(traceOriginal, f
 % timeEventAlign -- 1 x frames. 0 indicates the time of the event.
 
 
-if isempty(shiftTime)
+if ~exist('shiftTime', 'var') || isempty(shiftTime)
     shiftTime = 0;
 end
-if isempty(scaleTime)
+
+if ~exist('scaleTime', 'var') || isempty(scaleTime)
     scaleTime = 1;
 end
 
@@ -30,8 +31,12 @@ end
 maxNumFramesPerTrial = max(framesPerTrial);
 
 %% set the trig-aligned dFOF trace
+
 % frames x neurons x trials
-traceEventAlign = NaN(max(frame0s) + maxNumFramesPerTrial, numUnits, numTrials);
+frame0s = round(frame0s);
+% traceEventAlign = NaN(max(frame0s) + maxNumFramesPerTrial, numUnits, numTrials);
+traceEventAlign = NaN(max(frame0s) + max(framesPerTrial - frame0s), numUnits, numTrials);
+
 m = max(frame0s);
 
 if iscell(traceOriginal)
@@ -52,7 +57,13 @@ end
 
 
 %% set the trig-aligned time trace
+
 % frame0 (ie the frame to align trials on) will be 0+frameLength/2.
 timeEventAlign = scaleTime * ((1:size(traceEventAlign, 1)) - m) + shiftTime;
+
+%% set number of trials that contribute to each frame of traceEventAlign
+
+nvalidtrs = sum(~isnan(traceEventAlign),3); % frames x neurons; number of trials that contribute to each frame for each neuron.
+nvalidtrs = nvalidtrs(:,1);
 
 

@@ -19,7 +19,7 @@ end
 
 %%
 % th = 5; % 9; % this number of beginning trials will be excluded. also later in the code we want >th trials in each column of ratesDiffInput
-b = bsxfun(@plus, begTrs, (0:th)'); b = b(:); % don't use the 1st 10 trials.
+b = bsxfun(@plus, begTrs, (0:th-1)'); b = b(:); % don't use the 1st 10 trials.
 trs_begWarmUp = b;
 
 %{
@@ -42,11 +42,11 @@ trs_shortWaitdur = find([alldata.waitDuration] < waitdur_th)';
 
 trs2rmv = unique([trs_begWarmUp(:); trs_helpedInit(:); trs_helpedChoice(:)]); %, trs_unwantedOutcome]);
 if excludeExtraStim
-    disp('excluding trials with extraStim!')
+    disp('Excluding trials with extraStim!')
     trs2rmv = unique([trs2rmv(:); trs_extraStim(:)]);
 end
 if excludeShortWaitDur
-    disp('excluding trials with short waitDur!')
+    disp('Excluding trials with waitDur < 32ms!')
     trs2rmv = unique([trs2rmv(:); trs_shortWaitdur(:)]);
 end
 

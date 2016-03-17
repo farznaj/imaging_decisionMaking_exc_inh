@@ -27,7 +27,7 @@ end
 % Align dfof traces on particular events (like time1stCenterLick).
 % traceEventAlign: frames x units x trials
 % timeEventAlign: 1 x frames
-[traceEventAlign, timeEventAlign] = triggerAlignTraces(traces, eventInds_f, shiftTime, scaleTime); % frames x units x trials.
+[traceEventAlign, timeEventAlign, nvalidtrs] = triggerAlignTraces(traces, eventInds_f, shiftTime, scaleTime); % frames x units x trials.
 
 
 
@@ -39,8 +39,8 @@ eventFrameNum = max(eventInds_f) % find(timeEventAlign==frameLength/2) % in what
 %}
 if ~isequal(max(eventInds_f), find(timeEventAlign==frameLength/2)), error('something wrong!'); end
 
-nvalidtrs = sum(~isnan(traceEventAlign),3); % frames x neurons; number of trials that contribute to each frame for each neuron.
-nvalidtrs = nvalidtrs(:,1);
+% nvalidtrs = sum(~isnan(traceEventAlign),3); % frames x neurons; number of trials that contribute to each frame for each neuron.
+% nvalidtrs = nvalidtrs(:,1);
 % figure; subplot(221), plot(nvalidtrs(:,1)) % shows at each frame of traceEventAlign how many trials are contributing to the average.
 % xlabel('Frame')
 % ylabel('# Contributing trials')
@@ -91,7 +91,7 @@ else
 end
 
 % Align dfof traces on particular events (like time1stCenterLick).
-[traceEventAlign_wheelRev, timeEventAlign_wheelRev] = triggerAlignTraces(traces_wheel, eventInds_w, shiftTime, scaleTime);
+[traceEventAlign_wheelRev, timeEventAlign_wheelRev, nvalidtrs_wheel] = triggerAlignTraces(traces_wheel, eventInds_w, shiftTime, scaleTime);
 
 % some checks
 %{
@@ -102,8 +102,8 @@ fprintf('%d %d %d = size(traceEventAlign_wheelRev)\n', size(traceEventAlign_whee
 
 % compute how many trials contribute to each time point of
 % timeEventAlign_wheelRev
-nvalidtrs_wheel = sum(~isnan(traceEventAlign_wheelRev),3); % timeSamples x 1; number of trials that contribute to each frame for each neuron.
-nvalidtrs_wheel = nvalidtrs_wheel(:,1);
+% nvalidtrs_wheel = sum(~isnan(traceEventAlign_wheelRev),3); % timeSamples x 1; number of trials that contribute to each frame for each neuron.
+% nvalidtrs_wheel = nvalidtrs_wheel(:,1);
 % subplot(222), plot(nvalidtrs_wheel(:,1)) % shows at each frame of traceEventAlign how many trials are contributing to the average.
 
 % the following two should have small difference (eventTime, in ms, based on

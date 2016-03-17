@@ -150,6 +150,7 @@ end
 
 %%    
 if exist('alldata_fileNam', 'var') && savealldata
+    warning('Overwriting all_data!!')
     save(alldata_fileNam, 'all_data', '-append')
 end
 

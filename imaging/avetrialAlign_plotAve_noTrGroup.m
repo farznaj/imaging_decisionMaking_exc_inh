@@ -17,14 +17,14 @@ evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_
 
 
 %%
-doplots = 0;
 f = figure;
+doplots = 0;
 
 for i = 1:length(evT)
 
-    eventTime = eval(evT{i});   
-    
+    eventTime = eval(evT{i});       
     traces = alldataDfofGood; % alldataSpikesGood; %  traces to be aligned.
+    
     [traceEventAlign, timeEventAlign, nvalidtrs, traceEventAlign_wheelRev, ...
         timeEventAlign_wheelRev, nvalidtrs_wheel] = ...
         avetrialAlign_noTrGroup(eventTime, traces, alldata, frameLength, trs2rmv, doplots);
@@ -60,9 +60,8 @@ for i = 1:length(evT)
     subplot(3,length(evT),length(evT)*0+i), hold on
     % subplot(223), hold on
     top = nanmean(nanmean(traceEventAlign,3),2); % average across trials and neurons.
-    plot(top)
+    plot(top)    
 %     plot(timeEventAlign, top)
-    % plot(timeEventAlign_wheelRev, -nanmean(traceEventAlign_wheelRev,3), 'k:')
     
     xl1 = find(nvalidtrs >= round(max(nvalidtrs)*3/4), 1, 'first'); % at least 3/4th of trials should contribute
     xl2 = find(nvalidtrs >= round(max(nvalidtrs)*3/4), 1, 'last');
@@ -111,7 +110,10 @@ for i = 1:length(evT)
     
 end
 
+
+
 %%
+%{
 load(imfilename, 'sdImage')
 im = sdImage{2}; % ROIs will be shown on im
 [CC2, mask2] = setCC_mask_manual(rois, im);
@@ -181,7 +183,8 @@ a = squeeze(traceEventAlign); %
 top = nanmean(nanmean(a,2),3);
 
 
-%%
+%% make ROIs outside the neurons in a dark area
+
 clear rois
 i = 1; 
 [X,Y] = meshgrid(66:90, 1:45);
@@ -209,4 +212,4 @@ end
 activity = activity_custom2;
 dFOF = konnerthDeltaFOverF(activity, pmtOffFrames{gcampCh}, smoothPts, minPts);
     
-    
+%}    
