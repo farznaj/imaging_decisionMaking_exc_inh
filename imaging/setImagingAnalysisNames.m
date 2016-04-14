@@ -1,4 +1,4 @@
-function [imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh, pnev2load)
+function [imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh, pnev2load, GE)
 % [imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh)
 % E.g.
 % mousename = 'fni17';
@@ -10,15 +10,23 @@ if ~exist('pnev2load', 'var') || isempty(pnev2load)
     pnev2load = 1; % use the most recent file.
 end
 
+if ~exist('GE', 'var')
+    GE = false;
+end
+
 
 %%
-if ismac
-    dataPath = '/Users/Farzaneh/Desktop/Farzaneh/data'; % macbook
-elseif isunix
-    dataPath = '/sonas-hs/churchland/nlsas/data/data'; % server
-elseif ispc
-    dataPath = '\\sonas-hs.cshl.edu\churchland\data'; % lab PC
-end
+if ~GE % Farzaneh
+    if ismac    
+        dataPath = '/Users/Farzaneh/Desktop/Farzaneh/data'; % macbook
+    elseif isunix
+        dataPath = '/sonas-hs/churchland/nlsas/data/data'; % server
+    elseif ispc
+        dataPath = '\\sonas-hs.cshl.edu\churchland\data'; % lab PC
+    end
+else % Gamal
+    dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data';
+end    
 
 
 tifFold = fullfile(dataPath, mousename, 'imaging', imagingFolder);

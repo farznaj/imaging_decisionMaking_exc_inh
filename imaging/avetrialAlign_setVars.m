@@ -47,6 +47,7 @@ saveHelpedTrs = 0; % it will only take effect if defaultHelpedTrs is false. If 1
 
 setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
 
+GE = false; % flag for Gamal vs. Farzaneh 
 
 %%
 frameLength = 1000/30.9; % sec.
@@ -57,7 +58,7 @@ frameLength = 1000/30.9; % sec.
 % remember the last saved pnev mat file will be the pnevFileName
 
 pnev2load = 4; %[];
-[imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
+[imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load, GE);
 [~,f] = fileparts(pnevFileName);
 disp(f)
 cd(fileparts(imfilename))
@@ -67,7 +68,7 @@ cd(fileparts(imfilename))
 % load(imfilename, 'all_data'), all_data = all_data(1:end-1);   %from the imaging file.  % alldata = removeBegEndTrs(alldata, thbeg);
 % use the following if you want to go with the alldata of the behavior folder
 % set filenames
-[alldata_fileNames, ~] = setBehavFileNames(mouse, {datestr(datenum(imagingFolder, 'yymmdd'))});
+[alldata_fileNames, ~] = setBehavFileNames(mouse, {datestr(datenum(imagingFolder, 'yymmdd'))}, GE);
 % sort it
 [~,fn] = fileparts(alldata_fileNames{1});
 a = alldata_fileNames(cellfun(@(x)~isempty(x),cellfun(@(x)strfind(x, fn(1:end-4)), alldata_fileNames, 'uniformoutput', 0)))';
