@@ -1,0 +1,21 @@
+%% Notes on current preprocessing pipeline
+
+% Examine a file in Fiji. Choose a stable period to use for registration.
+%
+% Call preprocessCaMovies() to strip borders, motion correct, mask, save
+% output as new set of tif's
+%
+% Load a (motion-corrected) file in Fiji. Take Z-projection of median or
+% SD, change color scheme, choose ROIs. Save ROIs.
+%
+% Call applyFijiROIsToTifs() to get the activity matrix
+%
+% Call framesPerTrialStopStart3An() to get the trialization info
+%
+% Call mergeActivityIntoAlldata() to produce the merged alldata
+%
+% Save the merged alldata
+
+
+-------------------
+imaging_prep

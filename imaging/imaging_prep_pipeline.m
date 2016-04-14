@@ -11,9 +11,10 @@ mdfFileNumber = 1; % or tif major
 outName = [mouse,'-',imagingFolder, '-', num2str(mdfFileNumber)]
 
 P = struct;
-P.signalCh = 2; %2% channel whose signal activity you want to analyze (normally 2 for gcamp channel).
-P.channelsToRead = 2; %2% []; % it will be only used when MC is done. if motion correction is done, specify what channels to read (which later will be used for computing average images and eftychios's algorithm).
-P.saveParams = true; % if 0, you don't need outName.
+P.concatTempUpdate = 0; 
+P.signalCh = 2; % channel whose signal activity you want to analyze (normally 2 for gcamp channel).
+P.channelsToRead = 2; % []; % it will be only used when MC is done. if motion correction is done, specify what channels to read (which later will be used for computing average images and eftychios's algorithm).
+P.saveParams = true; % if 0, you don't need outName then.
 
 P.motionCorrDone = 1;
 P.saveGoodMovieStats = 0;
@@ -24,7 +25,7 @@ P.regFrameNums = {2}; % noMotionTr
 P.tifMinor = []; %[]; % set to [] if you want all tif minor files to be analyzed.
 P.pmt_th = []; % 1400;
 
-P.regFileNums = [2 1 1]; %[1 1 1] % file to use for motion correction major, minor, channel
+P.regFileNums = [1 1 1]; %[2 1 1] % file to use for motion correction major, minor, channel
 P.headerBug = 0;
 P.channelsToWrite = [1,2];
 P.maxMaskWidth = 30;
@@ -32,7 +33,7 @@ P.analysisFolder = 0;
 
 P.behavName = '';
 
-P.numComps = 200;
+P.numComps = 300; % 200
 P.tempSub = 3;
 P.spaceSub = 2;
 P.save_merging_vars = true;

@@ -1,5 +1,6 @@
-% a very nice script (together with pnev_manual_comp_match) that allows you
-% to plot and compare the trace and ROIs of 2 different methods.
+% pnev_manual_comp_setVars is a very nice script (together with
+% pnev_manual_comp_match) that allows you to plot and compare the trace and
+% ROIs of 2 different methods.
 %
 % you can use it to compare Eftychios vs manual. Or 2 different channels.
 % Or 2 different methods of Eftychios, etc.

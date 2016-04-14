@@ -1,0 +1,7 @@
+Master function: processCaImagingMCPnev(paramsFileName)
+
+It performs the following steps:
+
+1) Load a parameters file from a folder in the current directory named 
+ improcparams/paramsFileName. This file should be written by
+  writeCaProcessParams()

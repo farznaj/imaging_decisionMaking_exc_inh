@@ -1,6 +1,14 @@
 % This is the main and starting script for the analysis of your imaging data. It gives
 % you the vars that you need for further analyses.
 
+% pnev_manual_comp_setVars is a very nice script (together with
+% pnev_manual_comp_match) that allows you to plot and compare the trace and
+% ROIs of 2 different methods.
+%
+% you can use it to compare Eftychios vs manual. Or 2 different channels.
+% Or 2 different methods of Eftychios, etc.
+
+
 %% worry about bleedthrough, and visual artifact.
 
 %%
@@ -17,7 +25,7 @@ setInhibitExcit = true; % if 1, inhibit and excit traces will be set.
 compareManual = false; % compare results with manual ROI extraction
 plotTraces1by1 = false; % plot traces per neuron and per trial showing all trial events
 
-autoTraceQual = 1; % if 1, automatic measure for trace quality will be used.
+autoTraceQual = 0; % if 1, automatic measure for trace quality will be used.
 examineTraceQual = 0; % if 0, traceQuality array needs to be saved.
     saveTraceQual = 0; % it will only take effect if examineTraceQual is 1.
     analyzeQuality = [1 2]; % 1(good) 2(ok-good) 3(ok-bad) 4(bad) % trace qualities that will be analyzed.
@@ -27,8 +35,8 @@ analyzeOutcomes = {'all'}; % {'success', 'failure'}; % outcomes that will be ana
 
 excludeShortWaitDur = true; % waitdur_th = .032; % sec  % trials w waitdur less than this will be excluded.
 excludeExtraStim = false;
-allowCorrectResp = 'change';
-uncommittedResp = 'nothing'; % 'change'; %'remove'; % % 'remove', 'change', 'nothing';
+allowCorrectResp = 'change'; % 'change'; 'remove'; 'nothing'; % if 'change': on trials that mouse corrected his choice, go with the original response.
+uncommittedResp = 'nothing'; % 'change'; 'remove'; 'nothing'; % what to do on trials that mouse made a response (licked the side port) but did not lick again to commit it.
 
 thbeg = 5; % n initial trials to exclude.
 
@@ -37,78 +45,81 @@ helpedChoice = []; %31;
 defaultHelpedTrs = 0; % if 1, the program assumes that no trial was helped.
 saveHelpedTrs = 0; % it will only take effect if defaultHelpedTrs is false. If 1, helpedTr fields will be added to alldata.
 
+setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
+
 
 %%
 frameLength = 1000/30.9; % sec.
 
-[imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh);
+% remember if there are 
+% set the names of imaging mat files (one includes pnev results and one
+% includes all other vars)
+% remember the last saved pnev mat file will be the pnevFileName
+
+pnev2load = 4; %[];
+[imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
 [~,f] = fileparts(pnevFileName);
 disp(f)
 cd(fileparts(imfilename))
 
-% load alldata from the imaging file.
-% load(imfilename, 'all_data'), all_data = all_data(1:end-1);     % alldata = removeBegEndTrs(alldata, thbeg);
-% use the following if you want to go with the alldata of the behavior folder
-[alldata_fileNames, ~] = setBehavFileNames(mouse, {datestr(datenum(imagingFolder, 'yymmdd'))});
 
+% load alldata 
+% load(imfilename, 'all_data'), all_data = all_data(1:end-1);   %from the imaging file.  % alldata = removeBegEndTrs(alldata, thbeg);
+% use the following if you want to go with the alldata of the behavior folder
+% set filenames
+[alldata_fileNames, ~] = setBehavFileNames(mouse, {datestr(datenum(imagingFolder, 'yymmdd'))});
+% sort it
 [~,fn] = fileparts(alldata_fileNames{1});
 a = alldata_fileNames(cellfun(@(x)~isempty(x),cellfun(@(x)strfind(x, fn(1:end-4)), alldata_fileNames, 'uniformoutput', 0)))';
 [~, isf] = sort(cellfun(@(x)x(end-25:end), a, 'uniformoutput', 0));
 alldata_fileNames = alldata_fileNames(isf);
-
-[all_data, ~] = loadBehavData(alldata_fileNames(mdfFileNumber), defaultHelpedTrs, saveHelpedTrs); % it removes the last trial too.
+% load the one corresponding to mdffilenumber.
+[all_data, ~] = loadBehavData(alldata_fileNames(mdfFileNumber)); % , defaultHelpedTrs, saveHelpedTrs); % it removes the last trial too.
 fprintf('Total number of trials: %d\n', length(all_data))
+
 
 % begTrs = [0 cumsum(trials_per_session)]+1;
 % begTrs = begTrs(1:end-1);
-begTrs = 1;
+begTrs = 1; % 1st trial of each session
     
-% use the following plot to decide on thbeg
+% use the following plot to decide on thbeg: number of begining trials that
+% you want to exclude.
 % stimDur_diff
 figure; hold on
+title(sprintf('thbeg = %d', thbeg))
+plot([all_data.waitDuration]+[all_data.postStimDelay])
 plot([all_data.stimDuration])
 plot([all_data.extraStimDuration])
-plot([all_data.totalWaitDuration])
 plot([all_data.stimDur_aftRew])
-legend('stimDuration', 'extraStimDur', 'waitDur', 'stimDur\_aftRew')
+plot([thbeg thbeg],[-1 12], 'k')
+legend('waitDur', 'stimDuration', 'extraStimDur', 'stimDur\_aftRew')
 m = max([all_data.stimDuration]);
 ylim([-1 m+1])
 set(gca,'tickdir','out')
 
-
-%% THIS NEEDS WORK: important: take care of the issue that mouse may have made his decision before the end of the stimulus.
-% make sure you are looking at the stimulys epoch meaning that it is all
-% stimulus not choice or lack of stimulus
 %{
-diff([[alldata.waitDuration]', [alldata.stimDuration]'], [], 2)
-
-% this plot shows when flashes/clicked happened (their onset, remember they
-% last for alldata.eventDuration) during the stimulus
-xx = cumsum(alldata(6).auditoryIeis + alldata(6).eventDuration);
-xx = [0 xx(1:end-1)] * 1000 + 1; % ms
-yy = ones(1, length(alldata(6).auditoryIeis));
-figure; plot(xx, yy, 'o')
-
-% how many events were played (ie their onset had happened) when the waitDur happened.
-sum(xx < alldata(6).waitDuration * 1000)
-
-% trials with different stimdur than waitdur
-if any([alldata.stimDur_diff])
-    [alldata.stimDur_diff] ~= [alldata.waitDuration]
-end
+- stimulus is played for stimDuration which equal stimDur_diff (or if it is 0, waitDur) + extrastim_dur + stimdur_aftrew .
+- total waitdur (ie since stim onset, when mouse was allowed to do cent commit) equals waitDuration + postStimDelay
 %}
+
 
 %% Load vars related to manual method
 
 if compareManual
     
-    load(imfilename, 'rois', 'activity')
+    load(imfilename, 'imHeight', 'imWidth', 'pmtOffFrames')
+    
+    load(imfilename, 'activity_man_eftMask')
+    
+    load(imfilename, 'rois', 'activity') % , 'imHeight', 'imWidth', 'pmtOffFrames')
     load(pnevFileName, 'A') % load('demo_results_fni17-151102_001.mat', 'A2')
     spatialComp = A; % A2 % obj.A; 
     clear A
     
     
     %% manual activity and dfof
+    activity_man = activity_man_eftMask;
+
     activity_man = activity;
     clear activity
 
@@ -121,6 +132,9 @@ if compareManual
 
     %% masks and matching ROIs between the 2 methods.
 %     csfrs = [0 cumsum(framesPerTr)];
+    
+    % if you computed manual activity on eft mask:
+    matchedROI_idx = 1:size(dFOF_man,2); % there is a 1-1 match between ROIs
     
     % set contours for Eft ROIs
     contour_threshold = .95;
@@ -148,19 +162,28 @@ end
 
 %% Load vars related to Eftychios method
 
-load(pnevFileName, 'C', 'C_df', 'S')
+load(pnevFileName, 'C', 'C_df', 'options') % , 'S')
+if strcmp(options.deconv_method, 'MCMC')
+    load(pnevFileName, 'S') % if mcmc
+elseif strcmp(options.deconv_method, 'constrained_foopsi')    
+    load(pnevFileName, 'S_df') % if constrained foopsi
+end
+
+
+spiking = S_df; % S; % S_mcmc; % S2;
+spikes = spiking'; % frames x units
+
 % load('demo_results_fni17-151102_001.mat', 'C_mcmc', 'C_mcmc_df', 'S_mcmc')
 
 % spatialComp = A2; % obj.A; 
 temporalComp = C; % C_mcmc; % C2; % obj.C; 
 temporalDf = C_df; % C_mcmc_df; % C_df; % obj.C_df; 
-spiking = S; % S_mcmc; % S2;
+
 % spikingDf = S_df; % obj.S_df;
 clear C C_df S % ('C_mcmc', 'C_mcmc_df', 'S_mcmc')
 
 activity = temporalComp'; % frames x units
 % activity = activity_man;
-spikes = spiking'; % frames x units
 % Sdf = S_df';
 
 if size(temporalDf,1) == size(temporalComp,1)+1
@@ -185,6 +208,12 @@ framesPerTrial(isnan(framesPerTrial)) = [];
 minPts = 7000; %800;
 [all_data, mscanLag] = mergeActivityIntoAlldata_fn(all_data, activity, framesPerTrial, ...
   trialNumbers, frame1RelToStartOff, badFrames{signalCh}, pmtOffFrames{signalCh}, minPts, dFOF, spikes);
+
+% manual
+% activity = activity_man;
+% dFOF = dFOF_man;
+% [all_data, mscanLag] = mergeActivityIntoAlldata_fn(all_data, activity_man, framesPerTrial, ...
+%   trialNumbers, frame1RelToStartOff, badFrames{signalCh}, pmtOffFrames{signalCh}, minPts, dFOF_man, spikes);
 
 %{
 %% Take care of helped trials: you don't need it. you've done it for all ur behavioral data and appended the helped fields to alldata and saved it. if not the following function will do it.
@@ -214,7 +243,7 @@ alldata = all_data(trialNumbers); % in case mscan crashed, you want to remove tr
 fprintf('Total number of imaged trials: %d\n', length(alldata))
 
 
-%% Set problematic trials so you can later exclude them if desired.
+%% Set problematic trials to later exclude them if desired.
 % commenting for now but u may need it later.
 %{
 % in set_outcome_allResp you can take care of the following terms... u
@@ -258,8 +287,10 @@ length(trs_mouseRunning)
 
 %}
 
-%% Set trs2rmv, stimrate, outcome and response side 
+%% Set trs2rmv, stimrate, outcome and response side
 % warning('You have to specify trs2rmv!!')
+
+cb = unique([alldata.categoryBoundaryHz]); % category boundary in hz
 
 load(imfilename, 'badAlignTrStartCode', 'trialStartMissing') % they get set in framesPerTrialStopStart3An_fn
 
@@ -270,7 +301,6 @@ trs2rmv = setTrs2rmv(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begT
 %%%%%%% Set stim rate: trials with stimrate=nan, must be added to trs2rmv as well
 [~, stimdur, stimrate, stimtype] = setStimRateType(alldata); % stimtype = [multisens, onlyvis, onlyaud];
 trs2rmv = unique([trs2rmv; find(isnan(stimrate))]);
-
 %{
 trs2rmv = unique([trs2rmv, trs_unwantedOutcome]);
 
@@ -278,10 +308,48 @@ trs2rmv = unique([trs2rmv, trs_unwantedOutcome]);
 trs2rmv = unique([trs2rmv, trs_allowCorrectEntered, trs_errorlick_again_wait_entered]);
 %}
 
+
+%%%%%%% take care of cases that go tone happened earlier than stim offset
+%%%%%%% and resulted in a different stim type.
+fractFlashBefGoTone = NaN(1, length(alldata));
+stimRateChanged = zeros(1, length(alldata));
+goToneRelStimOnset = NaN(1, length(alldata));
+for tr = 1:length(alldata)
+    if ~isempty(alldata(tr).parsedEvents.states.center_reward) % ~isnan(goToneRelStimOnset(tr))
+        % xx shows flashes/clicks onset time during the stimulus
+        xx = cumsum(alldata(tr).auditoryIeis + alldata(tr).eventDuration);
+        xx = [0 xx(1:end-1)] * 1000 + 1; % ms % 1st flash onset is assigned 1
+
+
+        % goToneRelStimOnset = timeCommitCL_CR_Gotone - timeStimOnset + 1;
+        goToneRelStimOnset(tr) = ((alldata(tr).parsedEvents.states.center_reward(1))*1000 - (alldata(tr).parsedEvents.states.wait_stim(1))*1000) + 1;
+
+        
+        % percentage of flashes/clicks that happened before go tone. If 1,
+        % the animal received the whole stimulus before go tone.
+        fractFlashBefGoTone(tr) = sum(xx < goToneRelStimOnset(tr)) / length(xx); 
+        
+        % did stim type (hr vs lr) at go tone change compared to the
+        % original stimulus?
+        if sign(length(xx)-cb) ~= sign((sum(xx < goToneRelStimOnset(tr)))-cb) % alldata(tr).nAuditoryEvents
+            stimRateChanged(tr) = 1;
+        end
+    end
+end
+% find(fractFlashBefGoTone<1) % in these trials go tone came before the entire flashes were played.
+fractFlashBefGoTone_ifLessThan1 = fractFlashBefGoTone(fractFlashBefGoTone<1)
+% fprintf('Fract flash before goTone if <1\n%.2f \n', fractFlashBefGoTone(fractFlashBefGoTone<1))
+
+if any(stimRateChanged)
+    trsStimTypeScrewed = find(stimRateChanged)'; % in these trials when go tone came stim type (hr vs lr) was different from the entire stim... these are obviously problematic trials.
+    trs2rmv = unique([trs2rmv; trsStimTypeScrewed]);
+    fprintf('%d = #trs with screwed! stim type\n', length(trsStimTypeScrewed))
+end
+
 fprintf('Number of trs2rmv: %d\n', length(trs2rmv))
 
 
-%%%%%%%% Set outcome and response side for each trial, taking into account allcorrection and uncommitted responses.
+%%%%% Set outcome and response side for each trial, taking into account allcorrection and uncommitted responses.
 
 % Set some params related to behavior % behavior_info
 [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp);
@@ -291,7 +359,8 @@ outcomes(trs2rmv) = NaN;
 allResp(trs2rmv) = NaN; 
 allResp_HR_LR(trs2rmv) = NaN;
 
-cb = unique([alldata.categoryBoundaryHz]); % category boundary in hz
+
+% save('151102_001.mat', '-append', 'trs2rmv')  % Do this!
 
 
 %% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
@@ -300,11 +369,77 @@ cb = unique([alldata.categoryBoundaryHz]); % category boundary in hz
     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv);
 
-% The following is already done --> Note: for timeStimOnset, you are currently only including valid trials.
-% but you can include all trials as longs as initiation was done correctly.
+
+%% Take care of trials that mouse received center reward and go tone before the
+% end of the stimulus. This is important if looking at neural responses
+% during stim interval: you dont want to look beyond goTone time for these
+% trials... not necessarily important for other alignments. So you may or
+% may not need to run this part! If want to be conservative, run it!
+
+trsGoToneEarlierThanStimOffset = find(timeCommitCL_CR_Gotone < timeStimOffset)';
+fprintf('%d = #trs goTone earlier than stimOffset\n', length(trsGoToneEarlierThanStimOffset))
+
+% timeStimOnset(trsGoToneEarlierThanStimOffset) = NaN; % IMPORTANT: you dont want to look beyond goTone time for these trials, but upto go tone is safe!
+timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset) = NaN;  % you want this for sure (bc in some trials stim has been still playing after go tone).
+
+% For the following events not as important to set to nan unless you think
+% neural responses aligned on these events can be different when go tone
+% happened during stim, which is likely!
+if setNaN_goToneEarlierThanStimOffset % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
+    timeStimOnset(trsGoToneEarlierThanStimOffset) = NaN; % you dont want to look beyond goTone time for these trials, but upto go tone is safe!
+    timeStimOffset(trsGoToneEarlierThanStimOffset) = NaN; 
+    time1stSideTry(trsGoToneEarlierThanStimOffset) = NaN;  
+    time1stCorrectTry(trsGoToneEarlierThanStimOffset) = NaN; 
+    time1stIncorrectTry(trsGoToneEarlierThanStimOffset) = NaN; 
+    timeReward(trsGoToneEarlierThanStimOffset) = NaN; 
+    timeCommitIncorrResp(trsGoToneEarlierThanStimOffset) = NaN; 
+    time1stCorrectResponse(trsGoToneEarlierThanStimOffset) = NaN; 
+end
+
+
+% if you want to be super conservative, just reset trs2rmv and again set the times:
+% trs2rmv = unique([trs2rmv; trsGoToneEarlierThanStimOffset]);
+% [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
+%     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
+%     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv);
 
 
 
+
+%%% Done: Important: take care of the issue that mouse may have made his decision before the end of the stimulus.
+% make sure when looking at the stimulus epoch, it is all
+% stimulus and does not include choice or episodes of stimulus absence!
+%
+% timeStimOffset in setEventTimesRelBcontrolScopeTTL.m accurately shows
+% stim offset. 
+% but mouse may have committed center lick (hence received cent reward and
+% go tone) before stim offset.
+% timeCommitCL_CR_Gotone shows the time of commit cent lick and go tone, so
+% if timeCommitCL_CR_Gotone < timeStimOffset, go tone (and cent reward)
+% happened before the stim was over, so you need to exclude these trials.
+%
+% this is bc not only stim interval includes cent reward and go tone, but
+% also stim rate might be different at the time of go tone than what the
+% final rate which determins the reward.
+%
+% [(1:length(timeCommitCL_CR_Gotone))' timeCommitCL_CR_Gotone' , timeStimOffset' , [timeCommitCL_CR_Gotone < timeStimOffset]']
+
+%{
+% this plot shows when flashes/clicks happened (their onset, remember they
+% last for alldata.eventDuration) during the stimulus
+yy = ones(1, length(alldata(tr).auditoryIeis));
+figure; plot(xx, yy, 'o')
+
+% Not useful, what matters is when the go tone was played not when waitdur ended: how many events were played (ie their onset had happened) when the waitDur happened.
+% sum(xx < alldata(tr).waitDuration * 1000)
+
+diff([[alldata.waitDuration]', [alldata.stimDuration]'], [], 2)
+
+% trials with different stimdur_diff than waitdur
+if any([alldata.stimDur_diff])
+    [alldata.stimDur_diff] ~= [alldata.waitDuration]
+end
+%}
 
 
 %%
@@ -349,7 +484,7 @@ if autoTraceQual
     goodnessOrder = iMeasQual(sMeasQual>=0); % ascending order of neurons based on trace quality
     goodnessOrder = goodnessOrder(end:-1:1); % descending order
 end
-fprintf('N good-quality and all neurons: %d, %d. Ratio: %.2f\n', [sum(goodNeurons), size(activity,2), sum(goodNeurons)/ size(activity,2)]); % number and fraction of good neurons vs number of all neurons.
+% fprintf('N good-quality and all neurons: %d, %d. Ratio: %.2f\n', [sum(goodNeurons), size(activity,2), sum(goodNeurons)/ size(activity,2)]); % number and fraction of good neurons vs number of all neurons.
 
 
 % set goodinds: an array of length of all neurons, with 1s indicating good and 0s bad neurons.
@@ -361,6 +496,8 @@ elseif orderTraces % descending based on the measure of quality
 else % stick to the original order
     goodinds = goodNeurons;
 end
+
+fprintf('N good-quality and all neurons: %d, %d. Ratio: %.2f\n', [sum(goodinds), size(activity,2), sum(goodinds)/ size(activity,2)]); % number and fraction of good neurons vs number of all neurons.
 
 
 %% Set traces and choose good quality traces.
@@ -421,8 +558,9 @@ if plotTraces1by1
     
     % it makes sense to look at all trials and not just ~trs2rmv so do
     % trs2rmv = unique([trs_problemAlign, trs_badMotion_pmtOff]);, and again run setEvent
-
-    interactZoom = 1; plotTrs1by1 = 1; markQuantPeaks = 1;
+    plotTrs1by1 = 0;
+    interactZoom = 0; 
+    markQuantPeaks = 1;
     allEventTimes = {timeInitTone, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, timeStop, centerLicks, leftLicks, rightLicks};
     [~, ~, stimrate] = setStimRateType(alldata);
 
@@ -495,7 +633,12 @@ traces_al_sm_aveFr = nanmean(traces_al_sm(eventI_stimOn:end,:,:), 1);
 choicePref_all = choicePref_ROC(traces_al_sm_aveFr, ipsiTrs, contraTrs, makeplots, eventI_stimOn, useEqualNumTrs);
 
 
+%% SVM
+popClassifier
 
+popClassifierSVM_plots
+
+popClassifierSVM_rand
 
 
 

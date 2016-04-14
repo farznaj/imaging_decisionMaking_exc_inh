@@ -1,14 +1,34 @@
 function [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = alignTraces_prePost_allCases(alignedEvent, traces, traceTimeVec, ...
-    frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward)
+    frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv, flag_traces)
 
 % uses switch case to align traces using the prePost method.
 % alignedEvent is one of the follwoing: 
 % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward'
 
+if ~exist('flag_traces', 'var')
+    flag_traces = true; % if 1, 'traces' contains the temporal traces for each trial. if 0, it contains the movie for each trial.
+end
+
 
 %%
 switch alignedEvent
 
+    %% trial begining (frame 1 of trial when scanning started)
+    case 'trialBeg'  
+        timeInitTone1 = cellfun(@(x)x(1),timeInitTone);
+        eventNow = ones(size(traces)) * frameLength/2;
+        eventNow(trs2rmv) = NaN;
+        eventBef = [];
+        eventAft = timeInitTone1;
+        
+        eventInds_f = ones(size(traces));
+        eventInds_f(trs2rmv) = NaN;
+        
+        [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        
+        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
+        
+        
     %% init tone
     case 'initTone'  
         timeInitTone1 = cellfun(@(x)x(1),timeInitTone);
@@ -20,7 +40,7 @@ switch alignedEvent
         
         [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
         
-        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime); % frames x units x trials        
+        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
         
         % if isempty(nPreFrames)
         %     eventI_initTone = size(traces_aligned_fut_initTone,1) - nPostFrames;
@@ -52,7 +72,7 @@ switch alignedEvent
         
         [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
         
-        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime); % frames x units x trials        
+        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
         
     
     case 'goTone'  
@@ -67,7 +87,7 @@ switch alignedEvent
         
         [~, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
         
-        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime); % frames x units x trials        
+        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
         
     
     case '1stSideTry'  
@@ -80,7 +100,7 @@ switch alignedEvent
         
         [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
         
-        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime); % frames x units x trials        
+        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
         
     
     case 'reward'  
@@ -95,7 +115,7 @@ switch alignedEvent
         
         [~, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
         
-        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime); % frames x units x trials
+        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials
         
         
 end

@@ -5,6 +5,12 @@
 % frames into the average. Then you only look at portion of the trace that
 % has enough number of trials contributing to the average.
 
+%% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
+
+[timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
+    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
+    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv);
+
 
 %%
 evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
@@ -41,8 +47,8 @@ for i = 1:length(evT)
     plot(top)
 %     plot(timeEventAlign_wheelRev, top)
     
-    xl1 = find(nvalidtrs_wheel >= round(max(nvalidtrs)*3/4), 1, 'first'); % at least 3/4th of trials should contribute
-    xl2 = find(nvalidtrs_wheel >= round(max(nvalidtrs)*3/4), 1, 'last');
+    xl1 = find(nvalidtrs_wheel >= round(max(nvalidtrs)*4/4), 1, 'first'); % at least 3/4th of trials should contribute
+    xl2 = find(nvalidtrs_wheel >= round(max(nvalidtrs)*4/4), 1, 'last');
     
     xlim([xl1 xl2])
 %     xlim([timeEventAlign_wheelRev(xl1)  timeEventAlign_wheelRev(xl2)])
@@ -50,7 +56,7 @@ for i = 1:length(evT)
     ylabel('wheel revolution')
     
 %     plot([0 0],[min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
-    e = find(timeEventAlign_wheelRev > 0, 1);
+    e = find(timeEventAlign_wheelRev >= 0, 1);
     plot([e e], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
     
     
@@ -63,11 +69,11 @@ for i = 1:length(evT)
     plot(top)    
 %     plot(timeEventAlign, top)
     
-    xl1 = find(nvalidtrs >= round(max(nvalidtrs)*3/4), 1, 'first'); % at least 3/4th of trials should contribute
-    xl2 = find(nvalidtrs >= round(max(nvalidtrs)*3/4), 1, 'last');
+    xl1 = find(nvalidtrs >= round(max(nvalidtrs)*4/4), 1, 'first'); % at least 3/4th of trials should contribute
+    xl2 = find(nvalidtrs >= round(max(nvalidtrs)*4/4), 1, 'last');
     
 %     plot([0 0],[min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
-    e = find(timeEventAlign > 0, 1);
+    e = find(timeEventAlign >= 0, 1);
     plot([e e], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
     
     xlim([xl1 xl2])
@@ -94,11 +100,11 @@ for i = 1:length(evT)
 %     plot(timeEventAlign, top)
     % plot(timeEventAlign_wheelRev, -nanmean(traceEventAlign_wheelRev,3), 'k:')
     
-    xl1 = find(nvalidtrs >= round(max(nvalidtrs)*3/4), 1, 'first'); % at least 3/4th of trials should contribute
-    xl2 = find(nvalidtrs >= round(max(nvalidtrs)*3/4), 1, 'last');
+    xl1 = find(nvalidtrs >= round(max(nvalidtrs)*4/4), 1, 'first'); % at least 3/4th of trials should contribute
+    xl2 = find(nvalidtrs >= round(max(nvalidtrs)*4/4), 1, 'last');
     
 %     plot([0 0],[min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
-    e = find(timeEventAlign > 0, 1);
+    e = find(timeEventAlign >= 0, 1);
     plot([e e], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
     
     xlim([xl1 xl2])

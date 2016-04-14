@@ -83,13 +83,16 @@ end
 if exist('framesPerTrial', 'var')
     framesPerTr = framesPerTrial(~isnan(framesPerTrial));
     % framesPerTr = cellfun(@(x)size(x,1), alldataDfofGood); % compared to framesPerTrial, framesPerTr doesn't have NaN at the end bc the last trial is excluded.
-end
+% end
 
-if compareManual || plotTrs1by1
+% if compareManual || plotTrs1by1
     csfrs = [0 cumsum(framesPerTr)];
+    begf = csfrs+1; % first frame of each trial.
+    
     if addNaNiti
         % find the new indeces of csfrs in the traces that have NaNs inserted.
-        csfrs = csfrs + (0:length(csfrs)-1);
+%         csfrs = csfrs + (0:length(csfrs)-1);
+        begf = (csfrs + (0:length(csfrs)-1)) + 1; % % find the new indeces of csfrs in the traces that have NaNs inserted.
     end
     
     %     lastTr2plot = find((csfrs-size(traceFU_toplot{1},1))>0, 1)-2; % use this if you are using part of a trace not the entire trace.
@@ -103,6 +106,8 @@ if addNaNiti
     
     for itp = 1:length(traceFU_toplot)
         begFrames(begFrames>length(traceFU_toplot{itp})) = []; % this is in case you are plotting part of the entire movie.
+        % remember in insertElement, inds 2 be added are relative to the
+        % original array.
         traceFU_toplot{itp} = insertElement(traceFU_toplot{itp}, begFrames(2:end), NaN); % insert NaN right before the beginning of each trial.
         %         traceFU_toplot{itp}(begFrames(2:end)-1,:) = NaN;
     end
@@ -143,47 +148,18 @@ end
 
 if showitiFrNums
     
-    % the following 2 values should be identical: 2 ways of computing
-    % iti value: 1) value set in gui. 2) how long mouse spent in state iti.
-    % The nice thing is that if computed ITI turns out much larger
-    % than the set ITI, it indicates trial was paused during preced iti :), for
-    % this reason mouse spent more time in the iti state than value(ITI).
-    itiSet_gui_state = NaN(length(alldata),2);
-    for itr = 1:length(alldata)
-        i1 = diff(alldata(itr).parsedEvents.states.iti(end,:),[],2);
-        if ~isempty(alldata(itr).parsedEvents.states.iti2)
-            i2 = diff(alldata(itr).parsedEvents.states.iti2(end,:),[],2);
-        else
-            i2 = [];
-        end
-        iti_computed = max([i1,i2])+1;
-        itiSet_gui_state(itr,:) = [alldata(itr).iti iti_computed];
-    end
-    figure; plot(itiSet_gui_state)
-    
-    % duration between trials that imaging data is not collected, ie the time
-    % between stopRotaryScope state of the previous trial and startRotaryScope
-    % of the current trial.
-    iti_noscan = zeros(length(alldata),1); % iti_noscan(1)=0 indicates preceding trial 1, iti_noscan is zero (which makes sense.)
-    for itr = 2:length(alldata)
-        if isfield(alldata(itr).parsedEvents.states, 'trial_start_rot_scope')
-            iti_noscan(itr) = alldata(itr).parsedEvents.states.trial_start_rot_scope(1) - (alldata(itr-1).parsedEvents.states.stop_rotary_scope(1)+.5);
-        else
-            iti_noscan(itr) = alldata(itr).parsedEvents.states.start_rotary_scope(1) - (alldata(itr-1).parsedEvents.states.stop_rotary_scope(1)+.5);
-        end
-    end
-    hold on, plot(iti_noscan)
-    
+    [iti_noscan, iti_gui_state] = itiSet(alldata); % ms
+    frameLength = 1000/30.9; % msec.
+    nFrames_iti = round(iti_noscan/frameLength); % nFrames between trials (during iti) that was not imaged.
+
+    lab_iti = num2str(nFrames_iti);
+
+    figure; plot(iti_gui_state/1000)
+    hold on, plot(iti_noscan/1000)    
     xlabel('Trial number')
     ylabel('ITI (s)')
     legend('set in GUI','computed from states','no scanning')
-    
-    
-    %
-    frameLength = 1000/30.9; % sec.
-    nFrames_iti = round(iti_noscan*1000/frameLength); % nFrames between trials (during iti) that was not imaged.
-    lab_iti = num2str(nFrames_iti);
-    
+            
 end
 
 
@@ -340,8 +316,9 @@ for ineu = 1:size(traceFU_toplot{1},2)
     
     
     %% for each iti show how many frames the non-recorded iti equals to.
-    if showitiFrNums
-        x = begFrames(2:end)-1;
+    if showitiFrNums        
+        x = begf(2:end)-1;
+%         x = begFrames(2:end)-1;
         t = NaN(length(alldataDfofGood), 2); % NaN(length(lab_iti)-1,2); % find((csfrs-size(traceFU_toplot{1},1))>0, 1)-2
         for iiti = 1:length(alldataDfofGood)-1 % find((csfrs-size(traceFU_toplot{1},1))>0, 1)-2; % length(lab_iti)-1
             t(iiti,1) = text(x(iiti), mn-.2, num2str(iiti+1)); % trial number of the following trace.

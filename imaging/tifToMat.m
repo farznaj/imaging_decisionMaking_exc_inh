@@ -26,7 +26,7 @@ params = writeCaProcessParams(outName, mousename, imagingFolder, mdfFileNumber, 
 % files = dir(fullfile(tifFold, tiffilename));
 
 chAll = ch2read; % 2; % channelsToRead
-movieMC = cell(1, max([chAll', params.dftRegCh, params.gcampCh])); 
+movieMC = cell(1, max([chAll', params.dftRegCh, params.activityCh])); % params.gcampCh
 for ch = chAll' 
   % Get list of MCM tif files corresponding to channel ch.
   tifNumsCh = params.tifNums(params.tifNums(:,4)==ch,:);

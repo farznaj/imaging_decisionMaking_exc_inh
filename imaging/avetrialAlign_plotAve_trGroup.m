@@ -14,29 +14,32 @@ scaleTime = frameLength;
 
 
 %%
+% alignedEvent = 'trialBeg'; % align on frame 1
+
+%%
 alignedEvent = 'initTone';
 [traces_aligned_fut_initTone, time_aligned_initTone, eventI_initTone] = alignTraces_prePost_allCases...
-    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward);
+    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv);
 
 %%
 alignedEvent = 'stimOn';
 [traces_aligned_fut_stimOn, time_aligned_stimOn, eventI_stimOn] = alignTraces_prePost_allCases...
-    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward);
+    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv);
 
 %%
 alignedEvent = 'goTone';
 [traces_aligned_fut_goTone, time_aligned_goTone, eventI_goTone] = alignTraces_prePost_allCases...
-    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward);
+    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv);
 
 %%
 alignedEvent = '1stSideTry';
 [traces_aligned_fut_1stSideTry, time_aligned_1stSideTry, eventI_1stSideTry] = alignTraces_prePost_allCases...
-    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward);
+    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv);
 
 %%
 alignedEvent = 'reward';
 [traces_aligned_fut_reward, time_aligned_reward, eventI_reward] = alignTraces_prePost_allCases...
-    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward);
+    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv);
 
 
 %%
@@ -62,6 +65,8 @@ fprintf('size of traces_aligned_cat: %d  %d  %d\n', size(traces_aligned_cat))
 
 
 %%%
+correctL = (outcomes==1) & (allResp==1);
+correctR = (outcomes==1) & (allResp==2);
 fprintf('Num correct trials for Left and Right side: %d  %d\n', [sum(correctL), sum(correctR)])
 
 traces_aligned_corrL = traces_aligned_cat(:,:,correctL);
@@ -192,13 +197,15 @@ for ifig = 1:length(figall)-1
             
             tx = eventI_all{isec};
             %         text(el-2, mnx(1)-.002, tx(strfind(tx, '_')+1:end))
-            text(el-2, mnx(2)-.002, tx(strfind(tx, '_')+1:end))
-            
+%             text(el-2, mnx(2)-.002, tx(strfind(tx, '_')+1:end))
+            text(el-2, mnx(2), tx(strfind(tx, '_')+1:end))
+
         end
         
         %%
         xlim([1 xsec(end)])
-        ylim([mn(ineu)-.005  mx(ineu)+.005])
+%         ylim([mn(ineu)-.005  mx(ineu)+.005])
+        ylim([mn(ineu)  mx(ineu)])
         %     xlim([-500 500])
         %     xlabel('Time since event onset (ms)')
         %     ylabel('DF/F')

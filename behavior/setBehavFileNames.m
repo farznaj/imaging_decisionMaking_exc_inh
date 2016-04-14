@@ -101,3 +101,11 @@ for i = 1:length(days2exclude)
 end
 
 
+%% sort files in the same day based on time ... needs work.
+%{
+[~,fn] = fileparts(alldata_fileNames{1});
+a = alldata_fileNames(cellfun(@(x)~isempty(x),cellfun(@(x)strfind(x, fn(1:end-4)), alldata_fileNames, 'uniformoutput', 0)))';
+[~, isf] = sort(cellfun(@(x)x(end-25:end), a, 'uniformoutput', 0));
+alldata_fileNames = alldata_fileNames(isf);
+days_all = days_all(isf);
+%}
