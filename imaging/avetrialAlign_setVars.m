@@ -165,12 +165,11 @@ end
 load(pnevFileName, 'C', 'C_df', 'options') % , 'S')
 if strcmp(options.deconv_method, 'MCMC')
     load(pnevFileName, 'S') % if mcmc
+    spiking = S; % S; % S_mcmc; % S2;
 elseif strcmp(options.deconv_method, 'constrained_foopsi')    
     load(pnevFileName, 'S_df') % if constrained foopsi
+    spiking = S_df; % S; % S_mcmc; % S2;
 end
-
-
-spiking = S_df; % S; % S_mcmc; % S2;
 spikes = spiking'; % frames x units
 
 % load('demo_results_fni17-151102_001.mat', 'C_mcmc', 'C_mcmc_df', 'S_mcmc')
