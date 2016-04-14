@@ -1,4 +1,4 @@
-function [alldata_fileNames, days_all] = setBehavFileNames(subject, days, dayLast, days2exclude, GE)
+function [alldata_fileNames, days_all] = setBehavFileNames(subject, days, dayLast, days2exclude)
 %
 % alldata_fileNames includes the name of behavioral data .mat files specified
 % by the inputs:
@@ -18,10 +18,6 @@ function [alldata_fileNames, days_all] = setBehavFileNames(subject, days, dayLas
 % [alldata_fileNames, days_all] = setBehavFileNames('fni17', {'02-Nov-2015', '24-Sep-2015'});
 
 
-if ~exist('GE', 'var') % for Gamal
-    GE = false;
-end
-
 %%
 day = days{1};
 if nargin < 3
@@ -38,7 +34,7 @@ if nargin < 4
     days2exclude = {};
 end
 
-if ~GE % Farzaneh
+if isempty(strfind(pwd, 'gamalamin')) % Farzaneh
     if ismac
     %     dataPath = '/Users/Farzaneh/Desktop/Farzaneh/data'; % macbook
         dataPath = '/Volumes/churchland/data';

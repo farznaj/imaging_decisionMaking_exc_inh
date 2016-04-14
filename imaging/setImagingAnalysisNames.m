@@ -1,4 +1,4 @@
-function [imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh, pnev2load, GE)
+function [imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh, pnev2load)
 % [imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh)
 % E.g.
 % mousename = 'fni17';
@@ -10,13 +10,9 @@ if ~exist('pnev2load', 'var') || isempty(pnev2load)
     pnev2load = 1; % use the most recent file.
 end
 
-if ~exist('GE', 'var')
-    GE = false;
-end
-
 
 %%
-if ~GE % Farzaneh
+if isempty(strfind(pwd, 'gamalamin')) % Farzaneh
     if ismac    
         dataPath = '/Users/Farzaneh/Desktop/Farzaneh/data'; % macbook
     elseif isunix
