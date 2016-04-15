@@ -18,6 +18,8 @@ imagingFolder = '151102'; % '151021';
 mdfFileNumber = 1; % or tif major
 signalCh = 2;
 
+pnev2load = 4; %[];
+
 setInhibitExcit = true; % if 1, inhibit and excit traces will be set.
     sigTh = 1.2; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
     showResults = false; % set to true so u can evaluate if sigTh is doing a good job.
@@ -56,7 +58,6 @@ frameLength = 1000/30.9; % sec.
 % includes all other vars)
 % remember the last saved pnev mat file will be the pnevFileName
 
-pnev2load = 4; %[];
 [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
 [~,f] = fileparts(pnevFileName);
 disp(f)
@@ -357,6 +358,7 @@ fprintf('Number of trs2rmv: %d\n', length(trs2rmv))
 outcomes(trs2rmv) = NaN; 
 allResp(trs2rmv) = NaN; 
 allResp_HR_LR(trs2rmv) = NaN;
+% stimrate(trs2rmv) = NaN;
 
 
 % save('151102_001.mat', '-append', 'trs2rmv')  % Do this!
@@ -637,7 +639,6 @@ popClassifier
 
 popClassifierSVM_plots
 
-popClassifierSVM_rand
 
 
 

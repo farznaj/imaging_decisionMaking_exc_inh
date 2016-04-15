@@ -168,6 +168,10 @@ xlim([pb pe])
 %% Weighted average of neural responses for all trials and its distribution for hr vs lr trials. U compute this on normalized x bc score=0 as the threshold for hr and lr is defined on the projection of normalized x onto the weights.
 % comapre aggregate beta with beta from only 1 run of svm training.
 xx = spikeAveEp0;
+% a = xx;
+% a(a(:)<.005) = nanmean(xx(:));
+% xx = a;
+
 yy = choiceVec0; % (extraTrs); % choiceVec0
 
 % scale xx

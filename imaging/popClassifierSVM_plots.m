@@ -10,6 +10,9 @@
 traces = traces_al_sm(:, ~NsExcluded, :); % analyze all trials
 av1 = nanmean(nanmean(traces(:,:, choiceVec0==1), 3), 2);
 av2 = nanmean(nanmean(traces(:,:, choiceVec0==0), 3), 2);
+% average for HR vs LR stimulus.
+% av1 = nanmean(nanmean(traces(:,:, stimrate > cb), 3), 2);
+% av2 = nanmean(nanmean(traces(:,:, stimrate < cb), 3), 2);
 
 pb = round((- eventI_stimOn)*frameLength);
 pe = round((size(traces,1) - eventI_stimOn)*frameLength);

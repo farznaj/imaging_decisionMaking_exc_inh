@@ -212,13 +212,15 @@ for r = 1:numRand
         % legend('Actual', 'Model')
         xlim([1 SVMModel.NumObservations])
         
-        
+%         clear cl
+%         for i = 1:100
         % Cross validation: evaluate the Classification Error of the SVM classifier
         CVSVMModel = crossval(SVMModel, 'kfold', 10); % CVSVMModel.Trained{1}: model 1 --> there will be KFold of these models. (by default KFold=10);
         
         classLoss = kfoldLoss(CVSVMModel); % Classification loss (by default the fraction of misclassified data) for observations not used for training
         fprintf('Average cross-validated classification error = %.3f\n', classLoss)
-        
+%         cl(i) = classLoss;
+%         end
         % Estimate cross-validation predicted labels and scores.
         % For every fold, kfoldPredict predicts class labels for in-fold
         % observations using a model trained on out-of-fold observations.
