@@ -215,10 +215,43 @@ for r = 1:numRand
 %         clear cl
 %         for i = 1:100
         % Cross validation: evaluate the Classification Error of the SVM classifier
-        CVSVMModel = crossval(SVMModel, 'kfold', 10); % CVSVMModel.Trained{1}: model 1 --> there will be KFold of these models. (by default KFold=10);
         
-        classLoss = kfoldLoss(CVSVMModel); % Classification loss (by default the fraction of misclassified data) for observations not used for training
-        fprintf('Average cross-validated classification error = %.3f\n', classLoss)
+        classLossTrain = [];
+        classLossTest = [];
+        classLossChanceTrain = [];
+        classLossChanceTest = [];
+        for s = 1:100
+%%  run on PCA reduced averaged frames
+%             [~, X_s, l] = princomp(squeeze(nanmean(traces_al_sm(ep, ~NsExcluded, ~isnan(choiceVec)), 1)).');
+%             X_s = X_s(:, 1:find(cumsum(l/sum(l))>0.5, 1, 'first'));
+%             Y_s = choiceVec(~isnan(choiceVec));
+            %%  run on averaged frames
+%             X_s = squeeze(nanmean(traces_al_sm(ep, ~NsExcluded, ~isnan(choiceVec)), 1)).';
+%             Y_s = choiceVec(~isnan(choiceVec));
+%%   run on non averaged frames
+            X_s = reshape(permute(traces_al_sm(ep, ~NsExcluded, ~isnan(choiceVec)), [1 3 2]),...
+                length(ep)*sum(~isnan(choiceVec)), sum(~NsExcluded));
+            Y_s = repmat(reshape(choiceVec(~isnan(choiceVec)), 1, sum(~isnan(choiceVec))), length(ep), 1);
+            Y_s = Y_s(:);
+%%
+%             SVMModel = fitcsvm(spikeAveEp(shfledIxs, :),
+            SVMModel = fitcsvm(X_s, Y_s, 'standardize', 1, 'ClassNames', cnam, 'crossVal', 'off'); % Linear Kernel
+%             SVMModel = fitcsvm(spikeAveEp(shfledIxs, :), choiceVec(shfledIxs), 'standardize', 1, 'ClassNames', cnam, 'KernelFunction','RBF', 'KernelScale','auto'); % Square Exp Kernel
+            
+            classLossTrain(s) = mean(abs(Y_s-predict(SVMModel, X_s)));
+            CVSVMModel = crossval(SVMModel, 'kfold', 10); % CVSVMModel.Trained{1}: model 1 --> there will be KFold of these models. (by default KFold=10);
+            classLossTest(s) = kfoldLoss(CVSVMModel); % Classification loss (by default the fraction of misclassified data) for observations not used for training
+            
+            Y_s = Y_s(randperm(length(Y_s))); %shuffle labels
+            SVMModelChance = fitcsvm(X_s, Y_s, 'standardize', 1, 'ClassNames', cnam, 'crossVal', 'off'); %  % Linear Kernel
+%             SVMModelChance = fitcsvm(spikeAveEp, choiceVec(shfledIxs), 'standardize', 1, 'ClassNames', cnam, 'KernelFunction','RBF', 'KernelScale','auto') % Square Exp Kernel
+            CVSVMModelChance = crossval(SVMModelChance, 'kfold', 10); % CVSVMModel.Trained{1}: model 1 --> there will be KFold of these models. (by default KFold=10);
+            
+            classLossChanceTrain(s) = mean(abs(Y_s-predict(SVMModelChance, X_s)));
+            classLossChanceTest(s) = kfoldLoss(CVSVMModelChance); % Classification loss (by default the fraction of misclassified data) for observations not used for training
+            s
+        end
+        fprintf('Average cross-validated classification error = %.3f\n', mean(classLoss))
 %         cl(i) = classLoss;
 %         end
         % Estimate cross-validation predicted labels and scores.
@@ -238,6 +271,34 @@ for r = 1:numRand
         plot(elabel)
         title(sprintf('Class Loss = %.3f\n', classLoss))
         
+        figure;
+        subplot(211)
+        hold on
+        hd = hist(classLossTrain, 0:0.02:1);
+        hc = hist(classLossChanceTrain, 0:0.02:1);
+        bar(0:0.02:1, hc, 'facecolor', 0.5*[1 1 1], 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
+%         bar(0:0.02:1, hd, 'facecolor', 'r', 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
+        plot(mean(classLossTrain), 0, 'ko','markerfacecolor', 'r', 'markersize', 6)
+        plot(mean(classLossChanceTrain), 0, 'ko','markerfacecolor', 0.5*[1 1 1], 'markersize', 6)
+        ylabel('Count')
+        xlabel('training loss')
+        xlim([0 1])
+        legend('shuffled', 'data', 'location', 'northwest')
+        legend boxoff
+   
+        subplot(212)
+        hold on
+        hd = hist(classLossTest, 0:0.02:1);
+        hc = hist(classLossChanceTest, 0:0.02:1);
+        bar(0:0.02:1, hc, 'facecolor', 0.5*[1 1 1], 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
+        bar(0:0.02:1, hd, 'facecolor', 'r', 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
+        plot(mean(classLossTest), 0, 'ko','markerfacecolor', 'r', 'markersize', 6)
+        plot(mean(classLossChanceTest), 0, 'ko','markerfacecolor', 0.5*[1 1 1], 'markersize', 6)
+        ylabel('Count')
+        xlabel('cross-validation loss')
+        xlim([0 1])
+        legend('shuffled', 'data', 'location', 'northwest')
+        legend boxoff
         % How claassLoss is computed? I think: classLoss = 1 - mean(label == elabel)
         diff([classLoss, mean(label ~= elabel)])
     end
