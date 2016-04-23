@@ -29,7 +29,6 @@ if isunix
 elseif ispc
     dataPath = '\\sonas-hs.cshl.edu\churchland\data';
 end
-
 tifFold = fullfile(dataPath, mousename, 'imaging', imagingFolder);
 % pathToROIZip = fullfile(tifFold, sprintf('RoiSet_%s_%03d_ch%d_MCM.zip', imagingFolder, mdfFileNumber, roiCh));
 %
@@ -52,15 +51,17 @@ end
 % tifList;
 
 
-%% get mask for eft results
+%% Set mask for eft results by setting a contour on A.
 
 [imfilename, pnevFileName] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh);
 [~,f] = fileparts(pnevFileName);
 disp(f)
 
-
 load(imfilename, 'imHeight', 'imWidth')
+
 load(pnevFileName, 'A') % load('demo_results_fni17-151102_001.mat', 'A2')
+% load(fullfile(tifFold, 'test_aftInitSpUp_multiTrs'), 'A')
+
 spatialComp = A; % A2 % obj.A;
 clear A
     
@@ -73,16 +74,20 @@ mask = maskSet(CC, imHeight, imWidth); % mask_eft
 
 
 %% Compute mean pixel intensity of each ROI for each frame
-% [activity_custom2, rois_custom2] = applyFijiROIsToTifs_customROIs(pathToROIZip, tifList);
-[activity] = applyMaskROIsToTifs(mask, tifList);
+
+activity = applyMaskROIsToTifs(mask, tifList);
 activity_man_eftMask = activity;
+% [activity_custom2, rois_custom2] = applyFijiROIsToTifs_customROIs(pathToROIZip, tifList);
 % activity = activity'; % you are doing this for compatibility with Eft results (num comps x num frames)
 % activity(pmtOffFrames{signalCh},:) = NaN; % we are not doing this here, instead we will do it in
 
 
 %% Append activity to the date_major mat file.
+
+save(pnevFileName, '-append', 'activity_man_eftMask')
 % save(fullfile(tifFold, sprintf('%s_%03d', imagingFolder, mdfFileNumber)), '-append', 'activity_custom2', 'rois_custom2')
-save(fullfile(tifFold, sprintf('%s_%03d', imagingFolder, mdfFileNumber)), '-append', 'activity_man_eftMask')
+% save(fullfile(tifFold, sprintf('%s_%03d', imagingFolder, mdfFileNumber)), '-append', 'activity_man_eftMask')
+% save(fullfile(tifFold, 'test_aftInitSpUp_multiTrs'), '-append', 'activity_man_eftMask')
 
 % activity(pmtOffFrames{signalCh},:) = NaN; % we are not doing this here, instead we will do it in
 

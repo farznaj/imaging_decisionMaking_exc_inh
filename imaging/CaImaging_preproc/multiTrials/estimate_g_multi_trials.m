@@ -1,7 +1,12 @@
-function g = estimate_g_multi_trials(Y,p,lags,fudge_factor)
+function [g,snw] = estimate_g_multi_trials(Y,p,lags,fudge_factor,noise_method)
+
+if nargin < 5 || isempty(noise_method)
+    noise_method = 'mean';
+end
+options.noise_method = noise_method;
 
 if nargin < 4 || isempty(fudge_factor)
-    fudge_factor = 0.98;
+    fudge_factor = 1; 0.98;
 end
 
 if nargin < 3 || isempty(lags)
@@ -38,3 +43,11 @@ rg(rg>1) = 0.95 + 0.001*randn(size(rg(rg>1)));
 rg(rg<0) = 0.15 + 0.001*randn(size(rg(rg<0)));
 pg = poly(fudge_factor*rg);
 g = -pg(2:end);
+
+sn = zeros(Nt,1);
+w = zeros(Nt,1);
+for i = 1:Nt
+    sn(i) = get_noise_fft(Y{i}(:)',options);
+    w(i) = length(Y{i});
+end
+snw = sn'*w/sum(w);

@@ -81,8 +81,8 @@ switch alignedEvent
         eventBef = timeStimOnset;
         eventAft = time1stSideTry;
         
-        nPreFrames = 3;
-        
+        nPreFrames = 3; % 10;
+
         eventInds_f = eventTimeToIdx(eventNow, traceTimeVec);
         
         [~, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);

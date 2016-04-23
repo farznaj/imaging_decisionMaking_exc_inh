@@ -1,9 +1,13 @@
-function [data, trials_per_session] = loadBehavData(alldata_fileNames, defaultHelpedTrs, saveHelpedTrs, doclean)
+function [data, trials_per_session] = loadBehavData(alldata_fileNames, defaultHelpedTrs, saveHelpedTrs, doclean, excludeLastTr)
 %
 % [data, trials_per_session] = loadBehavData(alldata_fileNames);
 
 if ~exist('doclean', 'var') % if true, helpedTrs and inconsistent field names will be taken care of.
     doclean = false;
+end
+
+if ~exist('excludeLastTr', 'var') % if 1, it will remove the last trial if its parsedEvents is empty
+    excludeLastTr = true;
 end
 
 
@@ -44,9 +48,11 @@ for f = 1:length(alldata_fileNames)
     end
     
     
-    %% remove the last trial
+    %% remove the last trial if its parsedEvents is empty
     
-    all_data = all_data(1:end-1);
+    if excludeLastTr && isempty(all_data(end).parsedEvents) % double check this condition
+        all_data = all_data(1:end-1);
+    end
     
     
     %% concatenate all_data of all the mat files in alldata_fileNames

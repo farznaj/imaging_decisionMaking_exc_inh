@@ -1,6 +1,11 @@
-function cs_frtrs = framesPerTrialMovie(mousename, imagingFolder, mdfFileNumber, movieSt, movieEn)
+function [cs_frtrs, firstFullTrial, lastFullTrial, frs_trFirstInMov, frs_trEndInMov, nImagingTrsTotal] = framesPerTrialMovie(mousename, imagingFolder, mdfFileNumber, movieSt, movieEn)
 % cumsum of frame numbers corresponding to each trial recorded in the entire movie of a particular tif movie.
+% In the case of analyzing all movies, cs_frtrs is exactly cumsum of
+% framesPerTrial, but it will also include the last frames that were
+% recorded while bcontrol was aborted.
 
+
+%%
 if ~exist('movieSt', 'var') % cs_frtrs will be computed for the entire movie (not a specific tif minor).
     movieSt = [];
 end
@@ -29,15 +34,25 @@ framesPerTrialNoNaN = framesPerTrial(~isnan(framesPerTrial));
 cs_frtrs_all = unique([0 cumsum(framesPerTrialNoNaN) numRecFrs]); % if some frames were recorded without a trial, add those frames too.
 
 
-%% If looking at all movies:
-if isempty(movieSt)
-    
+%% All movies: 
+
 %     nfrs_perTr_inMovieStEn = [framesPerTrialNoNaN , numRecFrs - sum(framesPerTrialNoNaN)];
-    cs_frtrs = cs_frtrs_all;
+cs_frtrs = cs_frtrs_all;
+
+cc = cumsum(framesPerTrialNoNaN);
+firstFullTrial = 1; 
+lastFullTrial = length(framesPerTrialNoNaN);
+frs_trFirstInMov = 0;
+frs_trEndInMov = numRecFrs - cc(end);
+
+if frs_trEndInMov>0
+    nImagingTrsTotal = length(framesPerTrialNoNaN)+1; % includes the last partial trial that the imaging frames exist but its empty in alldata bc bcontrol was aborted at the middle of this last trial.
+end
     
-    
-    %% If looking at some of the movies:
-else
+
+%% Analyze some of the movies:
+
+if ~isempty(movieSt)   
     
     % Compute number of frames recorded for each tif movie (tifMinor).
     
@@ -57,8 +72,6 @@ else
     
     % find the number of frames for each trial recorded from the start of
     % movieSt to the end of movieEn.
-    movieSt = 4;
-    movieEn = 4;
     
     stFr = cs(movieSt)+1; % 1st frame of movie 4 in the concatenated movie.
     ff = cs_frtrs_all - stFr;
@@ -76,8 +89,14 @@ else
     % without a trial.
     nfrs_perTr_inMovieStEn = [frs_trFirstInMov, framesPerTrialNoNaN(trMovStarted+1 : trMovEnded-1), frs_trEndInMov];
     cs_frtrs = [0 cumsum(nfrs_perTr_inMovieStEn)];
-    
+
+    firstFullTrial = trMovStarted+1; 
+    lastFullTrial = trMovEnded-1;
+
 end
+
+
+
 
 %%
 %{

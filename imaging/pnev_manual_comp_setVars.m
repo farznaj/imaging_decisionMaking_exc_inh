@@ -7,7 +7,7 @@
 
 
 %%
-compareManual = false; % compare with manual method.
+compareManual = true; false; % compare with manual method.
 compareAnotherCh = false; % compare with ROIs and activity on a differnt channel
 plotMatchedTracesAndROIs = 1;
 plotOnlyMatchedTraces = 0;
@@ -15,11 +15,16 @@ plotOnlyMatchedTraces = 0;
 mousename = 'fni17';
 imagingFolder = '151102'; % '151021';
 mdfFileNumber = 1; % or tif major
+pnev2load = []; %7 % 4
 
 signalCh_meth1 = 2; % CC, mask, etc are driven from signalCh_meth1 (usually you use this as Ref, but you can change in pnev_manual_comp_match)
 signalCh_meth2 = 1; % CC2, mask2, etc2 are driven from signalCh_meth2 (or manual method)
 
-[imfilename, pnevFileName] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh_meth1);
+[imfilename, pnevFileName] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh_meth1, pnev2load);
+[~,f] = fileparts(pnevFileName);
+disp(f)
+cd(fileparts(imfilename))
+
 load(imfilename, 'imHeight', 'imWidth', 'sdImage', 'medImage')
 
 im = sdImage{signalCh_meth1}; % ROIs will be shown on im

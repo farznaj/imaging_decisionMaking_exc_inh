@@ -14,11 +14,11 @@
 %%
 % outName = 'fni17-151016';
 mouse = 'fni17';
-imagingFolder = '151102'; % '151021';
+imagingFolder = '151101'; % '151021';
 mdfFileNumber = 1; % or tif major
 signalCh = 2;
 
-pnev2load = 4; %[];
+pnev2load = []; %7 % 4
 
 setInhibitExcit = true; % if 1, inhibit and excit traces will be set.
     sigTh = 1.2; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
@@ -27,7 +27,7 @@ setInhibitExcit = true; % if 1, inhibit and excit traces will be set.
 compareManual = false; % compare results with manual ROI extraction
 plotTraces1by1 = false; % plot traces per neuron and per trial showing all trial events
 
-autoTraceQual = 0; % if 1, automatic measure for trace quality will be used.
+autoTraceQual = 1; % if 1, automatic measure for trace quality will be used.
 examineTraceQual = 0; % if 0, traceQuality array needs to be saved.
     saveTraceQual = 0; % it will only take effect if examineTraceQual is 1.
     analyzeQuality = [1 2]; % 1(good) 2(ok-good) 3(ok-bad) 4(bad) % trace qualities that will be analyzed.
@@ -109,20 +109,21 @@ set(gca,'tickdir','out')
 if compareManual
     
     load(imfilename, 'imHeight', 'imWidth', 'pmtOffFrames')
+    load(pnevFileName, 'activity_man_eftMask')
+%     load(imfilename, 'activity_man_eftMask')
     
-    load(imfilename, 'activity_man_eftMask')
-    
+    %{
     load(imfilename, 'rois', 'activity') % , 'imHeight', 'imWidth', 'pmtOffFrames')
     load(pnevFileName, 'A') % load('demo_results_fni17-151102_001.mat', 'A2')
     spatialComp = A; % A2 % obj.A; 
     clear A
-    
+    %}
     
     %% manual activity and dfof
     activity_man = activity_man_eftMask;
 
-    activity_man = activity;
-    clear activity
+%     activity_man = activity;
+    clear activity activity_man_eftMask
 
     % Compute df/f for the manually found activity trace.
     gcampCh = 2;
@@ -138,6 +139,7 @@ if compareManual
     matchedROI_idx = 1:size(dFOF_man,2); % there is a 1-1 match between ROIs
     
     % set contours for Eft ROIs
+    %{
     contour_threshold = .95;
     [CCorig, CR, COMs] = ROIContoursPnev(spatialComp, imHeight, imWidth, contour_threshold); % P.d1, P.d2
     CC = ROIContoursPnev_cleanCC(CCorig);    
@@ -156,12 +158,12 @@ if compareManual
     refMask = mask_eft;
     toMatchMask = mask_manual;
     matchedROI_idx = matchROIs_sumMask(refMask, toMatchMask); % matchedROI_idx(i)=j means ROI i of refMask matched ROI j of toMatchMask.
-
+    %}
     
 end
 
 
-%% Load vars related to Eftychios method
+%% Set spikes, activity, dFOF by loading vars from Eftychios output
 
 load(pnevFileName, 'C', 'C_df', 'options') % , 'S')
 if strcmp(options.deconv_method, 'MCMC')
@@ -172,6 +174,19 @@ elseif strcmp(options.deconv_method, 'constrained_foopsi')
     spiking = S_df; % S; % S_mcmc; % S2;
 end
 spikes = spiking'; % frames x units
+
+if size(C,2) ~= size(C_df,2) % iti-nans were inserted in C and S. remove them.
+    load(pnevFileName, 'Nnan_nanBeg_nanEnd')
+    nanBeg =  Nnan_nanBeg_nanEnd(2,:);
+    nanEnd = Nnan_nanBeg_nanEnd(3,:);
+    inds2rmv = cell2mat(arrayfun(@(x,y)(x:y), nanBeg, nanEnd, 'uniformoutput', 0)); % index of nan-ITIs (inferred ITIs) on C and S traces.
+    C(:, inds2rmv) = [];    
+   
+    if size(spikes,1) ~= size(C_df,2)
+        spikes(inds2rmv,:) = [];    
+    end
+end
+
 
 % load('demo_results_fni17-151102_001.mat', 'C_mcmc', 'C_mcmc_df', 'S_mcmc')
 

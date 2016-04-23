@@ -56,7 +56,7 @@ end
 %%
 if exist('badAlignTrStartCode', 'var')
     % Ttrials that alignment of behavior and imaging cannot be performed, i.e. badAlignTrStartCode, and trialStartMissing trials
-    trs_problemAlign = unique([find(badAlignTrStartCode)==1, find(trialStartMissing)==1]);
+    trs_problemAlign = unique([find(badAlignTrStartCode==1), find(trialStartMissing==1)]);
     
     % Trials including pmtOffFrames and bigMotion (badFrames).
     trs_badMotion_pmtOff = unique([find([alldata.anyBadFrames]==1), find([alldata.anyPmtOffFrames]==1)]);

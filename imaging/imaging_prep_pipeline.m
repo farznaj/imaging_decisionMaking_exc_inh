@@ -5,27 +5,35 @@ hpc_dir = '\\sonas-hs.cshl.edu\churchland-hpc-home\fnajafi\matlab';
 if ispc, cd(hpc_dir), end
 
 %%
-mouse = 'fni17';
-imagingFolder = '151102';
+mousename = 'fni17';
+imagingFolder = '151101';
 mdfFileNumber = 1; % or tif major
-outName = [mouse,'-',imagingFolder, '-', num2str(mdfFileNumber)]
+outName = [mousename,'-',imagingFolder, '-', num2str(mdfFileNumber)]
 
 P = struct;
-P.concatTempUpdate = 0; 
+P.saveParams = true; % if 0, you don't need outName then.
+
+P.multiTrs = 1; % remember if this is 1 you need to run the trialization part below to save cs_frtrs and Nnan to imfilename.
+P.ARmodelOrder = 0; % 2;
+P.orderROI_extractDf = 0; % true;
+
+P.numComps = 500; % remember to set to 30 or smaller for tests!
+P.tempSub = 3;
+P.spaceSub = 2;
+
 P.signalCh = 2; % channel whose signal activity you want to analyze (normally 2 for gcamp channel).
 P.channelsToRead = 2; % []; % it will be only used when MC is done. if motion correction is done, specify what channels to read (which later will be used for computing average images and eftychios's algorithm).
-P.saveParams = true; % if 0, you don't need outName then.
 
 P.motionCorrDone = 1;
 P.saveGoodMovieStats = 0;
 P.pnevActivity = 1; % whether to run Eftychios's algorithm or not.
 
 P.regFrameNums = {2}; % noMotionTr
+P.regFileNums = [1 1 1]; %[2 1 1] % file to use for motion correction major, minor, channel
 
 P.tifMinor = []; %[]; % set to [] if you want all tif minor files to be analyzed.
 P.pmt_th = []; % 1400;
 
-P.regFileNums = [1 1 1]; %[2 1 1] % file to use for motion correction major, minor, channel
 P.headerBug = 0;
 P.channelsToWrite = [1,2];
 P.maxMaskWidth = 30;
@@ -33,11 +41,8 @@ P.analysisFolder = 0;
 
 P.behavName = '';
 
-P.numComps = 300; % 200
-P.tempSub = 3;
-P.spaceSub = 2;
-P.save_merging_vars = true;
 
+P.save_merging_vars = true;
 % P.parallelTempUpdate = true; % false;
 P.save4debug = false; % false;
 P.doPlots = false;
@@ -56,7 +61,9 @@ behavName = {behavdir.name};
 
 
 %%
-writeCaProcessParams(outName, mouse, imagingFolder, mdfFileNumber, P);
+% remember to cd to the foler that contains the improcparams folder!
+
+params = writeCaProcessParams(outName, mousename, imagingFolder, mdfFileNumber, P);
 
 % writeCaProcessParams(outName, mousename, imagingFolder, mdfFileNumber, signalCh, regFileNums, noMotionTr,....
 %     behavName, '', headerBug, channelsToWrite, maxMaskWidth, motionCorrDone, analysisFolder, pmt_th, channelsToRead, saveGoodMovieStats, pnevActivity, tifMinor);
@@ -72,26 +79,39 @@ processCaImagingMCPnev(outName)
 
 
 
-%% set some parameters.
+%% Set behavFileName, binaryfileName, frameCountFileName
+
 % load params file
 % hpc_dir = '\\sonas-hs.cshl.edu\churchland-hpc-home\fnajafi\matlab';
 % outName = 'fni17-151016';
 % load(fullfile(hpc_dir, 'improcparams',outName))
+dataPath = '\\sonas-hs.cshl.edu\churchland\data'; % lab PC
 
-mouse = 'fni17';
-imagingFolder = '151102'; % '151021';
+mousename = 'fni17';
+imagingFolder = '151101'; % '151021';
 mdfFileNumber = 1; % or tif major
 signalCh = 2;
 
-[imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh);
+[imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh);
 
 % Set behavFile, binFiles, and framecountFiles (Related to behavior and
 % trialization).
 params.headerBug = 0;
-behavName = dir(fullfile(dataPath, mouse, 'behavior', [mouse, '_', datestr(datenum(imagingFolder(1:6), 'yymmdd')), '*.mat']));
+%{
+behavName = dir(fullfile(dataPath, mousename, 'behavior', [mousename, '_', datestr(datenum(imagingFolder(1:6), 'yymmdd')), '*.mat']));
 behavName = {behavName.name};
 behavName = behavName{mdfFileNumber};
-params.behavFile = fullfile(dataPath, mouse, 'behavior', behavName);
+params.behavFile = fullfile(dataPath, mousename, 'behavior', behavName);
+%}
+% set filenames
+[alldata_fileNames, ~] = setBehavFileNames(mousename, {datestr(datenum(imagingFolder, 'yymmdd'))});
+% sort it
+[~,fn] = fileparts(alldata_fileNames{1});
+a = alldata_fileNames(cellfun(@(x)~isempty(x),cellfun(@(x)strfind(x, fn(1:end-4)), alldata_fileNames, 'uniformoutput', 0)))';
+[~, isf] = sort(cellfun(@(x)x(end-25:end), a, 'uniformoutput', 0));
+alldata_fileNames = alldata_fileNames(isf);
+params.behavFile = alldata_fileNames{mdfFileNumber};
+% showcell(params.behavFile)
 
 params.binFiles = {};
 params.framecountFiles = {};
@@ -99,8 +119,107 @@ for m = mdfFileNumber
     params.binFiles{end+1} = fullfile(tifFold, sprintf('%s_%03d.bin', imagingFolder(1:6), m));
     params.framecountFiles{end+1} = fullfile(tifFold, sprintf('framecounts_%03d.txt', m));
 end
+showcell(params.binFiles)
+showcell(params.framecountFiles)
+
+   
+%% Load alldata
+
+% load(params.behavFile, 'all_data')
+excludeLastTr = 0; % don't exclude the last trial. You need it this way for alignment purposes with the imaging data.
+[all_data, ~] = loadBehavData(alldata_fileNames(mdfFileNumber), [], [], [], excludeLastTr);
+fprintf('Total number of trials: %d\n', length(all_data))
+% load(imfilename, 'all_data')  % this one has the additinal imaging and mouse helped fields.
+
+
+%% Get trialization-related parameters
+
+%   fname = 'framesPerTrialStopStart3An_fn';
+%   eval([fname,'(params.binFiles{f}, params.framecountFiles{f}, params.headerBug, all_data)'])
+  
+framesPerTrial = cell(1, length(params.binFiles));
+trialNumbers = cell(1, length(params.binFiles));
+frame1RelToStartOff = cell(1, length(params.binFiles));
+badAlignTrStartCode = cell(1, length(params.binFiles));
+trialStartMissing = cell(1, length(params.binFiles));
+framesPerTrial_galvo = cell(1, length(params.binFiles));
+
+% you combined framesPerTrialStopStart3An_fn and
+% framesPerTrialStopStart3An_fn2, so no need to check for data anymore!
+
+% if str2double(imagingFolder) < 151101
+    for f = 1:length(params.binFiles)
+        [framesPerTrial{f}, trialNumbers{f}, frame1RelToStartOff{f}, badAlignTrStartCode{f}, framesPerTrial_galvo{f}, trialStartMissing{f}] = ...
+            framesPerTrialStopStart3An_fn(params.binFiles{f}, params.framecountFiles{f}, params.headerBug, all_data);
+    end
+% else % starting from 151101 you added the state trial_start_rot_scope which lasts for 36ms and sends the trialStart signal. so you can use simpler codes for finding framesPerTrial.
+%     for f = 1:length(params.binFiles)
+%         [framesPerTrial{f}, trialNumbers{f}, frame1RelToStartOff{f}, badAlignTrStartCode{f}, framesPerTrial_galvo{f}] = ...
+%             framesPerTrialStopStart3An_fn2(params.binFiles{f}, params.framecountFiles{f}, params.headerBug, all_data);
+%     end    
+% end
+
+framesPerTrial = [framesPerTrial{:}];
+trialNumbers = [trialNumbers{:}]; % trial number found by the trialStart signal (sent from bcontrol to mscan).
+frame1RelToStartOff = [frame1RelToStartOff{:}];
+badAlignTrStartCode = [badAlignTrStartCode{:}];
+trialStartMissing = [trialStartMissing{:}];
+framesPerTrial_galvo = [framesPerTrial_galvo{:}];
+  
+  
+%%
+save(imfilename, '-append', 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'badAlignTrStartCode', 'trialStartMissing')
+
+
+%% Get vars for running Efythios algorith for the multi-trial case
+
+[cs_frtrs, Nnan] = update_tempcomps_multitrs_setvars(mousename, imagingFolder, mdfFileNumber);
+% [cs_frtrs, Nnan] = update_tempcomps_multitrs_setvars(mousename, imagingFolder, mdfFileNumber, allTifMinors, tifMinor);
+
+
+%%
+save(imfilename, '-append', 'cs_frtrs', 'Nnan')
+
+
+%% Some tests for frame numbers per trial
+
+% find trials that were not recorded in mscan, and see if it is bc of short iti.
+trmiss = find(~ismember(1:length(trialNumbers), trialNumbers));
+
+% compare frame numbers per trial driven from bcontrol states with frameCounts in the text file and frame numbers driven from the galvo analog signal.
+frameLength = 1000 / 30.9;
+nfrs = NaN(1, min(length(all_data)-1, sum(~isnan(framesPerTrial))));
+for tr = 1 : min(length(all_data)-1, sum(~isnan(framesPerTrial)))
+    % duration of a trial in mscan (ie duration of scopeTTL being sent).
+    durtr = all_data(tr).parsedEvents.states.stop_rotary_scope(1)*1000 + 500 - ...
+        all_data(tr).parsedEvents.states.start_rotary_scope(1)*1000; % 500 is added bc the duration of stop_rotary_scope is 500ms.
+    nfrs(tr) = durtr/ frameLength;
+end
+nfrs(trmiss) = [];
+framesBcontrol = floor(nfrs);
+framesBcontrol = [framesBcontrol NaN];
+
+minl = min(length(framesPerTrial), length(framesPerTrial_galvo));
+trNum_framsBcontrol_framesMscan_framesGalvo_bcontrolMinusMscan = [(1:minl)', ...
+    framesBcontrol(1:minl)', framesPerTrial(1:minl)', framesPerTrial_galvo(1:minl)', [framesBcontrol(1:minl) - framesPerTrial(1:minl)]']
+
+figure; plot(trNum_framsBcontrol_framesMscan_framesGalvo_bcontrolMinusMscan(:,2:end-1));
+
+
+if ~isempty(trmiss)
+    fprintf('Index of trials not recorded in MScan: %d\n', trmiss)
     
-    
+    % duration of no scopeTTL, preceding the trial
+    dur_nottl = NaN(1,length(all_data)-1);
+    for tr = 2:length(all_data)-1
+        dur_nottl(tr) = all_data(tr).parsedEvents.states.start_rotary_scope(1)*1000 - all_data(tr-1).parsedEvents.states.stop_rotary_scope(1)*1000;
+    end
+    fprintf('noTTL duration of trials not recorded in MScan: %d\n', dur_nottl(trmiss))
+end
+
+
+
+
 %% manual RIO selection  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Write to tif the average images %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
 
@@ -161,7 +280,7 @@ end
 
 %% compute activity for manually selected ROIs
 roiCh = 2; % channel on which ROIs was found. you can find activity on signalCh=1 using rois found roiCh=2;
-[activity, rois] = manualROIactivity(mouse, imagingFolder, mdfFileNumber, signalCh, roiCh);
+[activity, rois] = manualROIactivity(mousename, imagingFolder, mdfFileNumber, signalCh, roiCh);
 % activity(pmtOffFrames{signalCh},:) = NaN; % we are not doing this here, instead we will do it in 
 
 % plot ROIs found manually on the sdImage
@@ -174,82 +293,6 @@ for ir = 1:length(rois)
     plot(rois{ir}.mnCoordinates(:,1), rois{ir}.mnCoordinates(:,2), '-', 'color', colors(ir,:))
 end
 
-
-
-
-
-
-%% load alldata
-load(params.behavFile, 'all_data')
-% load(imfilename, 'all_data')  % this one has the additinal imaging and mouse helped fields.
-
-
-%% Get trialization-related parameters
-%   fname = 'framesPerTrialStopStart3An_fn';
-%   eval([fname,'(params.binFiles{f}, params.framecountFiles{f}, params.headerBug, all_data)'])
-  
-framesPerTrial = cell(1, length(params.binFiles));
-trialNumbers = cell(1, length(params.binFiles));
-frame1RelToStartOff = cell(1, length(params.binFiles));
-badAlignTrStartCode = cell(1, length(params.binFiles));
-trialStartMissing = cell(1, length(params.binFiles));
-framesPerTrial_galvo = cell(1, length(params.binFiles));
-
-if str2double(imagingFolder) < 151101
-    for f = 1:length(params.binFiles)
-        [framesPerTrial{f}, trialNumbers{f}, frame1RelToStartOff{f}, badAlignTrStartCode{f}, framesPerTrial_galvo{f}, trialStartMissing{f}] = ...
-            framesPerTrialStopStart3An_fn(params.binFiles{f}, params.framecountFiles{f}, params.headerBug, all_data);
-    end
-else % starting from 151101 you added the state trial_start_rot_scope which lasts for 36ms and sends the trialStart signal. so you can use simpler codes for finding framesPerTrial.
-    for f = 1:length(params.binFiles)
-        [framesPerTrial{f}, trialNumbers{f}, frame1RelToStartOff{f}, badAlignTrStartCode{f}, framesPerTrial_galvo{f}] = ...
-            framesPerTrialStopStart3An_fn2(params.binFiles{f}, params.framecountFiles{f}, params.headerBug, all_data);
-    end    
-end
-
-framesPerTrial = [framesPerTrial{:}];
-trialNumbers = [trialNumbers{:}]; % trial number found by the trialStart signal (sent from bcontrol to mscan).
-frame1RelToStartOff = [frame1RelToStartOff{:}];
-badAlignTrStartCode = [badAlignTrStartCode{:}];
-trialStartMissing = [trialStartMissing{:}];
-framesPerTrial_galvo = [framesPerTrial_galvo{:}];
-  
-  
-%%
-save(imfilename, 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'badAlignTrStartCode', 'trialStartMissing', '-append')
-
-
-%% some tests
-% find trials that were not recorded in mscan, and see if it is bc of short iti.
-trmiss = find(~ismember(1:length(trialNumbers), trialNumbers));
-
-% compare frame numbers per trial driven from bcontrol states with frameCounts in the text file and frame numbers driven from the galvo analog signal.
-frameLength = 1000 / 30.9;
-nfrs = NaN(1, min(length(all_data)-1, sum(~isnan(framesPerTrial))));
-for tr = 1 : min(length(all_data)-1, sum(~isnan(framesPerTrial)))
-    % duration of a trial in mscan (ie duration of scopeTTL being sent).
-    durtr = all_data(tr).parsedEvents.states.stop_rotary_scope(1)*1000 + 500 - ...
-        all_data(tr).parsedEvents.states.start_rotary_scope(1)*1000; % 500 is added bc the duration of stop_rotary_scope is 500ms.
-    nfrs(tr) = durtr/ frameLength;
-end
-nfrs(trmiss) = [];
-framesBcontrol = floor(nfrs);
-framesBcontrol = [framesBcontrol NaN];
-
-trNum_framsBcontrol_framesMscan_framesGalvo_bcontrolMinusMscan = [(1:length(framesPerTrial))', framesBcontrol', framesPerTrial', framesPerTrial_galvo(1:length(framesPerTrial))', [framesBcontrol - framesPerTrial]']
-figure; plot(trNum_framsBcontrol_framesMscan_framesGalvo_bcontrolMinusMscan(:,2:end-1));
-
-
-if ~isempty(trmiss)
-    fprintf('Index of trials not recorded in MScan: %d\n', trmiss)
-    
-    % duration of no scopeTTL, preceding the trial
-    dur_nottl = NaN(1,length(all_data)-1);
-    for tr = 2:length(all_data)-1
-        dur_nottl(tr) = all_data(tr).parsedEvents.states.start_rotary_scope(1)*1000 - all_data(tr-1).parsedEvents.states.stop_rotary_scope(1)*1000;
-    end
-    fprintf('noTTL duration of trials not recorded in MScan: %d\n', dur_nottl(trmiss))
-end
 
 
 %%
