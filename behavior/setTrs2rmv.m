@@ -53,7 +53,9 @@ end
 % len_fract_trs2rmv = [length(trs2rmv) length(trs2rmv)/length(alldata)]
 
 
-%%
+%% If you care about imaging data, then you need to run this part.
+% but if it is all behavior, you don't need to run this section.
+
 if exist('badAlignTrStartCode', 'var')
     % Ttrials that alignment of behavior and imaging cannot be performed, i.e. badAlignTrStartCode, and trialStartMissing trials
     trs_problemAlign = unique([find(badAlignTrStartCode==1), find(trialStartMissing==1)]);
@@ -61,11 +63,15 @@ if exist('badAlignTrStartCode', 'var')
     % Trials including pmtOffFrames and bigMotion (badFrames).
     trs_badMotion_pmtOff = unique([find([alldata.anyBadFrames]==1), find([alldata.anyPmtOffFrames]==1)]);
     
-    % trials that were not triggered in mscan
-    trs_notScanned = find(trialCodeMissing==1);
+    % trials that miss trialCode signal.
+    trs_noTrialCode = find(trialCodeMissing==1);
     
+    % trials that were not imaged. (I believe trs_noTrialCode is a subset
+    % of trs_notScanned).
+    trs_notScanned = find([alldata.hasActivity]==0);
     
-    trs2rmv = unique([trs2rmv; trs_problemAlign(:); trs_badMotion_pmtOff(:); trs_notScanned(:)]);
+    trs2rmv = unique([trs2rmv; trs_problemAlign(:); trs_badMotion_pmtOff(:); trs_noTrialCode(:); trs_notScanned(:)]);
+
 end
 
 

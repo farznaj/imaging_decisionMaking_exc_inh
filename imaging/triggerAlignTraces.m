@@ -64,6 +64,7 @@ timeEventAlign = scaleTime * ((1:size(traceEventAlign, 1)) - m) + shiftTime;
 %% set number of trials that contribute to each frame of traceEventAlign
 
 nvalidtrs = sum(~isnan(traceEventAlign),3); % frames x neurons; number of trials that contribute to each frame for each neuron.
-nvalidtrs = nvalidtrs(:,1);
+nvalidtrs = nvalidtrs(:, find(sum(nvalidtrs,1), 1)); % take nvalidtrs from the 1st neuron that is not nan (ie is a good unit).
+% nvalidtrs = nvalidtrs(:,1);
 
 

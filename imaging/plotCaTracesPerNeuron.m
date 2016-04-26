@@ -195,7 +195,7 @@ if plotTrs1by1
     end
     
     %     blPrecedEvent = NaN(size(alldataDfofGood{1},2), length(alldataDfofGood)); % neurons x trials
-    blPrecedEvent = NaN(size(traceFU_toplot{1},2), length(framesPerTr));
+    blPrecedEvent = NaN(size(traceFU_toplot{1},2), length(alldataDfofGood)); % length(framesPerTr));
     % figure;
     for itr = 1: length(alldataDfofGood) % find((csfrs-size(traceFU_toplot{1},1))>0, 1)-2; % size(blPrecedEvent,2) % the 1st is prefered in case you don't have trace of the entire session
         if ~isnan(eventTime(itr))
@@ -320,7 +320,7 @@ for ineu = 1:size(traceFU_toplot{1},2)
         x = begf(2:end)-1;
 %         x = begFrames(2:end)-1;
         t = NaN(length(alldataDfofGood), 2); % NaN(length(lab_iti)-1,2); % find((csfrs-size(traceFU_toplot{1},1))>0, 1)-2
-        for iiti = 1:length(alldataDfofGood)-1 % find((csfrs-size(traceFU_toplot{1},1))>0, 1)-2; % length(lab_iti)-1
+        for iiti = 1:length(begf)-2 % length(alldataDfofGood)-1 % find((csfrs-size(traceFU_toplot{1},1))>0, 1)-2; % length(lab_iti)-1
             t(iiti,1) = text(x(iiti), mn-.2, num2str(iiti+1)); % trial number of the following trace.
             t(iiti,2) = text(x(iiti), mn-.45, lab_iti(iiti+1,:)); % non-imaged frames preceding the following trace.
         end
@@ -465,7 +465,8 @@ for ineu = 1:size(traceFU_toplot{1},2)
             plot([timev(1) timev(end)], [blDfof(ineu) blDfof(ineu)], 'r:')
             
             %%
-            xlim([timev(1) timev(end)])
+%             xlim([timev(1) timev(end)])
+            xlim([wheelTimes(1) wheelTimes(end)])
             %             ylim([min(toplot(:))-.02  max(bl_th, max(toplot(:)))+.02])
             %             ylim([min([toplot(:); wheelRev])-.02  max(bl_th, max(toplot(:)))+.02])
             set(gca,'tickdir','out')

@@ -111,7 +111,7 @@ end
 nr = 7; nc = 7;
 figall = [0: nr*nc: nu , nu];
 
-for ifig = 1:length(figall)-1
+for ifig = randi(length(figall)-1) % 1:length(figall)-1 % look at all neurons:   % randi(length(figall)-1) % look at a subset of neurons.
     
     figure('name', sprintf('Neurons %d-%d', figall(ifig)+1, figall(ifig+1)));
     ha = tight_subplot(nr,nc,[.03 .02],[.03 .001],[.03 .001]);

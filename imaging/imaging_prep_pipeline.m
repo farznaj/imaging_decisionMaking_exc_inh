@@ -87,8 +87,8 @@ processCaImagingMCPnev(outName)
 dataPath = '\\sonas-hs.cshl.edu\churchland\data'; % lab PC
 
 mousename = 'fni17';
-imagingFolder = '151029'; % '151021';
-mdfFileNumber = 3; % or tif major
+imagingFolder = '151101'; % '151021';
+mdfFileNumber = 1; % or tif major
 signalCh = 2;
 
 [imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh);
@@ -346,3 +346,38 @@ username = 'fnajafi';
 outName = [mousename,'-',imagingFolder];
 load(fullfile(username, 'matlab', 'improcparams', outName), 'params');
 %}
+
+
+
+
+%% If ch1 average images were saved separately from ch2 average images, combine them into the same var and save them again.
+
+date_major
+load([date_major,'_ch1'])
+
+meda = medImage;
+ranga = rangeImage;
+maxa = maxImage;
+sda = sdImage;
+
+load(date_major, 'medImage', 'maxImage', 'rangeImage', 'sdImage')
+medImage{1} = meda{1};
+rangeImage{1} = ranga{1};
+maxImage{1} = maxa{1};
+sdImage{1} = sda{1};
+
+
+aveImages = {'medImage', 'maxImage', 'rangeImage', 'sdImage'};
+for i=1:length(aveImages)
+    top = eval(aveImages{i});
+    figure; 
+    for ii=1:2,
+        subplot(2,1,ii)
+        imagesc(top{ii})
+    end
+end
+
+
+%%
+save(date_major, '-append', 'medImage', 'maxImage', 'rangeImage', 'sdImage')
+

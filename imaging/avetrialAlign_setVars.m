@@ -14,8 +14,8 @@
 %%
 % outName = 'fni17-151016';
 mouse = 'fni17';
-imagingFolder = '151101'; % '151021';
-mdfFileNumber = 1; % or tif major
+imagingFolder = '151029'; % '151021';
+mdfFileNumber = 3; % or tif major
 signalCh = 2;
 
 pnev2load = []; %7 % 4
@@ -76,7 +76,7 @@ a = alldata_fileNames(cellfun(@(x)~isempty(x),cellfun(@(x)strfind(x, fn(1:end-4)
 alldata_fileNames = alldata_fileNames(isf);
 % load the one corresponding to mdffilenumber.
 [all_data, ~] = loadBehavData(alldata_fileNames(mdfFileNumber)); % , defaultHelpedTrs, saveHelpedTrs); % it removes the last trial too.
-fprintf('Total number of trials: %d\n', length(all_data))
+fprintf('Total number of behavioral trials: %d\n', length(all_data))
 
 
 % begTrs = [0 cumsum(trials_per_session)]+1;
@@ -103,6 +103,29 @@ set(gca,'tickdir','out')
 - total waitdur (ie since stim onset, when mouse was allowed to do cent commit) equals waitDuration + postStimDelay
 %}
 
+
+load(imfilename, 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'badFrames', 'pmtOffFrames', 'trialCodeMissing')
+trialNumbers(isnan(framesPerTrial)) = [];
+frame1RelToStartOff(isnan(framesPerTrial)) = [];
+framesPerTrial(isnan(framesPerTrial)) = [];
+
+if ~exist('trialCodeMissing', 'var') % for those days that you didn't save this var.
+    trialCodeMissing = [];
+end
+
+fprintf('Total number of imaged trials: %d\n', length(trialNumbers))
+if ~any(trialCodeMissing)
+    fprintf('All trials are triggered :)\n')
+else
+    fprintf('There are non-triggered trials! Trial %d\n', find(trialCodeMissing))
+end
+
+
+
+
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%% Load neural data, merge them into all_data, and assess trace quality %%%%%%%%%%%%%%%%%%%%%%%
 
 %% Load vars related to manual method
 
@@ -163,7 +186,7 @@ if compareManual
 end
 
 
-%% Set spikes, activity, dFOF by loading vars from Eftychios output
+%% Set spikes, activity, dFOF by loading vars from Eftychios output, and merge them into alldata
 
 load(pnevFileName, 'C', 'C_df', 'options') % , 'S')
 if strcmp(options.deconv_method, 'MCMC')
@@ -175,7 +198,7 @@ elseif strcmp(options.deconv_method, 'constrained_foopsi')
 end
 spikes = spiking'; % frames x units
 
-if size(C,2) ~= size(C_df,2) % iti-nans were inserted in C and S. remove them.
+if size(C,2) ~= size(C_df,2) % iti-nans were inserted in C and S: remove them.
     load(pnevFileName, 'Nnan_nanBeg_nanEnd')
     nanBeg =  Nnan_nanBeg_nanEnd(2,:);
     nanEnd = Nnan_nanBeg_nanEnd(3,:);
@@ -187,6 +210,10 @@ if size(C,2) ~= size(C_df,2) % iti-nans were inserted in C and S. remove them.
     end
 end
 
+an = find(~sum(~isnan(C),2));
+if ~isempty(an)
+    warning(sprintf('The trace of neuron(s) %i is all NaN!', an));
+end
 
 % load('demo_results_fni17-151102_001.mat', 'C_mcmc', 'C_mcmc_df', 'S_mcmc')
 
@@ -209,16 +236,7 @@ dFOF = temporalDf';
 clear temporalComp temporalDf spiking
 
 
-
-%%
-%%%%%%%%%%%%%%%%%%%%%%%%% Take care of behavioral data (all_data) %%%%%%%%%%%%%%%%%%%%%%%
-
-%% Add the following imaging fields to all_data (before removing any trials): activity, dFOF, spikes
-
-load(imfilename, 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'badFrames', 'pmtOffFrames')
-trialNumbers(isnan(framesPerTrial)) = [];
-frame1RelToStartOff(isnan(framesPerTrial)) = [];
-framesPerTrial(isnan(framesPerTrial)) = [];
+%% Merge imaging variables into all_data (before removing any trials): activity, dFOF, spikes
 
 minPts = 7000; %800;
 [all_data, mscanLag] = mergeActivityIntoAlldata_fn(all_data, activity, framesPerTrial, ...
@@ -242,24 +260,101 @@ all_data = setHelpedTrs(all_data, defaultHelpedTrs, saveHelpedTrs, alldata_fileN
 %}
   
 
-%% Clean all_data (if there are some last trials that are recorded in bcontrol but not mscan, remove them.)
+%% Take care of trials that are in alldata but not in imaging data.
 
+%{
 if sum(~ismember(1:length(trialNumbers), trialNumbers))~=0
     error('There are non-triggered trials in mscan! Decide how to proceed!')
     % try this:
     % remove the trial that was not recorded in MScan
     all_data(~ismember(1:length(trialNumbers), trialNumbers)) = []; % FN note: double check this.
 end
-
 alldata = all_data(trialNumbers); % in case mscan crashed, you want to remove trials that were recorded in bcontrol but not in mscan.
+%}
+
+alldata = all_data;
+
 % clear all_data
-
 % alldata = alldata(1:end-1);  % you commented it here and added it above. loadBehavData by default removes the last trial.   % alldata = removeBegEndTrs(alldata, thbeg);
-fprintf('Total number of imaged trials: %d\n', length(alldata))
+% fprintf('Total number of imaged trials: %d\n', length(alldata))
 
+
+% Add NaN for alldata.dFOF, spikes, and activity of those trials that were
+% not imaged (either at the end, or at the middle due to mscan failure.)
+
+% For trials that were not imaged, set frameTimes, dFOF, spikes and activity traces to all nans (size:
+% min(framesPerTrial) x #neurons).
+[alldata([alldata.hasActivity]==0).dFOF] = deal(NaN(min(framesPerTrial), size(dFOF,2)));
+[alldata([alldata.hasActivity]==0).spikes] = deal(NaN(min(framesPerTrial), size(dFOF,2)));
+[alldata([alldata.hasActivity]==0).activity] = deal(NaN(min(framesPerTrial), size(dFOF,2)));
+[alldata([alldata.hasActivity]==0).frameTimes] = deal(NaN(1, min(framesPerTrial)));
+
+
+%% Assess trace quality of each neuron
+
+if examineTraceQual    
+%     assessCaTraceQaulity % another script to look at traces 1 by 1.
+
+    inds2plot = randperm(size(activity,2));
+    traceQuality = plotEftManTracesROIs(dFOF', spikes', [], [], [], [], [], [], [], activity', inds2plot, 1, 0, []);
+
+    if saveTraceQual
+        save(imfilename, 'traceQuality', '-append')
+    end
+    goodNeurons = ismember(traceQuality, analyzeQuality);
+end
+
+    
+%% Automatic assessment of trace quality
+
+% Compute measures of trace quality
+if autoTraceQual
+    [avePks2sdS, aveProm2sdS, measQual] = traceQualMeasure(dFOF', spikes');
+
+    % Sort traces
+    [sPks, iPks] = sort(avePks2sdS);
+    [sProm, iProm] = sort(aveProm2sdS);
+    [sPksProm, iPksProm] = sort(avePks2sdS .* aveProm2sdS);
+    [sMeasQual, iMeasQual] = sort(measQual);
+
+    % badQual = find(avePks2sdS<3 | aveProm2sdS<1);
+    badQual = iMeasQual(sMeasQual<0);
+    % look at badQual neurons
+%     plotCaTracesPerNeuron({dFOF(:, badQual)}, 0, 0, 1, [], []) 
+
+    goodNeurons = true(1,length(avePks2sdS));
+    goodNeurons(badQual) = false;
+    
+    % order based on automatic measure
+    goodnessOrder = iMeasQual(sMeasQual>=0); % ascending order of neurons based on trace quality
+    goodnessOrder = goodnessOrder(end:-1:1); % descending order
+end
+% fprintf('N good-quality and all neurons: %d, %d. Ratio: %.2f\n', [sum(goodNeurons), size(activity,2), sum(goodNeurons)/ size(activity,2)]); % number and fraction of good neurons vs number of all neurons.
+
+
+% set goodinds: an array of length of all neurons, with 1s indicating good and 0s bad neurons.
+if ~any([autoTraceQual, examineTraceQual])  % if no trace quality examination (auto or manual), then include all neurons.
+    goodinds = true(1, size(dFOF,2)); %    goodnessOrder = 1:size(dFOF,2);    goodNeurons = 1:size(dFOF,2);
+elseif orderTraces % descending based on the measure of quality
+    error('the code below needs work. goodinds is supposed to be logical not tr numbers.')
+    goodinds = goodnessOrder; 
+else % stick to the original order
+    goodinds = goodNeurons;
+end
+
+fprintf('N good-quality and all neurons: %d, %d. Ratio: %.2f\n', [sum(goodinds), size(activity,2), sum(goodinds)/ size(activity,2)]); % number and fraction of good neurons vs number of all neurons.
+
+
+
+
+
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%% Take care of behavioral data (all_data) %%%%%%%%%%%%%%%%%%%%%%%
 
 %% Set problematic trials to later exclude them if desired.
-% commenting for now but u may need it later.
+
+% commenting for now but you may need it later.
 %{
 % in set_outcome_allResp you can take care of the following terms... u
 % don't need to worry about them here.
@@ -302,16 +397,13 @@ length(trs_mouseRunning)
 
 %}
 
-%% Set trs2rmv, stimrate, outcome and response side
+%% Set trs2rmv, stimrate, outcome and response side. You will set certain variables to NaN for trs2rmv (but you will never remove them from any arrays).
+
 % warning('You have to specify trs2rmv!!')
 
 cb = unique([alldata.categoryBoundaryHz]); % category boundary in hz
 
-load(imfilename, 'badAlignTrStartCode', 'trialStartMissing', 'trialCodeMissing') % they get set in framesPerTrialStopStart3An_fn
-
-if ~exist('trialCodeMissing', 'var') % for those days that you didn't save this var.
-    trialCodeMissing = [];
-end
+load(imfilename, 'badAlignTrStartCode', 'trialStartMissing'); %, 'trialCodeMissing') % they get set in framesPerTrialStopStart3An_fn
 
 % set the following as trs2rmv: trs_begWarmUp(:); trs_helpedInit(:); trs_helpedChoice(:), trs_extraStim, trs_shortWaitdur, trs_problemAlign, trs_badMotion_pmtOff 
 trs2rmv = setTrs2rmv(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, badAlignTrStartCode, trialStartMissing, trialCodeMissing);
@@ -320,6 +412,7 @@ trs2rmv = setTrs2rmv(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begT
 %%%%%%% Set stim rate: trials with stimrate=nan, must be added to trs2rmv as well
 [~, stimdur, stimrate, stimtype] = setStimRateType(alldata); % stimtype = [multisens, onlyvis, onlyaud];
 trs2rmv = unique([trs2rmv; find(isnan(stimrate))]);
+
 %{
 trs2rmv = unique([trs2rmv, trs_unwantedOutcome]);
 
@@ -366,7 +459,7 @@ if any(stimRateChanged)
 end
 
 fprintf('Number of trs2rmv: %d\n', length(trs2rmv))
-
+disp(trs2rmv')
 
 %%%%% Set outcome and response side for each trial, taking into account allcorrection and uncommitted responses.
 
@@ -462,65 +555,13 @@ end
 %}
 
 
+
+
 %%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% Take care of calcium traces %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% Take care of neural traces in alldata %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Assess trace quality of each neuron
+%% In alldata, set traces and choose good quality traces.
 
-if examineTraceQual    
-%     assessCaTraceQaulity % another script to look at traces 1 by 1.
-
-    inds2plot = randperm(size(activity,2));
-    traceQuality = plotEftManTracesROIs(dFOF', spikes', [], [], [], [], [], [], [], activity', inds2plot, 1, 0, []);
-
-    if saveTraceQual
-        save(imfilename, 'traceQuality', '-append')
-    end
-    goodNeurons = ismember(traceQuality, analyzeQuality);
-end
-
-    
-%% Automatic assessment of trace quality
-
-% Compute measures of trace quality
-if autoTraceQual
-    [avePks2sdS, aveProm2sdS, measQual] = traceQualMeasure(dFOF', spikes');
-
-    % Sort traces
-    [sPks, iPks] = sort(avePks2sdS);
-    [sProm, iProm] = sort(aveProm2sdS);
-    [sPksProm, iPksProm] = sort(avePks2sdS .* aveProm2sdS);
-    [sMeasQual, iMeasQual] = sort(measQual);
-
-    % badQual = find(avePks2sdS<3 | aveProm2sdS<1);
-    badQual = iMeasQual(sMeasQual<0);
-    % look at badQual neurons
-%     plotCaTracesPerNeuron({dFOF(:, badQual)}, 0, 0, 1, [], []) 
-
-    goodNeurons = true(1,length(avePks2sdS));
-    goodNeurons(badQual) = false;
-    
-    % order based on automatic measure
-    goodnessOrder = iMeasQual(sMeasQual>=0); % ascending order of neurons based on trace quality
-    goodnessOrder = goodnessOrder(end:-1:1); % descending order
-end
-% fprintf('N good-quality and all neurons: %d, %d. Ratio: %.2f\n', [sum(goodNeurons), size(activity,2), sum(goodNeurons)/ size(activity,2)]); % number and fraction of good neurons vs number of all neurons.
-
-
-% set goodinds: an array of length of all neurons, with 1s indicating good and 0s bad neurons.
-if ~any([autoTraceQual, examineTraceQual])  % if no trace quality examination (auto or manual), then include all neurons.
-    goodinds = true(1, size(dFOF,2)); %    goodnessOrder = 1:size(dFOF,2);    goodNeurons = 1:size(dFOF,2);
-elseif orderTraces % descending based on the measure of quality
-    error('the code below needs work. goodinds is supposed to be logical not tr numbers.')
-    goodinds = goodnessOrder; 
-else % stick to the original order
-    goodinds = goodNeurons;
-end
-
-fprintf('N good-quality and all neurons: %d, %d. Ratio: %.2f\n', [sum(goodinds), size(activity,2), sum(goodinds)/ size(activity,2)]); % number and fraction of good neurons vs number of all neurons.
-
-
-%% Set traces and choose good quality traces.
 % alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.activity}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
 alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.dFOF}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
 alldataSpikesGood = cellfun(@(x)x(:, goodinds), {alldata.spikes}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
@@ -572,13 +613,19 @@ if setInhibitExcit
 end
 
 
+
+
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%% Do some plotting of neural traces %%%%%%%%%%%%%%%%%%%%%%%
+
 %% Look at traces per neuron and per trial and show events during a trial as well. Traces start at the scan start (so not aligned on any particular event.)
 
 if plotTraces1by1
     
     % it makes sense to look at all trials and not just ~trs2rmv so do
     % trs2rmv = unique([trs_problemAlign, trs_badMotion_pmtOff]);, and again run setEvent
-    plotTrs1by1 = 0;
+    plotTrs1by1 = 1;
     interactZoom = 0; 
     markQuantPeaks = 1;
     allEventTimes = {timeInitTone, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, timeStop, centerLicks, leftLicks, rightLicks};
@@ -607,6 +654,14 @@ avetrialAlign_plotAve_noTrGroup
 avetrialAlign_plotAve_trGroup
 
 
+
+
+
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%% Start some analyses: alignement, choice preference, SVM %%%%%%%%%%%%%%%%%%%%%%%
+
+
 %% Align traces on particular trial events
 
 % remember traces_al_sm has nan for trs2rmv as well as trs in alignedEvent that are nan.
@@ -620,7 +675,8 @@ traceTimeVec = {alldata.frameTimes}; % time vector of the trace that you want to
 [traces_al_sm, time_aligned_stimOn, eventI_stimOn] = alignTraces_prePost_filt(traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward);
 
 % set to nan those trials in outcomes and allRes that are nan in traces_al_sm
-allTrs2rmv = find(squeeze(sum(isnan(traces_al_sm(:,1,:)))));
+a = find(sum(sum(~isnan(traces_al_sm),1),3), 1);
+allTrs2rmv = find(squeeze(sum(isnan(traces_al_sm(:,a,:)))));
 outcomes(allTrs2rmv) = NaN; 
 allResp(allTrs2rmv) = NaN; 
 allResp_HR_LR(allTrs2rmv) = NaN;
@@ -648,15 +704,24 @@ useEqualNumTrs = false; % if true, equal number of trials for HR and LR will be 
 choicePref_all = choicePref_ROC(traces_al_sm, ipsiTrs, contraTrs, makeplots, eventI_stimOn, useEqualNumTrs);
 
 
-%% compute choicePref for the average of frames after the stim.
+%% Compute choicePref for the average of frames after the stim.
+
 traces_al_sm_aveFr = nanmean(traces_al_sm(eventI_stimOn:end,:,:), 1);
 choicePref_all = choicePref_ROC(traces_al_sm_aveFr, ipsiTrs, contraTrs, makeplots, eventI_stimOn, useEqualNumTrs);
 
 
 %% SVM
+
 popClassifier
 
 popClassifierSVM_plots
+
+
+
+
+
+
+
 
 
 
