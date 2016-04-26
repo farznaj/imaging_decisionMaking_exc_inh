@@ -205,7 +205,7 @@ for ifig = 1:length(figall)-1
         %%
         xlim([1 xsec(end)])
 %         ylim([mn(ineu)-.005  mx(ineu)+.005])
-        ylim([mn(ineu)  mx(ineu)])
+        ylim([mn(ineu)  mx(ineu)]+eps)
         %     xlim([-500 500])
         %     xlabel('Time since event onset (ms)')
         %     ylabel('DF/F')

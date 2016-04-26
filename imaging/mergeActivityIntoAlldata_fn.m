@@ -58,6 +58,7 @@ end
 
 
 %% Prepare deltaF/F
+
 if ~exist('dFOF', 'var')
     smoothPts = 6;
     dFOF = konnerthDeltaFOverF(activity, pmtOffFrames, smoothPts, minPts);

@@ -47,6 +47,8 @@ frs_trEndInMov = numRecFrs - cc(end);
 
 if frs_trEndInMov>0
     nImagingTrsTotal = length(framesPerTrialNoNaN)+1; % includes the last partial trial that the imaging frames exist but its empty in alldata bc bcontrol was aborted at the middle of this last trial.
+else
+    nImagingTrsTotal = length(framesPerTrialNoNaN);
 end
     
 

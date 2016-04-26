@@ -307,10 +307,14 @@ length(trs_mouseRunning)
 
 cb = unique([alldata.categoryBoundaryHz]); % category boundary in hz
 
-load(imfilename, 'badAlignTrStartCode', 'trialStartMissing') % they get set in framesPerTrialStopStart3An_fn
+load(imfilename, 'badAlignTrStartCode', 'trialStartMissing', 'trialCodeMissing') % they get set in framesPerTrialStopStart3An_fn
+
+if ~exist('trialCodeMissing', 'var') % for those days that you didn't save this var.
+    trialCodeMissing = [];
+end
 
 % set the following as trs2rmv: trs_begWarmUp(:); trs_helpedInit(:); trs_helpedChoice(:), trs_extraStim, trs_shortWaitdur, trs_problemAlign, trs_badMotion_pmtOff 
-trs2rmv = setTrs2rmv(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, badAlignTrStartCode, trialStartMissing);
+trs2rmv = setTrs2rmv(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, badAlignTrStartCode, trialStartMissing, trialCodeMissing);
 
 
 %%%%%%% Set stim rate: trials with stimrate=nan, must be added to trs2rmv as well

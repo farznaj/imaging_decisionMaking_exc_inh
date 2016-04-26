@@ -38,3 +38,10 @@ for itr = 1:length(alldata)
 end
 
 
+%%
+% iti_code = zeros(length(alldata),1); % iti_noscan(1)=0 indicates preceding trial 1, iti_noscan is zero (which makes sense.)
+% for itr = 2:length(alldata)
+%     iti_code(itr) = alldata(itr).parsedEvents.states.trialcode1(1) - alldata(itr-1).parsedEvents.states.trialcode1(1);
+% end
+
+

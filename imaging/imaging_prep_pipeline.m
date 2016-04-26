@@ -13,32 +13,30 @@ outName = [mousename,'-',imagingFolder, '-', num2str(mdfFileNumber)]
 P = struct;
 P.saveParams = true; % if 0, you don't need outName then.
 
-P.multiTrs = 1; % remember if this is 1 you need to run the trialization part below to save cs_frtrs and Nnan to imfilename.
-P.ARmodelOrder = 0; % 2;
-P.orderROI_extractDf = 0; % true;
+P.pnevActivity = 0; % 1 % whether to run Eftychios's algorithm or not.
+    P.multiTrs = 1; % remember if this is 1 you need to run the trialization part below to save cs_frtrs and Nnan to imfilename.
+    P.ARmodelOrder = 0; % 2;
+    P.orderROI_extractDf = 0; % true;
+    P.maxFrsForMinPsn = 16000; % 10000 %[] % min(Y) and P.sn will be computed on the first maxFrsForMinPsn frames.
 
-P.numComps = 500; % remember to set to 30 or smaller for tests!
-P.tempSub = 3;
-P.spaceSub = 2;
+    P.numComps = 500; % remember to set to 30 or smaller for tests!
+    P.tempSub = 3;
+    P.spaceSub = 2;
 
-P.signalCh = 2; % channel whose signal activity you want to analyze (normally 2 for gcamp channel).
-P.channelsToRead = 2; % []; % it will be only used when MC is done. if motion correction is done, specify what channels to read (which later will be used for computing average images and eftychios's algorithm).
+P.saveGoodMovieStats = 1;
+P.channelsToRead = 1; % 2 % []; % it will be only used when MC is done. if motion correction is done, specify what channels to read (which later will be used for computing average images and eftychios's algorithm).
+P.motionCorrDone = 1; % if 0, the below matters.
+    P.regFrameNums = {2}; % noMotionTr
+    P.regFileNums = [1 1 1]; %[2 1 1] % file to use for motion correction major, minor, channel % params.dftRegCh = P.regFileNums(3); % channel to perform dftregistration on.
 
-P.motionCorrDone = 1;
-P.saveGoodMovieStats = 0;
-P.pnevActivity = 1; % whether to run Eftychios's algorithm or not.
-
-P.regFrameNums = {2}; % noMotionTr
-P.regFileNums = [1 1 1]; %[2 1 1] % file to use for motion correction major, minor, channel
-
-P.tifMinor = []; %[]; % set to [] if you want all tif minor files to be analyzed.
+    
 P.pmt_th = []; % 1400;
-
-P.headerBug = 0;
+P.tifMinor = []; %[]; % set to [] if you want all tif minor files to be analyzed.
 P.channelsToWrite = [1,2];
+P.signalCh = 2; % 2 % channel whose signal activity you want to analyze (normally 2 for gcamp channel). % 
+P.headerBug = 0;
 P.maxMaskWidth = 30;
 P.analysisFolder = 0;
-
 P.behavName = '';
 
 
@@ -73,6 +71,7 @@ params = writeCaProcessParams(outName, mousename, imagingFolder, mdfFileNumber, 
 clearvars -except params outName 
 
 
+
 %%
 processCaImagingMCPnev(outName)
 
@@ -88,8 +87,8 @@ processCaImagingMCPnev(outName)
 dataPath = '\\sonas-hs.cshl.edu\churchland\data'; % lab PC
 
 mousename = 'fni17';
-imagingFolder = '151101'; % '151021';
-mdfFileNumber = 1; % or tif major
+imagingFolder = '151029'; % '151021';
+mdfFileNumber = 3; % or tif major
 signalCh = 2;
 
 [imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh);
@@ -143,13 +142,14 @@ frame1RelToStartOff = cell(1, length(params.binFiles));
 badAlignTrStartCode = cell(1, length(params.binFiles));
 trialStartMissing = cell(1, length(params.binFiles));
 framesPerTrial_galvo = cell(1, length(params.binFiles));
+trialCodeMissing = cell(1, length(params.binFiles));
 
 % you combined framesPerTrialStopStart3An_fn and
 % framesPerTrialStopStart3An_fn2, so no need to check for data anymore!
 
 % if str2double(imagingFolder) < 151101
     for f = 1:length(params.binFiles)
-        [framesPerTrial{f}, trialNumbers{f}, frame1RelToStartOff{f}, badAlignTrStartCode{f}, framesPerTrial_galvo{f}, trialStartMissing{f}] = ...
+        [framesPerTrial{f}, trialNumbers{f}, frame1RelToStartOff{f}, badAlignTrStartCode{f}, framesPerTrial_galvo{f}, trialStartMissing{f}, trialCodeMissing{f}] = ...
             framesPerTrialStopStart3An_fn(params.binFiles{f}, params.framecountFiles{f}, params.headerBug, all_data);
     end
 % else % starting from 151101 you added the state trial_start_rot_scope which lasts for 36ms and sends the trialStart signal. so you can use simpler codes for finding framesPerTrial.
@@ -165,16 +165,21 @@ frame1RelToStartOff = [frame1RelToStartOff{:}];
 badAlignTrStartCode = [badAlignTrStartCode{:}];
 trialStartMissing = [trialStartMissing{:}];
 framesPerTrial_galvo = [framesPerTrial_galvo{:}];
+trialCodeMissing = [trialCodeMissing{:}];
   
-  
+
 %%
-save(imfilename, '-append', 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'badAlignTrStartCode', 'trialStartMissing')
+save(imfilename, '-append', 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'badAlignTrStartCode', 'trialStartMissing', 'trialCodeMissing')
 
 
 %% Get vars for running Efythios algorith for the multi-trial case
+% Remember you need badFrames to get total number of recorded frames.
 
-[cs_frtrs, Nnan] = update_tempcomps_multitrs_setvars(mousename, imagingFolder, mdfFileNumber);
+p.trialCodeMissing = trialCodeMissing;
+[cs_frtrs, Nnan] = update_tempcomps_multitrs_setvars(mousename, imagingFolder, mdfFileNumber, p);
 % [cs_frtrs, Nnan] = update_tempcomps_multitrs_setvars(mousename, imagingFolder, mdfFileNumber, allTifMinors, tifMinor);
+size(Nnan)
+size(cs_frtrs)
 
 
 %%

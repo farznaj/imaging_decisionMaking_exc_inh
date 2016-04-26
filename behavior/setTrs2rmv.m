@@ -1,4 +1,4 @@
-function trs2rmv = setTrs2rmv(alldata, th, excludeExtraStim, excludeShortWaitDur, begTrs, badAlignTrStartCode, trialStartMissing)
+function trs2rmv = setTrs2rmv(alldata, th, excludeExtraStim, excludeShortWaitDur, begTrs, badAlignTrStartCode, trialStartMissing, trialCodeMissing)
 %
 % set trs2rmv (bad trials that you want to be removed from analysis)
 
@@ -61,8 +61,11 @@ if exist('badAlignTrStartCode', 'var')
     % Trials including pmtOffFrames and bigMotion (badFrames).
     trs_badMotion_pmtOff = unique([find([alldata.anyBadFrames]==1), find([alldata.anyPmtOffFrames]==1)]);
     
+    % trials that were not triggered in mscan
+    trs_notScanned = find(trialCodeMissing==1);
     
-    trs2rmv = unique([trs2rmv; trs_problemAlign(:); trs_badMotion_pmtOff(:)]);
+    
+    trs2rmv = unique([trs2rmv; trs_problemAlign(:); trs_badMotion_pmtOff(:); trs_notScanned(:)]);
 end
 
 
