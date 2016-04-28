@@ -3,7 +3,7 @@
 
 %% Set the rand vectors
 
-nRandW = 1e3;
+nRandW = 1e4;
 randWeights = randn(size(wNsHrLrAve,1), nRandW); % neurons x nrand
 randWeights = bsxfun(@times, randWeights, spikeAveEp0_sd'); % stretch by std of neurons (std computed across trials).
 randWeights = bsxfun(@rdivide, randWeights, sqrt(sum(randWeights.^2))); % normalize by vector length
