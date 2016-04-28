@@ -1,6 +1,7 @@
 % Remember: you can use the script svmUnderstandIt to understand how some
 % of the matlab functions related to SVM classification work.
 windowAvgFlg = true;
+pcaFlg = true;
 stMs = round(500/frameLength);
 enMs = round(900/frameLength);
 
@@ -96,7 +97,14 @@ end
 %% run SVM
 cnam = [0,1]; % LR: negative ; HR: positive
 % SVMModel = svmClassifierMS(X, Y, cnam);
-SVMModel = fitcsvm(X, Y, 'standardize', 1, 'ClassNames', cnam, 'KernelFunction', 'linear'); % 'KernelFunction'. 'BoxConstraint'
+if pcaFlg 
+    [PCs, ~, l] = pca(X);
+    numPCs = find(cumsum(l/sum(l))>0.99, 1, 'first');
+    X_s = bsxfun(@plus, bsxfun(@minus, X, mean(X))*(PCs(:, 1:numPCs)*PCs(:, 1:numPCs)'), mean(X));
+    SVMModel = fitcsvm(X_s, Y, 'standardize', 1, 'ClassNames', cnam, 'KernelFunction', 'linear'); % 'KernelFunction'. 'BoxConstraint'
+else
+    SVMModel = fitcsvm(X, Y, 'standardize', 1, 'ClassNames', cnam, 'KernelFunction', 'linear'); % 'KernelFunction'. 'BoxConstraint'
+end
 wNsHrLr(:,1) = SVMModel.Beta;
 biasHrLr(1) = SVMModel.Bias;
             
@@ -187,18 +195,21 @@ classLossTest = [];
 classLossChanceTrain = [];
 classLossChanceTest = [];
 
-
-
+wNsHrLr_s = [];
+biasHrLr_s = [];
+wNsHrLrChance = [];
+biasHrLrChance = [];
 
 for s = 1:100
     shflTrials = randperm(length(Y));
     X_s = X(shflTrials, :);
     Y_s = Y(shflTrials);
-%%%%%%%% reduce features by PCA 
-% % %     [PCs, X_s, l] = pca(X_s);
-% % %     numPCs = find(cumsum(l/sum(l))>0.99, 1, 'first');
-% % %     X_s = bsxfun(@minus, X_s, mean(X_s))*(PCs(:, 1:numPCs)*PCs(:, 1:numPCs)');
-
+%%%%%%%% reduce features by PCA
+    if pcaFlg
+        [PCs, ~, l] = pca(X_s);
+        numPCs = find(cumsum(l/sum(l))>0.99, 1, 'first');
+        X_s = bsxfun(@plus, bsxfun(@minus, X_s, mean(X_s))*(PCs(:, 1:numPCs)*PCs(:, 1:numPCs)'), mean(X_s));
+    end
      
 %%%%%%%% data augmentation resampling
 % % % %             mskNans = ~isnan(choiceVec);
