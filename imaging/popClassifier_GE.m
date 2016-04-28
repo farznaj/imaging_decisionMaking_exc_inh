@@ -206,8 +206,6 @@ for s = 1:100
     Y_s = Y(shflTrials);
 %%%%%%%% reduce features by PCA
     if pcaFlg
-        [PCs, ~, l] = pca(X_s);
-        numPCs = find(cumsum(l/sum(l))>0.99, 1, 'first');
         X_s = bsxfun(@plus, bsxfun(@minus, X_s, mean(X_s))*(PCs(:, 1:numPCs)*PCs(:, 1:numPCs)'), mean(X_s));
     end
      
