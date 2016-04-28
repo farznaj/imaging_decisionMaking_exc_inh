@@ -151,7 +151,18 @@ for tr = 1:length(alldata)
         
         if ~ismember(outcomes(tr), [invalid, noSideCommit])
             if ~isempty(alldata(tr).parsedEvents.states.punish_allowcorrection)
-                timeCommitIncorrResp(tr) = alldata(tr).parsedEvents.states.punish_allowcorrection(:,1) * 1000 - t0;
+                % Mouse may enter punish_allowcorrection more than once :
+                % He enters it and then exits it by doing a correct lick.
+                % But he does not commit the correct lick, instad he does
+                % an error lick and commit it, so he re-enters the
+                % punish_allowcorrection. In this case there is more than 1
+                % commitIncorrectResp... we go with the 1st one... but keep
+                % it in mind.
+                ne = size(alldata(tr).parsedEvents.states.punish_allowcorrection, 1);
+                if ne > 1
+                    warning(sprintf('Mouse entered punish_allowcorrect %i times. We pick the 1st one as commitIncorrResp\n', ne))
+                end
+                timeCommitIncorrResp(tr) = alldata(tr).parsedEvents.states.punish_allowcorrection(1,1) * 1000 - t0;
             elseif ~isempty(alldata(tr).parsedEvents.states.punish)
                 timeCommitIncorrResp(tr) = alldata(tr).parsedEvents.states.punish(:,1) * 1000 - t0;
             end

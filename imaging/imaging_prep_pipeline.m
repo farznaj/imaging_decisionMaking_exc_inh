@@ -14,11 +14,12 @@ P = struct;
 P.saveParams = true; % if 0, you don't need outName then.
 
 P.pnevActivity = 1; % 1 % whether to run Eftychios's algorithm or not.
-    P.limit_threads = 4; % 8
+    P.poolsize = 8; % 0 for default
+    P.limit_threads = 4; % 8 % 0 for default
     P.multiTrs = 1; % remember if this is 1 you need to run the trialization part below to save cs_frtrs and Nnan to imfilename.
     P.ARmodelOrder = 0; % 2;
     P.orderROI_extractDf = 0; % true;
-    P.maxFrsForMinPsn = 16000; % 10000 %[] % min(Y) and P.sn will be computed on the first maxFrsForMinPsn frames.
+    P.maxFrsForMinPsn = 16000; % 10000 %[] for default % min(Y) and P.sn will be computed on the first maxFrsForMinPsn frames.
 
     P.numComps = 500; % remember to set to 30 or smaller for tests!
     P.tempSub = 3;

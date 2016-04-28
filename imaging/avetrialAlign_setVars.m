@@ -14,7 +14,7 @@
 %%
 % outName = 'fni17-151016';
 mouse = 'fni17';
-imagingFolder = '150903'; % '151021';
+imagingFolder = '151010'; % '151021';
 mdfFileNumber = 1; % or tif major
 signalCh = 2;
 
@@ -461,8 +461,8 @@ end
 % find(fractFlashBefGoTone<1) % in these trials go tone came before the entire flashes were played.
 % fractFlashBefGoTone_ifLessThan1 = fractFlashBefGoTone(fractFlashBefGoTone<1);
 % fprintf('Fract flash before goTone if <1\n%.2f \n', fractFlashBefGoTone(fractFlashBefGoTone<1))
-nanmean(fractFlashBefGoTone(fractFlashBefGoTone<1))
 if sum(fractFlashBefGoTone<1)>0
+    nanmean(fractFlashBefGoTone(fractFlashBefGoTone<1))
     aveFractFlashBefGoTone_forLessThan1 = nanmean(fractFlashBefGoTone(fractFlashBefGoTone<1))
     
     figure; plot(fractFlashBefGoTone)
