@@ -490,7 +490,7 @@ popClassifierSVM_rand
 
 %% Compare SVM weights with ROC choicePref
 
-popClassifierSVM_choicePref
+% popClassifierSVM_choicePref
 
 
 
