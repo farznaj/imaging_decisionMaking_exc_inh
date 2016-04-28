@@ -234,13 +234,13 @@ for s = 1:100
     
     CVSVMModel_s = crossval(SVMModel_s, 'kfold', 10); % CVSVMModel.Trained{1}: model 1 --> there will be KFold of these models. (by default KFold=10);
     classLossTest(s) = kfoldLoss(CVSVMModel_s); % Classification loss (by default the fraction of misclassified data) for observations not used for training
-
-    SVMModelChance = fitcsvm(X_s, Y_s(randperm(length(Y_s))), 'standardize', 1, 'ClassNames', cnam); %  % Linear Kernel
+    Y_s_shfld = Y_s(randperm(length(Y_s)));
+    SVMModelChance = fitcsvm(X_s, Y_s_shfld, 'standardize', 1, 'ClassNames', cnam); %  % Linear Kernel
     CVSVMModelChance = crossval(SVMModelChance, 'kfold', 10); % CVSVMModel.Trained{1}: model 1 --> there will be KFold of these models. (by default KFold=10);
     wNsHrLrChance(:, s) = SVMModelChance.Beta;
     biasHrLrChance(:, s) = SVMModelChance.Bias;
     
-    classLossChanceTrain(s) = mean(abs(Y_s-predict(SVMModelChance, X_s)));
+    classLossChanceTrain(s) = mean(abs(Y_s_shfld-predict(SVMModelChance, X_s)));
     classLossChanceTest(s) = kfoldLoss(CVSVMModelChance); % Classification loss (by default the fraction of misclassified data) for observations not used for training
     s
 end
