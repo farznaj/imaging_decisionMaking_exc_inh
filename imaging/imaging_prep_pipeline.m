@@ -6,14 +6,15 @@ if ispc, cd(hpc_dir), end
 
 %%
 mousename = 'fni17';
-imagingFolder = '151101';
+imagingFolder = '151015';
 mdfFileNumber = 1; % or tif major
 outName = [mousename,'-',imagingFolder, '-', num2str(mdfFileNumber)]
 
 P = struct;
 P.saveParams = true; % if 0, you don't need outName then.
 
-P.pnevActivity = 0; % 1 % whether to run Eftychios's algorithm or not.
+P.pnevActivity = 1; % 1 % whether to run Eftychios's algorithm or not.
+    P.limit_threads = 4; % 8
     P.multiTrs = 1; % remember if this is 1 you need to run the trialization part below to save cs_frtrs and Nnan to imfilename.
     P.ARmodelOrder = 0; % 2;
     P.orderROI_extractDf = 0; % true;
@@ -23,13 +24,16 @@ P.pnevActivity = 0; % 1 % whether to run Eftychios's algorithm or not.
     P.tempSub = 3;
     P.spaceSub = 2;
 
-P.saveGoodMovieStats = 1;
-P.channelsToRead = 1; % 2 % []; % it will be only used when MC is done. if motion correction is done, specify what channels to read (which later will be used for computing average images and eftychios's algorithm).
 P.motionCorrDone = 1; % if 0, the below matters.
-    P.regFrameNums = {2}; % noMotionTr
+    % if 1
+    P.channelsToRead = 2; %[1,2]; % 2 % []; % set to both channels if you want to save goodMovieStats % it will be only used when MC is done. if motion correction is done, specify what channels to read (which later will be used for computing average images and eftychios's algorithm).
+    % if 0
+    P.regFrameNums = {2}; % {2}; % noMotionTr
     P.regFileNums = [1 1 1]; %[2 1 1] % file to use for motion correction major, minor, channel % params.dftRegCh = P.regFileNums(3); % channel to perform dftregistration on.
 
+P.saveGoodMovieStats = 0;
     
+
 P.pmt_th = []; % 1400;
 P.tifMinor = []; %[]; % set to [] if you want all tif minor files to be analyzed.
 P.channelsToWrite = [1,2];
@@ -87,11 +91,12 @@ processCaImagingMCPnev(outName)
 dataPath = '\\sonas-hs.cshl.edu\churchland\data'; % lab PC
 
 mousename = 'fni17';
-imagingFolder = '151101'; % '151021';
+imagingFolder = '151026'; % '151021';
 mdfFileNumber = 1; % or tif major
 signalCh = 2;
 
 [imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh);
+cd(tifFold)
 
 % Set behavFile, binFiles, and framecountFiles (Related to behavior and
 % trialization).
@@ -100,7 +105,7 @@ params.headerBug = 0;
 behavName = dir(fullfile(dataPath, mousename, 'behavior', [mousename, '_', datestr(datenum(imagingFolder(1:6), 'yymmdd')), '*.mat']));
 behavName = {behavName.name};
 behavName = behavName{mdfFileNumber};
-params.behavFile = fullfile(dataPath, mousename, 'behavior', behavName);
+pacrams.behavFile = fullfile(dataPath, mousename, 'behavior', behavName);
 %}
 % set filenames
 [alldata_fileNames, ~] = setBehavFileNames(mousename, {datestr(datenum(imagingFolder, 'yymmdd'))});
@@ -127,7 +132,7 @@ showcell(params.framecountFiles)
 % load(params.behavFile, 'all_data')
 excludeLastTr = 0; % don't exclude the last trial. You need it this way for alignment purposes with the imaging data.
 [all_data, ~] = loadBehavData(alldata_fileNames(mdfFileNumber), [], [], [], excludeLastTr);
-fprintf('Total number of trials: %d\n', length(all_data))
+fprintf('Number of behavioral trials: %d\n', length(all_data))
 % load(imfilename, 'all_data')  % this one has the additinal imaging and mouse helped fields.
 
 
@@ -167,24 +172,41 @@ trialStartMissing = [trialStartMissing{:}];
 framesPerTrial_galvo = [framesPerTrial_galvo{:}];
 trialCodeMissing = [trialCodeMissing{:}];
   
+nansum(framesPerTrial)
+size(framesPerTrial)
+size(trialNumbers)
+size(trialStartMissing)
+% size(trialCodeMissing)
+% size(badAlignTrStartCode)
+find(trialStartMissing)
+find(trialCodeMissing)
+% find(badAlignTrStartCode)
+
 
 %%
 save(imfilename, '-append', 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'badAlignTrStartCode', 'trialStartMissing', 'trialCodeMissing')
 
+%{
+if ~exist([imfilename, '.mat'], 'file')
+    save(imfilename, 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'badAlignTrStartCode', 'trialStartMissing', 'trialCodeMissing')
+end
+%}
 
 %% Get vars for running Efythios algorith for the multi-trial case
+%
 % Remember you need badFrames to get total number of recorded frames.
 
-p.trialCodeMissing = trialCodeMissing;
-[cs_frtrs, Nnan] = update_tempcomps_multitrs_setvars(mousename, imagingFolder, mdfFileNumber, p);
+% p.trialCodeMissing = trialCodeMissing;
+[cs_frtrs, Nnan_nanBeg_nanEnd] = update_tempcomps_multitrs_setvars...
+    (mousename, imagingFolder, mdfFileNumber); % , p);
 % [cs_frtrs, Nnan] = update_tempcomps_multitrs_setvars(mousename, imagingFolder, mdfFileNumber, allTifMinors, tifMinor);
-size(Nnan)
+size(Nnan_nanBeg_nanEnd)
 size(cs_frtrs)
 
 
 %%
-save(imfilename, '-append', 'cs_frtrs', 'Nnan')
-
+save(imfilename, '-append', 'cs_frtrs', 'Nnan_nanBeg_nanEnd')
+%}
 
 %% Some tests for frame numbers per trial
 

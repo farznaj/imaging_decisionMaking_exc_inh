@@ -41,13 +41,19 @@ waitdur_th = .032; % sec
 trs_shortWaitdur = find([alldata.waitDuration] < waitdur_th)';
 
 trs2rmv = unique([trs_begWarmUp(:); trs_helpedInit(:); trs_helpedChoice(:)]); %, trs_unwantedOutcome]);
+
 if excludeExtraStim
     disp('Excluding trials with extraStim!')
     trs2rmv = unique([trs2rmv(:); trs_extraStim(:)]);
+else
+    disp('Not excluding trials with extraStim!')
 end
+
 if excludeShortWaitDur
     disp('Excluding trials with waitDur < 32ms!')
     trs2rmv = unique([trs2rmv(:); trs_shortWaitdur(:)]);
+else
+    disp('Not excluding trials with waitDur < 32ms!')
 end
 
 % len_fract_trs2rmv = [length(trs2rmv) length(trs2rmv)/length(alldata)]

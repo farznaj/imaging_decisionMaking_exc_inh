@@ -2,7 +2,7 @@
 % of the matlab functions related to SVM classification work.
 
 stMs = round(500/frameLength);
-enMs = round(900/frameLength);
+enMs = round(700/frameLength);
 
 thAct = 1e-3; % could be a good th for excluding neurons w too little activity.
 numRand = 1; % 50; 100; % you tried values between [50 500], at nrand=500 mismatches (computed on the b averaged across all iters) are actually worse compared to the average mismatch computed from single runs.  nrand=200 seems to be a good choice.
@@ -51,7 +51,7 @@ spikeAveEp0 = squeeze(nanmean(traces_al_sm(ep,:,:)))'; % trials x units.
 %
 thMinFractTrs = .05; %.01; % a neuron must be active in >= .1 fraction of trials to be used in the population analysis.
 thTrsWithSpike = 3; ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
-nTrsWithSpike = sum(spikeAveEp0 > 0); % in how many trials each neuron had activity (remember this is average spike during ep).
+nTrsWithSpike = sum(spikeAveEp0 > 0); % 1 x units % in how many trials each neuron had activity (remember this is average spike during ep).
 % figure; plot(nTrsWithSpike)
 % hold on, plot([1 length(nTrsWithSpike)],[thTrsWithSpike  thTrsWithSpike])
 NsFewTrActiv = nTrsWithSpike < thTrsWithSpike;

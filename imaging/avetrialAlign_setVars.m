@@ -14,8 +14,8 @@
 %%
 % outName = 'fni17-151016';
 mouse = 'fni17';
-imagingFolder = '151029'; % '151021';
-mdfFileNumber = 3; % or tif major
+imagingFolder = '150903'; % '151021';
+mdfFileNumber = 1; % or tif major
 signalCh = 2;
 
 pnev2load = []; %7 % 4
@@ -92,8 +92,10 @@ plot([all_data.waitDuration]+[all_data.postStimDelay])
 plot([all_data.stimDuration])
 plot([all_data.extraStimDuration])
 plot([all_data.stimDur_aftRew])
+plot([all_data.stimDur_diff])
 plot([thbeg thbeg],[-1 12], 'k')
-legend('waitDur', 'stimDuration', 'extraStimDur', 'stimDur\_aftRew')
+legend('waitDur', 'stimDuration', 'extraStimDur', 'stimDur\_aftRew', 'stimDur\_diff')
+set(gcf, 'name', 'stimDuration= stimDur_diff (or if it is 0, waitDur) + extrastim_dur + stimdur_aftrew .')
 m = max([all_data.stimDuration]);
 ylim([-1 m+1])
 set(gca,'tickdir','out')
@@ -199,7 +201,7 @@ end
 spikes = spiking'; % frames x units
 
 if size(C,2) ~= size(C_df,2) % iti-nans were inserted in C and S: remove them.
-    load(pnevFileName, 'Nnan_nanBeg_nanEnd')
+    load(imfilename, 'Nnan_nanBeg_nanEnd')
     nanBeg =  Nnan_nanBeg_nanEnd(2,:);
     nanEnd = Nnan_nanBeg_nanEnd(3,:);
     inds2rmv = cell2mat(arrayfun(@(x,y)(x:y), nanBeg, nanEnd, 'uniformoutput', 0)); % index of nan-ITIs (inferred ITIs) on C and S traces.
@@ -212,7 +214,11 @@ end
 
 an = find(~sum(~isnan(C),2));
 if ~isempty(an)
-    warning(sprintf('The trace of neuron(s) %i is all NaN!', an));
+    warning(sprintf(['C trace of neuron(s) ', repmat('%i ', 1, length(an)), 'is all NaN. This should not happen!'], an));
+end
+an = find(~sum(~isnan(C_df),2));
+if ~isempty(an)
+    warning(sprintf(['C_df trace of neuron(s) ', repmat('%i ', 1, length(an)), 'is all NaN. This should not happen!'], an));
 end
 
 % load('demo_results_fni17-151102_001.mat', 'C_mcmc', 'C_mcmc_df', 'S_mcmc')
@@ -411,7 +417,10 @@ trs2rmv = setTrs2rmv(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begT
 
 %%%%%%% Set stim rate: trials with stimrate=nan, must be added to trs2rmv as well
 [~, stimdur, stimrate, stimtype] = setStimRateType(alldata); % stimtype = [multisens, onlyvis, onlyaud];
-trs2rmv = unique([trs2rmv; find(isnan(stimrate))]);
+if sum(isnan(stimrate)) > 0
+    fprintf('# trials with NaN stimrate= %i\n', sum(isnan(stimrate)))
+    trs2rmv = unique([trs2rmv; find(isnan(stimrate))]);
+end
 
 %{
 trs2rmv = unique([trs2rmv, trs_unwantedOutcome]);
@@ -424,7 +433,7 @@ trs2rmv = unique([trs2rmv, trs_allowCorrectEntered, trs_errorlick_again_wait_ent
 %%%%%%% take care of cases that go tone happened earlier than stim offset
 %%%%%%% and resulted in a different stim type.
 fractFlashBefGoTone = NaN(1, length(alldata));
-stimRateChanged = zeros(1, length(alldata));
+stimRateChanged = false(1, length(alldata));
 goToneRelStimOnset = NaN(1, length(alldata));
 for tr = 1:length(alldata)
     if ~isempty(alldata(tr).parsedEvents.states.center_reward) % ~isnan(goToneRelStimOnset(tr))
@@ -444,18 +453,31 @@ for tr = 1:length(alldata)
         % did stim type (hr vs lr) at go tone change compared to the
         % original stimulus?
         if sign(length(xx)-cb) ~= sign((sum(xx < goToneRelStimOnset(tr)))-cb) % alldata(tr).nAuditoryEvents
-            stimRateChanged(tr) = 1;
+            stimRateChanged(tr) = true;
         end
     end
 end
+
 % find(fractFlashBefGoTone<1) % in these trials go tone came before the entire flashes were played.
-fractFlashBefGoTone_ifLessThan1 = fractFlashBefGoTone(fractFlashBefGoTone<1)
+% fractFlashBefGoTone_ifLessThan1 = fractFlashBefGoTone(fractFlashBefGoTone<1);
 % fprintf('Fract flash before goTone if <1\n%.2f \n', fractFlashBefGoTone(fractFlashBefGoTone<1))
+nanmean(fractFlashBefGoTone(fractFlashBefGoTone<1))
+if sum(fractFlashBefGoTone<1)>0
+    aveFractFlashBefGoTone_forLessThan1 = nanmean(fractFlashBefGoTone(fractFlashBefGoTone<1))
+    
+    figure; plot(fractFlashBefGoTone)
+    xlabel('Trial')
+    ylabel([{'Fraction of flashes played before Go Tone'}, {'Ideally we want 1.'}])
+end
+
 
 if any(stimRateChanged)
     trsStimTypeScrewed = find(stimRateChanged)'; % in these trials when go tone came stim type (hr vs lr) was different from the entire stim... these are obviously problematic trials.
+    fprintf('%d = #trs with a different stim type at Go Tone than the actual stim type\n', length(trsStimTypeScrewed))
+    aveFractFlashBefGoTone_stimRateChanged = nanmean(fractFlashBefGoTone(stimRateChanged))
+    aveOutcomeFractFlashBefGoTone_stimRateChanged = nanmean([alldata(stimRateChanged).outcome])
+
     trs2rmv = unique([trs2rmv; trsStimTypeScrewed]);
-    fprintf('%d = #trs with screwed! stim type\n', length(trsStimTypeScrewed))
 end
 
 fprintf('Number of trs2rmv: %d\n', length(trs2rmv))

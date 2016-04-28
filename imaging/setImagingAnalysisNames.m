@@ -13,7 +13,7 @@ end
 
 %%
 if isempty(strfind(pwd, 'gamalamin')) % Farzaneh
-    if ismac    
+    if ismac
         dataPath = '/Users/Farzaneh/Desktop/Farzaneh/data'; % macbook
     elseif isunix
         dataPath = '/sonas-hs/churchland/nlsas/data/data'; % server
@@ -22,7 +22,7 @@ if isempty(strfind(pwd, 'gamalamin')) % Farzaneh
     end
 else % Gamal
     dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data';
-end    
+end
 
 
 tifFold = fullfile(dataPath, mousename, 'imaging', imagingFolder);
@@ -32,10 +32,14 @@ imfilename = fullfile(tifFold, date_major);
 pnevFileName = [date_major, '_ch', num2str(signalCh),'-Pnev*'];
 pnevFileName = dir(fullfile(tifFold, pnevFileName));
 
-% in case there are a few pnev files, choose which one you want!
-[~,i] = sort([pnevFileName.datenum], 'descend');
-disp({pnevFileName(i).name}')
-pnevFileName = pnevFileName(i(pnev2load)).name; 
-pnevFileName = fullfile(tifFold, pnevFileName);
-
+if isempty(pnevFileName)
+    fprintf('No Pnev file was found!\n')
+    pnevFileName = '';
+else
+    % in case there are a few pnev files, choose which one you want!
+    [~,i] = sort([pnevFileName.datenum], 'descend');
+    disp({pnevFileName(i).name}')
+    pnevFileName = pnevFileName(i(pnev2load)).name;
+    pnevFileName = fullfile(tifFold, pnevFileName);
+end
 
