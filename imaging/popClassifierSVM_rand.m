@@ -10,16 +10,20 @@ randWeights = bsxfun(@rdivide, randWeights, sqrt(sum(randWeights.^2))); % normal
 
 
 %% see if the distribution of classifier weights are different from random neural weights
-
+inhibNs = good_inhibit(~NsExcluded);
 rs = sort(abs(randWeights), 'descend');
 rs = mean(rs,2);
 % figure; bar(rs)
 
 [ws, iws] = sort(abs(wNsHrLrAve), 'descend');
+wNsHrLrAveSorted = wNsHrLrAve(iws);
+inhibNsSorted = inhibNs(iws);
 % figure; plot(ws)
 figure; 
 subplot(221), hold on
-bar(wNsHrLrAve(iws))
+bar(find(inhibNsSorted==0)-1, wNsHrLrAveSorted(~inhibNsSorted), 'b')
+bar(find(inhibNsSorted==1)-1, wNsHrLrAveSorted(inhibNsSorted), 'r')
+
 plot(rs)
 plot(-rs)
 xlabel('Neurons')
