@@ -94,11 +94,15 @@ end
 
 th = 5; % 10; 9; % this number of beginning trials will be excluded. also later in the code we want >th trials in each column of ratesDiffInput
 trs2rmv = setTrs2rmv(alldata, th, excludeExtraStim, excludeShortWaitDur, begTrs);
-
+% Use the code below if you are analyzing imaging data.
+% trs2rmv = setTrs2rmv(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, badAlignTrStartCode, trialStartMissing, trialCodeMissing);
 
 %% set outcome and response side for each trial, taking into account allcorrection and uncommitted responses.
 
 [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp);
+% Remember alldata.outcome is not necessarily the same as outcomes,
+% depending on what you do to allCorrection trials, if it is set to change,
+% then outcomes and alldata.outcome will be opposite to each other!!!
 
 
 %% set stim rate
@@ -184,6 +188,26 @@ end
 
 
 %% set success vector for the previous trial
+
+% Note regarding how prev sucess and failure vectors are set:
+% Remember for the explanation below, you need to look at outcomes and not
+% alldata.outcome (they could be different if you set allowCorrectResp to
+% change). See above for more detialed explanation.
+% successPrevInput(i) indicates the success outcome and choice of trial i-1:
+% if successPrevInput(i)=1, then trial i-1 was a successful HR-choice
+% trial.
+% if successPrevInput(i)=-1, then trial i-1 was a successful LR-choice
+% trial.
+% if successPrevInput(i)=0, then trial i-1 was a failure trial.
+%
+% failurePrevInput(i) indicates the failure outcome and choice of trial i-1:
+% if failurePrevInput(i)=1, then trial i-1 was a failure HR-choice
+% trial.
+% if failurePrevInput(i)=-1, then trial i-1 was a failure LR-choice
+% trial.
+% if failurePrevInput(i)=0, then trial i-1 was a successful trial.
+%
+
 
 % set s_curr indicating the success/failure and HR/LR outcome of the
 % current trial.
