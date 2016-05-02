@@ -6,14 +6,14 @@ if ispc, cd(hpc_dir), end
 
 %%
 mousename = 'fni17';
-imagingFolder = '150908';
-mdfFileNumber = 1; % or tif major
+imagingFolder = '151029';
+mdfFileNumber = 3; % or tif major
 outName = [mousename,'-',imagingFolder, '-', num2str(mdfFileNumber)]
 
 P = struct;
 P.saveParams = true; % if 0, you don't need outName then.
 
-P.pnevActivity = 1; % 1 % whether to run Eftychios's algorithm or not.
+P.pnevActivity = 0; % 1 % whether to run Eftychios's algorithm or not.
     P.poolsize = 8; % 0 for default
     P.limit_threads = 16; %2; % 8 % 0 for default
     P.multiTrs = 1; % remember if this is 1 you need to run the trialization part below to save cs_frtrs and Nnan to imfilename.
@@ -25,14 +25,14 @@ P.pnevActivity = 1; % 1 % whether to run Eftychios's algorithm or not.
     P.tempSub = 3;
     P.spaceSub = 2;
 
-P.motionCorrDone = 1; % if 0, the below matters.
+P.motionCorrDone = 0; % if 0, the below matters.
     % if 1
     P.channelsToRead = 2; %[1,2]; % 2 % []; % set to both channels if you want to save goodMovieStats % it will be only used when MC is done. if motion correction is done, specify what channels to read (which later will be used for computing average images and eftychios's algorithm).
     % if 0
     P.regFrameNums = {2}; % {2}; % noMotionTr
     P.regFileNums = [1 1 1]; %[2 1 1] % file to use for motion correction major, minor, channel % params.dftRegCh = P.regFileNums(3); % channel to perform dftregistration on.
 
-P.saveGoodMovieStats = 0;
+P.saveGoodMovieStats = 1;
     
 
 P.pmt_th = []; % 1400;

@@ -38,6 +38,7 @@ if exist('im', 'var') && ~isempty(im)
     
     for rr = 1:length(CC)
         plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
+        pause
     end
 end
 

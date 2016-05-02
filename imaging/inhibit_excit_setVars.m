@@ -7,7 +7,7 @@ if ~exist('showResults', 'var')
 end
 
 
-%% set vars to identify inhibitory neurons.
+%% set vars to identify inhibitory neurons: get ROI contours for the gcamp channel.
 
 % [imfilename, pnevFileName] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh);
 
@@ -31,6 +31,28 @@ contour_threshold = .95;
 
 im2 = medImage{1};
 inhibitRois = inhibitROIselection(mask, im2, sigTh, CC, showResults); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
+
+
+% Evaluate the results:
+colors = hot(2*size(spatialComp,2));
+colors = colors(end:-1:1,:);
+% plot inhibitory ROIs on medImage of inhibit channel.
+figure('name', 'medImage of inhibit channel'); 
+subplot(211)
+imagesc(im2)
+hold on
+for rr = find(inhibitRois)
+    plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
+end
+title('gcamp ROIs idenetified as inhibitory');
+
+subplot(212)
+imagesc(im2)
+hold on
+for rr = find(~inhibitRois)
+    plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
+end
+title('gcamp ROIs identified as excitatory');
 
 
 %% set good_inhibit and good_excit neurons. (run avetrialAlign_setVars to get goodinds and traces.)

@@ -22,7 +22,7 @@ pnev2load = []; %7 % 4
 
 setInhibitExcit = true; % if 1, inhibit and excit traces will be set.
     sigTh = 1.2; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
-    showResults = false; % set to true so u can evaluate if sigTh is doing a good job.
+    showResults = false; % set to true so u can evaluate identification of inhibitory neurons (ie if sigTh is doing a good job).
     
 compareManual = false; % compare results with manual ROI extraction
 plotTraces1by1 = false; % plot traces per neuron and per trial showing all trial events
