@@ -1,5 +1,11 @@
-% it will pool all sessions for each mouse.
+% This is the main starting script for the logistic regression analysis of
+% behavioral data (predicting animals choice from a number of factors like
+% stimulus rate, ITI and previous choice). 
+% It sets parameters and calls trialHist_logistRegress. 
+% It pools trials from all sessions for each mouse.
 
+
+%%
 miceNames = {'fn03', 'fn04', 'fn05', 'fn06', 'fni16', 'fni17', 'fni18', 'fni19', 'hni01', 'hni04'};
 
 binningRates = 1; % this is for the conventional analysis, if true the effect of outcome will be shown for different stim strength.
@@ -53,7 +59,8 @@ for icount = 1:length(miceNames)
     trials_per_mouse(icount) = length(alldata);
     
     
-    %% do logisitic regression
+    %% Do logisitic regression
+    
     clear B deviance stats X y B_inds B_len ratesDiffInput successPrevInput failurePrevInput itiPrecedInput
     
     [B, deviance, stats, X, y, B_inds, B_len, ...
@@ -65,7 +72,8 @@ for icount = 1:length(miceNames)
         doplots, vec_ratesdiff, vec_iti, excludeExtraStim, excludeShortWaitDur, regressModel, vec_ratesdiff2, mouse);
     
     
-    %%
+    %% Do conventional analysis to look at the effect of trial history for different ITIs.
+    
     trialHist_post1
 
     
@@ -75,11 +83,13 @@ fprintf(['Trials per mouse:', repmat('%d  ', [1, length(trials_per_mouse)]),'\n'
 fprintf('Average trials per mouse: %d\n', nanmean(trials_per_mouse))
 
 
-%% set B, p and se for each term (rate, iti, etc) separately in a cell array
+%% Set B, p and se for each term (rate, iti, etc) separately in a cell array
+
 trialHist_post2
 
 
-%% set combined plots
+%% Set combined plots
+
 if length(miceNames)>1
     trialHist_plots
 end

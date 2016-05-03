@@ -484,7 +484,11 @@ if doiti && any(strcmp(regressModel, {'rate_outcomeRate', 'rateITI_outcomeITI', 
     inds_itiRatesDiffInput = r_t(:)';
     len_itiRatesDiffInput = (length(vec_ratesdiff2)-1) * (length(vec_iti)-1);
 
-
+else
+    itiRatesDiffInput = []; 
+    rateSuccPrecedInput = []; 
+    rateFailPrecedInput = []; 
+    ratesDiffVecInds2 = [];
 end
 
 
@@ -571,7 +575,10 @@ if num_fitted_trs > 20
     [B, deviance, stats] = glmfit(X, y, 'binomial', 'constant', 'off', 'estdisp', 'on');
 
     % exclude data if iteration limit reached in glmfit.
-    if strcmp(lastwarn, 'Iteration limit reached.') || regexp(lastwarn, 'The estimated coefficients perfectly separate') || regexp(lastwarn, 'X is ill conditioned')
+    if strcmp(lastwarn, 'Iteration limit reached.') || ...
+            ~isempty(regexp(lastwarn, 'The estimated coefficients perfectly separate', 'once')) || ...
+            ~isempty(regexp(lastwarn, 'X is ill conditioned', 'once'))
+        lastwarn
 %         fprintf('Iteration limit reached.\n')
         B = []; deviance = []; stats = [];
         %
@@ -639,11 +646,11 @@ if doplots
     % isequal(sqrt(diag(stats.covb)), stats.se)
     % isequal(B ./ stats.se, stats.t)
     %{
-if estdisp
-    stats.p = 2 * tcdf(-abs(stats.t), dfe);
-else
-    stats.p = 2 * normcdf(-abs(stats.t));
-end
+    if estdisp
+        stats.p = 2 * tcdf(-abs(stats.t), dfe);
+    else
+        stats.p = 2 * normcdf(-abs(stats.t));
+    end
     %}
     
     
@@ -670,14 +677,18 @@ end
     for ib = 2%:length(B_term)
         subplot(4,2,5)
         errorbar(1:size(B_term{ib},2), B_term{ib}, se_term{ib}, 'k.');
-        ylabel('regress coeff')
+        ylabel('Regress coeff')
     end
     
+    clear l
+    cnt = 0;
     for ib = 3:length(B_term)
+        cnt = cnt+1;
         subplot(4,2,6), hold on
-        errorbar(1:size(B_term{ib},2), B_term{ib}, se_term{ib}, '.', 'color', col{ib});
-        ylabel('regress coeff')
-    end    
+        l(cnt) = errorbar(1:size(B_term{ib},2), B_term{ib}, se_term{ib}, '.', 'color', col{ib});
+        ylabel('Regress coeff')        
+    end
+    legend(l)
     
     %{
     % stimRate coef
@@ -736,6 +747,7 @@ end
     end
     %}
     
+    
     %% make PMF based on the model predictions
     
     % xs = (rates(1) : 0.1 : rates(end))';
@@ -761,12 +773,16 @@ end
     figure(figh)
     subplot(428)
     PMF_set_plot(stimrate, y, cb, [], plotPMF, shownumtrs);
-    PMF_set_plot(stimrate, yfit, cb, [], plotPMF, 0, 'y');
     PMF_set_plot(stimrate, p, cb, [], plotPMF, 0, 'r');
+    PMF_set_plot(stimrate, yfit, cb, [], plotPMF, 0, 'y');    
     xlabel('Stim rate (Hz)')
     ylabel('Prop HR choice')
     xlim([min(stimrate)-1 max(stimrate)+1])
     ylim([-.1 1.1])
+    f1 = findobj(gca, 'color', 'k', 'type', 'line');
+    f2 = findobj(gca, 'color', 'r', 'type', 'line');
+    f3 = findobj(gca, 'color', 'y', 'type', 'line');
+    legend([f1(1), f2(1), f3(1)], 'data','fitted P','fitted category')
     
     
 end
