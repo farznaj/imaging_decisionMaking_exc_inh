@@ -1,9 +1,29 @@
+
+%% Align traces on particular trial events
+
+% remember traces_al_sm has nan for trs2rmv as well as trs in alignedEvent that are nan.
+
+traces = alldataSpikesGood; % alldataSpikesGoodExc; % alldataSpikesGoodInh; % alldataSpikesGood;  % traces to be aligned.
+alignedEvent = 'stimOn'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward'
+dofilter = false; true;
+
+traceTimeVec = {alldata.frameTimes}; % time vector of the trace that you want to realign.
+
+[traces_al_sm, time_aligned_stimOn, eventI_stimOn] = alignTraces_prePost_filt(traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward);
+
+% set to nan those trials in outcomes and allRes that are nan in traces_al_sm
+a = find(sum(sum(~isnan(traces_al_sm),1),3), 1);
+allTrs2rmv = find(squeeze(sum(isnan(traces_al_sm(:,a,:)))));
+outcomes(allTrs2rmv) = NaN; 
+allResp(allTrs2rmv) = NaN; 
+allResp_HR_LR(allTrs2rmv) = NaN;
+%%
 % Remember: you can use the script svmUnderstandIt to understand how some
 % of the matlab functions related to SVM classification work.
 windowAvgFlg = true;
 pcaFlg = true;
 stMs = round(500/frameLength);
-enMs = round(900/frameLength);
+enMs = round(700/frameLength);
 
 thAct = 1e-3; % could be a good th for excluding neurons w too little activity.
 numRand = 1; % 50; 100; % you tried values between [50 500], at nrand=500 mismatches (computed on the b averaged across all iters) are actually worse compared to the average mismatch computed from single runs.  nrand=200 seems to be a good choice.
@@ -85,13 +105,13 @@ yy = choiceVec0; % choiceVec0(extraTrs); % trials x 1
 
 mskNan = isnan(choiceVec);
 if windowAvgFlg
-X = spikeAveEp(~mskNan, :); % spikeAveEp0(extraTrs,:); % trials x units
-Y = choiceVec(~mskNan); % choiceVec0(extraTrs); % trials x 1
+    X = spikeAveEp(~mskNan, :); % spikeAveEp0(extraTrs,:); % trials x units
+    Y = choiceVec(~mskNan); % choiceVec0(extraTrs); % trials x 1
 else
-X = reshape(permute(traces_al_sm(ep, ~NsExcluded, ~mskNan), [1 3 2]),...
-length(ep)*sum(~mskNan), sum(~NsExcluded));
-Y = repmat(reshape(choiceVec(~mskNan), 1, sum(~mskNan)), length(ep), 1);
-Y = Y(:);  
+    X = reshape(permute(traces_al_sm(ep, ~NsExcluded, ~mskNan), [1 3 2]),...
+    length(ep)*sum(~mskNan), sum(~NsExcluded));
+    Y = repmat(reshape(choiceVec(~mskNan), 1, sum(~mskNan)), length(ep), 1);
+    Y = Y(:);  
 end
 
 %% run SVM
