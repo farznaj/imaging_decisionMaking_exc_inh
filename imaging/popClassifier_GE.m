@@ -1,3 +1,4 @@
+neuronType = 2; % 0: excitatory, 1: inhibitory, 2:all types.
 
 %% Align traces on particular trial events
 
@@ -11,6 +12,12 @@ traceTimeVec = {alldata.frameTimes}; % time vector of the trace that you want to
 
 [traces_al_sm, time_aligned_stimOn, eventI_stimOn] = alignTraces_prePost_filt(traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward);
 
+switch neuronType
+    case 0 % only escitatory
+        traces_al_sm(:, good_inhibit, :) = NaN;
+    case 1 % only inhibitory
+        traces_al_sm(:, good_excit, :) = NaN;
+end
 % set to nan those trials in outcomes and allRes that are nan in traces_al_sm
 a = find(sum(sum(~isnan(traces_al_sm),1),3), 1);
 allTrs2rmv = find(squeeze(sum(isnan(traces_al_sm(:,a,:)))));
