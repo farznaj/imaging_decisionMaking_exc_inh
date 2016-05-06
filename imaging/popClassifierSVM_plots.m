@@ -130,18 +130,3 @@ threshes = (sd0 * mu1 + sd1 * mu0) / (sd1 + sd0);
 plot([threshes threshes], [0 .5], ':')
 
 
-%% Compare svm weights with random weights
-
-popClassifierSVM_rand
-
-
-%% Compare SVM weights with ROC choicePref
-
-popClassifierSVM_choicePref
-
-
-
-
-
-
-

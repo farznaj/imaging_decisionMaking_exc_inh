@@ -748,8 +748,9 @@ traces = alldataSpikesGood; % alldataSpikesGoodExc; % alldataSpikesGoodInh; % al
 alignedEvent = 'stimOn'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward'
 dofilter = true; % false; 
 % set nPre and nPost to nan if you want to go with the numbers that are based on eventBef and eventAft.
-nPreFrames = []; % nan; 
-nPostFrames = []; % nan;
+% set to [] to include all frames before and after the alignedEvent.
+nPreFrames = nan; []; % nan; 
+nPostFrames = nan; []; % nan;
 
 traceTimeVec = {alldata.frameTimes}; % time vector of the trace that you want to realign.
 
@@ -793,9 +794,21 @@ choicePref_all = choicePref_ROC(traces_al_sm_aveFr, ipsiTrs, contraTrs, makeplot
 
 %% SVM
 
-popClassifier
+% do the analysis
+% popClassifier
+popClassifier_GE
 
+% plot projections
 popClassifierSVM_plots
+
+% for CV dataset
+popClassifierSVM_plots_CVprojections.m
+
+% Compare svm weights with random weights
+popClassifierSVM_rand
+
+% Compare SVM weights with ROC choicePref
+popClassifierSVM_choicePref
 
 
 
