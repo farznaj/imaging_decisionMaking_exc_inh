@@ -293,6 +293,8 @@ for ineu = 1:size(traceFU_toplot{1},2)
         mx = [mx max(toplot)];
     end
     
+    if ~all(isnan(toplot))
+        
     mn = min(mn);
     mx = max(mx);
     
@@ -494,6 +496,8 @@ for ineu = 1:size(traceFU_toplot{1},2)
     cla
     %     delete(h)
     %     set(gca, 'tickdir','out', 'NextPlot', 'replacechildren');
+    
+    end
     
 end
 

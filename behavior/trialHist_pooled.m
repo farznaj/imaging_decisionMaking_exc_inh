@@ -8,7 +8,7 @@
 %%
 miceNames = {'fn03', 'fn04', 'fn05', 'fn06', 'fni16', 'fni17', 'fni18', 'fni19', 'hni01', 'hni04'};
 
-binningRates = 1; % this is for the conventional analysis, if true the effect of outcome will be shown for different stim strength.
+binningRates = 0; 1; % this is for the conventional analysis, if true the effect of outcome will be shown for different stim strength.
 
 doplots = true;
 
@@ -28,7 +28,7 @@ vec_ratesdiff = 0:2:12;
 vec_ratesdiff2 = [0 6 10 12];
 
 defaultHelpedTrs = false; % false; % set to 0 if you want to manually set the helped trials.
-saveHelpedTrs = true;
+saveHelpedTrs = false; % true
 
 
 %%

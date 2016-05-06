@@ -62,31 +62,36 @@ for in = 1:size(traces_al_sm, 2)
     
     %
     outputs = [traces_i, traces_c]; % ipsi is asigned 0 and contra is asigned 1 in "targets". so assumption is ipsi response is lower than contra. so auc>.5 (choicePref>0) happens when ipsi resp<contra, and auc<.5 (choicePref<0) happens when ipsi>contra.
-    if any(isnan(outputs(:))), error('There are NaNs in outputs (traces). Matlab roc wont work properly. Get rid of NaNs!'), end
-    
-    [tpr,fpr,thresholds] = roc(targets,outputs); % each cell corresponds to a frame
-    
-    %     tpr = cellfun(@(x)smooth(x,5)', tpr, 'uniformoutput', 0); % smoothing makes very little difference
-    %     fpr = cellfun(@(x)smooth(x,5)', fpr, 'uniformoutput', 0);
-    %{
+    if all(isnan(outputs(:)))
+        fprintf('The neural trace is all NaNs!\n')
+    else
+        
+        if any(isnan(outputs(:))), error('There are NaNs in outputs (traces). Matlab roc wont work properly. Get rid of NaNs!'), end
+        
+        [tpr,fpr,thresholds] = roc(targets,outputs); % each cell corresponds to a frame
+        
+        %     tpr = cellfun(@(x)smooth(x,5)', tpr, 'uniformoutput', 0); % smoothing makes very little difference
+        %     fpr = cellfun(@(x)smooth(x,5)', fpr, 'uniformoutput', 0);
+        %{
     figure; plotroc(targets(fr,:), outputs(fr,:))
     figure; plotroc(targets, outputs)
-    %}
-    
-    if numfrs > 1
-        % auc = trapz([0, fpr{fr}, 1], [0, tpr{fr}, 1]); % choice pref measure for each neuron at each frame
-        auc = cellfun(@(x,y)trapz([0, x, 1], [0, y, 1]), fpr, tpr); % [fpr, tpr] = [0 0] and [1 1] will be always valid and you need them to measure auc correctly.
-    else
-        auc = trapz([0, fpr, 1], [0, tpr, 1]);
+        %}
+        
+        if numfrs > 1
+            % auc = trapz([0, fpr{fr}, 1], [0, tpr{fr}, 1]); % choice pref measure for each neuron at each frame
+            auc = cellfun(@(x,y)trapz([0, x, 1], [0, y, 1]), fpr, tpr); % [fpr, tpr] = [0 0] and [1 1] will be always valid and you need them to measure auc correctly.
+        else
+            auc = trapz([0, fpr, 1], [0, tpr, 1]);
+        end
+        
+        choicePref =  2*(auc-0.5);
+        %     figure; plot(choicePref) % look at choicePref for neuron in over time (all frames)
+        choicePref_all(:,in) = choicePref; % frames x neurons
+        
+        %     figure; hold on
+        %     boundedline((1:numfrs)', nanmean(traces_i,2), nanstd(traces_i,[],2), 'alpha')
+        %     boundedline((1:numfrs)', nanmean(traces_c,2), nanstd(traces_c,[],2), 'r', 'alpha')
     end
-    
-    choicePref =  2*(auc-0.5);
-    %     figure; plot(choicePref) % look at choicePref for neuron in over time (all frames)
-    choicePref_all(:,in) = choicePref; % frames x neurons
-    
-    %     figure; hold on
-    %     boundedline((1:numfrs)', nanmean(traces_i,2), nanstd(traces_i,[],2), 'alpha')
-    %     boundedline((1:numfrs)', nanmean(traces_c,2), nanstd(traces_c,[],2), 'r', 'alpha')
     
     
 end

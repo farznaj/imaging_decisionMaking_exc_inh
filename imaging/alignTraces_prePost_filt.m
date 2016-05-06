@@ -1,4 +1,4 @@
-function [traces_al_sm, time_aligned_stimOn, eventI_stimOn] = alignTraces_prePost_filt(traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward)
+function [traces_al_sm, time_aligned_stimOn, eventI_stimOn] = alignTraces_prePost_filt(traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, nPreFrames, nPostFrames)
 % calls functions for aligning traces on a particular trial event, and does
 % gaussian filtering if desired. (Pre_post method is used for alignment, as
 % opposed to nan method.)
@@ -17,8 +17,10 @@ scaleTime = frameLength;
 
 
 %% align the traces on stim onset.
+trs2rmv = []; 
+flag_traces = 1;
 [traces_aligned_fut_stimOn, time_aligned_stimOn, eventI_stimOn] = alignTraces_prePost_allCases...
-    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward);
+    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv, flag_traces, nPreFrames, nPostFrames);
 
 traces_al = traces_aligned_fut_stimOn;
 fprintf('Size of aligned trces: %d  %d  %d (fr x unit x tr)\n', size(traces_al))

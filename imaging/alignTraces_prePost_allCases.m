@@ -1,5 +1,5 @@
 function [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = alignTraces_prePost_allCases(alignedEvent, traces, traceTimeVec, ...
-    frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv, flag_traces)
+    frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv, flag_traces, nPreFrames, nPostFrames)
 
 % uses switch case to align traces using the prePost method.
 % alignedEvent is one of the follwoing: 
@@ -7,6 +7,30 @@ function [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = a
 
 if ~exist('flag_traces', 'var')
     flag_traces = true; % if 1, 'traces' contains the temporal traces for each trial. if 0, it contains the movie for each trial.
+end
+
+
+if exist('nPreFrames', 'var') 
+    if isnan(nPreFrames)
+        set_npre = 1;
+    else
+        nPre0 = nPreFrames;
+        set_npre = 0;
+    end
+else
+    set_npre = 1;
+end
+
+
+if exist('nPostFrames', 'var') 
+    if isnan(nPostFrames)
+        set_npost = 1;
+    else
+        nPost0 = nPostFrames;
+        set_npost = 0;
+    end
+else
+    set_npost = 1;
 end
 
 
@@ -38,7 +62,16 @@ switch alignedEvent
         
         eventInds_f = eventTimeToIdx(eventNow, traceTimeVec);
         
-        [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        if set_npre & set_npost
+            [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        elseif set_npre
+            [nPreFrames, ~] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        elseif set_npost
+            [~, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        else
+            nPreFrames = nPre0;
+            nPostFrames = nPost0;
+        end
         
         [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
         
@@ -70,7 +103,17 @@ switch alignedEvent
         
         eventInds_f = eventTimeToIdx(eventNow, traceTimeVec);
         
-        [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+%         [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        if set_npre & set_npost
+            [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        elseif set_npre
+            [nPreFrames, ~] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        elseif set_npost
+            [~, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        else
+            nPreFrames = nPre0;
+            nPostFrames = nPost0;
+        end
         
         [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
         
@@ -85,7 +128,17 @@ switch alignedEvent
 
         eventInds_f = eventTimeToIdx(eventNow, traceTimeVec);
         
-        [~, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+%         [~, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        if set_npre & set_npost
+            [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        elseif set_npre
+            [nPreFrames, ~] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        elseif set_npost
+            [~, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        else
+            nPreFrames = nPre0;
+            nPostFrames = nPost0;
+        end
         
         [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
         
@@ -98,7 +151,17 @@ switch alignedEvent
         
         eventInds_f = eventTimeToIdx(eventNow, traceTimeVec);
         
-        [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+%         [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        if set_npre & set_npost
+            [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        elseif set_npre
+            [nPreFrames, ~] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        elseif set_npost
+            [~, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        else
+            nPreFrames = nPre0;
+            nPostFrames = nPost0;
+        end
         
         [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
         

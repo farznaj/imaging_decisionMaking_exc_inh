@@ -14,7 +14,7 @@ if ~exist('defPrePostFrs', 'var')
 end
 
 ntrs = sum(~isnan(eventNow));
-fprintf('Number of trials: %d\n', ntrs)
+fprintf('Number of trials with valid values for eventNow: %d\n', ntrs)
 
 if ~isempty(eventBef)
     nPreTime = min(eventNow - eventBef);

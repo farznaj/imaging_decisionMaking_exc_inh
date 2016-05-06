@@ -22,13 +22,16 @@ if all([binITIs, binRates])
     %}
     
     %% plot rate and iti coeffs.
+    
     col = {'k','r','g', 'b', 'm', 'c'};
     figure;
     for ib = 1:length(B_term)
         subplot(length(B_term),1,ib)
         errorbar(1:size(B_term{ib},2), nanmean(B_term{ib},1), nanstd(B_term{ib},[],1)./sqrt(n_bTerm{ib}), '.', 'color', col{ib});
         ylabel('regress coeff')
+        [h, p] = ttest2(B_term{ib}(:,1), B_term{ib}(:,end)); h_P = [h, p]
     end
+    
     
     %{
     figure;
@@ -71,6 +74,7 @@ if all([binITIs, binRates])
     %}
     
     %% look at average p values of each term
+    
     for iterm = 1:length(se_term)
         a = nanmean(p_term{iterm},1);
         fprintf(['Average P of term %d =', repmat('%.2f  ', [1, length(a)]), '\n'], iterm, a)
@@ -78,6 +82,7 @@ if all([binITIs, binRates])
     
     
     %% plot B for previous outcome after long vs. short iti. or strong vs weak current stim.
+    
     % or previous outcome after strong vs. weak stim.
     mn = min([B_term{4}(:); B_term{3}(:)]);
     mx = max([B_term{4}(:); B_term{3}(:)]);
@@ -87,6 +92,7 @@ if all([binITIs, binRates])
     try
         h = errorbarxy(B_term{3}(:,1), B_term{3}(:,end), se_term{3}(:,1), se_term{3}(:,end));
         delete(findobj(gca, 'color', 'b'))
+        set(findobj(gca, 'color', 'r'), 'color', 'k')
     catch
     end
     hold on
@@ -106,6 +112,7 @@ if all([binITIs, binRates])
     try
         errorbarxy(B_term{4}(:,1), B_term{4}(:,end), se_term{4}(:,1), se_term{4}(:,end))
         delete(findobj(gca, 'color', 'b'))
+        set(findobj(gca, 'color', 'r'), 'color', 'k')
     catch
     end
     hold on
@@ -122,6 +129,7 @@ if all([binITIs, binRates])
     
     
     %% summary plots of the conventinal analysis of trial history.
+    
     mn = min([fract_change_choosingSameChoice_aftS_all(:); fract_change_choosingSameChoice_aftF_all(:); fract_change_choosingHR_aftHR_vs_LR_S_all(:); fract_change_choosingLR_aftLR_vs_HR_S_all(:); fract_change_choosingHR_aftHR_vs_LR_F_all(:); fract_change_choosingLR_aftLR_vs_HR_F_all(:)]);
     mx = max([fract_change_choosingSameChoice_aftS_all(:); fract_change_choosingSameChoice_aftF_all(:); fract_change_choosingHR_aftHR_vs_LR_S_all(:); fract_change_choosingLR_aftLR_vs_HR_S_all(:); fract_change_choosingHR_aftHR_vs_LR_F_all(:); fract_change_choosingLR_aftLR_vs_HR_F_all(:)]);
     lv = size(fract_change_choosingHR_aftHR_vs_LR_F,1);

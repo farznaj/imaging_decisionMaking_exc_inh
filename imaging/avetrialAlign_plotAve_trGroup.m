@@ -122,108 +122,111 @@ for ifig = randi(length(figall)-1) % 1:length(figall)-1 % look at all neurons:  
     for ineu = figall(ifig)+1 : figall(ifig+1) % 1:size(traceEventAlign,2) % randperm(size(traceEventAlign,2)) % i_ttestp; %  %
         cnt = cnt+1;
         axes(ha(cnt));
-%         title(ineu)
+        %         title(ineu)
         hold on
         st = 1; gp = 2;
         ttot = []; eltot = [];
         mnx = [mn(ineu) mx(ineu)]; % [-.01 .015];
         
-        %%
-        for isec = 1:length(traces_aligned_all) % loop over traces aligned on different events
-            
-            tp = eval(traces_aligned_all{isec}); % traces_aligned_fut_initTone;
-            el = eval(eventI_all{isec}); % eventI_initTone;
-            tt = eval(time_all{isec});
-            
-            ln = size(tp, 1);
-            xsec = st : st+ln-1;
-            el = xsec(1)+el-1;
-            st = xsec(end)+gp+1;
-            ttot = [ttot, tt, NaN(1,gp)];
-            eltot = [eltot, el];
-            
-            traces_aligned_corrL = tp(:,ineu,correctL);
-            traces_aligned_corrR = tp(:,ineu,correctR);
-            
-            aveTrsPerNeuron_corrL = nanmean(traces_aligned_corrL, 3);
-            aveTrsPerNeuron_corrR = nanmean(traces_aligned_corrR, 3);
-            
-            sdTrsPerNeuron_corrL = nanstd(traces_aligned_corrL, 0, 3);
-            seTrsPerNeuron_corrL = sdTrsPerNeuron_corrL ./ ...
-                repmat(sqrt(sum(correctL)), size(sdTrsPerNeuron_corrL));
-            
-            sdTrsPerNeuron_corrR = nanstd(traces_aligned_corrR, 0, 3);
-            seTrsPerNeuron_corrR = sdTrsPerNeuron_corrR ./ ...
-                repmat(sqrt(sum(correctR)), size(sdTrsPerNeuron_corrR));
-            
-            
-            %% left choice (ipsi): blue
-            toplot = aveTrsPerNeuron_corrL; %(:, ineu);
-            toplot_b = seTrsPerNeuron_corrL; %(:, ineu);
-            
-            if dofilter
-                toplot = conv(toplot, H', 'same');
-                toplot_b = conv(toplot_b, H, 'same');
+        if isnan(mn(ineu))
+            warning('either the neuron trace is all NaNs, or there is something wrong!')
+        else
+            %%
+            for isec = 1:length(traces_aligned_all) % loop over traces aligned on different events
                 
-                % you need to use the following if you don't use the 'same' option for conv
-%                 toplot = toplot(ceil(siz/2) : end-ceil(siz/2)+1);
-%                 toplot_b = toplot_b(ceil(siz/2) : end-ceil(siz/2)+1);
+                tp = eval(traces_aligned_all{isec}); % traces_aligned_fut_initTone;
+                el = eval(eventI_all{isec}); % eventI_initTone;
+                tt = eval(time_all{isec});
+                
+                ln = size(tp, 1);
+                xsec = st : st+ln-1;
+                el = xsec(1)+el-1;
+                st = xsec(end)+gp+1;
+                ttot = [ttot, tt, NaN(1,gp)];
+                eltot = [eltot, el];
+                
+                traces_aligned_corrL = tp(:,ineu,correctL);
+                traces_aligned_corrR = tp(:,ineu,correctR);
+                
+                aveTrsPerNeuron_corrL = nanmean(traces_aligned_corrL, 3);
+                aveTrsPerNeuron_corrR = nanmean(traces_aligned_corrR, 3);
+                
+                sdTrsPerNeuron_corrL = nanstd(traces_aligned_corrL, 0, 3);
+                seTrsPerNeuron_corrL = sdTrsPerNeuron_corrL ./ ...
+                    repmat(sqrt(sum(correctL)), size(sdTrsPerNeuron_corrL));
+                
+                sdTrsPerNeuron_corrR = nanstd(traces_aligned_corrR, 0, 3);
+                seTrsPerNeuron_corrR = sdTrsPerNeuron_corrR ./ ...
+                    repmat(sqrt(sum(correctR)), size(sdTrsPerNeuron_corrR));
+                
+                
+                %% left choice (ipsi): blue
+                toplot = aveTrsPerNeuron_corrL; %(:, ineu);
+                toplot_b = seTrsPerNeuron_corrL; %(:, ineu);
+                
+                if dofilter
+                    toplot = conv(toplot, H', 'same');
+                    toplot_b = conv(toplot_b, H, 'same');
+                    
+                    % you need to use the following if you don't use the 'same' option for conv
+                    %                 toplot = toplot(ceil(siz/2) : end-ceil(siz/2)+1);
+                    %                 toplot_b = toplot_b(ceil(siz/2) : end-ceil(siz/2)+1);
+                end
+                
+                %     plot(t, toplot, 'color', [114 189 255]/256)
+                %     plot(t, toplot+toplot_sd, ':', 'color', [114 189 255]/256)
+                %     plot(t, toplot-toplot_sd, ':', 'color', [114 189 255]/256)
+                
+                boundedline(xsec, toplot, toplot_b, 'alpha');
+                %         set(h, 'linewidth', 2)
+                
+                %% right choice (contra) : red
+                toplot = aveTrsPerNeuron_corrR; %(:, ineu);
+                toplot_b = seTrsPerNeuron_corrR; %(:, ineu);
+                
+                if dofilter
+                    toplot = conv(toplot, H', 'same');
+                    toplot_b = conv(toplot_b, H, 'same');
+                    
+                    % you need to use the following if you don't use the 'same' option for conv
+                    %                 toplot = toplot(ceil(siz/2) : end-ceil(siz/2)+1);
+                    %                 toplot_b = toplot_b(ceil(siz/2) : end-ceil(siz/2)+1);
+                end
+                
+                boundedline(xsec, toplot, toplot_b, 'r', 'alpha')
+                
+                %% plot a line and write text for the event
+                plot([el el], mnx, 'k:')
+                
+                tx = eventI_all{isec};
+                %         text(el-2, mnx(1)-.002, tx(strfind(tx, '_')+1:end))
+                %             text(el-2, mnx(2)-.002, tx(strfind(tx, '_')+1:end))
+                text(el-2, mnx(2), tx(strfind(tx, '_')+1:end))
+                
             end
             
-            %     plot(t, toplot, 'color', [114 189 255]/256)
-            %     plot(t, toplot+toplot_sd, ':', 'color', [114 189 255]/256)
-            %     plot(t, toplot-toplot_sd, ':', 'color', [114 189 255]/256)
+            %%
+            xlim([1 xsec(end)])
+            %         ylim([mn(ineu)-.005  mx(ineu)+.005])
+            ylim([mn(ineu)  mx(ineu)]+eps)
+            %     xlim([-500 500])
+            %     xlabel('Time since event onset (ms)')
+            %     ylabel('DF/F')
+            set(gca, 'tickdir', 'out')
+            %     set(gcf, 'name', sprintf('Neuron %d', ineu))    %     set(gcf, 'name', sprintf('Neuron %d, P=%.2f', ineu, s_ttestp(cnt)))
+            %     set(gca, 'xtick', eltot) % marks events
+            %     set(gca, 'xtick', (1:7:length(ttot)))
+            %     set(gca, 'xticklabel', round(ttot(1:7:end)))
             
-            boundedline(xsec, toplot, toplot_b, 'alpha');
-            %         set(h, 'linewidth', 2)
+            %     round(200/frameLength)
+            e = [eltot(1)-6 eltot(1) eltot(2) eltot(2)+6 eltot(2)+12 eltot(2)+18 eltot(3) eltot(4) eltot(4)+6 eltot(5)-6 eltot(5) eltot(5)+6];
+            set(gca, 'xtick', e)
+            set(gca, 'xticklabel', round(ttot(e)))
             
-            %% right choice (contra) : red
-            toplot = aveTrsPerNeuron_corrR; %(:, ineu);
-            toplot_b = seTrsPerNeuron_corrR; %(:, ineu);
-            
-            if dofilter
-                toplot = conv(toplot, H', 'same');
-                toplot_b = conv(toplot_b, H, 'same');
-                
-                % you need to use the following if you don't use the 'same' option for conv                
-%                 toplot = toplot(ceil(siz/2) : end-ceil(siz/2)+1);
-%                 toplot_b = toplot_b(ceil(siz/2) : end-ceil(siz/2)+1);
-            end
-            
-            boundedline(xsec, toplot, toplot_b, 'r', 'alpha')
-            
-            %% plot a line and write text for the event
-            plot([el el], mnx, 'k:')
-            
-            tx = eventI_all{isec};
-            %         text(el-2, mnx(1)-.002, tx(strfind(tx, '_')+1:end))
-%             text(el-2, mnx(2)-.002, tx(strfind(tx, '_')+1:end))
-            text(el-2, mnx(2), tx(strfind(tx, '_')+1:end))
-
+            %%
+            %         pause
+            %         delete(gca)
         end
-        
-        %%
-        xlim([1 xsec(end)])
-%         ylim([mn(ineu)-.005  mx(ineu)+.005])
-        ylim([mn(ineu)  mx(ineu)]+eps)
-        %     xlim([-500 500])
-        %     xlabel('Time since event onset (ms)')
-        %     ylabel('DF/F')
-        set(gca, 'tickdir', 'out')
-        %     set(gcf, 'name', sprintf('Neuron %d', ineu))    %     set(gcf, 'name', sprintf('Neuron %d, P=%.2f', ineu, s_ttestp(cnt)))
-        %     set(gca, 'xtick', eltot) % marks events
-        %     set(gca, 'xtick', (1:7:length(ttot)))
-        %     set(gca, 'xticklabel', round(ttot(1:7:end)))
-        
-        %     round(200/frameLength)
-        e = [eltot(1)-6 eltot(1) eltot(2) eltot(2)+6 eltot(2)+12 eltot(2)+18 eltot(3) eltot(4) eltot(4)+6 eltot(5)-6 eltot(5) eltot(5)+6];
-        set(gca, 'xtick', e)
-        set(gca, 'xticklabel', round(ttot(e)))
-        
-        %%
-%         pause
-%         delete(gca)
-        
     end
 end
 

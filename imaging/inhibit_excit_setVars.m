@@ -11,17 +11,20 @@ end
 
 % [imfilename, pnevFileName] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh);
 
-load(imfilename, 'imHeight', 'imWidth', 'medImage')
+load(imfilename, 'imHeight', 'imWidth', 'medImage', 'sdImage')
 load(pnevFileName, 'A') % pnevFileName should contain Eft results after merging-again has been performed.
 spatialComp = A; 
 clear A
 
-im = medImage{2};
-if ~showResults
+if showResults
+%     im = medImage{2};
+    im = sdImage{2};
+else
     im = [];
 end
 
 contour_threshold = .95;
+fprintf('Setting the mask for the gcamp channel....\n')
 [CC, ~, ~, mask] = setCC_cleanCC_plotCC_setMask(spatialComp, imHeight, imWidth, contour_threshold, im);
 % size(CC)
 % size(mask)
@@ -34,20 +37,24 @@ inhibitRois = inhibitROIselection(mask, im2, sigTh, CC, showResults); % an array
 
 
 % Evaluate the results:
+im2p = sdImage{1};
 colors = hot(2*size(spatialComp,2));
 colors = colors(end:-1:1,:);
-% plot inhibitory ROIs on medImage of inhibit channel.
-figure('name', 'medImage of inhibit channel'); 
+% plot inhibitory ROIs on the image of inhibit channel.
+figure('name', 'Image of inhibit channel'); 
 subplot(211)
-imagesc(im2)
+imagesc(im2p)
+colormap gray
 hold on
 for rr = find(inhibitRois)
     plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
 end
 title('gcamp ROIs idenetified as inhibitory');
 
+% plot excitatory ROIs on the image of inhibit channel.
 subplot(212)
-imagesc(im2)
+imagesc(im2p)
+colormap gray
 hold on
 for rr = find(~inhibitRois)
     plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))

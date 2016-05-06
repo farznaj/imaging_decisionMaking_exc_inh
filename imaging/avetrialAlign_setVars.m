@@ -504,6 +504,8 @@ allResp_HR_LR(trs2rmv) = NaN;
     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv);
 
+trsGoToneEarlierThanStimOffset = find(timeCommitCL_CR_Gotone < timeStimOffset)';
+
 
 %% Take care of trials that mouse received center reward and go tone before the
 % end of the stimulus. This is important if looking at neural responses
@@ -511,24 +513,77 @@ allResp_HR_LR(trs2rmv) = NaN;
 % trials... not necessarily important for other alignments. So you may or
 % may not need to run this part! If want to be conservative, run it!
 
-trsGoToneEarlierThanStimOffset = find(timeCommitCL_CR_Gotone < timeStimOffset)';
-fprintf('%d = #trs goTone earlier than stimOffset\n', length(trsGoToneEarlierThanStimOffset))
+% but also remember when you align traces on 1stSideTry you don't want to
+% have stimulus played during the baseline. Usually 1stSideTry happens
+% long after stimOffset so this shouldn't be a problem. Figures below help
+% you dig into this. If you want to be very careful, you should remove
+% trials that have stim during n frames before time1stSideTry where n =
+% nPreFrame for alignments on 1stSideTry. Below you are removing trials
+% with stimOffset during the 3 frames before 1stSideTry.
 
-% timeStimOnset(trsGoToneEarlierThanStimOffset) = NaN; % IMPORTANT: you dont want to look beyond goTone time for these trials, but upto go tone is safe!
-timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset) = NaN;  % you want this for sure (bc in some trials stim has been still playing after go tone).
+if isempty(trsGoToneEarlierThanStimOffset)
+    fprintf('%d = No trials withgoTone earlier than stimOffset :)\n')
+else
 
-% For the following events not as important to set to nan unless you think
-% neural responses aligned on these events can be different when go tone
-% happened during stim, which is likely!
-if setNaN_goToneEarlierThanStimOffset % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
-    timeStimOnset(trsGoToneEarlierThanStimOffset) = NaN; % you dont want to look beyond goTone time for these trials, but upto go tone is safe!
-    timeStimOffset(trsGoToneEarlierThanStimOffset) = NaN; 
-    time1stSideTry(trsGoToneEarlierThanStimOffset) = NaN;  
-    time1stCorrectTry(trsGoToneEarlierThanStimOffset) = NaN; 
-    time1stIncorrectTry(trsGoToneEarlierThanStimOffset) = NaN; 
-    timeReward(trsGoToneEarlierThanStimOffset) = NaN; 
-    timeCommitIncorrResp(trsGoToneEarlierThanStimOffset) = NaN; 
-    time1stCorrectResponse(trsGoToneEarlierThanStimOffset) = NaN; 
+    figure('name', 'Trials with goTone earlier than stimulus offset'); 
+    subplot(211), hold on
+    plot(timeStimOffset(trsGoToneEarlierThanStimOffset)  -  ...
+        timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset))
+    
+    plot(time1stSideTry(trsGoToneEarlierThanStimOffset)  -  ...
+        timeStimOffset(trsGoToneEarlierThanStimOffset))    
+    plot([1 length(trsGoToneEarlierThanStimOffset)], [3*frameLength 3*frameLength], 'k:')
+    ylabel('Time (ms)')
+    legend('time after goTone with stimulus', 'time before 1stSideTry without stimulus') % this is a more understandable legend
+%     legend('stimOffset - goTone', '1stSideTry - stimOffset')
+    
+    subplot(212), hold on; 
+    plot(timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset))
+    plot(timeStimOffset(trsGoToneEarlierThanStimOffset), 'r')
+    plot(time1stSideTry(trsGoToneEarlierThanStimOffset), 'g')
+    plot(timeReward(trsGoToneEarlierThanStimOffset), 'm')
+    plot(timeCommitIncorrResp(trsGoToneEarlierThanStimOffset), 'c')
+    xlabel('Trials with Go tone earlier than stim offset')
+    ylabel('Time (ms)')
+    legend('goTone', 'stimOffset', '1stSideTry', 'Reward', 'commitIncorr')
+    
+    
+    %%
+    fprintf('%d = #trs goTone earlier than stimOffset\n', length(trsGoToneEarlierThanStimOffset))
+    fprintf('Removing them from timeCommitCL_CR_Gotone!\n')    
+    % timeStimOnset(trsGoToneEarlierThanStimOffset) = NaN; % IMPORTANT: you dont want to look beyond goTone time for these trials, but upto go tone is safe!
+    timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset) = NaN;  % you want this for sure (bc in some trials stim has been still playing after go tone).
+
+    
+    %%
+    a = time1stSideTry(trsGoToneEarlierThanStimOffset) - timeStimOffset(trsGoToneEarlierThanStimOffset);
+    if sum(a < 3*frameLength)
+        fprintf('There are %i trials with stimOffset within 3 frames before 1stSideTry.\n', sum(a < 3*frameLength))
+        fprintf('Removing them from 1stSideTry, 1stCorrTry, 1stIncorrTry!\n')
+        aa = trsGoToneEarlierThanStimOffset(a < 3*frameLength);
+        time1stSideTry(aa) = NaN;
+        time1stCorrectTry(aa) = NaN;
+        time1stIncorrectTry(aa) = NaN;
+        time1stCorrectResponse(aa) = NaN;
+    end
+    
+    
+    %%
+    % For the following events not as important to set to nan unless you think
+    % neural responses aligned on these events can be different when go tone
+    % happened during stim, which is likely!
+    if setNaN_goToneEarlierThanStimOffset % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
+        timeStimOnset(trsGoToneEarlierThanStimOffset) = NaN; % you dont want to look beyond goTone time for these trials, but upto go tone is safe!
+        timeStimOffset(trsGoToneEarlierThanStimOffset) = NaN; 
+        time1stSideTry(trsGoToneEarlierThanStimOffset) = NaN;  
+        time1stCorrectTry(trsGoToneEarlierThanStimOffset) = NaN; 
+        time1stIncorrectTry(trsGoToneEarlierThanStimOffset) = NaN; 
+        timeReward(trsGoToneEarlierThanStimOffset) = NaN; 
+        timeCommitIncorrResp(trsGoToneEarlierThanStimOffset) = NaN; 
+        time1stCorrectResponse(trsGoToneEarlierThanStimOffset) = NaN; 
+    end
+    
+    
 end
 
 
@@ -673,6 +728,7 @@ avetrialAlign_plotAve_noTrGroup
 
 %% Plot average traces across all neurons for different trial groups aligned on particular trial events. 
 
+fprintf('Remember: in each subplot (ie each neuron) different trials are contributing to different segments (alignments) of the trace!\n')
 avetrialAlign_plotAve_trGroup
 
 
@@ -690,11 +746,14 @@ avetrialAlign_plotAve_trGroup
 
 traces = alldataSpikesGood; % alldataSpikesGoodExc; % alldataSpikesGoodInh; % alldataSpikesGood;  % traces to be aligned.
 alignedEvent = 'stimOn'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward'
-dofilter = false; true;
+dofilter = true; % false; 
+% set nPre and nPost to nan if you want to go with the numbers that are based on eventBef and eventAft.
+nPreFrames = []; % nan; 
+nPostFrames = []; % nan;
 
 traceTimeVec = {alldata.frameTimes}; % time vector of the trace that you want to realign.
 
-[traces_al_sm, time_aligned_stimOn, eventI_stimOn] = alignTraces_prePost_filt(traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward);
+[traces_al_sm, time_aligned_stimOn, eventI_stimOn] = alignTraces_prePost_filt(traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, nPreFrames, nPostFrames);
 
 % set to nan those trials in outcomes and allRes that are nan in traces_al_sm
 a = find(sum(sum(~isnan(traces_al_sm),1),3), 1);
