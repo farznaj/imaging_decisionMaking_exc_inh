@@ -1,11 +1,11 @@
-function [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp)
+function [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp, allowCorrectOutcomeChange)
 %
 % set outcome and response side for each trial, taking into account
 % allcorrection and uncommitted responses.
 %
-% OUTPUTS: 
-% outcomes: outcome of each trial: 
-%    1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, 
+% OUTPUTS:
+% outcomes: outcome of each trial:
+%    1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation,
 %   -4: no center commit, -5: no side commit
 % allResp: response side of each trial: 1: left, 2: right.
 % allResp_HR_LR: response side based on the contingency --> 1 for HR choice, 0 for LR choice.
@@ -20,6 +20,11 @@ function [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, unco
 % state. Default changes the outcome and response side to the original lick
 % (as if mouse was not allowed to correct).
 %
+% allowCorrectOutcomeChange: optional % only effective when
+% allowCorrectResp is set to 'change'. If 0, outcome of allowCorrEntered
+% trials wont be changed (although animal's choice will be changed). If 1,
+% outcome will be changed as well.
+
 
 %%
 if ~exist('uncommittedResp', 'var')
@@ -28,6 +33,10 @@ end
 
 if ~exist('allowCorrectResp', 'var')
     allowCorrectResp = 'change'; % change the response on trials that entered allowCorrection to the original choice.
+end
+
+if ~exist('allowCorrectOutcomeChange', 'var')
+    allowCorrectOutcomeChange = 1; % only effective when allowCorrectResp is 'change'. If 0, outcome of allowCorrEntered trials wont be changed (although animal's choice will be changed). If 1, outcome will be changed as well.
 end
 
 
@@ -43,13 +52,46 @@ if ~strcmp(allowCorrectResp, 'nothing')
     % this does not give all trials that the mouse 1st committed error. If the mouse was on sideChoose, he will go to punish (and not punish allow correction).)
     a = arrayfun(@(x)x.parsedEvents.states.punish_allowcorrection, alldata, 'uniformoutput', 0);
     allowCorrectEntered = ~cellfun(@isempty, a);
+    fprintf('%.3f = Fraction of trials aninmal entered allowCorrection\n', nanmean(allowCorrectEntered))
+    
+    if sum(allowCorrectEntered) > 0
+        a = nanmean(allowCorrectEntered & outcomes==1) / nanmean(allowCorrectEntered);
+        fprintf('%.3f = Fract of allowCorrectEntered trials with final success\n', a)
+        a = nanmean(allowCorrectEntered & outcomes==0) / nanmean(allowCorrectEntered);
+        fprintf('%.3f = Fract of allowCorrectEntered trials with final failure\n', a)
+        a = nanmean(allowCorrectEntered & outcomes==-5) / nanmean(allowCorrectEntered);
+        fprintf('%.3f = Fract of allowCorrectEntered trials with final no sideLickAgain\n', a)
+        a = nanmean(allowCorrectEntered & outcomes==-2) / nanmean(allowCorrectEntered);
+        fprintf('%.3f = Fract of allowCorrectEntered trials with final noChoice. These are really noSideLickAgain, but must correspond to earlier training days when you did not have the state wait4decision2. \n', a)
+        
+        if nanmean(ismember(unique(outcomes(allowCorrectEntered)), [-5 -2 0 1])) ~=1
+            error('This cannot happen!')
+        end
+    end
+    
+else
+    disp('allCorrectEntered trials left unchanged!')
 end
 % sum(allowCorrectEntered & outcomes==0) % cases that animal entered allowCorrection and yet didn't change his choice.
 % sum(allowCorrectEntered & outcomes==1) % animal entered allowCorrection but changed his choice later.
 % sum(allowCorrectEntered & outcomes==-5) % animal entered allowCorrection but didn't side lick again eventually.
+% sum(allowCorrectEntered & outcomes==-2) % animal entered allowCorrection, but didn't side lick again eventually. This case is only
+% for earlier training days of your early mice. See the comment below.
+
+% Remember at first you did not have wait4decision2 and it was all
+% wait4decision. What it means is that you didn't distinguish between
+% animal not choosing at all (outcome=-2) and not side licking again
+% (outcome=-5). So you may have the following case for the earlier training
+% days of some of your early mice: (allowCorrectEntered & outcomes==-2). [In
+% reality when a mouse enters allowCorrection, then the outcome cannot be
+% -2 (bc he has made a choice) but this only happened because you did not
+% distinguish between no choice and no side lick again at earlier days of
+% your paradigm.]
+
 
 switch allowCorrectResp
     case 'remove'
+        disp('Removing allCorrectEntered trials!')
         allResp(allowCorrectEntered) = NaN;
         outcomes(allowCorrectEntered) = NaN;
         
@@ -61,7 +103,7 @@ switch allowCorrectResp
         allResp(allowCorrectEntered & outcomes==1) = a;
         
         
-        for itr = find(allowCorrectEntered & outcomes==-5) % mouse didn't side-lick-again at the end, set the resp side to the original choice.
+        for itr = find(allowCorrectEntered & ismember(outcomes, [-2, -5])) % mouse didn't side-lick-again at the end, set the resp side to the original choice. % if wondering why outcome=-2 is included, read your comments above. % find(allowCorrectEntered & outcomes==-5)
             pat = alldata(itr).parsedEvents.states.punish_allowcorrection(1);
             
             if ismember(pat, alldata(itr).parsedEvents.pokes.L)
@@ -71,9 +113,28 @@ switch allowCorrectResp
             end
         end
         
-        
-        outcomes(allowCorrectEntered) = 0; % their outcome can be 0, 1, or -5, but u're going with mouse's 1st choice so you prefer this to outcomes(allowCorrectEntered & outcomes==1) = 0;
+        if allowCorrectOutcomeChange % change both outcome and allResp
+            disp('Changing the response and outcome of allCorrectEntered trials!')
+            outcomes(allowCorrectEntered) = 0; % their outcome can be 0, 1, or -5, but u're going with mouse's 1st choice so you prefer this to outcomes(allowCorrectEntered & outcomes==1) = 0;
+        else % don't change outcome, only change allResp
+            disp('Changing the response BUT NOT outcome of allCorrectEntered trials!')
+        end
 end
+
+
+%{
+if size(alldata(itr).parsedEvents.states.punish_allowcorrection,1) > 1
+%     alldata(itr).parsedEvents.states
+    alldata(itr).parsedEvents.states.punish_allowcorrection
+    alldata(itr).parsedEvents.states.errorlick_again_wait
+    alldata(itr).parsedEvents.states.errorlick_again
+    alldata(itr).parsedEvents.states.punish_allowcorrection
+    alldata(itr).parsedEvents.states.correctlick_again_wait
+    alldata(itr).parsedEvents.states.correctlick_again
+    alldata(itr).parsedEvents.states.punish_allowcorrection_done
+    alldata(itr).parsedEvents.states.reward
+end
+%}
 
 
 %% Deal with trials that mouse made an uncommitted lick first and then switched to the other side.

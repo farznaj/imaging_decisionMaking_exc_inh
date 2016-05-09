@@ -191,6 +191,8 @@ for ib = allbins'
             if sum(a)>3 % we want at least 3 trials.
                 choiceNow(1:sum(a), it) = choiceNow_all(a);
                 stimdiffNow(1:sum(a), it) = stimdiffNow_all(a);
+            else
+                disp('not enough number of trials, setting to NaN')
             end
         end
     end
@@ -261,11 +263,16 @@ if doplots
     subplot(321)
     plot([nhs;nls;nhf;nlf]')
 %     plot(v(1:end-1), [nhs;nls;nhf;nlf]')
-    set(gca, 'xtick', 1:length(v)-1)
-    set(gca, 'xticklabel', (v(1:end-1) + diff(v)/2))
-    xlabel('StimRate diff (center of bin value)')
-    ylabel('Number of trials preceded by...')
-    legend('HR success', 'LR success', 'HR failure', 'LR failure')
+    if binningRates
+        set(gca, 'xtick', 1:length(v)-1)
+        set(gca, 'xticklabel', (v(1:end-1) + diff(v)/2))
+        xlabel('StimRate diff (center of bin value)')
+        ylabel('Number of trials preceded by...')
+        legend('HR\_S', 'LR\_S', 'HR\_F', 'LR\_F')
+    else
+        set(gca, 'xtick', 1:4)
+        set(gca, 'xticklabel', {'HR\_S', 'LR\_S', 'HR\_F', 'LR\_F'})
+    end
 end
 
 

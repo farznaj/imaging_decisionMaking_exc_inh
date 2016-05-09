@@ -84,7 +84,9 @@ end
 % sumMask method
 % matchedROI_idx(i)=j means ROI j of toMatchMask matched ROI i of refMask. % matchedROI_idx shows you what ROI from Eft method matched the manual ROI.
 % matchedROI_idx(i)=NaN means no ROI in toMatchMask matched the ref mask.
-matchedROI_idx = matchROIs_sumMask(refMask, toMatchMask); 
+if ~exist('activity_man_eftMask', 'var')
+    matchedROI_idx = matchROIs_sumMask(refMask, toMatchMask); 
+end
 
 figure; plot(matchedROI_idx), % xlabel('Manual ROI index'), ylabel('matching Eft ROI index')
 

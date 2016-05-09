@@ -21,13 +21,13 @@ makeplots = 0;
 %%
 % compute choicePref for each frame
 % choicePref_all: frames x units. chiocePref at each frame for each neuron
-% choicePref_all = choicePref_ROC(traces_al_sm, ipsiTrs, contraTrs, makeplots, eventI_stimOn);
+% choicePref_all = choicePref_ROC(traces_al_sm, ipsiTrs, contraTrs, makeplots, eventI);
 
-% traces_al_sm_aveFr = nanmean(traces_al_sm(eventI_stimOn:end,:,:), 1); % compute choicePref for the average of frames after the stim.
+% traces_al_sm_aveFr = nanmean(traces_al_sm(eventI:end,:,:), 1); % compute choicePref for the average of frames after the stim.
 
 traces_al_sm_aveFr = nanmean(traces_al_sm(ep, ~NsExcluded,:), 1); % same neurons and epoch that were analyzed for SVM.
 
-choicePref_all = choicePref_ROC(traces_al_sm_aveFr, ipsiTrs, contraTrs, makeplots, eventI_stimOn, useEqualNumTrs); % frames x neurons
+choicePref_all = choicePref_ROC(traces_al_sm_aveFr, ipsiTrs, contraTrs, makeplots, eventI, useEqualNumTrs); % frames x neurons
 
 % choicePrefAveEp = nanmean(choicePref_all(ep, :)); % average choicePref across epoch ep.
 choicePrefAveEp = choicePref_all;

@@ -17,7 +17,7 @@ scaleTime = frameLength;
 
 
 %% align the traces on stim onset.
-trs2rmv = []; 
+trs2rmv = []; % you need it only if you are aligning on trialBeg (ie 1st frame of a trial)
 flag_traces = 1;
 [traces_aligned_fut_stimOn, time_aligned_stimOn, eventI_stimOn] = alignTraces_prePost_allCases...
     (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv, flag_traces, nPreFrames, nPostFrames);

@@ -17,6 +17,8 @@ imagingFolder = '151102'; % '151021';
 mdfFileNumber = 1; % or tif major
 pnev2load = []; %7 % 4
 
+
+%%
 signalCh_meth1 = 2; % CC, mask, etc are driven from signalCh_meth1 (usually you use this as Ref, but you can change in pnev_manual_comp_match)
 signalCh_meth2 = 1; % CC2, mask2, etc2 are driven from signalCh_meth2 (or manual method)
 
@@ -46,6 +48,7 @@ end
 
 
 %% set vars for the 1st method
+
 disp(pnevFileName)
 load(pnevFileName, 'A') % load('151102_001_ch1-PnevPanResults*', 'A')
 spatialComp = A; % obj.A; % A2;
@@ -53,6 +56,16 @@ clear A
 
 if any([plotMatchedTracesAndROIs  plotOnlyMatchedTraces])
     load(pnevFileName, 'C', 'C_df', 'S_df')
+    
+    if size(C,2) ~= size(C_df,2) % iti-nans were inserted in C and S: remove them.
+        load(imfilename, 'Nnan_nanBeg_nanEnd')
+        nanBeg =  Nnan_nanBeg_nanEnd(2,:);
+        nanEnd = Nnan_nanBeg_nanEnd(3,:);
+        inds2rmv = cell2mat(arrayfun(@(x,y)(x:y), nanBeg, nanEnd, 'uniformoutput', 0)); % index of nan-ITIs (inferred ITIs) on C and S traces.
+        C(:, inds2rmv) = [];
+    end
+
+
     temporalComp = C;
     temporalDf = C_df;
     spikingDf = S_df;
@@ -106,6 +119,14 @@ if any([plotMatchedTracesAndROIs  plotOnlyMatchedTraces])
         
         load(imfilename, 'rois', 'activity', 'pmtOffFrames')
         
+        % if you computed manual activity on eft mask:
+        clear activity_man_eftMask
+        load(pnevFileName, 'activity_man_eftMask')
+        
+        if exist('activity_man_eftMask', 'var')
+            activity = activity_man_eftMask;
+        end
+        
         if size(activity,1)==size(temporalComp,2)
             activity = activity'; % perhaps do this for the manual activity before saving it.
         end
@@ -118,6 +139,12 @@ if any([plotMatchedTracesAndROIs  plotOnlyMatchedTraces])
         
         temporalComp2 = activity_man;
         temporalDf2 = dFOF_man;
+        
+        if exist('activity_man_eftMask', 'var')
+            activity = activity_man_eftMask;
+            matchedROI_idx = 1:size(dFOF_man,2); % there is a 1-1 match between ROIs            
+        end
+
         
     end
 end
@@ -139,8 +166,11 @@ size(mask)
 if ~compareManual % compare w a different output from Eft algorithm.    
     [CC2, ~, ~, mask2] = setCC_cleanCC_plotCC_setMask(spatialComp2, imHeight, imWidth, contour_threshold, im2);    
     
-else  % compare w manually-found ROIs    
+elseif ~exist('activity_man_eftMask', 'var')  % compare w manually-found ROIs    
     [CC2, mask2] = setCC_mask_manual(rois, im);    
+else
+    CC2 = CC;
+    mask2 = mask;
 end
 
 size(CC2)

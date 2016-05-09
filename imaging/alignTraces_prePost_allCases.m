@@ -50,7 +50,8 @@ switch alignedEvent
         
         [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
         
-        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
+        [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials                
+        fprintf('alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         
         
     %% init tone
@@ -73,7 +74,8 @@ switch alignedEvent
             nPostFrames = nPost0;
         end
         
-        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
+        [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
+        fprintf('alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         
         % if isempty(nPreFrames)
         %     eventI_initTone = size(traces_aligned_fut_initTone,1) - nPostFrames;
@@ -115,7 +117,8 @@ switch alignedEvent
             nPostFrames = nPost0;
         end
         
-        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
+        [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
+        fprintf('alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         
     
     case 'goTone'  
@@ -140,7 +143,8 @@ switch alignedEvent
             nPostFrames = nPost0;
         end
         
-        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
+        [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
+        fprintf('alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         
     
     case '1stSideTry'  
@@ -163,7 +167,8 @@ switch alignedEvent
             nPostFrames = nPost0;
         end
         
-        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
+        [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
+        fprintf('alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         
     
     case 'reward'  
@@ -178,7 +183,8 @@ switch alignedEvent
         
         [~, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
         
-        [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials
+        [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials
+        fprintf('alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         
         
 end

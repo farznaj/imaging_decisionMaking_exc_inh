@@ -94,9 +94,9 @@ subplot(221), hold on
 plot([0 0], [mn mx], 'k:', 'handleVisibility', 'off') % [eventI_stimOn eventI_stimOn]
 plot([st st], [mn mx], 'k:', 'handleVisibility', 'off') % [epStart epStart]
 plot([en en], [mn mx], 'k:', 'handleVisibility', 'off') % [epEnd epEnd]
-plot(time_aligned_stimOn, av1), plot(time_aligned_stimOn, av2)
-% boundedline(time_aligned_stimOn, av1, sd1, 'b', 'alpha')
-% boundedline(time_aligned_stimOn, av2, sd2, 'r', 'alpha')
+plot(time_aligned, av1), plot(time_aligned, av2)
+% boundedline(time_aligned, av1, sd1, 'b', 'alpha')
+% boundedline(time_aligned, av2, sd2, 'r', 'alpha')
 xlabel('Time since stim onset (ms)')
 ylabel({'Weighted average of', 'neural responses'})
 xlim([pb pe])
@@ -160,8 +160,8 @@ subplot(222), hold on
 plot([0 0], [mn mx], 'k:', 'handleVisibility', 'off') % [eventI_stimOn eventI_stimOn]
 plot([st st], [mn mx], 'k:', 'handleVisibility', 'off') % [epStart epStart]
 plot([en en], [mn mx], 'k:', 'handleVisibility', 'off') % [epEnd epEnd]
-plot(time_aligned_stimOn, top) % average across all iters
-boundedline(time_aligned_stimOn, top, topsd, 'r', 'alpha') % average across all iters
+plot(time_aligned, top) % average across all iters
+boundedline(time_aligned, top, topsd, 'r', 'alpha') % average across all iters
 xlabel('Time since stim onset (ms)')
 ylabel('Correct classification')
 xlim([pb pe])

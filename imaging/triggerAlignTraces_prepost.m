@@ -1,4 +1,4 @@
-function [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces)
+function [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces)
 % [traces_aligned_fut, time_aligned, eventI] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime)
 %
 % Align traces on eventInds_f, such that nPreFrames are before the event,

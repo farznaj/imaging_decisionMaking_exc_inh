@@ -1,3 +1,5 @@
+% set vars required for preprocessing of imaging data.
+
 % writeCaProcessParams(outName, mouse, imagingFold, tifMajor, signalCh, regFileNums, regFrameNums, behavName, behavFcn, headerBug,...
 %     channelsToWrite, maxMaskWidth, motionCorrDone, analysisFolder)
 
