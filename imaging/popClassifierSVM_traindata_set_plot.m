@@ -11,18 +11,29 @@
 % popClassifier will give the vars you need here.
 
 
+dataType = {'actual', 'shuffled'};
+
+
+%% Set average weights for CV SVM models across all iterations.
+
+% it gives the normalized average of normalized weights.
+if usePooledWeights
+    popClassifierSVM_traindata_setWeights
+end
+
 
 %%
-makePlots_here = 0;
-
-dataType = {'actual', 'shuffled'};
+makePlots_here = 0; % 1;
 
 frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff = cell(1,length(dataType));
 frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff = cell(1,length(dataType));
 avePerf_cv_dataVSshuff = cell(1,length(dataType));
 
 
-for id = 2; % 1:length(dataType) % there is very little variability for trained data among different iterations... so it makes sense not to go though the trained dataset.
+for id = 1:length(dataType) % there is very little variability for trained data among different iterations... so it makes sense not to go though the trained dataset.
+    
+    fprintf('Setting training data projections for %s data\n', dataType{id})
+    
     %%
     % set projections (of neural responses on the hyperplane defined by the
     % decoder's weights) for the test observations in the cross-validated SVM
@@ -55,7 +66,11 @@ for id = 2; % 1:length(dataType) % there is very little variability for trained 
                 svm_model_now = SVMModelChance_all(s).cv; % shuffled trained data
         end
         
-        wNsHrLrAve_rep = svm_model_now.Beta;
+        if ~usePooledWeights
+            wNsHrLrAve_rep = svm_model_now.Beta;
+            % normalize it to the vector length
+            wNsHrLrAve_rep = wNsHrLrAve_rep / norm(wNsHrLrAve_rep);
+        end
         
         
         % Set the test trials beta and traces for kfold ik
@@ -80,8 +95,14 @@ for id = 2; % 1:length(dataType) % there is very little variability for trained 
         % training) onto the decoder. This gives the projection traces
         % named frameTrProjOnBeta_rep.
         
-        % project non-filtered traces
-        frameTrProjOnBeta_rep = einsum(traces_bef_proj_nf, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
+        if usePooledWeights
+            % project non-filtered traces on the average normalized vector across all iterations and folds
+            frameTrProjOnBeta_rep = einsum(traces_bef_proj_nf, w_norm_ave_train_dataVSshuff(:,id), 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
+        else
+            % project non-filtered traces on the weights from a single model.
+            frameTrProjOnBeta_rep = einsum(traces_bef_proj_nf, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
+        end
+        
         % project filtered traces
         %             frameTrProjOnBeta_rep = einsum(traces_bef_proj_f, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
         %         size(frameTrProjOnBeta_rep) % frames x sum(trTest) (ie number of test trials)

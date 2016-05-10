@@ -5,17 +5,20 @@
 % Remember: you can use the script svmUnderstandIt to understand how some
 % of the matlab functions related to SVM classification work.
 
+home
 fprintf('SVM analysis started.\n')
 
 
 %% Set initial variables
 
-trialHistAnalysis = 1; % more parameters are specified in popClassifier_trialHistory.m
-    iTiFlg = 0; % 0: short iTi, 1: long iTi, 2: all iTis.
+trialHistAnalysis = 0; % more parameters are specified in popClassifier_trialHistory.m
+    iTiFlg = 1; % 0: short iTi, 1: long iTi, 2: all iTis.
     prevSuccessFlg = true; % true previous sucess trials; false: previous failure.
     vec_iti = [0 9 30]; % [0 10 30]; %[0 6 9 12 30]; % [0 7 30]; % [0 10 30]; % [0 6 9 12 30]; % use [0 40]; if you want to have a single iti bin and in conventioinal analysis look at the effect of current rate on outcome.
     
 neuronType = 2; % 0: excitatory, 1: inhibitory, 2:all types.
+pcaFlg = true; %false; %true;
+windowAvgFlg = true;
 
 if trialHistAnalysis
     alignedEvent = 'initTone';
@@ -23,21 +26,20 @@ else
     alignedEvent = 'stimOn'; % what event align traces on. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward'
 end
 
-pcaFlg = true; %false; %true;
-windowAvgFlg = true;
-
 clear epStart epEnd
 if trialHistAnalysis
     epStart = 1; %3; %4;
-    epEnd = nan; %epStart + round(200/frameLength); % nan; % if nan, you will use the time of alignedEvent for epEnd.
+    epEnd = nan; %epStart + round(200/frameLength); % if nan, you will use the time of alignedEvent for epEnd.
 else
     stMs = round(600/frameLength); % the start point of the epoch relative to alignedEvent for training SVM. (500ms)
     enMs = floor(800/frameLength); % the end point of the epoch relative to alignedEvent for training SVM. (700ms)
 end
 
 shuffleTrsForIters = 1; % if 1, in the iterations you will shuffle trials where you set CV SVM models and shuffled data, you will shuffle trials (this is different from the shuffling for computing chance distributions).
+numShuffs = 10; % 100 % number of iterations for getting CV models and shuffled data.
+usePooledWeights = 1; % if 1, weights will be pooled across different shuffles and then a single weight vector will be used to compute projections. If 0, weights of each model will be used for making projections of that model.
 
-numCVshuffIters = 10; % 100 % number of iterations for getting CV models and shuffled data.
+
 plot_rand_choicePref = 0; % if 1, plots related to random decoders (similar to NN paper) will be made. Also plots that compare weights for each neuron with its measure of choicePref to see if higher weights are associated with higher ROC measure of choicePref.
 doplot_svmBasics = 0; % if 1, it will plot a figure showing weights, scores, posterior probability and labels for each neuron.
 
@@ -386,9 +388,9 @@ SVMModelChance_all = struct; % keep trained SVM models for shuffled data for all
 CVSVMModel_s_all = struct; % keep CV SVM models for all iterations.
 CVSVMModelChance_all = struct; % keep CV SVM models for shuffled data for all iterations.
 
-shflTrials_alls = NaN(length(Y), numCVshuffIters);
+shflTrials_alls = NaN(length(Y), numShuffs);
 
-for s = 1:numCVshuffIters
+for s = 1:numShuffs
     
     if shuffleTrsForIters
         shflTrials = randperm(length(Y));
@@ -484,6 +486,14 @@ fprintf('%.3f = Average training classification error for shuffled data\n', mean
 
 
 %% Compute and plot projections and classification accuracy (for each time point) for all CV models generated above.
+% Remember CV progjections are not going to be very different from
+% Training-data projections. This is because the decoder weights for CV SVM
+% models are computed from the large percentage of data (90% if KFold is
+% 10). As a result decoder weights should be very similar between CV and
+% training datasets, hence the projections.
+
+% What is really informative though is the classification accuracy, because
+% that is computed on the 10% remaining test trials.
 
 popClassifierSVM_CVdata_set_plot
 
@@ -546,8 +556,8 @@ subplot(212),  errorbar( mean(biasHrLr), std(biasHrLr), 'k.')
 
 %% Main summary plots
 
-% plots of projections, and classification accuracy for all trails (the
-% majority of which are the training dataset).
+% plots of projections, and classification accuracy for all trials (the
+% vast majority of them are the training dataset).
 popClassifierSVM_plots
 
 

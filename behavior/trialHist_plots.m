@@ -176,8 +176,8 @@ else
             ylabel('B of strong stim')
             xlabel('B of weak stim')
         end
-        xlim([0 1.5])
-        ylim([-.4 1.8])
+%         xlim([0 1.5])
+%         ylim([-.4 1.8])
         box off
         set(gca,'tickdir','out')
         set(gca,'ticklength',[.025 0])

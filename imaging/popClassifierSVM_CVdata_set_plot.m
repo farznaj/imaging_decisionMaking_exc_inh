@@ -11,16 +11,27 @@
 % popClassifier will give the vars you need here.
 
 
-
-%%
 dataType = {'actual', 'shuffled'};
 
+
+%% Set average weights for CV SVM models across all iterations.
+
+% it gives the normalized average of normalized weights.
+if usePooledWeights
+    popClassifierSVM_CVdata_setWeights
+end
+
+
+%%
 frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff = cell(1,length(dataType));
 frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff = cell(1,length(dataType));
 avePerf_cv_dataVSshuff = cell(1,length(dataType));
 
 
 for id = 1:length(dataType)
+    
+    fprintf('Setting CV data projections for %s data\n', dataType{id})
+    
     %%
     % set projections (of neural responses on the hyperplane defined by the
     % decoder's weights) for the test observations in the cross-validated SVM
@@ -49,15 +60,18 @@ for id = 1:length(dataType)
     %%
     for s = 1:length(CVSVMModel_s_all)
         
+        % Set the CVSVM model and the order of trials that were used for it.
+        
+        % Trials for this iteration
         trs_s = shflTrials_alls(:, s);
         
         switch dataType{id}
             case 'actual'
                 svm_model_now = CVSVMModel_s_all(s).cv; % CV data
-%                 svm_model_now = SVMModel_s_all(s).cv; % trained data
+                %                 svm_model_now = SVMModel_s_all(s).cv; % trained data
             case 'shuffled'
                 svm_model_now = CVSVMModelChance_all(s).cv; % shuffled CV data
-%                 svm_model_now = SVMModelChance_all(s).cv; % shuffled trained data
+                %                 svm_model_now = SVMModelChance_all(s).cv; % shuffled trained data
         end
         
         % use this if you don't want to pool across folds
@@ -73,7 +87,7 @@ for id = 1:length(dataType)
         traces_bef_proj_f_all = [];
         
         
-        %% Loop over folds of each CV SVM model.
+        %% Loop through the 10 folds of each CV SVM model.
         
         % pool the projections across the 10 folds of SV model for each shuffle iteration (s)
         for ik = 1:svm_model_now.KFold % repition ik of svm_model_now.Partition
@@ -81,8 +95,14 @@ for id = 1:length(dataType)
             % Set the test trials beta and traces for kfold ik
             
             trTest = test(svm_model_now.Partition, ik); % index of test trials (in the non-nan array of trials) in repition ik of svm_model_now.Partition
-            wNsHrLrAve_rep = svm_model_now.Trained{ik}.Beta; % weights for repitition ik.
             trs2use = trs_s(trTest); % this is crucial in case you have shuffled trials when computing svm_model_now (in those s iterations).
+            
+            if ~usePooledWeights
+                wNsHrLrAve_rep = svm_model_now.Trained{ik}.Beta; % weights for repitition ik.
+                % normalize it to the vector length
+                wNsHrLrAve_rep = wNsHrLrAve_rep / norm(wNsHrLrAve_rep);
+            end
+            
             
             % non-smoothed traces
             traces_bef_proj_nf = non_filtered(:, :, trs2use); % frames x units x trials. % traces_al_sm(:, ~NsExcluded, trsUsedInSVM(trs2use))
@@ -100,15 +120,18 @@ for id = 1:length(dataType)
             % training) onto the decoder. This gives the projection traces
             % named frameTrProjOnBeta_rep.
             
-            % project non-filtered traces
-            frameTrProjOnBeta_rep = einsum(traces_bef_proj_nf, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
+            if usePooledWeights
+                % project non-filtered traces on the average normalized vector across all iterations and folds
+                frameTrProjOnBeta_rep = einsum(traces_bef_proj_nf, w_norm_ave_dataVSshuff(:,id), 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
+            else
+                % project non-filtered traces on the weights from a single model.
+                frameTrProjOnBeta_rep = einsum(traces_bef_proj_nf, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
+            end
+            
+            
             % project filtered traces
-%             frameTrProjOnBeta_rep = einsum(traces_bef_proj_f, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
+            %             frameTrProjOnBeta_rep = einsum(traces_bef_proj_f, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
             %         size(frameTrProjOnBeta_rep) % frames x sum(trTest) (ie number of test trials)
-            
-            %     disp('______')
-            % %     sum(trTest)
-            
             
             % now separate frameTrProjOnBeta_rep into hr and lr groups.
             %         frameTrProjOnBeta_hr_rep = frameTrProjOnBeta_rep(:, choiceVec0(trsUsedInSVM(trTest))==1); % frames x trials % HR
@@ -184,29 +207,29 @@ for id = 1:length(dataType)
     
     
     %% Print the size of matrices
-
+    
     if id==1
         fprintf('Data: %s\n', dataType{id})
         % frameTrProjOnBeta_hr_rep_all_alls % frameTrProjOnBeta_lr_rep_all_alls
         % frameTrProjOnBeta_rep_all_alls
         % traces_bef_proj_nf_all_alls
-
+        
         size_projection_testTrs = size(frameTrProjOnBeta_rep_all_alls{randi(length(CVSVMModel_s_all))});
         fprintf(['size_projection_testTrs: ', repmat('%i  ', 1, length(size_projection_testTrs)), '\n'], size_projection_testTrs)
-
+        
         size_projection_hr_testTrs = size(frameTrProjOnBeta_hr_rep_all_alls{randi(length(CVSVMModel_s_all))});
         fprintf(['size_projection_hr_testTrs: ', repmat('%i  ', 1, length(size_projection_hr_testTrs)), '\n'], size_projection_hr_testTrs)
-
+        
         size_projection_lr_testTrs = size(frameTrProjOnBeta_lr_rep_all_alls{randi(length(CVSVMModel_s_all))});
         fprintf(['size_projection_lr_testTrs: ', repmat('%i  ', 1, length(size_projection_lr_testTrs)), '\n'], size_projection_lr_testTrs)
-
+        
         size_orig_traces_testTrs = size(traces_bef_proj_nf_all_alls{randi(length(CVSVMModel_s_all))});
         fprintf(['size_orig_traces_testTrs: ', repmat('%i  ', 1, length(size_orig_traces_testTrs)), '\n'], size_orig_traces_testTrs)
-
+        
         size_avePerf_cv = size(avePerf_cv);
         fprintf(['size_avePerf_cv: ', repmat('%i  ', 1, length(size_avePerf_cv)), '\n'], size_avePerf_cv)
-
-        end
+        
+    end
     
     if ~isequal(size(avePerf_cv, 2), length(CVSVMModel_s_all) * svm_model_now.KFold)
         error('something wrong')
@@ -233,7 +256,6 @@ mxa = [];
 clear hh
 
 for id = 1:length(dataType)
-    
     
     % compute the average trace across all test trials for each CVSVMModel.
     % then convert the average trace of all CVSVMModels into a single matrix, this is called av11 (or av22).
@@ -283,7 +305,7 @@ for id = 1:length(dataType)
     
     top = nanmean(avePerf_cv_dataVSshuff{id}, 2); % average performance across all iters.
     top_sd = nanstd(avePerf_cv_dataVSshuff{id}, 0, 2) / sqrt(size(avePerf_cv_dataVSshuff{id},2));
- 
+    
     mn = min(top(:));
     mx = max(top(:));
     mxa = [mxa, mx];
@@ -318,7 +340,7 @@ end
 p_classAcc = NaN(1, size(avePerf_cv,1));
 h_classAcc = NaN(1, size(avePerf_cv,1));
 for fr = 1:length(p_classAcc)
-    [h_classAcc(fr), p_classAcc(fr)]= ttest2(avePerf_cv_dataVSshuff{1}(fr,:)', avePerf_cv_dataVSshuff{2}(fr,:)',...
+    [h_classAcc(fr), p_classAcc(fr)]= ttest2(avePerf_cv_dataVSshuff{1}(fr,:), avePerf_cv_dataVSshuff{2}(fr,:),...
         'tail', 'right', 'vartype', 'unequal'); % Test the alternative hypothesis that the population mean of actual data is less than the population mean of shuffled data.
 end
 
@@ -330,8 +352,22 @@ plot(time_aligned, hnew * max(mxa)+.05, 'k')
 legend(hh, 'data', 'shuffled', 'location', 'northwest')
 legend boxoff
 
+%{
+p_classAcc = NaN(1, size(avePerf_cv,1));
+h_classAcc = NaN(1, size(avePerf_cv,1));
+for fr = 1:length(p_classAcc)
+    [h_classAcc(fr), p_classAcc(fr)]= ttest(avePerf_cv_dataVSshuff{2}(fr,:), .5, 'tail', 'left'); 
+end
+hnew = h_classAcc;
+hnew(~hnew) = nan;
+plot(time_aligned, hnew * max(mxa)-.05, 'g')
 
-%% Plot and compare distributions of classification loss between shuffled and original datasets. Do this for both training dataset and CV dataset. 
+fr = 30;
+[h,p,ci,stats] = ttest(avePerf_cv_dataVSshuff{2}(fr,:), .5, 'tail', 'left')
+%}
+
+
+%% Plot and compare distributions of classification loss between shuffled and original datasets. Do this for both training dataset and CV dataset.
 
 % figure;
 % Training dataset

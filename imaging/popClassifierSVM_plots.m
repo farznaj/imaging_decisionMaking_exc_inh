@@ -62,7 +62,7 @@ st = round((epStart - eventI)*frameLength);
 en = round((epEnd - eventI)*frameLength);
 
 
-%% Simple averaging of neural responses for HR and LR trials.
+%% Simple raw averages of neural responses for HR and LR trials.
 % you sould perhaps choose you training window based on this plot!
 
 % traces = traces_al_sm(:, ~NsExcluded, :); % equal number of trs for both conds
@@ -100,8 +100,8 @@ xlim([pb pe])
 %% Weighted average of neurons for each trial, using svm weights trained on a particular epoch (ep).
 
 % decide what weights you want to use:
-weights = wNsHrLr; % SVMModel.Beta
-% weights = wNsHrLrAve; % normalized weights (and bagged in case weights
+% weights = wNsHrLr; % SVMModel.Beta
+weights = wNsHrLrAve; % normalized weights (and bagged in case weights
 % computed from more than 1 iteration).
 
 % include all trs (not just the random equal trs) and use the average b  across all iters.
