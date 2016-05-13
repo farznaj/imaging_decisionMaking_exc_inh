@@ -14,29 +14,31 @@
 % worry about bleedthrough, and visual artifact.
 
 
+%% Good days
+% imagingFolder = '151029'; % '151021';
+% mdfFileNumber = 3;
+
+home
+
 %% Set some initial variables.
 
 mouse = 'fni17';
-imagingFolder = '151029'; % '151021';
-mdfFileNumber = 3; % or tif major
+imagingFolder = '150916'; % '151029'; % '151021';
+mdfFileNumber = 1; %3; %  or tif major
 signalCh = 2;
+pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the latest pnev vile). Set [] to load the latest one.
 
-pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the latest pnev vile). Set [] to load the latest one. 
+autoTraceQual = 0; %1; % if 1, automatic measure for trace quality will be used.
+normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
 
-setInhibitExcit = true; % if 1, inhibit and excit traces will be set.
+setInhibitExcit = false; % true; % if 1, inhibit and excit traces will be set.
 sigTh = 1.2; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
-showResults = false; % set to true so u can evaluate identification of inhibitory neurons (ie if sigTh is doing a good job).
+assessInhibitClass = false; % set to true to evaluate identification of inhibitory neurons (ie if sigTh is doing a good job).
 
-plot_ave_noTrGroup = false; % Plot average traces across all neurons and all trials aligned on particular trial events.
-plot_ave_trGroup = false; % Plot average traces across all neurons for different trial groups aligned on particular trial events.
-plotTraces1by1 = false; % plot traces per neuron and per trial showing all trial events
-compareManual = false; % compare results with manual ROI extraction
+rmv_timeGoTone_if_stimOffset_aft_goTone = 1; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
+rmv_time1stSide_if_stimOffset_aft_1stSide = 1; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
 
-autoTraceQual = 1; % if 1, automatic measure for trace quality will be used.
-examineTraceQual = 0; % if 0, traceQuality array needs to be saved.
-saveTraceQual = 0; % it will only take effect if examineTraceQual is 1.
-analyzeQuality = [1 2]; % 1(good) 2(ok-good) 3(ok-bad) 4(bad) % trace qualities that will be analyzed.
-orderTraces = 0; % if 1, traces will be ordered based on the measure of quality from high to low quality.
+
 
 excludeShortWaitDur = true; % waitdur_th = .032; % sec  % trials w waitdur less than this will be excluded.
 excludeExtraStim = false;
@@ -51,8 +53,20 @@ defaultHelpedTrs = 0; % if 1, the program assumes that no trial was helped.
 saveHelpedTrs = 0; % it will only take effect if defaultHelpedTrs is false. If 1, helpedTr fields will be added to alldata.
 analyzeOutcomes = {'all'}; % {'success', 'failure'}; % outcomes that will be analyzed.
 
-setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
 furtherAnalyses = 0; % analyses related to choicePref and SVM will be performed.
+plot_ave_noTrGroup = false; % Plot average traces across all neurons and all trials aligned on particular trial events.
+plot_ave_trGroup = false; % Plot average traces across all neurons for different trial groups aligned on particular trial events.
+plotTraces1by1 = false; % plot traces per neuron and per trial showing all trial events
+compareManual = false; % compare results with manual ROI extraction
+
+setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
+
+manualExamineTraceQual = 0; % if 0, traceQuality array needs to be saved.
+saveTraceQual = 0; % it will only take effect if manualExamineTraceQual is 1.
+analyzeQuality = [1 2]; % 1(good) 2(ok-good) 3(ok-bad) 4(bad) % trace qualities that will be analyzed. It will only take effect if manualExamineTraceQual is 1.
+orderTraces = 0; % if 1, traces will be ordered based on the measure of quality from high to low quality.
+
+
 % outName = 'fni17-151016';
 
 
@@ -197,14 +211,23 @@ end
 %% Set spikes, activity, dFOF by loading vars from Eftychios output, and merge them into alldata
 
 load(pnevFileName, 'C', 'C_df', 'options') % , 'S')
+%{
 if strcmp(options.deconv_method, 'MCMC')
     load(pnevFileName, 'S') % if mcmc
     spiking = S; % S; % S_mcmc; % S2;
-elseif strcmp(options.deconv_method, 'constrained_foopsi')
+elseif strcmp(options.deconv_method, 'constrained_foopsi') % From Efty: S_df as it is derived from S by applying extract_DF_F offers nothing interpretable.
     load(pnevFileName, 'S_df') % if constrained foopsi
-    spiking = S_df; % S; % S_mcmc; % S2;
+    spiking = S_df;
 end
 spikes = spiking'; % frames x units
+%}
+load(pnevFileName, 'S')
+spikes = S';
+if normalizeSpikes
+    fprintf('Normalizing spikes traces of each neuron.\n')
+    spikes = bsxfun(@rdivide, spikes, max(spikes,[],1)); % normalize spikes trace of each neuron by its max.
+    %     spikes = bsxfun(@rdivide, spikes, quantile(spikes,.9)); % normalize spikes trace of each neuron by its 90th percentile.
+end
 
 if size(C,2) ~= size(C_df,2) % iti-nans were inserted in C and S: remove them.
     load(imfilename, 'Nnan_nanBeg_nanEnd')
@@ -304,7 +327,7 @@ alldata = all_data;
 
 %% Assess trace quality of each neuron
 
-if examineTraceQual
+if manualExamineTraceQual
     %     assessCaTraceQaulity % another script to look at traces 1 by 1.
     
     inds2plot = randperm(size(activity,2));
@@ -323,29 +346,44 @@ end
 if autoTraceQual
     [avePks2sdS, aveProm2sdS, measQual] = traceQualMeasure(dFOF', spikes');
     
-    % Sort traces
-    [sPks, iPks] = sort(avePks2sdS);
-    [sProm, iProm] = sort(aveProm2sdS);
-    [sPksProm, iPksProm] = sort(avePks2sdS .* aveProm2sdS);
-    [sMeasQual, iMeasQual] = sort(measQual);
-    
     % badQual = find(avePks2sdS<3 | aveProm2sdS<1);
-    badQual = iMeasQual(sMeasQual<0);
-    % look at badQual neurons
-    %     plotCaTracesPerNeuron({dFOF(:, badQual)}, 0, 0, 1, [], [])
+    badQual = find(measQual<0);
     
     goodNeurons = true(1,length(avePks2sdS));
     goodNeurons(badQual) = false;
     
-    % order based on automatic measure
-    goodnessOrder = iMeasQual(sMeasQual>=0); % ascending order of neurons based on trace quality
-    goodnessOrder = goodnessOrder(end:-1:1); % descending order
+    % look at C of neurons identified as badQual.
+    %     plotCaTracesPerNeuron({dFOF(:, badQual)}, [], [], 0, 0, 0, 0)
+    
+    figure;
+    for i = badQual, % 1:size(dFOF)
+        plot(dFOF(:,i))
+        %         plot(spikes(:,i))
+        
+        set(gcf,'name',num2str(i))
+        title(sprintf('pks %.2f   prom %.2f   prod %.2f   meas %.2f', avePks2sdS(i), aveProm2sdS(i), ...
+            avePks2sdS(i) * aveProm2sdS(i), measQual(i)))
+        
+        pause
+    end
+    
+    if orderTraces
+        % Sort traces
+        [sPks, iPks] = sort(avePks2sdS);
+        [sProm, iProm] = sort(aveProm2sdS);
+        [sPksProm, iPksProm] = sort(avePks2sdS .* aveProm2sdS);
+        [sMeasQual, iMeasQual] = sort(measQual);
+        
+        % order based on automatic measure
+        goodnessOrder = iMeasQual(sMeasQual>=0); % ascending order of neurons based on trace quality
+        goodnessOrder = goodnessOrder(end:-1:1); % descending order
+    end
 end
 % fprintf('N good-quality and all neurons: %d, %d. Ratio: %.2f\n', [sum(goodNeurons), size(activity,2), sum(goodNeurons)/ size(activity,2)]); % number and fraction of good neurons vs number of all neurons.
 
 
 % set goodinds: an array of length of all neurons, with 1s indicating good and 0s bad neurons.
-if ~any([autoTraceQual, examineTraceQual])  % if no trace quality examination (auto or manual), then include all neurons.
+if ~any([autoTraceQual, manualExamineTraceQual])  % if no trace quality examination (auto or manual), then include all neurons.
     goodinds = true(1, size(dFOF,2)); %    goodnessOrder = 1:size(dFOF,2);    goodNeurons = 1:size(dFOF,2);
 elseif orderTraces % descending based on the measure of quality
     error('the code below needs work. goodinds is supposed to be logical not tr numbers.')
@@ -482,21 +520,30 @@ else
     
     %%
     fprintf('%d trials with goTone earlier than stimOffset...\n', length(trsGoToneEarlierThanStimOffset))
-    fprintf('... removing them from timeCommitCL_CR_Gotone!\n')
-    % timeStimOnset(trsGoToneEarlierThanStimOffset) = NaN; % IMPORTANT: you dont want to look beyond goTone time for these trials, but upto go tone is safe!
-    timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset) = NaN;  % you want this for sure (bc in some trials stim has been still playing after go tone).
+    if rmv_timeGoTone_if_stimOffset_aft_goTone
+        fprintf('... removing them from timeCommitCL_CR_Gotone!\n')
+        % timeStimOnset(trsGoToneEarlierThanStimOffset) = NaN; % IMPORTANT: you dont want to look beyond goTone time for these trials, but upto go tone is safe!
+        timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset) = NaN;  % you want this for sure (bc in some trials stim has been still playing after go tone).
+    else
+        fprintf('... you chose not to remove them!\n')
+    end
     
     
     %%
     a = time1stSideTry(trsGoToneEarlierThanStimOffset) - timeStimOffset(trsGoToneEarlierThanStimOffset);
     if sum(a < 3*frameLength)
-        fprintf('There are %i trials with stimOffset within 3 frames before 1stSideTry.\n', sum(a < 3*frameLength))
-        fprintf('Removing them from 1stSideTry, 1stCorrTry, 1stIncorrTry!\n')
-        aa = trsGoToneEarlierThanStimOffset(a < 3*frameLength);
-        time1stSideTry(aa) = NaN;
-        time1stCorrectTry(aa) = NaN;
-        time1stIncorrectTry(aa) = NaN;
-        time1stCorrectResponse(aa) = NaN;
+        fprintf('%i trials with stimOffset within 3 frames before 1stSideTry.\n', sum(a < 3*frameLength))
+        
+        if rmv_time1stSide_if_stimOffset_aft_1stSide
+            fprintf('... removing them from 1stSideTry, 1stCorrTry, 1stIncorrTry!\n')
+            aa = trsGoToneEarlierThanStimOffset(a < 3*frameLength);
+            time1stSideTry(aa) = NaN;
+            time1stCorrectTry(aa) = NaN;
+            time1stIncorrectTry(aa) = NaN;
+            time1stCorrectResponse(aa) = NaN;
+        else
+            fprintf('... you chose not to remove them!\n')
+        end
     else
         fprintf('No trials with stimOffset within 3 frames before 1stSideTry. Good :) \n')
     end
@@ -571,7 +618,7 @@ end
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Take care of neural traces in alldata %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% In alldata, set traces and choose good quality traces.
+%% In alldata, set good quality traces.
 
 % alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.activity}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
 alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.dFOF}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
@@ -605,16 +652,35 @@ numTrials = length(alldata);
 if setInhibitExcit
     
     fprintf('Identifying inhibitory neurons....\n')
-    [inhibitRois, good_inhibit, good_excit] = inhibit_excit_setVars(imfilename, pnevFileName, sigTh, goodinds, showResults);
+    [inhibitRois, roi2surr_sig] = inhibit_excit_setVars(imfilename, pnevFileName, sigTh, assessInhibitClass);
+    
+    
+    %% set good_inhibit and good_excit neurons.
+    
+    % goodinds: an array of length of all neurons, with 1s indicating good and 0s bad neurons.
+    good_inhibit = inhibitRois(goodinds); % an array of length of good neurons, with 1s for inhibit. and 0s for excit. neurons and nans for unsure neurons.
+    good_excit = inhibitRois(goodinds) == 0; % an array of length of good neurons, with 1s for excit. and 0s for inhibit neurons and nans for unsure neurons.
+    
+    % you can use the codes below if you want to be safe.
+    good_inhibit = inhibitRois(goodinds & roi2surr_sig >= 1.3);
+    good_excit = inhibitRois(goodinds & roi2surr_sig <= 1.1) == 0;
+    
+    fprintf('Fract inhibit in all, good & bad Ns = %.3f  %.3f  %.3f\n', [...
+        nanmean(inhibitRois)
+        nanmean(inhibitRois(goodinds))
+        nanmean(inhibitRois(~goodinds))])
+    % it seems good neurons are biased to include more excit neurons bc for
+    % some reason tdtomato neruons have low quality on the red channel.
+    
     
     
     %% set traces for good inhibit and excit neurons.
     
-    alldataDfofGoodInh = cellfun(@(x)x(:, good_inhibit), alldataDfofGood, 'uniformoutput', 0); % 1 x number of trials
-    alldataSpikesGoodInh = cellfun(@(x)x(:, good_inhibit), alldataSpikesGood, 'uniformoutput', 0); % 1 x number of trials
+    alldataDfofGoodInh = cellfun(@(x)x(:, good_inhibit==1), alldataDfofGood, 'uniformoutput', 0); % 1 x number of trials
+    alldataSpikesGoodInh = cellfun(@(x)x(:, good_inhibit==1), alldataSpikesGood, 'uniformoutput', 0); % 1 x number of trials
     
-    alldataDfofGoodExc = cellfun(@(x)x(:, good_excit), alldataDfofGood, 'uniformoutput', 0); % 1 x number of trials
-    alldataSpikesGoodExc = cellfun(@(x)x(:, good_excit), alldataSpikesGood, 'uniformoutput', 0); % 1 x number of trials
+    alldataDfofGoodExc = cellfun(@(x)x(:, good_excit==1), alldataDfofGood, 'uniformoutput', 0); % 1 x number of trials
+    alldataSpikesGoodExc = cellfun(@(x)x(:, good_excit==1), alldataSpikesGood, 'uniformoutput', 0); % 1 x number of trials
     
     % for the rest its easy, just to (:, good_inhibit) and (:, good_excit) to
     % get their corresponding traces for inhibit and excit neurons.
@@ -638,16 +704,20 @@ if plotTraces1by1
     
     % it makes sense to look at all trials and not just ~trs2rmv so do
     % trs2rmv = unique([trs_problemAlign, trs_badMotion_pmtOff]);, and again run setEvent
-    plotTrs1by1 = 1;
+    plotTrs1by1 = 1; %1;
     interactZoom = 0;
-    markQuantPeaks = 1;
+    markQuantPeaks = 1; % 1;
+    showitiFrNums = 1;
     allEventTimes = {timeInitTone, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, timeStop, centerLicks, leftLicks, rightLicks};
-    [~, ~, stimrate] = setStimRateType(alldata);
+    %     [~, ~, stimrate] = setStimRateType(alldata);
+    
+    % Remember the first input will be plotted!
+    % If you want to plot certain neurons, specify that in dfofGood, eg: dFOF(:, badQual)
+    plotCaTracesPerNeuron({dfofGood}, alldataDfofGood, alldataSpikesGood, interactZoom, plotTrs1by1, markQuantPeaks, showitiFrNums, {framesPerTrial, alldata, spikesGood, [], [], allEventTimes, stimrate})
     
     % plotCaTracesPerNeuron([{C_df'}, {C_mcmc_df'}], interactZoom, plotTrs1by1, markQuantPeaks, alldataDfofGood, alldataSpikesGood, {framesPerTrial, alldata, S_mcmc', dFOF_man, matchedROI_idx, allEventTimes, stimrate})
-    plotCaTracesPerNeuron({dfofGood}, interactZoom, plotTrs1by1, markQuantPeaks, alldataDfofGood, alldataSpikesGood, {framesPerTrial, alldata, spikesGood, [], [], allEventTimes, stimrate})
-    
-    % plotCaTracesPerNeuron(traceFU_toplot, interactZoom, plotTrs1by1, markQuantPeaks, {framesPerTrial, alldata, S_mcmc, dFOF_man, matchedROI_idx})
+    % plot badQual neurons.
+    %     plotCaTracesPerNeuron({dFOF(:, badQual)}, [], [], 0, 0, 0, 0)
     
     
     %% plot all neuron traces per trial
@@ -733,7 +803,7 @@ if furtherAnalyses
     %% SVM
     
     % do the analysis
-    popClassifier    
+    popClassifier
     
     % plot projections
     popClassifierSVM_plots

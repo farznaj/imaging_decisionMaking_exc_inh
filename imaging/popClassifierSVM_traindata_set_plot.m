@@ -30,7 +30,7 @@ frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff = cell(1,length(dataType));
 avePerf_cv_dataVSshuff = cell(1,length(dataType));
 
 
-for id = 1:length(dataType) % there is very little variability for trained data among different iterations... so it makes sense not to go though the trained dataset.
+for id = 2; % 1:length(dataType) % there is very little variability for the actual trained data among different iterations... so it makes sense not to go though the actual trained dataset.
     
     fprintf('Setting training data projections for %s data\n', dataType{id})
     

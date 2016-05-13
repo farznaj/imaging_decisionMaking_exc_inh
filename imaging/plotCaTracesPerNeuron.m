@@ -1,5 +1,7 @@
-function plotCaTracesPerNeuron(traceFU_toplot, interactZoom, plotTrs1by1, markQuantPeaks, alldataDfofGood, alldataSpikesGood, varargin)
-% plotCaTracesPerNeuron(traceFU_toplot, interactZoom, plotTrs1by1, markQuantPeaks, {framesPerTrial, alldata, S_mcmc, dFOF_man, eftMatchIdx_mask, allEventTimes, stimrate})
+function plotCaTracesPerNeuron(traceFU_toplot, alldataDfofGood, alldataSpikesGood, interactZoom, plotTrs1by1, markQuantPeaks, showitiFrNums, varargin)
+% plotCaTracesPerNeuron(traceFU_toplot, interactZoom, plotTrs1by1, markQuantPeaks, alldataDfofGood, alldataSpikesGood, showitiFrNums, varargin)
+% varargin: {framesPerTrial, alldata, S_mcmc, dFOF_man, eftMatchIdx_mask, allEventTimes, stimrate}) 
+%
 % allEventTimes = {timeInitTone, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, timeStop, centerLicks, leftLicks, rightLicks};
 %
 % traces are required in format frames x units
@@ -30,9 +32,9 @@ if ~isempty(varargin)
     
     if length(varargin{1})>1 && ~isempty(varargin{1}{2})
         alldata = varargin{1}{2};
-        showitiFrNums = 1;
+%         showitiFrNums = 1;
     else
-        showitiFrNums = 0;
+%         showitiFrNums = 0;
     end
     
     if length(varargin{1})>2 && ~isempty(varargin{1}{3})
@@ -69,13 +71,20 @@ if ~isempty(varargin)
     else
         markEventTimes = 0;
     end
-    
+    %{
+    if length(varargin{1})>7 && ~isempty(varargin{1}{8})
+        NsToPlot = varargin{1}{8}; % badQual; % 1:size(traceFU_toplot{1},2)
+    else
+        NsToPlot = 1:size(traceFU_toplot{1},2);
+    end
+    %}
 else
     addNaNiti = 0;
     showitiFrNums = 0;
     compareManual = 0;
     showSpikes = 0;
     markEventTimes = 0;
+    NsToPlot = 1:size(traceFU_toplot{1},2);
 end
 
 
@@ -130,7 +139,10 @@ if plotTrs1by1
 end
 
 if showSpikes
-    sth = .3; % threshold to identify spikes on strace.
+%     sth = .3; % threshold to identify spikes on strace.
+    a = boxFilterNaN(nanmean(strace,2), 200);
+    sth = quantile(a, .1); % use the lowest 10 percentile on the smoothed average trace as the threshold for identifying spikes.
+    
     snan = nan(size(strace));
     snan(strace > sth) = 1;
     
@@ -144,7 +156,7 @@ if showSpikes
 end
 
 
-%% preceding iti (sec)
+%% Preceding iti (sec)
 
 if showitiFrNums
     
@@ -259,7 +271,7 @@ if plotTrs1by1
 end
 
 
-for ineu = 1:size(traceFU_toplot{1},2)
+for ineu = 1:size(traceFU_toplot{1},2) % NsToPlot % badQual;
     
     figure(f1)
     set(f1,'name', sprintf('Neuron %d', ineu))

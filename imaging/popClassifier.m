@@ -37,7 +37,7 @@ end
 
 shuffleTrsForIters = 1; % if 1, in the iterations you will shuffle trials where you set CV SVM models and shuffled data, you will shuffle trials (this is different from the shuffling for computing chance distributions).
 numShuffs = 10; % 100 % number of iterations for getting CV models and shuffled data.
-usePooledWeights = 1; % if 1, weights will be pooled across different shuffles and then a single weight vector will be used to compute projections. If 0, weights of each model will be used for making projections of that model.
+usePooledWeights = 0; % if 1, weights will be pooled across different shuffles and then a single weight vector will be used to compute projections. If 0, weights of each model will be used for making projections of that model.
 
 
 plot_rand_choicePref = 0; % if 1, plots related to random decoders (similar to NN paper) will be made. Also plots that compare weights for each neuron with its measure of choicePref to see if higher weights are associated with higher ROC measure of choicePref.
@@ -230,6 +230,7 @@ if pcaFlg
     % X
     [PCs, ~, l] = pca(X);
     numPCs = find(cumsum(l/sum(l))>0.99, 1, 'first');
+    fprintf('Number of PCs = %d\n', numPCs)
     X_s = bsxfun(@plus, bsxfun(@minus, X, mean(X))*(PCs(:, 1:numPCs)*PCs(:, 1:numPCs)'), mean(X));
     
     % filtered
