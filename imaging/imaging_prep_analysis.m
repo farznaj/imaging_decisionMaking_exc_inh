@@ -24,16 +24,20 @@ home
 
 mouse = 'fni17';
 imagingFolder = '150916'; % '151029'; % '151021';
-mdfFileNumber = 1; %3; %  or tif major
+mdfFileNumber = 1; % 3; % or tif major
 signalCh = 2;
 pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the latest pnev vile). Set [] to load the latest one.
 
 autoTraceQual = 0; %1; % if 1, automatic measure for trace quality will be used.
 normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
 
-setInhibitExcit = false; % true; % if 1, inhibit and excit traces will be set.
-sigTh = 1.2; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
-assessInhibitClass = false; % set to true to evaluate identification of inhibitory neurons (ie if sigTh is doing a good job).
+setInhibitExcit = true; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
+    assessInhibitClass = false; % if 1 and inhibitRois not already saved, you will evaluate identification of inhibitory neurons (ie if sigTh is doing a good job).
+    saveInhibitRois = 1; % if 1 and inhibitRois not already saved, ROIs that were identified as inhibit will be saved in imfilename. (ie the output of inhibit_excit_setVars will be saved).
+    sigTh = 1.13; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
+        % 1.1: excit is safe, but u should check inhibit with low sig/surr to make sure they are not excit.
+        % 1.2: u are perhaps missing some inhibit neurons.
+        % 1.13 can be good too.
 
 rmv_timeGoTone_if_stimOffset_aft_goTone = 1; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
 rmv_time1stSide_if_stimOffset_aft_1stSide = 1; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
@@ -62,7 +66,7 @@ compareManual = false; % compare results with manual ROI extraction
 setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
 
 manualExamineTraceQual = 0; % if 0, traceQuality array needs to be saved.
-saveTraceQual = 0; % it will only take effect if manualExamineTraceQual is 1.
+    saveTraceQual = 0; % it will only take effect if manualExamineTraceQual is 1.
 analyzeQuality = [1 2]; % 1(good) 2(ok-good) 3(ok-bad) 4(bad) % trace qualities that will be analyzed. It will only take effect if manualExamineTraceQual is 1.
 orderTraces = 0; % if 1, traces will be ordered based on the measure of quality from high to low quality.
 
@@ -649,32 +653,61 @@ numTrials = length(alldata);
 % size: 1 x number of trials, each element includes the traces of all inh (exc)
 % neurons.
 
+
 if setInhibitExcit
     
-    fprintf('Identifying inhibitory neurons....\n')
-    [inhibitRois, roi2surr_sig] = inhibit_excit_setVars(imfilename, pnevFileName, sigTh, assessInhibitClass);
+    % Load inhibitRois if it already exists, otherwise set it.
     
+    a = matfile(imfilename);
     
-    %% set good_inhibit and good_excit neurons.
+    if isprop(a, 'inhibitRois')
+        fprintf('Loading inhibitRois...\n')
+        load(imfilename, 'inhibitRois')
+        
+    else    
+        fprintf('Identifying inhibitory neurons....\n')
+        % inhibitRois will be : 
+            % 1 for inhibit ROIs.
+            % 0 for excit ROIs.        
+            % nan for ROIs that could not be classified as inhibit or excit.
+        [inhibitRois, roi2surr_sig] = inhibit_excit_setVars(imfilename, pnevFileName, sigTh, assessInhibitClass);
+
+        if saveInhibitRois
+            fprintf('Saving inhibitRois...\n')
+            save(imfilename, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
+        end
+
+    end
+    
+    fprintf('Fract inhibit %.3f, excit %.3f, unknown %.3f\n', [...
+        nanmean(inhibitRois==1), nanmean(inhibitRois==0), nanmean(isnan(inhibitRois))])
+       
+    
+    %% Set good_inhibit and good_excit neurons (ie in good quality neurons which ones are inhibit and which ones are excit).    
     
     % goodinds: an array of length of all neurons, with 1s indicating good and 0s bad neurons.
-    good_inhibit = inhibitRois(goodinds); % an array of length of good neurons, with 1s for inhibit. and 0s for excit. neurons and nans for unsure neurons.
+    good_inhibit = inhibitRois(goodinds) == 1; % an array of length of good neurons, with 1s for inhibit. and 0s for excit. neurons and nans for unsure neurons.
     good_excit = inhibitRois(goodinds) == 0; % an array of length of good neurons, with 1s for excit. and 0s for inhibit neurons and nans for unsure neurons.
     
-    % you can use the codes below if you want to be safe.
-    good_inhibit = inhibitRois(goodinds & roi2surr_sig >= 1.3);
-    good_excit = inhibitRois(goodinds & roi2surr_sig <= 1.1) == 0;
+    fprintf('Fract inhibit %.3f, excit %.3f in good quality neurons\n', [...
+        nanmean(good_inhibit), nanmean(good_excit)])
     
-    fprintf('Fract inhibit in all, good & bad Ns = %.3f  %.3f  %.3f\n', [...
-        nanmean(inhibitRois)
-        nanmean(inhibitRois(goodinds))
-        nanmean(inhibitRois(~goodinds))])
-    % it seems good neurons are biased to include more excit neurons bc for
-    % some reason tdtomato neruons have low quality on the red channel.
+    % you can use the codes below if you want to be safe:
+%     good_inhibit = inhibitRois(goodinds & roi2surr_sig >= 1.3) == 1;
+%     good_excit = inhibitRois(goodinds & roi2surr_sig <= 1.1) == 0;
+    
+    if nanmean(goodinds) ~= 1
+        fprintf('Fract inhibit in all, good & bad Ns = %.3f  %.3f  %.3f\n', [...
+            nanmean(inhibitRois==1)
+            nanmean(inhibitRois(goodinds)==1)
+            nanmean(inhibitRois(~goodinds)==1)])
+        % it seems good neurons include more excit (than inhibit) neurons
+        % as if for some reason tdtomato neruons have low quality on the
+        % green channel.
+    end
     
     
-    
-    %% set traces for good inhibit and excit neurons.
+    %% Set traces for good inhibit and excit neurons.
     
     alldataDfofGoodInh = cellfun(@(x)x(:, good_inhibit==1), alldataDfofGood, 'uniformoutput', 0); % 1 x number of trials
     alldataSpikesGoodInh = cellfun(@(x)x(:, good_inhibit==1), alldataSpikesGood, 'uniformoutput', 0); % 1 x number of trials
@@ -682,12 +715,12 @@ if setInhibitExcit
     alldataDfofGoodExc = cellfun(@(x)x(:, good_excit==1), alldataDfofGood, 'uniformoutput', 0); % 1 x number of trials
     alldataSpikesGoodExc = cellfun(@(x)x(:, good_excit==1), alldataSpikesGood, 'uniformoutput', 0); % 1 x number of trials
     
-    % for the rest its easy, just to (:, good_inhibit) and (:, good_excit) to
-    % get their corresponding traces for inhibit and excit neurons.
-    % activityGood
-    % dfofGood
-    % spikesGood
-    % alldataDfofGood_mat
+    % For the matrices below just do (:, good_inhibit) and (:, good_excit)
+    % to get their corresponding traces for inhibit and excit neurons :
+        % activityGood
+        % dfofGood
+        % spikesGood
+        % alldataDfofGood_mat
     
 end
 
@@ -723,6 +756,7 @@ if plotTraces1by1
     %% plot all neuron traces per trial
     
     plotCaTracesPerTrial
+    
     
 end
 

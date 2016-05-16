@@ -11,13 +11,13 @@ fprintf('SVM analysis started.\n')
 
 %% Set initial variables
 
-trialHistAnalysis = 0; % more parameters are specified in popClassifier_trialHistory.m
-    iTiFlg = 1; % 0: short iTi, 1: long iTi, 2: all iTis.
+trialHistAnalysis = 1; % more parameters are specified in popClassifier_trialHistory.m
+    iTiFlg = 0; % 0: short iTi, 1: long iTi, 2: all iTis.
     prevSuccessFlg = true; % true previous sucess trials; false: previous failure.
     vec_iti = [0 9 30]; % [0 10 30]; %[0 6 9 12 30]; % [0 7 30]; % [0 10 30]; % [0 6 9 12 30]; % use [0 40]; if you want to have a single iti bin and in conventioinal analysis look at the effect of current rate on outcome.
     
-neuronType = 2; % 0: excitatory, 1: inhibitory, 2:all types.
-pcaFlg = true; %false; %true;
+neuronType = 2; % 0: excitatory, 1: inhibitory, 2: all types.
+pcaFlg = true;
 windowAvgFlg = true;
 
 if trialHistAnalysis
@@ -230,7 +230,8 @@ if pcaFlg
     % X
     [PCs, ~, l] = pca(X);
     numPCs = find(cumsum(l/sum(l))>0.99, 1, 'first');
-    fprintf('Number of PCs = %d\n', numPCs)
+    fprintf('Number of PCs:\n   %i : total\n   %i : >.99 variance\n', length(l), numPCs)
+
     X_s = bsxfun(@plus, bsxfun(@minus, X, mean(X))*(PCs(:, 1:numPCs)*PCs(:, 1:numPCs)'), mean(X));
     
     % filtered

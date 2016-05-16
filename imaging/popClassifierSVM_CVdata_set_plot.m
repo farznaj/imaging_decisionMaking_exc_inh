@@ -215,19 +215,19 @@ for id = 1:length(dataType)
         % traces_bef_proj_nf_all_alls
         
         size_projection_testTrs = size(frameTrProjOnBeta_rep_all_alls{randi(length(CVSVMModel_s_all))});
-        fprintf(['size_projection_testTrs: ', repmat('%i  ', 1, length(size_projection_testTrs)), '\n'], size_projection_testTrs)
+        fprintf(['size_projection_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_testTrs)), '\n'], size_projection_testTrs)
         
         size_projection_hr_testTrs = size(frameTrProjOnBeta_hr_rep_all_alls{randi(length(CVSVMModel_s_all))});
-        fprintf(['size_projection_hr_testTrs: ', repmat('%i  ', 1, length(size_projection_hr_testTrs)), '\n'], size_projection_hr_testTrs)
+        fprintf(['size_projection_hr_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_hr_testTrs)), '\n'], size_projection_hr_testTrs)
         
         size_projection_lr_testTrs = size(frameTrProjOnBeta_lr_rep_all_alls{randi(length(CVSVMModel_s_all))});
-        fprintf(['size_projection_lr_testTrs: ', repmat('%i  ', 1, length(size_projection_lr_testTrs)), '\n'], size_projection_lr_testTrs)
+        fprintf(['size_projection_lr_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_lr_testTrs)), '\n'], size_projection_lr_testTrs)
         
         size_orig_traces_testTrs = size(traces_bef_proj_nf_all_alls{randi(length(CVSVMModel_s_all))});
-        fprintf(['size_orig_traces_testTrs: ', repmat('%i  ', 1, length(size_orig_traces_testTrs)), '\n'], size_orig_traces_testTrs)
+        fprintf(['size_orig_traces_testTrs (frs x ns x trs): ', repmat('%i  ', 1, length(size_orig_traces_testTrs)), '\n'], size_orig_traces_testTrs)
         
         size_avePerf_cv = size(avePerf_cv);
-        fprintf(['size_avePerf_cv: ', repmat('%i  ', 1, length(size_avePerf_cv)), '\n'], size_avePerf_cv)
+        fprintf(['size_avePerf_cv (frs x shffls): ', repmat('%i  ', 1, length(size_avePerf_cv)), '\n'], size_avePerf_cv)
         
     end
     
@@ -245,7 +245,8 @@ end
 
 %% Plots related to CV dataset
 
-col = {'b', 'r'};
+% col = {'b', 'r'};
+col = {'k', 'g'};
 figure('name', 'Only cross-validated trials. Top: actual data. Bottom: shuffled data');
 pb = round((- eventI)*frameLength);
 pe = round((length(time_aligned) - eventI)*frameLength);
@@ -356,7 +357,7 @@ legend boxoff
 p_classAcc = NaN(1, size(avePerf_cv,1));
 h_classAcc = NaN(1, size(avePerf_cv,1));
 for fr = 1:length(p_classAcc)
-    [h_classAcc(fr), p_classAcc(fr)]= ttest(avePerf_cv_dataVSshuff{2}(fr,:), .5, 'tail', 'left'); 
+    [h_classAcc(fr), p_classAcc(fr)]= ttest(avePerf_cv_dataVSshuff{2}(fr,:), .5, 'tail', 'left');
 end
 hnew = h_classAcc;
 hnew(~hnew) = nan;
@@ -367,32 +368,9 @@ fr = 30;
 %}
 
 
-%% Plot and compare distributions of classification loss between shuffled and original datasets. Do this for both training dataset and CV dataset.
 
-% figure;
-% Training dataset
-% subplot(211)
-subplot(224)
-hold on
-%         hd = hist(classLossTrain, 0:0.02:1);
-hc = hist(classLossChanceTrain, 0:0.02:1);
-if strfind(version, 'R2016')
-    bar(0:0.02:1, hc, 'facecolor', 0.5*[1 1 1], 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
-else
-    bar(0:0.02:1, hc, 'facecolor', 0.5*[1 1 1], 'edgecolor', 'none'); % , 'Facealpha', 0.7', 'barwidth', 1);
-end
-%         bar(0:0.02:1, hd, 'facecolor', 'r', 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
-plot(mean(classLossChanceTrain), 0, 'ko','markerfacecolor', 0.5*[1 1 1], 'markersize', 6)
-plot(mean(classLossTrain), 0, 'ko','markerfacecolor', 'r', 'markersize', 6)
-ylabel('Count')
-xlabel('training loss')
-xlim([0 1])
-% legend('shuffled', 'data', 'location', 'northwest')
-legend boxoff
+%% Plot and compare distributions of classification loss between shuffled and actual datasets. Do this for both training dataset and CV dataset.
 
-
-% subplot(212)
-% CV dataset
 [~, p]= ttest2(classLossTest, classLossChanceTest, 'tail', 'left', 'vartype', 'unequal'); % Test the alternative hypothesis that the population mean of actual data is less than the population mean of shuffled data.
 [~, pboth] = ttest2(classLossTest, classLossChanceTest, 'vartype', 'unequal');
 [~, pright] = ttest2(classLossTest, classLossChanceTest, 'tail', 'right', 'vartype', 'unequal');
@@ -400,22 +378,57 @@ fprintf('pval both tails = %.2f\n', pboth)
 fprintf('pval left tail (actual<shuff) = %.2f\n', p)
 fprintf('pval right tail (actual>shuff) = %.2f\n', pright)
 
+% figure;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% TRAINING DATASET (shuffled and actual)
+% subplot(211)
+subplot(224)
 hold on
+% Shuffled (chance) dataset
+hc = hist(classLossChanceTrain, 0:0.02:1);
+%     hd = hist(classLossTrain, 0:0.02:1);
+if strfind(version, 'R2016')
+    bar(0:0.02:1, hc, 'facecolor', 'g', 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
+else
+    bar(0:0.02:1, hc, 'facecolor', 'g', 'edgecolor', 'none'); % , 'Facealpha', 0.7', 'barwidth', 1);
+end
+% Shuffled (chance) training dataset
+plot(mean(classLossChanceTrain), 0, 'go','markerfacecolor', 'g', 'markersize', 6)
+% Actual training dataset
+plot(mean(classLossTrain), 0, 'ko','markerfacecolor', 'k', 'markersize', 6)
+ylabel('Count')
+xlabel('training loss')
+xlim([0 1])
+% legend('shuffled', 'data', 'location', 'northwest')
+legend boxoff
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% CV DATASET (shuffled and actual)
+% subplot(212)
+hold on
+% Shuffled (chance) CV dataset
 hc = hist(classLossChanceTest, 0:0.02:1);
+% Actual CV dataset
 hd = hist(classLossTest, 0:0.02:1);
 if strfind(version, 'R2016')
-    bar(0:0.02:1, hc, 'facecolor', 0.5*[1 1 1], 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
-    bar(0:0.02:1, hd, 'facecolor', 'r', 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
+    % Shuffled (chance) CV dataset
+    bar(0:0.02:1, hc, 'facecolor', 'g', 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
+    % Actual CV dataset
+    bar(0:0.02:1, hd, 'facecolor', 'k', 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
 else
-    bar(0:0.02:1, hc, 'facecolor', 0.5*[1 1 1], 'edgecolor', 'none'); %, 'Facealpha', 0.7', 'barwidth', 1);
-    bar(0:0.02:1, hd, 'facecolor', 'r', 'edgecolor', 'none'); %, 'Facealpha', 0.7', 'barwidth', 1);
+    bar(0:0.02:1, hc, 'facecolor', 'g', 'edgecolor', 'none'); %, 'Facealpha', 0.7', 'barwidth', 1);
+    bar(0:0.02:1, hd, 'facecolor', 'k', 'edgecolor', 'none'); %, 'Facealpha', 0.7', 'barwidth', 1);
 end
-h1 = plot(mean(classLossChanceTest), 0, 'ko','markerfacecolor', 0.5*[1 1 1], 'markersize', 6);
-h2 = plot(mean(classLossTest), 0, 'ko','markerfacecolor', 'r', 'markersize', 6);
+% Shuffled (chance) CV dataset
+h1 = plot(mean(classLossChanceTest), 0, 'ko','markerfacecolor', 'g', 'markersize', 6);
+% Actual CV dataset
+h2 = plot(mean(classLossTest), 0, 'ko','markerfacecolor', 'k', 'markersize', 6);
 ylabel('Count')
 title(['p-value lower tail = ' num2str(p)])
-xlabel('cross-validation loss')
+xlabel('CV loss at the training timepoint')
 xlim([0 1])
 legend([h1 h2], 'shuffled', 'data', 'location', 'northwest')
 legend boxoff
+
+
 

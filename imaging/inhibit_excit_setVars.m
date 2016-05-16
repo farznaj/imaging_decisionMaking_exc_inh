@@ -46,7 +46,7 @@ subplot(211)
 imagesc(im2p)
 colormap gray
 hold on
-for rr = find(inhibitRois)
+for rr = find(inhibitRois==1)
     plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
 end
 title('gcamp ROIs idenetified as inhibitory');
@@ -56,7 +56,7 @@ subplot(212)
 imagesc(im2p)
 colormap gray
 hold on
-for rr = find(~inhibitRois)
+for rr = find(inhibitRois==0)
     plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
 end
 title('gcamp ROIs identified as excitatory');

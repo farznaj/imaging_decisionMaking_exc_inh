@@ -155,7 +155,7 @@ subplot(222), hold on
 plot([st st], [mn mx], 'k:', 'handleVisibility', 'off') % [epStart epStart]
 plot([en en], [mn mx], 'k:', 'handleVisibility', 'off') % [epEnd epEnd]
 plot([time_aligned(1) time_aligned(end)], [.5 .5], 'k:', 'handleVisibility', 'off')
-hh(1) = plot(time_aligned, top); % average across all iters
+hh(1) = plot(time_aligned, top, 'k'); % average across all iters
 xlabel('Time since stim onset (ms)')
 ylabel('Correct classification')
 xlim([pb pe])

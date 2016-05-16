@@ -87,14 +87,14 @@ inhibitRois = roi2surr_sig > sigTh; % neurons in ch2 that are inhibitory. (ie pr
 inhibitRois = double(inhibitRois); % you do this so the class is consistent with when you do manual evaluation (below)
 
 fract = nanmean(inhibitRois); % fraction of ch2 neurons also present in ch1.
-fprintf('%.2f: fraction of inhibitory neurons in gcamp channel.\n', fract)
+fprintf('%.3f: fraction of inhibitory neurons in gcamp channel.\n', fract)
   
     
 %% Look at ch2 ROIs on ch1 image, 1 by 1.
 
 if exist('CCgcamp', 'var') && showResults
     
-    figure; hold on
+    figure('position', [1157 747 695 237]); hold on
     plot(roi2surr_sig)
     plot([0 500], [sigTh sigTh], 'r')
     xlabel('Neuron number')
@@ -131,17 +131,20 @@ if exist('CCgcamp', 'var') && showResults
 
 
     %%
+    disp('=====================')
     disp('Evaluate inhibitory neuron identification. Figure shows medImage of inhibit neurons.')
-    disp('Red indiciates inhibitory. Yellow: excitatory')
-    disp('Enter: show the next ROI.')
-    disp('Esc: quit')
+%     disp('Red contours are inhibitory. Yellow: excitatory')    
+    disp('Esc: quit evaluation.')
     disp('Other keys: keep showing the same ROI.')
-    disp('Press 0 if the classification is wrong.')
-    disp('Press 2 if unsure about the classification.')
+    disp('When contour is shown :')
+    disp('... press Enter if happy with classification and want to see next ROI.')
+    disp('... press 0 if the classification is wrong.')
+    disp('... press 2 if unsure about the classification.')
     
     
     %% Plot and evaluate inhibitory neurons
     
+    disp('------- evaluating inhibitory neurons -------')
     figure;
     set(gcf, 'position', [44  62  1014  846]); %[28   133   805   658]) % get(groot, 'screensize'))    
     imagesc(medImageInhibit)
@@ -159,8 +162,8 @@ if exist('CCgcamp', 'var') && showResults
         end
         
         set(gcf, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
-        ch = 0;
-        while ch~=13
+%         ch = 0;
+%         while ch~=13
             
             % lines will be red for neurons identified as inhibitory.
             if inhibitRois(rr2)
@@ -182,7 +185,8 @@ if exist('CCgcamp', 'var') && showResults
                     inhibitEval(rr2) = true;
                 end
                 %}
-                break
+                rr = rr+1;
+%                 break            
                 
                 
             % if number 0 pressed, you want to exclude this ROI from inhibit neurons.
@@ -204,19 +208,22 @@ if exist('CCgcamp', 'var') && showResults
             else
                 ch = getkey;
             end
-        end
+%         end
         
-        rr = rr+1;
+%         rr = rr+1;
     end    
     
     % now correct inhibitRois based on your evaluation.
     aa = double(inhibitRois); 
+    fprintf('%i of inhibitory ROIs are reset as excitatory.\n', sum(inhibitEval==0))
+    fprintf('%i of inhibitory ROIs are reset as unknown.\n', sum(inhibitEval==2))    
     aa(inhibitEval==0) = 0; % these ROIs are misidentified as inhibit, and must be excit.
     aa(inhibitEval==2) = nan; % we don't know whether to classify these ROIs as excit or inhibit.
 
 
     %% Plot and evaluate excitatory neurons
     
+    disp('------- evaluating excitatory neurons -------')
     figure;
     set(gcf, 'position', [44  62  1014  846]); %, [28   133   805   658]) % get(groot, 'screensize'))
     
@@ -235,8 +242,8 @@ if exist('CCgcamp', 'var') && showResults
         end
         
         set(gcf, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
-        ch = 0;
-        while ch~=13
+%         ch = 0;
+%         while ch~=13
             
             % lines will be red for neurons identified as inhibitory.
             if inhibitRois(rr2)
@@ -258,7 +265,8 @@ if exist('CCgcamp', 'var') && showResults
                     inhibitEval(rr2) = true;
                 end
                 %}
-                break
+                rr = rr+1;
+%                 break                
                 
                 
             % if number 0 pressed, you want to exclude this ROI from excit neurons.
@@ -280,18 +288,20 @@ if exist('CCgcamp', 'var') && showResults
             else
                 ch = getkey;
             end
-        end
+%         end
         
-        rr = rr+1;
+%         rr = rr+1;
     end
 
     % now correct inhibitRois based on your evaluation.
 %%%     aa = inhibitRois; 
+    fprintf('%i of excitatory ROIs are reset as inhibitory.\n', sum(excitEval==0))
+    fprintf('%i of excitatory ROIs are reset as unknown.\n', sum(excitEval==2))
     aa(excitEval==0) = 1; % these ROIs are misidentified as excit, and must be inhibit.
     aa(excitEval==2) = nan; % we don't know whether to classify these ROIs as excit or inhibit.
 
     
-    %% Reset inhibitRois after evaluation is done.
+    %% Finally reset inhibitRois after evaluation is done.
     
     inhibitRois = aa;
     

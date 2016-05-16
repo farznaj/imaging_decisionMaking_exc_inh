@@ -25,9 +25,9 @@ end
 %%
 makePlots_here = 0; % 1;
 
-frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff = cell(1,length(dataType));
-frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff = cell(1,length(dataType));
-avePerf_cv_dataVSshuff = cell(1,length(dataType));
+frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_train = cell(1,length(dataType));
+frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_train = cell(1,length(dataType));
+avePerf_cv_dataVSshuff_train = cell(1,length(dataType));
 
 
 for id = 2; % 1:length(dataType) % there is very little variability for the actual trained data among different iterations... so it makes sense not to go though the actual trained dataset.
@@ -40,12 +40,12 @@ for id = 2; % 1:length(dataType) % there is very little variability for the actu
     % model.
     
     % each cell of frameTrProjOnBeta_hr_rep_all_alls includes frames x test trials for each iteration of s (ie each CVSVMModel you computed in popClassifier).
-    frameTrProjOnBeta_hr_rep_all_alls = cell(1, length(CVSVMModel_s_all));
-    frameTrProjOnBeta_lr_rep_all_alls = cell(1, length(CVSVMModel_s_all));
-    frameTrProjOnBeta_rep_all_alls = cell(1, length(CVSVMModel_s_all));
+    frameTrProjOnBeta_hr_rep_all_alls_train = cell(1, length(CVSVMModel_s_all));
+    frameTrProjOnBeta_lr_rep_all_alls_train = cell(1, length(CVSVMModel_s_all));
+    frameTrProjOnBeta_rep_all_alls_train = cell(1, length(CVSVMModel_s_all));
     
-    traces_bef_proj_nf_all_alls = cell(1, length(CVSVMModel_s_all));
-    traces_bef_proj_f_all_alls = cell(1, length(CVSVMModel_s_all));
+    traces_bef_proj_nf_all_alls_train = cell(1, length(CVSVMModel_s_all));
+    traces_bef_proj_f_all_alls_train = cell(1, length(CVSVMModel_s_all));
     
     avePerf_cv = [];
     
@@ -140,19 +140,19 @@ for id = 2; % 1:length(dataType) % there is very little variability for the actu
         
         
         %%
-        frameTrProjOnBeta_hr_rep_all_alls{s} = frameTrProjOnBeta_hr_rep; % frameTrProjOnBeta_hr_rep_all; % frames x trials (these are all test trials)
+        frameTrProjOnBeta_hr_rep_all_alls_train{s} = frameTrProjOnBeta_hr_rep; % frameTrProjOnBeta_hr_rep_all; % frames x trials (these are all test trials)
         frameTrProjOnBeta_lr_rep_all_alls{s} = frameTrProjOnBeta_lr_rep; % _all;
-        frameTrProjOnBeta_rep_all_alls{s} = frameTrProjOnBeta_rep; %_all;
+        frameTrProjOnBeta_rep_all_alls_train{s} = frameTrProjOnBeta_rep; %_all;
         
-        traces_bef_proj_nf_all_alls{s} = traces_bef_proj_nf; %_all;
-        traces_bef_proj_f_all_alls{s} = traces_bef_proj_f; %_all;
+        traces_bef_proj_nf_all_alls_train{s} = traces_bef_proj_nf; %_all;
+        traces_bef_proj_f_all_alls_train{s} = traces_bef_proj_f; %_all;
         
         
     end
     
-    frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff{id} = frameTrProjOnBeta_hr_rep_all_alls;
-    frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff{id} = frameTrProjOnBeta_lr_rep_all_alls;
-    avePerf_cv_dataVSshuff{id} = avePerf_cv;
+    frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_train{id} = frameTrProjOnBeta_hr_rep_all_alls_train;
+    frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_train{id} = frameTrProjOnBeta_lr_rep_all_alls;
+    avePerf_cv_dataVSshuff_train{id} = avePerf_cv;
     
     
     %% Print the size of matrices
@@ -163,20 +163,20 @@ for id = 2; % 1:length(dataType) % there is very little variability for the actu
         % frameTrProjOnBeta_rep_all_alls
         % traces_bef_proj_nf_all_alls
         
-        size_projection_testTrs = size(frameTrProjOnBeta_rep_all_alls{randi(length(CVSVMModel_s_all))});
-        fprintf(['size_projection_testTrs: ', repmat('%i  ', 1, length(size_projection_testTrs)), '\n'], size_projection_testTrs)
+        size_projection_testTrs = size(frameTrProjOnBeta_rep_all_alls_train{randi(length(CVSVMModel_s_all))});
+        fprintf(['size_projection_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_testTrs)), '\n'], size_projection_testTrs)
         
-        size_projection_hr_testTrs = size(frameTrProjOnBeta_hr_rep_all_alls{randi(length(CVSVMModel_s_all))});
-        fprintf(['size_projection_hr_testTrs: ', repmat('%i  ', 1, length(size_projection_hr_testTrs)), '\n'], size_projection_hr_testTrs)
+        size_projection_hr_testTrs = size(frameTrProjOnBeta_hr_rep_all_alls_train{randi(length(CVSVMModel_s_all))});
+        fprintf(['size_projection_hr_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_hr_testTrs)), '\n'], size_projection_hr_testTrs)
         
         size_projection_lr_testTrs = size(frameTrProjOnBeta_lr_rep_all_alls{randi(length(CVSVMModel_s_all))});
-        fprintf(['size_projection_lr_testTrs: ', repmat('%i  ', 1, length(size_projection_lr_testTrs)), '\n'], size_projection_lr_testTrs)
+        fprintf(['size_projection_lr_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_lr_testTrs)), '\n'], size_projection_lr_testTrs)
         
-        size_orig_traces_testTrs = size(traces_bef_proj_nf_all_alls{randi(length(CVSVMModel_s_all))});
-        fprintf(['size_orig_traces_testTrs: ', repmat('%i  ', 1, length(size_orig_traces_testTrs)), '\n'], size_orig_traces_testTrs)
+        size_orig_traces_testTrs = size(traces_bef_proj_nf_all_alls_train{randi(length(CVSVMModel_s_all))});
+        fprintf(['size_orig_traces_testTrs (frs x ns x trs): ', repmat('%i  ', 1, length(size_orig_traces_testTrs)), '\n'], size_orig_traces_testTrs)
         
         size_avePerf_cv = size(avePerf_cv);
-        fprintf(['size_avePerf_cv: ', repmat('%i  ', 1, length(size_avePerf_cv)), '\n'], size_avePerf_cv)
+        fprintf(['size_avePerf_cv (frs x shffls): ', repmat('%i  ', 1, length(size_avePerf_cv)), '\n'], size_avePerf_cv)
         
     end
     
@@ -190,7 +190,8 @@ if makePlots_here
     
     %% Plots related to CV dataset
     
-    col = {'b', 'r'};
+%     col = {'b', 'r'};
+    col = {'k', 'g'};
     figure('name', 'Trained data. Top: actual data. Bottom: shuffled data');
     pb = round((- eventI)*frameLength);
     pe = round((length(time_aligned) - eventI)*frameLength);
@@ -206,8 +207,8 @@ if makePlots_here
         % compute the average trace across all test trials for each CVSVMModel.
         % then convert the average trace of all CVSVMModels into a single matrix, this is called av11 (or av22).
         % frames x number of shuffle iters (s)
-        av11 = cell2mat(cellfun(@(x)nanmean(x,2), frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff{id}, 'uniformoutput', 0)); % frames x number of shuffle iters (s)
-        av22 = cell2mat(cellfun(@(x)nanmean(x,2), frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff{id}, 'uniformoutput', 0));
+        av11 = cell2mat(cellfun(@(x)nanmean(x,2), frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_train{id}, 'uniformoutput', 0)); % frames x number of shuffle iters (s)
+        av22 = cell2mat(cellfun(@(x)nanmean(x,2), frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_train{id}, 'uniformoutput', 0));
         
         av1 = nanmean(av11, 2); % average across s
         av2 = nanmean(av22, 2); % average across s
@@ -246,8 +247,8 @@ if makePlots_here
         
         %% Decoder performance at each time point (decoder trained on epoch ep)
         
-        top = nanmean(avePerf_cv_dataVSshuff{id}, 2); % average performance across all iters.
-        top_sd = nanstd(avePerf_cv_dataVSshuff{id}, 0, 2) / sqrt(size(avePerf_cv_dataVSshuff{id},2));
+        top = nanmean(avePerf_cv_dataVSshuff_train{id}, 2); % average performance across all iters.
+        top_sd = nanstd(avePerf_cv_dataVSshuff_train{id}, 0, 2) / sqrt(size(avePerf_cv_dataVSshuff_train{id},2));
         
         mn = min(top(:));
         mx = max(top(:));
@@ -268,7 +269,7 @@ if makePlots_here
         plot([time_aligned(1) time_aligned(end)], [.5 .5], 'k:', 'handleVisibility', 'off')
         
         % plot(time_aligned, top) % average across all iters
-        hh(id) = boundedline(time_aligned, top, top_sd, col{id}, 'alpha');
+        hh(id) = boundedline(time_aligned, top, top_sd, col2{id}, 'alpha');
         
         xlabel('Time since stim onset (ms)')
         ylabel('Correct classification')
@@ -283,7 +284,7 @@ if makePlots_here
     p_classAcc = NaN(1, size(avePerf_cv,1));
     h_classAcc = NaN(1, size(avePerf_cv,1));
     for fr = 1:length(p_classAcc)
-        [h_classAcc(fr), p_classAcc(fr)]= ttest2(avePerf_cv_dataVSshuff{1}(fr,:)', avePerf_cv_dataVSshuff{2}(fr,:)',...
+        [h_classAcc(fr), p_classAcc(fr)]= ttest2(avePerf_cv_dataVSshuff_train{1}(fr,:)', avePerf_cv_dataVSshuff_train{2}(fr,:)',...
             'tail', 'right', 'vartype', 'unequal'); % Test the alternative hypothesis that the population mean of actual data is less than the population mean of shuffled data.
     end
     
@@ -295,57 +296,5 @@ if makePlots_here
     legend(hh, 'data', 'shuffled', 'location', 'northwest')
     legend boxoff
     
-    
-    %% Plot and compare distributions of classification loss between shuffled and original datasets. Do this for both training dataset and CV dataset.
-    
-    % figure;
-    % Training dataset
-    % subplot(211)
-    subplot(224)
-    hold on
-    %         hd = hist(classLossTrain, 0:0.02:1);
-    hc = hist(classLossChanceTrain, 0:0.02:1);
-    if strfind(version, 'R2016')
-        bar(0:0.02:1, hc, 'facecolor', 0.5*[1 1 1], 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
-    else
-        bar(0:0.02:1, hc, 'facecolor', 0.5*[1 1 1], 'edgecolor', 'none'); % , 'Facealpha', 0.7', 'barwidth', 1);
-    end
-    %         bar(0:0.02:1, hd, 'facecolor', 'r', 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
-    plot(mean(classLossChanceTrain), 0, 'ko','markerfacecolor', 0.5*[1 1 1], 'markersize', 6)
-    plot(mean(classLossTrain), 0, 'ko','markerfacecolor', 'r', 'markersize', 6)
-    ylabel('Count')
-    xlabel('training loss')
-    xlim([0 1])
-    % legend('shuffled', 'data', 'location', 'northwest')
-    legend boxoff
-    
-    
-    % subplot(212)
-    % CV dataset
-    [~, p]= ttest2(classLossTest, classLossChanceTest, 'tail', 'left', 'vartype', 'unequal'); % Test the alternative hypothesis that the population mean of actual data is less than the population mean of shuffled data.
-    [~, pboth] = ttest2(classLossTest, classLossChanceTest, 'vartype', 'unequal');
-    [~, pright] = ttest2(classLossTest, classLossChanceTest, 'tail', 'right', 'vartype', 'unequal');
-    fprintf('pval both tails = %.2f\n', pboth)
-    fprintf('pval left tail (actual<shuff) = %.2f\n', p)
-    fprintf('pval right tail (actual>shuff) = %.2f\n', pright)
-    
-    hold on
-    hc = hist(classLossChanceTest, 0:0.02:1);
-    hd = hist(classLossTest, 0:0.02:1);
-    if strfind(version, 'R2016')
-        bar(0:0.02:1, hc, 'facecolor', 0.5*[1 1 1], 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
-        bar(0:0.02:1, hd, 'facecolor', 'r', 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
-    else
-        bar(0:0.02:1, hc, 'facecolor', 0.5*[1 1 1], 'edgecolor', 'none'); %, 'Facealpha', 0.7', 'barwidth', 1);
-        bar(0:0.02:1, hd, 'facecolor', 'r', 'edgecolor', 'none'); %, 'Facealpha', 0.7', 'barwidth', 1);
-    end
-    h1 = plot(mean(classLossChanceTest), 0, 'ko','markerfacecolor', 0.5*[1 1 1], 'markersize', 6);
-    h2 = plot(mean(classLossTest), 0, 'ko','markerfacecolor', 'r', 'markersize', 6);
-    ylabel('Count')
-    title(['p-value lower tail = ' num2str(p)])
-    xlabel('cross-validation loss')
-    xlim([0 1])
-    legend([h1 h2], 'shuffled', 'data', 'location', 'northwest')
-    legend boxoff
     
 end
