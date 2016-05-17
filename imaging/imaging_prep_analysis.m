@@ -58,7 +58,7 @@ saveHelpedTrs = 0; % it will only take effect if defaultHelpedTrs is false. If 1
 analyzeOutcomes = {'all'}; % {'success', 'failure'}; % outcomes that will be analyzed.
 
 furtherAnalyses = 0; % analyses related to choicePref and SVM will be performed.
-plot_ave_noTrGroup = false; % Plot average traces across all neurons and all trials aligned on particular trial events.
+plot_ave_noTrGroup = true; % Plot average traces across all neurons and all trials aligned on particular trial events.
 plot_ave_trGroup = false; % Plot average traces across all neurons for different trial groups aligned on particular trial events.
 plotTraces1by1 = false; % plot traces per neuron and per trial showing all trial events
 compareManual = false; % compare results with manual ROI extraction

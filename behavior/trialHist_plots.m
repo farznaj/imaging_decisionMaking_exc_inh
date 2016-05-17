@@ -38,36 +38,38 @@ else
         
         n_bTerm = cellfun(@(x)sum(~isnan(x)), B_term, 'uniformoutput', 0);
         for ib = 1:length(n_bTerm)
-            fprintf(['num valid elements in each bin of term %d ', repmat('%d ',1,length(n_bTerm{ib})), '\n'], ib, n_bTerm{ib})
+            fprintf(['num valid elements in each bin of term %d = ', repmat('%d ',1,length(n_bTerm{ib})), '\n'], ib, n_bTerm{ib})
         end
-        
-        %{
-    numR = sum(~isnan(B_rate_all));
-    numIS = sum(~isnan(B_itiS_all));
-    numIF = sum(~isnan(B_itiF_all));
-    
-    fprintf(['numTrs in each rate bin: ', repmat('%d ',1,length(numR)), '\n'], numR)
-    fprintf(['numTrs in each ITI_succ bin: ', repmat('%d ',1,length(numIS)), '\n'], numIS)
-    fprintf(['numTrs in each ITI_fail bin: ', repmat('%d ',1,length(numIF)), '\n'], numIF)
-        %}
-        
-        %% plot rate and iti coeffs.
-        
-        col = {'k','r','g', 'b', 'm', 'c'};
-        figure;
-        disp('h_p for ttest2 between the 1st and last column of ')
-        for ib = 1:length(B_term)
-            subplot(length(B_term),1,ib)
-            h = errorbar(1:size(B_term{ib},2), nanmean(B_term{ib},1), nanstd(B_term{ib},[],1)./sqrt(n_bTerm{ib}), '.', 'color', 'k', 'markersize', 10); %, col{ib});
-%             errorbar_tick(h, 15)
-            ylabel('regress coeff')
-            
+
+        disp('h_p for ttest2 (across mice) between the 1st and last column of ')
+        for ib = 1:length(B_term)            
             [h, p] = ttest2(B_term{ib}(:,1), B_term{ib}(:,end));
             h_P = [h, p];
             fprintf('term %i:\n', ib)
             disp(h_P)
         end
         
+        %{
+        numR = sum(~isnan(B_rate_all));
+        numIS = sum(~isnan(B_itiS_all));
+        numIF = sum(~isnan(B_itiF_all));
+
+        fprintf(['numTrs in each rate bin: ', repmat('%d ',1,length(numR)), '\n'], numR)
+        fprintf(['numTrs in each ITI_succ bin: ', repmat('%d ',1,length(numIS)), '\n'], numIS)
+        fprintf(['numTrs in each ITI_fail bin: ', repmat('%d ',1,length(numIF)), '\n'], numIF)
+        %}
+        
+        
+        %% plot rate and iti coeffs.
+        
+        col = {'k','r','g', 'b', 'm', 'c'};
+        figure;
+        for ib = 1:length(B_term)
+            subplot(length(B_term),1,ib)
+            h = errorbar(1:size(B_term{ib},2), nanmean(B_term{ib},1), nanstd(B_term{ib},[],1)./sqrt(n_bTerm{ib}), '.', 'color', 'k', 'markersize', 10); %, col{ib});
+%             errorbar_tick(h, 15)
+            ylabel('regress coeff')
+        end
         
         %{
     figure;

@@ -16,7 +16,7 @@ trialHistAnalysis = 1; % more parameters are specified in popClassifier_trialHis
     prevSuccessFlg = true; % true previous sucess trials; false: previous failure.
     vec_iti = [0 9 30]; % [0 10 30]; %[0 6 9 12 30]; % [0 7 30]; % [0 10 30]; % [0 6 9 12 30]; % use [0 40]; if you want to have a single iti bin and in conventioinal analysis look at the effect of current rate on outcome.
     
-neuronType = 2; % 0: excitatory, 1: inhibitory, 2: all types.
+neuronType = 1; % 0: excitatory, 1: inhibitory, 2: all types.
 pcaFlg = true;
 windowAvgFlg = true;
 
@@ -75,16 +75,18 @@ nPostFrames = nan; []; % nan;
 
 switch neuronType
     case 0 % only excitatory
-        traces_al_sm(:, good_inhibit, :) = NaN;
+%         traces_al_sm(:, good_inhibit, :) = NaN;
+    traces_al_sm = traces_al_sm(:, good_excit, :);
     case 1 % only inhibitory
-        traces_al_sm(:, good_excit, :) = NaN;
+%         traces_al_sm(:, good_excit, :) = NaN;
+    traces_al_sm = traces_al_sm(:, good_inhibit, :);
 end
 
 
 % set to nan those trials in outcomes and allRes that are nan in traces_al_sm
 a = find(sum(sum(~isnan(traces_al_sm),1),3), 1);
 allTrs2rmv = find(squeeze(sum(isnan(traces_al_sm(:,a,:)))));
-fprintf('%d= final #nan trials in the aligned traces\n', length(allTrs2rmv))
+fprintf('%d= final number of NaN trials in the aligned traces\n', length(allTrs2rmv))
 
 outcomes(allTrs2rmv) = NaN;
 allResp(allTrs2rmv) = NaN;
@@ -268,12 +270,11 @@ fprintf('# total trials = %d\n', SVMModel.NumObservations)
 fprintf('# trials that are support vectors = %d\n', size(SVMModel.Alpha,1))
 
 
-
-%% Print some results about on the SVM outcome
+%%% A few checks :
 
 if ~SVMModel.ConvergenceInfo.Converged, error('not converged!'), end
 
-fprintf('converged = %d\n', SVMModel.ConvergenceInfo.Converged)
+%%% fprintf('converged = %d\n', SVMModel.ConvergenceInfo.Converged)
 % SVMModel.NumObservations == size(choiceVec,1) - (length(extraTrs) + sum(isnan(choiceVec0))) % final number of trials
 % size(SVMModel.X,2) == size(spikeAveEp0,2) - sum(NsFewTrActiv) % final number of neurons
 
@@ -309,13 +310,12 @@ if any(SVMModel.Prior ~= .5), error('The 2 conditions have non-equal number of t
 % Compute it for those exact trials used for training.
 if pcaFlg
     [label] = predict(SVMModel, X_s); % predict(SVMModel, SVMModel.X);
-    label(isnan(sum(X_s,2))) = NaN;
-    fractMisMatch_trainingTrs(1) = sum(abs(Y - label)>0) / sum(~isnan(Y - label));
+    label(isnan(sum(X_s,2))) = NaN;    
 else
     [label] = predict(SVMModel, X); % predict(SVMModel, SVMModel.X);
     label(isnan(sum(X,2))) = NaN;
-    fractMisMatch_trainingTrs(1) = sum(abs(Y - label)>0) / sum(~isnan(Y - label));
 end
+fractMisMatch_trainingTrs(1) = sum(abs(Y - label)>0) / sum(~isnan(Y - label));
 fprintf('%.3f = Fract classification error for the training dataset.\n', fractMisMatch_trainingTrs)
 
 
@@ -332,9 +332,15 @@ CVSVMModel = crossval(SVMModel);
 
 % How claassLoss is computed? I think: classLoss = 1 - mean(label == elabel)
 classLossCV = kfoldLoss(CVSVMModel);
-fprintf('CV classification error (1 iteration) = %.3f\n', classLossCV)
-a = diff([classLossCV, mean(label ~= elabel)]);
+fprintf('%.3f = CV classification error (1 iteration)\n', classLossCV)
+% a = diff([classLossCV, mean(label ~= elabel)]); % This is what you had,
+% but I think it is wrong and you need to use the code below. Double check!
+a = diff([classLossCV, mean(Y ~= elabel)]);
 fprintf('%.3f = Difference in classLoss computed using kfoldLoss vs manually using kfoldPredict labels. This value is expected to be very small!\n', a)
+if a > 1e-10
+    a
+    error('Why is there a mismatch? Read your comments above about "a".')
+end
 
 
 %% See how well the SVM decoder trained on our particular epoch can decode other time points.
@@ -375,20 +381,20 @@ avePerf(:,1) = nanmean(corrClass, 2);  % frames x randomIters
 %% 1) Set CV SVM models for a number of iterations. 2) Generate shuffled (chance) distributions for each iteration. 
 % quality relative to shuffles
 
-classLossTrain = [];
-classLossTest = [];
-classLossChanceTrain = [];
-classLossChanceTest = [];
+classLossTrain = NaN(1, numShuffs);
+classLossTest = NaN(1, numShuffs);
+classLossChanceTrain = NaN(1, numShuffs);
+classLossChanceTest = NaN(1, numShuffs);
 
-wNsHrLr_s = [];
-biasHrLr_s = [];
-wNsHrLrChance = [];
-biasHrLrChance = [];
+wNsHrLr_s = NaN(length(SVMModel.Beta), numShuffs);
+biasHrLr_s = NaN(1, numShuffs);
+wNsHrLrChance = NaN(length(SVMModel.Beta), numShuffs);
+biasHrLrChance = NaN(1, numShuffs);
 
-SVMModel_s_all = struct; % keep trained SVM models for all iterations.
-SVMModelChance_all = struct; % keep trained SVM models for shuffled data for all iterations.
-CVSVMModel_s_all = struct; % keep CV SVM models for all iterations.
-CVSVMModelChance_all = struct; % keep CV SVM models for shuffled data for all iterations.
+SVMModel_s_all = struct; % trained SVM models for all iterations.
+SVMModelChance_all = struct; % trained SVM models for shuffled data for all iterations.
+CVSVMModel_s_all = struct; % CV SVM models for all iterations.
+CVSVMModelChance_all = struct; % CV SVM models for shuffled data for all iterations.
 
 shflTrials_alls = NaN(length(Y), numShuffs);
 
@@ -439,24 +445,23 @@ for s = 1:numShuffs
     
     % trained dataset
     SVMModel_s = fitcsvm(X_s, Y_s, 'standardize', 1, 'ClassNames', cnam); % Linear Kernel
-    classLossTrain(s) = mean(abs(Y_s-predict(SVMModel_s, X_s)));
+    classLossTrain(s) = mean(abs(Y_s - predict(SVMModel_s, X_s)));
     
     wNsHrLr_s(:, s) = SVMModel_s.Beta;
-    biasHrLr_s(:, s) = SVMModel_s.Bias;
+    biasHrLr_s(s) = SVMModel_s.Bias;
 
     % CV dataset
     CVSVMModel_s = crossval(SVMModel_s, 'kfold', 10); % CVSVMModel.Trained{1}: model 1 --> there will be KFold of these models. (by default KFold=10);    
     classLossTest(s) = kfoldLoss(CVSVMModel_s); % Classification loss (by default the fraction of misclassified data) for observations not used for training
         
     
-    
-    %% Shuffled data to set chance distributions (Y is shuffled so the the link between trial and choice is gone).
+    %% Shuffled data (for setting chance distributions: Y is shuffled so the link between trial and choice is gone).
     
     Y_s_shfld = Y_s(randperm(length(Y_s)));
     
     % shuffled trained dataset
     SVMModelChance = fitcsvm(X_s, Y_s_shfld, 'standardize', 1, 'ClassNames', cnam); %  % Linear Kernel
-    classLossChanceTrain(s) = mean(abs(Y_s_shfld-predict(SVMModelChance, X_s)));
+    classLossChanceTrain(s) = mean(abs(Y_s_shfld - predict(SVMModelChance, X_s)));
 
     wNsHrLrChance(:, s) = SVMModelChance.Beta;
     biasHrLrChance(:, s) = SVMModelChance.Bias;

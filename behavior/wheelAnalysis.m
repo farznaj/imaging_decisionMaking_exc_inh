@@ -25,6 +25,7 @@ figure; plot(diffRot_mscan)
 
 
 %% plot the wheelRev signal for trials one by one
+
 wheelTimeRes = alldata(1).wheelSampleInt;
 figure;
 for itr = 1:length(alldata) % 102
@@ -41,8 +42,32 @@ for itr = 1:length(alldata) % 102
 end
 
 
-%% concatenate wheelRev for all trials and plot it.
+%% concatenate wheelRev for all trials and plot it. Also take care of the apparent rest in rotary values.
+
 % values seem to range from -16 to 16, not sure why, but what matters is
 % the change not the absolute values.
-a = {alldata.wheelRev};
-figure; plot(cell2mat(a'))
+a = cell2mat({alldata.wheelRev}');
+figure; hold on
+plot(a)
+xlabel('Rotary samples')
+ylabel('Rotary position')
+
+% Rotary position seems to reset (to +16) once it reaches -16. We need to
+% take care of this! You do this by subtracting out the amount of jump from
+% point ~-16 to ~16: 
+f = find(round(diff(a)) > 16);
+
+for i = 1:length(f)-1
+    r = f(i)+1 : f(i+1);
+    d = a(f(i)+1) - a(f(i));
+    a(r) = a(r) - d;
+end
+
+i = length(f);
+d = a(f(i)+1) - a(f(i));
+a(f(i)+1 : end) = a(f(i)+1 : end) - d;
+
+plot(a)
+legend('raw','after controling for the reset')
+
+

@@ -108,7 +108,8 @@ fprintf('Size of choicePref_all (fr x units): %d  %d\n', size(choicePref_all))
 if makeplots
     
     figure;
-    % plot average choicePref across neurons
+    
+    %%%%% plot average of absolute of choicePref across neurons
     subplot(221), hold on
     top = nanmean(abs(choicePref_all),2);
     ylabel('Abs(choicePref)')
@@ -117,8 +118,12 @@ if makeplots
     plot(top, 'k', 'linewidth', 2)
     plot([eventI_stimOn  eventI_stimOn], [min(top(:))  max(top(:))], 'k--')
     % figure; plot(nanmean(choicePref_all(:,~good_inhibit),2))
+    box off
+    set(gca,'tickdir','out')
+    set(gca,'ticklength',[.025 0])
     
-    % compare hist of choice pref in the 1st and 2nd half of the stim.
+    
+    %%%%%% compare hist of choice pref in the 1st and 2nd half of the stim.
     frsh = round(linspace(eventI_stimOn, numfrs, 3));
     choicePref_all_h1 = nanmean(choicePref_all(frsh(1):frsh(2), :)); % average choicePref during 1st half of the stimulus
     choicePref_all_h2 = nanmean(choicePref_all(frsh(end-1):frsh(end), :)); % average choicePref during 2nd half of the stimulus
@@ -126,39 +131,37 @@ if makeplots
     
     v = linspace(min(choicePref_all(:)), max(choicePref_all(:)), 10);
     n1 = histcounts(choicePref_all_h1, v, 'normalization', 'count');
-    n2 = histcounts(choicePref_all_h2, v, 'normalization', 'count');
-    
-    box off
-    set(gca,'tickdir','out')
-    set(gca,'ticklength',[.025 0])
-    
+    n2 = histcounts(choicePref_all_h2, v, 'normalization', 'count');   
     
     subplot(224)
     plot(v(1:end-1), [n1; n2]')
     legend('half 1','half 2')
+%     plot(v(1:end-1), cumsum([n1; n2]'))    
     
     
+    %%%%%%%%% plot histogram of chiocePref for the first few frames and the last few frames.    
+    a = choicePref_all(eventI_stimOn-2 : eventI_stimOn,:); % pre-stimulus
+    b = choicePref_all(size(choicePref_all,1) - 2 : size(choicePref_all,1),:); % end of stimulus    
+    v = linspace(min([b(:);a(:)]), max([b(:);a(:)]), 10);
     
-    % plot histogram of chiocePref for the first few frames and the last
-    % few frames.
+    n1 = histcounts(a(:), v, 'normalization', 'probability');
+    n2 = histcounts(b(:), v, 'normalization', 'probability');
+    
     subplot(222), hold on; 
-%     plot(v(1:end-1), cumsum([n1; n2]'))
-    b = choicePref_all(size(choicePref_all,1) - 2 : size(choicePref_all,1),:);
-    histogram(b(:), 'normalization', 'probability')
-    a = choicePref_all(eventI_stimOn-2 : eventI_stimOn,:);
-    histogram(a(:), 'normalization', 'probability');
-    legend('End of stim','Pre-stim')
+%     plot(v(1:end-1), [n1; n2]')
+    plot(v(1:end-1) + mode(diff(v))/2, [n1; n2]') % plot on the center of bin
+    
+    legend('Pre-stim', 'End of stim')
     legend boxoff
     xlabel('ipsi <-- Choice pref --> contra')
-    ylabel('Fraction')
-    
+    ylabel('Fraction')    
     box off
     set(gca,'tickdir','out')
     set(gca,'ticklength',[.025 0])
     
     
     
-    % plot choice pref for all neurons for each frame
+    %%%%%%%%%%%%%%%%% plot choice pref for all neurons for each frame
     a = choicePref_all';
     subplot(223), hold on
     imagesc(a)

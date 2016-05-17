@@ -109,7 +109,8 @@ if exist('framesPerTrial', 'var')
 end
 
 
-%% add NaN between trials.
+%% Add NaN between trials.
+
 if addNaNiti
     begFrames = csfrs+1; % first frame of each trial.
     
@@ -176,6 +177,7 @@ end
 
 
 %% Compute mean and std of peaks of the dfofGood trace for each neuron.
+
 if markQuantPeaks || plotTrs1by1
     
     peaksDfofTrace = cell(1, size(traceFU_toplot{1},2)); % remember if it is C_df it has the baseline in it too so you need to take it out otherwise number of units will be 1 more.
@@ -197,6 +199,7 @@ end
 
 
 %% Set the baseline preceding a specific event for each trial and each neuron
+
 % if traceEventAlign is aligned on timeInitTone, so bl would be frame at
 % which timeInitTone is -3:-1.
 if plotTrs1by1

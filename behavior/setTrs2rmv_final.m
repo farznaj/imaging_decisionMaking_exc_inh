@@ -88,5 +88,5 @@ if any(stimRateChanged)
 end
 
 fprintf('Number of trs2rmv: %d\n', length(trs2rmv))
-disp(trs2rmv')
+% disp(trs2rmv')
 

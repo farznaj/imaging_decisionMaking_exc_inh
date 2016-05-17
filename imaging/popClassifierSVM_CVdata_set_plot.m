@@ -371,6 +371,7 @@ fr = 30;
 
 %% Plot and compare distributions of classification loss between shuffled and actual datasets. Do this for both training dataset and CV dataset.
 
+[~, p0]= ttest2(classLossTrain, classLossChanceTrain, 'tail', 'left', 'vartype', 'unequal'); % Test the alternative hypothesis that the population mean of actual data is less than the population mean of shuffled data.
 [~, p]= ttest2(classLossTest, classLossChanceTest, 'tail', 'left', 'vartype', 'unequal'); % Test the alternative hypothesis that the population mean of actual data is less than the population mean of shuffled data.
 [~, pboth] = ttest2(classLossTest, classLossChanceTest, 'vartype', 'unequal');
 [~, pright] = ttest2(classLossTest, classLossChanceTest, 'tail', 'right', 'vartype', 'unequal');
@@ -379,7 +380,7 @@ fprintf('pval left tail (actual<shuff) = %.2f\n', p)
 fprintf('pval right tail (actual>shuff) = %.2f\n', pright)
 
 % figure;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% TRAINING DATASET (shuffled and actual)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% TRAINING DATASET (shuffled and actual) %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % subplot(211)
 subplot(224)
 hold on
@@ -387,23 +388,23 @@ hold on
 hc = hist(classLossChanceTrain, 0:0.02:1);
 %     hd = hist(classLossTrain, 0:0.02:1);
 if strfind(version, 'R2016')
-    bar(0:0.02:1, hc, 'facecolor', 'g', 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
+    bar(0:0.02:1, hc, 'facecolor', [153 255 153]/255, 'edgecolor', 'none', 'Facealpha', 0.7', 'barwidth', 1);
 else
-    bar(0:0.02:1, hc, 'facecolor', 'g', 'edgecolor', 'none'); % , 'Facealpha', 0.7', 'barwidth', 1);
+    bar(0:0.02:1, hc, 'facecolor', [153 255 153]/255, 'edgecolor', 'none'); % , 'Facealpha', 0.7', 'barwidth', 1);
 end
 % Shuffled (chance) training dataset
-plot(mean(classLossChanceTrain), 0, 'go','markerfacecolor', 'g', 'markersize', 6)
+h11 = plot(mean(classLossChanceTrain), 0, 'go','markerfacecolor', [153 255 153]/255, 'markersize', 6);
 % Actual training dataset
-plot(mean(classLossTrain), 0, 'ko','markerfacecolor', 'k', 'markersize', 6)
-ylabel('Count')
+h12 = plot(mean(classLossTrain), 0, 'ko','markerfacecolor', [.6 .6 .6], 'markersize', 6);
+% ylabel('Count')
 xlabel('training loss')
 xlim([0 1])
-% legend('shuffled', 'data', 'location', 'northwest')
-legend boxoff
+% legend([h11, h12], 'trained\_shuffled', 'trained\_data', 'location', 'northwest')
+% legend boxoff
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% CV DATASET (shuffled and actual)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% CV DATASET (shuffled and actual) %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % subplot(212)
 hold on
 % Shuffled (chance) CV dataset
@@ -424,10 +425,11 @@ h1 = plot(mean(classLossChanceTest), 0, 'ko','markerfacecolor', 'g', 'markersize
 % Actual CV dataset
 h2 = plot(mean(classLossTest), 0, 'ko','markerfacecolor', 'k', 'markersize', 6);
 ylabel('Count')
-title(['p-value lower tail = ' num2str(p)])
-xlabel('CV loss at the training timepoint')
+xlabel('Training- and CV-data loss at the training timepoint')
 xlim([0 1])
-legend([h1 h2], 'shuffled', 'data', 'location', 'northwest')
+title({['p-value lower tail, training = ' num2str(p0)], ['CV = ' num2str(p)]})
+% legend([h1 h2], 'shuffled', 'data', 'location', 'northwest')
+legend([h11, h12, h1 h2], 'trained\_shuffled', 'trained\_data', 'CV\_shuffled', 'CV\_data', 'location', 'northwest')
 legend boxoff
 
 

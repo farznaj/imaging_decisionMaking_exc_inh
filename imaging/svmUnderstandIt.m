@@ -156,8 +156,15 @@ fprintf('Average cross-validated classification error = %.3f\n', classLoss)
 [elabel, epostp] = kfoldPredict(ScoreCVSVMModel);
 
 
-% How claassLoss is computed? I think: classLoss = 1 - mean(label == elabel)
-diff([classLoss, mean(label ~= elabel)])
+% How claassLoss is computed? I think: classLoss = 1 - mean(Y == elabel)   % 1 - mean(label == elabel)
+% a = diff([classLoss, mean(label ~= elabel)]); % This is what you had,
+% but I think it is wrong and you need to use the code below. Double check!
+a = diff([classLoss, mean(Y ~= elabel)]);
+fprintf('%.3f = Difference in classLoss computed using kfoldLoss vs manually using kfoldPredict labels. This value is expected to be very small!\n', a)
+if a > 1e-10
+    a
+    error('Why is there a mismatch? Read your comments above about "a".')
+end
 
 
 %% Example using Holdout for Cross-validated classification model.
