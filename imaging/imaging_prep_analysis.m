@@ -23,8 +23,8 @@ home
 %% Set some initial variables.
 
 mouse = 'fni17';
-imagingFolder = '150916'; % '151029'; % '151021';
-mdfFileNumber = 1; % 3; % or tif major
+imagingFolder = '151029'; % '151029'; % '151021';
+mdfFileNumber = 3; % 3; % or tif major
 signalCh = 2;
 pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the latest pnev vile). Set [] to load the latest one.
 
