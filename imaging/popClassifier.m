@@ -11,7 +11,7 @@ fprintf('SVM analysis started.\n')
 
 %% Set initial variables
 
-trialHistAnalysis = 1; % more parameters are specified in popClassifier_trialHistory.m
+trialHistAnalysis = 0; % more parameters are specified in popClassifier_trialHistory.m
     iTiFlg = 0; % 0: short iTi, 1: long iTi, 2: all iTis.
     prevSuccessFlg = true; % true previous sucess trials; false: previous failure.
     vec_iti = [0 9 30]; % [0 10 30]; %[0 6 9 12 30]; % [0 7 30]; % [0 10 30]; % [0 6 9 12 30]; % use [0 40]; if you want to have a single iti bin and in conventioinal analysis look at the effect of current rate on outcome.
@@ -36,7 +36,7 @@ else
 end
 
 shuffleTrsForIters = 1; % if 1, in the iterations you will shuffle trials where you set CV SVM models and shuffled data, you will shuffle trials (this is different from the shuffling for computing chance distributions).
-numShuffs = 10; % 100 % number of iterations for getting CV models and shuffled data.
+numShuffs = 100; % 100 % number of iterations for getting CV models and shuffled data.
 usePooledWeights = 0; % if 1, weights will be pooled across different shuffles and then a single weight vector will be used to compute projections. If 0, weights of each model will be used for making projections of that model.
 
 
