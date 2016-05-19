@@ -93,7 +93,7 @@ boundedline(time_aligned, av2, sd2, 'r', 'alpha')
 % plot(time_aligned, av2, 'r')
 
 xlabel('Time since stim onset (ms)')
-ylabel('Raw average of neural responses')
+ylabel({'Raw average of', 'neural responses'})
 xlim([pb pe])
 
 
@@ -128,14 +128,16 @@ subplot(221), hold on
 plot([st st], [mn mx], 'k:', 'handleVisibility', 'off') % [epStart epStart]
 plot([en en], [mn mx], 'k:', 'handleVisibility', 'off') % [epEnd epEnd]
 
-boundedline(time_aligned, av1, sd1, 'b', 'alpha')
-boundedline(time_aligned, av2, sd2, 'r', 'alpha')
+h11 = boundedline(time_aligned, av1, sd1, 'b', 'alpha');
+h12 = boundedline(time_aligned, av2, sd2, 'r', 'alpha');
 % plot(time_aligned, av1, 'b')
 % plot(time_aligned, av2, 'r')
 
 xlabel('Time since stim onset (ms)')
 ylabel({'Weighted average of', 'neural responses'})
 xlim([pb pe])
+
+legend([h11 h12], {'HR','LR'}, 'location', 'northwest', 'box', 'off')
 
 % frameTrProjOnBeta = einsum(traces_al_sm(:, ~NsExcluded, ~trsExcluded), SVMModel.Beta, 2, 1); % (fr x u x tr) * (u x 1) --> (fr x tr)
 % size(frameTrProjOnBeta) % frames x trials
@@ -155,9 +157,9 @@ subplot(222), hold on
 plot([st st], [mn mx], 'k:', 'handleVisibility', 'off') % [epStart epStart]
 plot([en en], [mn mx], 'k:', 'handleVisibility', 'off') % [epEnd epEnd]
 plot([time_aligned(1) time_aligned(end)], [.5 .5], 'k:', 'handleVisibility', 'off')
-hh(1) = plot(time_aligned, top, 'k'); % average across all iters
+hh(1) = plot(time_aligned, top, 'g'); % average across all iters
 xlabel('Time since stim onset (ms)')
-ylabel('Correct classification')
+ylabel('Classification accuracy')
 xlim([pb pe])
 
 

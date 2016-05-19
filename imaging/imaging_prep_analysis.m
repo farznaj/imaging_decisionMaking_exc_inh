@@ -1,7 +1,6 @@
-% Used to be named aveTrialAlign_setVars
-
 % This is the main and starting script for the analysis of your imaging
 % data. It gives you the vars that you need for further analyses.
+% it used to be named aveTrialAlign_setVars
 
 % pnev_manual_comp_setVars is also a very nice script (together with
 % pnev_manual_comp_match) that allows you to plot and compare the trace and
@@ -9,9 +8,12 @@
 %  you can use it to compare Eftychios vs manual. Or 2 different channels.
 % Or 2 different methods of Eftychios, etc.
 
-
 % It seems the following is not a concern when using Eftychios's algorithm:
 % worry about bleedthrough, and visual artifact.
+
+% outcomes: 
+%    1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation,
+%   -4: no center commit, -5: no side commit
 
 
 %% Good days
@@ -23,13 +25,14 @@ home
 %% Set some initial variables.
 
 mouse = 'fni17';
-imagingFolder = '150916'; % '151029'; % '151021';
-mdfFileNumber = 1; % 3; % or tif major
+imagingFolder = '151029'; % '150916'; % '151021';
+mdfFileNumber = 3; % 1; % or tif major
 signalCh = 2;
 pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the latest pnev vile). Set [] to load the latest one.
 
 autoTraceQual = 0; %1; % if 1, automatic measure for trace quality will be used.
 normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
+plot_ave_noTrGroup = 1; % Plot average traces across all neurons and all trials aligned on particular trial events.
 
 setInhibitExcit = true; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
     assessInhibitClass = false; % if 1 and inhibitRois not already saved, you will evaluate identification of inhibitory neurons (ie if sigTh is doing a good job).
@@ -39,8 +42,8 @@ setInhibitExcit = true; % if 1, inhibitory and excitatory neurons will be identi
         % 1.2: u are perhaps missing some inhibit neurons.
         % 1.13 can be good too.
 
-rmv_timeGoTone_if_stimOffset_aft_goTone = 1; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
-rmv_time1stSide_if_stimOffset_aft_1stSide = 1; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
+rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
+rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
 
 
 
@@ -58,7 +61,6 @@ saveHelpedTrs = 0; % it will only take effect if defaultHelpedTrs is false. If 1
 analyzeOutcomes = {'all'}; % {'success', 'failure'}; % outcomes that will be analyzed.
 
 furtherAnalyses = 0; % analyses related to choicePref and SVM will be performed.
-plot_ave_noTrGroup = true; % Plot average traces across all neurons and all trials aligned on particular trial events.
 plot_ave_trGroup = false; % Plot average traces across all neurons for different trial groups aligned on particular trial events.
 plotTraces1by1 = false; % plot traces per neuron and per trial showing all trial events
 compareManual = false; % compare results with manual ROI extraction
@@ -212,7 +214,7 @@ if compareManual
 end
 
 
-%% Set spikes, activity, dFOF by loading vars from Eftychios output, and merge them into alldata
+%% Set spikes, activity, dFOF by loading vars from pnev mat file.
 
 load(pnevFileName, 'C', 'C_df', 'options') % , 'S')
 %{
@@ -474,147 +476,12 @@ allResp_HR_LR(trs2rmv) = NaN;
 
 %% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
 
+scopeTTLOrigTime = 1;
+stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, setNaN_goToneEarlierThanStimOffset};
+% stimAftGoToneParams = []; % {0,0,0};
 [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
-    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv);
-
-trsGoToneEarlierThanStimOffset = find(timeCommitCL_CR_Gotone < timeStimOffset)';
-
-
-%% Take care of trials that mouse received center reward and go tone before the
-% end of the stimulus. This is important if looking at neural responses
-% during stim interval: you dont want to look beyond goTone time for these
-% trials... not necessarily important for other alignments. So you may or
-% may not need to run this part! If want to be conservative, run it!
-
-% but also remember when you align traces on 1stSideTry you don't want to
-% have stimulus played during the baseline. Usually 1stSideTry happens
-% long after stimOffset so this shouldn't be a problem. Figures below help
-% you dig into this. If you want to be very careful, you should remove
-% trials that have stim during n frames before time1stSideTry where n =
-% nPreFrame for alignments on 1stSideTry. Below you are removing trials
-% with stimOffset during the 3 frames before 1stSideTry.
-
-if isempty(trsGoToneEarlierThanStimOffset)
-    fprintf('%d = No trials withgoTone earlier than stimOffset :)\n')
-else
-    
-    figure('name', 'Trials with goTone earlier than stimulus offset');
-    subplot(211), hold on
-    plot(timeStimOffset(trsGoToneEarlierThanStimOffset)  -  ...
-        timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset))
-    
-    plot(time1stSideTry(trsGoToneEarlierThanStimOffset)  -  ...
-        timeStimOffset(trsGoToneEarlierThanStimOffset))
-    plot([1 length(trsGoToneEarlierThanStimOffset)], [3*frameLength 3*frameLength], 'k:')
-    ylabel('Time (ms)')
-    legend('post-goTone duration with stimulus', 'pre-1stSideTry duration without stimulus') % this is a more understandable legend
-    %     legend('stimOffset - goTone', '1stSideTry - stimOffset')
-    
-    subplot(212), hold on;
-    plot(timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset))
-    plot(timeStimOffset(trsGoToneEarlierThanStimOffset), 'r')
-    plot(time1stSideTry(trsGoToneEarlierThanStimOffset), 'g')
-    plot(timeReward(trsGoToneEarlierThanStimOffset), 'm')
-    plot(timeCommitIncorrResp(trsGoToneEarlierThanStimOffset), 'c')
-    xlabel('Trials with Go tone earlier than stim offset')
-    ylabel('Time (ms)')
-    legend('goTone', 'stimOffset', '1stSideTry', 'Reward', 'commitIncorr')
-    
-    
-    %%
-    fprintf('%d trials with goTone earlier than stimOffset...\n', length(trsGoToneEarlierThanStimOffset))
-    if rmv_timeGoTone_if_stimOffset_aft_goTone
-        fprintf('... removing them from timeCommitCL_CR_Gotone!\n')
-        % timeStimOnset(trsGoToneEarlierThanStimOffset) = NaN; % IMPORTANT: you dont want to look beyond goTone time for these trials, but upto go tone is safe!
-        timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset) = NaN;  % you want this for sure (bc in some trials stim has been still playing after go tone).
-    else
-        fprintf('... you chose not to remove them!\n')
-    end
-    
-    
-    %%
-    a = time1stSideTry(trsGoToneEarlierThanStimOffset) - timeStimOffset(trsGoToneEarlierThanStimOffset);
-    if sum(a < 3*frameLength)
-        fprintf('%i trials with stimOffset within 3 frames before 1stSideTry.\n', sum(a < 3*frameLength))
-        
-        if rmv_time1stSide_if_stimOffset_aft_1stSide
-            fprintf('... removing them from 1stSideTry, 1stCorrTry, 1stIncorrTry!\n')
-            aa = trsGoToneEarlierThanStimOffset(a < 3*frameLength);
-            time1stSideTry(aa) = NaN;
-            time1stCorrectTry(aa) = NaN;
-            time1stIncorrectTry(aa) = NaN;
-            time1stCorrectResponse(aa) = NaN;
-        else
-            fprintf('... you chose not to remove them!\n')
-        end
-    else
-        fprintf('No trials with stimOffset within 3 frames before 1stSideTry. Good :) \n')
-    end
-    
-    
-    %%
-    % For the following events not as important to set to nan unless you think
-    % neural responses aligned on these events can be different when go tone
-    % happened during stim, which is likely!
-    if setNaN_goToneEarlierThanStimOffset % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
-        timeStimOnset(trsGoToneEarlierThanStimOffset) = NaN; % you dont want to look beyond goTone time for these trials, but upto go tone is safe!
-        timeStimOffset(trsGoToneEarlierThanStimOffset) = NaN;
-        time1stSideTry(trsGoToneEarlierThanStimOffset) = NaN;
-        time1stCorrectTry(trsGoToneEarlierThanStimOffset) = NaN;
-        time1stIncorrectTry(trsGoToneEarlierThanStimOffset) = NaN;
-        timeReward(trsGoToneEarlierThanStimOffset) = NaN;
-        timeCommitIncorrResp(trsGoToneEarlierThanStimOffset) = NaN;
-        time1stCorrectResponse(trsGoToneEarlierThanStimOffset) = NaN;
-    end
-    
-    
-end
-
-
-% if you want to be super conservative, just reset trs2rmv and again set the times:
-% trs2rmv = unique([trs2rmv; trsGoToneEarlierThanStimOffset]);
-% [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
-%     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
-%     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv);
-
-
-
-
-%%% Done: Important: take care of the issue that mouse may have made his decision before the end of the stimulus.
-% make sure when looking at the stimulus epoch, it is all
-% stimulus and does not include choice or episodes of stimulus absence!
-%
-% timeStimOffset in setEventTimesRelBcontrolScopeTTL.m accurately shows
-% stim offset.
-% but mouse may have committed center lick (hence received cent reward and
-% go tone) before stim offset.
-% timeCommitCL_CR_Gotone shows the time of commit cent lick and go tone, so
-% if timeCommitCL_CR_Gotone < timeStimOffset, go tone (and cent reward)
-% happened before the stim was over, so you need to exclude these trials.
-%
-% this is bc not only stim interval includes cent reward and go tone, but
-% also stim rate might be different at the time of go tone than what the
-% final rate which determins the reward.
-%
-% [(1:length(timeCommitCL_CR_Gotone))' timeCommitCL_CR_Gotone' , timeStimOffset' , [timeCommitCL_CR_Gotone < timeStimOffset]']
-
-%{
-% this plot shows when flashes/clicks happened (their onset, remember they
-% last for alldata.eventDuration) during the stimulus
-yy = ones(1, length(alldata(tr).auditoryIeis));
-figure; plot(xx, yy, 'o')
-
-% Not useful, what matters is when the go tone was played not when waitdur ended: how many events were played (ie their onset had happened) when the waitDur happened.
-% sum(xx < alldata(tr).waitDuration * 1000)
-
-diff([[alldata.waitDuration]', [alldata.stimDuration]'], [], 2)
-
-% trials with different stimdur_diff than waitdur
-if any([alldata.stimDur_diff])
-    [alldata.stimDur_diff] ~= [alldata.waitDuration]
-end
-%}
+    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams);
 
 
 
@@ -782,8 +649,7 @@ end
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%% Start some analyses: alignement, choice preference, SVM %%%%%%%%%%%%%%%%%%%%%%%
 
-if furtherAnalyses
-    
+if furtherAnalyses    
     %% Align traces on particular trial events
     
     % remember traces_al_sm has nan for trs2rmv as well as trs in alignedEvent that are nan.
@@ -798,7 +664,9 @@ if furtherAnalyses
     
     traceTimeVec = {alldata.frameTimes}; % time vector of the trace that you want to realign.
     
-    [traces_al_sm, time_aligned_stimOn, eventI_stimOn] = alignTraces_prePost_filt(traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, nPreFrames, nPostFrames);
+    [traces_al_sm, time_aligned_stimOn, eventI_stimOn] = alignTraces_prePost_filt...
+        (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
+        timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
     
     % set to nan those trials in outcomes and allRes that are nan in traces_al_sm
     a = find(sum(sum(~isnan(traces_al_sm),1),3), 1);
@@ -808,7 +676,7 @@ if furtherAnalyses
     allResp_HR_LR(allTrs2rmv) = NaN;
     
     
-    %% Compute choice preference, 2*(auc-0.5), for each neuron at each frame.
+    %% Compute and plot choice preference, 2*(auc-0.5), for each neuron at each frame.
     
     % choicePref_ROC
     
@@ -834,24 +702,12 @@ if furtherAnalyses
     % choicePref_all = choicePref_ROC(traces_al_sm_aveFr, ipsiTrs, contraTrs, makeplots, eventI_stimOn, useEqualNumTrs);
     
     
-    %% SVM
+    %% SVM    
     
-    % do the analysis
-    popClassifier
-    
-    % plot projections
-    popClassifierSVM_plots
-    
-    % for CV dataset
-    popClassifierSVM_plots_CVprojections.m
-    
-    % Compare svm weights with random weights
-    popClassifierSVM_rand
-    
-    % Compare SVM weights with ROC choicePref
-    popClassifierSVM_choicePref
+    popClassifier   
     
     
 end
 
 
+%%

@@ -1,42 +1,97 @@
-% This is the main script for doing SVM analysis on neural population
-% responses (trials x neurons): predicting choice given the population
-% responses at an epoch during the stimulus.
-
-% Remember: you can use the script svmUnderstandIt to understand how some
+function popClassifier(alldata, alldataSpikesGood, outcomes, allResp_HR_LR, frameLength, ...
+    timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, ...
+    neuronType, trialHistAnalysis, numShuffs, nPreFrames, nPostFrames, alignedEvent, onlyCorrect, iTiFlg, prevSuccessFlg, vec_iti)
+%
+% This is the main function for doing SVM analysis on calcium imaging data.
+% Run imaging_prep_analysis to get the required input vars.
+%
+% Predicting choice given the population responses (trials x neurons) at an
+% epoch during the stimulus.
+%
+% You can use the script svmUnderstandIt to understand how some
 % of the matlab functions related to SVM classification work.
-
+%
+% Author: Farzaneh Najafi with modifications from Gamal Elsayed.
+% Jan 2016
+%
 home
 fprintf('SVM analysis started.\n')
 
 
 %% Set initial variables
-
-trialHistAnalysis = 1; % more parameters are specified in popClassifier_trialHistory.m
-    iTiFlg = 0; % 0: short iTi, 1: long iTi, 2: all iTis.
+%{
+neuronType = 2; % 0: excitatory, 1: inhibitory, 2: all types.
+trialHistAnalysis = 0; % more parameters are specified in popClassifier_trialHistory.m
+    iTiFlg = 1; % 0: short ITI, 1: long ITI, 2: all ITIs.
     prevSuccessFlg = true; % true previous sucess trials; false: previous failure.
     vec_iti = [0 9 30]; % [0 10 30]; %[0 6 9 12 30]; % [0 7 30]; % [0 10 30]; % [0 6 9 12 30]; % use [0 40]; if you want to have a single iti bin and in conventioinal analysis look at the effect of current rate on outcome.
     
-neuronType = 1; % 0: excitatory, 1: inhibitory, 2: all types.
-pcaFlg = true;
-windowAvgFlg = true;
+numShuffs = 10; % 100 % number of iterations for getting CV models and shuffled data.
+onlyCorrect = 1; % If 1, analyze only correct trials.
 
+% Set nPre and nPost to nan to make sure frames before and after
+% alignedEvent don't have any other events.
+% Set to [] to include all exisiting frames before and after the
+% alignedEvent (regardless of whether they include other frames or not).
+% Set to any other value if you wan to manually specify the number of frames
+% before and after alignedEvent in the aligned traces (ie traces_al_sm).
+nPreFrames = []; % nan; %
+nPostFrames = []; % nan; % 
+
+
+% alignedEvent: 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
 if trialHistAnalysis
     alignedEvent = 'initTone';
 else
-    alignedEvent = 'stimOn'; % what event align traces on. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward'
+    alignedEvent = 'commitIncorrResp'; 'reward'; 'goTone';  % 'stimOn'; % what event align traces on. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward'
 end
+%}
+
+%%%%%%%%%% Define training epoch (ie the epoch over which neural activity will be
+% averaged and on which SVM will be trained): 
+% epStart: 1st frame (index of frames in traces_al_sm) of the training epoch.
+% epEnd: last frame (index of frames in traces_al_sm) of the training epoch.
+% Alternatively, you can define frame indeces relative to alignedEvent by
+% setting epStartRel2Event and epEndRel2Event.
+% epStartRel2Event: 1st frame (after alignedEvent) of the training epoch. 
+% epEndRel2Event: last frame (after alignedEvent) of the training epoch.
+
+% This helps to figure out what to use as epEnd
+defaultPrePostFrames = 2; % default value for nPre and postFrames, if their computed values < 1.
+[~, ~, ~, nPre, nPost] = alignTraces_prePost_allCases(alignedEvent, [], {alldata.frameTimes}, ...
+    frameLength, defaultPrePostFrames, [], [], timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, [], 1, nan, nan, 1);
+fprintf('%i = number of post event frames without any other events.\n', nPost)
+warning('Double check the start and end point of the training epoch!')
+% fprintf('%i = event frame if nPreFrames was set to NaN.\n%i = number of post event frames without any other events.\n', nPre+1, nPost)
 
 clear epStart epEnd
 if trialHistAnalysis
+    disp('Training epoch = all frames before alingedEvent (including alignedEvent).')
+    % index of frames in traces_al_sm
     epStart = 1; %3; %4;
-    epEnd = nan; %epStart + round(200/frameLength); % if nan, you will use the time of alignedEvent for epEnd.
+    epEnd = nan; %epStart + round(200/frameLength); % if nan, epEnd = time of alignedEvent.
+    
+elseif strcmp(alignedEvent, 'stimOn')
+    disp('Training epoch = 600-800ms after stimulus onset.')
+    % index of frames after alignedEvent (if epStartRel2Event=1, epStart
+    % will be 1 frame after alignedEvent).
+    epStartRel2Event = round(600/frameLength); % the start point of the epoch relative to alignedEvent for training SVM. (500ms)
+    epEndRel2Event = floor(800/frameLength); % the end point of the epoch relative to alignedEvent for training SVM. (700ms)
 else
-    stMs = round(600/frameLength); % the start point of the epoch relative to alignedEvent for training SVM. (500ms)
-    enMs = floor(800/frameLength); % the end point of the epoch relative to alignedEvent for training SVM. (700ms)
+    disp('Training epoch = all frames after alingedEvent and before the next event.')
+    epStartRel2Event = 1;
+    if ~isempty(nPost)
+        epEndRel2Event = nPost;
+    else
+        disp('... there is no next event, so training epoch = all frames after alignedEvent')
+        epEndRel2Event = nan;
+    end
 end
 
+
+pcaFlg = true;
+windowAvgFlg = true;
 shuffleTrsForIters = 1; % if 1, in the iterations you will shuffle trials where you set CV SVM models and shuffled data, you will shuffle trials (this is different from the shuffling for computing chance distributions).
-numShuffs = 10; % 100 % number of iterations for getting CV models and shuffled data.
 usePooledWeights = 0; % if 1, weights will be pooled across different shuffles and then a single weight vector will be used to compute projections. If 0, weights of each model will be used for making projections of that model.
 
 
@@ -50,7 +105,7 @@ doplot_svmBasics = 0; % if 1, it will plot a figure showing weights, scores, pos
 % thAct = 1e-3; % Perhaps for MCMC: could be a good th for excluding neurons w too little activity.
 
 
-%%
+%%%
 % numRand = 1; % 50; 100; % you tried values between [50 500], at nrand=500 mismatches (computed on the b averaged across all iters) are actually worse compared to the average mismatch computed from single runs.  nrand=200 seems to be a good choice.
 doplots = true;
 rng(0, 'twister'); % Set random number generation for reproducibility
@@ -63,15 +118,16 @@ rng(0, 'twister'); % Set random number generation for reproducibility
 
 traces = alldataSpikesGood; % alldataSpikesGoodExc; % alldataSpikesGoodInh; % alldataSpikesGood;  % traces to be aligned.
 % alignedEvent = 'stimOn'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward'
-dofilter = false; true;
+dofilter = false; % true;
+traceTimeVec = {alldata.frameTimes};
 
-traceTimeVec = {alldata.frameTimes}; % time vector of the trace that you want to realign.
-
-% set nPre and nPost to nan if you want to go with the numbers that are based on eventBef and eventAft.
-% set to [] to include all frames before and after the alignedEvent.
-nPreFrames = nan; []; % nan;
-nPostFrames = nan; []; % nan;
-[traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt(traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, nPreFrames, nPostFrames);
+% % set nPre and nPost to nan if you want to go with the numbers that are based on eventBef and eventAft.
+% % set to [] to include all frames before and after the alignedEvent.
+% nPreFrames = nan;[];4;
+% nPostFrames = nan;[];10;
+% alignedEvent = 'reward';    % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
+[traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt(traces, traceTimeVec, alignedEvent, frameLength, dofilter, ...
+    timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
 
 switch neuronType
     case 0 % only excitatory
@@ -86,10 +142,10 @@ end
 % set to nan those trials in outcomes and allRes that are nan in traces_al_sm
 a = find(sum(sum(~isnan(traces_al_sm),1),3), 1);
 allTrs2rmv = find(squeeze(sum(isnan(traces_al_sm(:,a,:)))));
-fprintf('%d= final number of NaN trials in the aligned traces\n', length(allTrs2rmv))
+% fprintf('%d= final number of NaN trials in the aligned traces\n', length(allTrs2rmv))
 
 outcomes(allTrs2rmv) = NaN;
-allResp(allTrs2rmv) = NaN;
+% allResp(allTrs2rmv) = NaN;
 allResp_HR_LR(allTrs2rmv) = NaN;
 
 
@@ -99,7 +155,10 @@ if trialHistAnalysis
     popClassifier_trialHistory
 else
     choiceVec0 = allResp_HR_LR';  % trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.
-    choiceVec0(outcomes~=1) = NaN; % analyze only correct trials.
+    
+    if onlyCorrect
+        choiceVec0(outcomes~=1) = NaN; % analyze only correct trials.
+    end
 end
 
 fprintf('#trials for LR and HR correct choices = %d  %d\n', [sum(choiceVec0==0), sum(choiceVec0==1)])
@@ -109,12 +168,36 @@ fprintf('#trials for LR and HR correct choices = %d  %d\n', [sum(choiceVec0==0),
 
 % Set the epoch of neural responses that you want to analyze.
 if ~exist('epStart', 'var') || ~exist('epEnd', 'var')
-    minStimFrs = floor(min(stimdur*1000)/frameLength); % minimum stimdur of all trials in frames
+    
     nPostFrs = size(traces_al_sm,1) - (eventI-1); % number of frames after the stimOn (including stimOn frame) in the aligned traces.
-    epLen = min(nPostFrs, minStimFrs); % length of the epoch we are going to anayze.
+    
+    if eventI+epStartRel2Event < 1
+        warning('Resetting epStart to 1!')
+    end
+    epStart = max(1, eventI+epStartRel2Event); %20; round(500/frameLength); % eventI_stimOn; % start of the epoch in frames (not ms)
+    
+    if size(traces_al_sm,1) < epStart
+        warning('Resetting epStart to number of frames in traces_al_sm!')
+    end
+    epStart = min(size(traces_al_sm,1), epStart); % make sure
+    
+    epEnd = min(eventI+epEndRel2Event, eventI+nPostFrs-1); % eventI_stimOn+epLen-1; % end of the epoch in frames (not ms)
+    
+    % below is to make sure epEndRel2Event is not after stimOffset, ie you
+    % don't train SVM on a window that includes post-stimOffset responses.
+    % (Lets say you set epEndRel2Event such that training window's last
+    % timepoint will be 1100ms after stim onset, even though stimulus was
+    % only on for 1000ms. By running the codes below you will make sure
+    % that training window won't go beyong 1000ms.)
+    if strcmp(alignedEvent, 'stimOn')
+        minStimFrs = floor(min(stimdur*1000)/frameLength); % minimum stimdur of all trials in frames    
+        if minStimFrs < epEndRel2Event
+            warning('Resetting epEndRel2Event to min of stimDur!')
+        end
+        epLen = min(nPostFrs, minStimFrs); % length of the epoch we are going to analyze.
 
-    epStart = max(1, eventI + stMs); %20; round(500/frameLength); % eventI_stimOn; % start of the epoch in frames (not ms)
-    epEnd = min(eventI + enMs, eventI+epLen-1); % eventI_stimOn+epLen-1; % end of the epoch in frames (not ms)
+        epEnd = min(eventI+epEndRel2Event, eventI+epLen-1); % eventI_stimOn+epLen-1; % end of the epoch in frames (not ms)
+    end
 end
 
 if isnan(epEnd)
@@ -122,6 +205,8 @@ if isnan(epEnd)
 end
 
 ep = epStart : epEnd; % frames in traces_al_sm that will be used for analysis. % for now lets use spike counts over the entire stim frames.
+fprintf('%d : %d = Training epoch (frame indeces in traces_al_sm)\n', ep(1), ep(end))
+% fprintf([repmat('%d ', 1, length(ep)), '= Training epoch (frame indeces in traces_al_sm)\n'], ep)
 
 
 %% Start setting X: the predictor matrix (trials x neurons) that shows average of spikes for a particular epoch for each trial and neuron.

@@ -36,7 +36,10 @@ if ~exist('allowCorrectResp', 'var')
 end
 
 if ~exist('allowCorrectOutcomeChange', 'var')
-    allowCorrectOutcomeChange = 1; % only effective when allowCorrectResp is 'change'. If 0, outcome of allowCorrEntered trials wont be changed (although animal's choice will be changed). If 1, outcome will be changed as well.
+    allowCorrectOutcomeChange = 1; 
+    % only effective when allowCorrectResp is 'change'. If 0, outcome of
+    % allowCorrEntered trials wont be changed (although animal's choice
+    % will be changed). If 1, outcome will be changed as well.
 end
 
 

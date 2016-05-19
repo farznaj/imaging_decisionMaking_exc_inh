@@ -1,15 +1,19 @@
 function [traceEventAlign, timeEventAlign, nvalidtrs, traceEventAlign_wheelRev,...
-    timeEventAlign_wheelRev, nvalidtrs_wheel] = avetrialAlign_noTrGroup(eventTime, traces, alldata, frameLength, trs2rmv, doplots, printsize)
+    timeEventAlign_wheelRev, nvalidtrs_wheel] = avetrialAlign_noTrGroup(eventTime, traces, alldata, frameLength, trs2rmv, alignWheel, printsize, doplots)
 
 % eventTime = time1stCenterLick; timeInitTone; % 'beg'; timeStimOnset; % timeStimOnset; % timeReward;  % eventTime = cellfun(@(x)x(1),timeInitTone); %timeInitTone; % first trial initi tone.
 % traces =  alldataSpikesGood; % alldataDfofGood; % traces to be aligned.
 
-if ~exist('doplots', 'var')
-    doplots = false;
+if ~exist('alignWheel', 'var')
+    alignWheel = false;
 end
 
 if ~exist('printsize', 'var')
-    printsize = true;
+    printsize = false;
+end
+
+if ~exist('doplots', 'var')
+    doplots = false;
 end
 
 
@@ -81,80 +85,99 @@ scaleTime = frameLength;
 
 %% Align wheelRev on eventTime
 
-wheelTimeRes = alldata(1).wheelSampleInt;
-shiftTime = wheelTimeRes / 2;
-scaleTime = wheelTimeRes;
-[traces_wheel, times_wheel] = wheelInfo(alldata);
-% shiftTime = times_wheel{1}(1);
-% scaleTime = times_wheel{1}(1)*2;
-
-% find the frame during which the event of interest (eg. time1stCenterLick) happened.
-if length(eventTime)==1 && eventTime==1
-    eventInds_w = ones(size(alldata));
-    eventInds_w(trs2rmv) = NaN;
-else
-    eventInds_w = eventTimeToIdx(eventTime, times_wheel); % index of eventTime on traceTimeVec array for each trial.
-end
-
-% Take care of trials that the size of rotary array reached the max defined
-% in the arduino (ie 2500 samples). You need to remove these trials because
-% you cannot align them properly.
-f = find(eventInds_w==2500);
-if ~isempty(f)
-    if printsize
-        fprintf('....Removing %i trial(s) that reached max length of rotary array (2500 samples)\n', length(f))
+if alignWheel
+    
+    wheelTimeRes = alldata(1).wheelSampleInt;
+    shiftTime = wheelTimeRes / 2;
+    scaleTime = wheelTimeRes;
+    [traces_wheel, times_wheel] = wheelInfo(alldata);
+    % shiftTime = times_wheel{1}(1);
+    % scaleTime = times_wheel{1}(1)*2;
+    
+    % find the frame during which the event of interest (eg. time1stCenterLick) happened.
+    if length(eventTime)==1 && eventTime==1
+        eventInds_w = ones(size(alldata));
+        eventInds_w(trs2rmv) = NaN;
+    else
+        eventInds_w = eventTimeToIdx(eventTime, times_wheel); % index of eventTime on traceTimeVec array for each trial.
     end
-    eventInds_w(f) = NaN;
-end
-
-% Align dfof traces on particular events (like time1stCenterLick).
-[traceEventAlign_wheelRev, timeEventAlign_wheelRev, nvalidtrs_wheel] = triggerAlignTraces(traces_wheel, eventInds_w, shiftTime, scaleTime);
-
-% some checks
-%{
-numTrsWevent = sum(~isnan(eventInds_w))
-mnFrame0_mxFrame0_mxNumFrames = [min(eventInds_w) max(eventInds_w) max(framesPerTrial)]
-%}
-
-if printsize
-    fprintf('%d %d %d = size(traceEventAlign_wheelRev)\n', size(traceEventAlign_wheelRev)) % timeSamples x 1 x trials.
-end
-
-% compute how many trials contribute to each time point of
-% timeEventAlign_wheelRev
-% nvalidtrs_wheel = sum(~isnan(traceEventAlign_wheelRev),3); % timeSamples x 1; number of trials that contribute to each frame for each neuron.
-% nvalidtrs_wheel = nvalidtrs_wheel(:,1);
-% subplot(222), plot(nvalidtrs_wheel(:,1)) % shows at each frame of traceEventAlign how many trials are contributing to the average.
-
-
-% the following two should have small difference (eventTime, in ms, based on
-% wheelRev trace and ca trace): 
-% remember the max rotary array is defined in arduino 25000points (ms), so
-% if you see a big difference here it should be bc wheelRev reached its max
-% length.
-if printsize
+    
+    
+    % Take care of trials that the size of rotary array reached the max defined
+    % in the arduino (ie 2500 samples). You need to remove these trials because
+    % you cannot align them properly.
+    f = find(eventInds_w==2500);
+    if ~isempty(f)
+        if printsize
+            fprintf('....Removing %i trial(s) that reached max length of rotary array (2500 samples)\n', length(f))
+        end
+        eventInds_w(f) = NaN;
+    end
+    
+    % checks
     a = eventInds_f;
     a(f) = nan;
-    fprintf('%.3f = diff of eventTime (ms) btwn imaging and wheelRev (should be small!)\n', diff([max(a)*frameLength  max(eventInds_w)*wheelTimeRes]))
-    if isequal(25000, max(eventInds_w)*wheelTimeRes)
-        fprintf('... the reason for large mismatch seems to be the upper limit of 2500 samples for the rotary encoder')
-        
-        % figure; hold on
-        % plot(eventInds_f*frameLength)
-        % plot(eventInds_w * wheelTimeRes)
+    dd = diff([max(a)*frameLength  max(eventInds_w)*wheelTimeRes]);
+    if dd > 33
+        fprintf('%.2f ms = difference in eventTime between wheel trace and imaging trace\n', dd)
+        error('Why is there such a big difference?!')
     end
+    
+    
+    % Align dfof traces on particular events (like time1stCenterLick).
+    [traceEventAlign_wheelRev, timeEventAlign_wheelRev, nvalidtrs_wheel] = triggerAlignTraces(traces_wheel, eventInds_w, shiftTime, scaleTime);
+    
+    % some checks
+    %{
+    numTrsWevent = sum(~isnan(eventInds_w))
+    mnFrame0_mxFrame0_mxNumFrames = [min(eventInds_w) max(eventInds_w) max(framesPerTrial)]
+    %}
+    
+    if printsize
+        fprintf('%d %d %d = size(traceEventAlign_wheelRev)\n', size(traceEventAlign_wheelRev)) % timeSamples x 1 x trials.
+    end
+    
+    % compute how many trials contribute to each time point of
+    % timeEventAlign_wheelRev
+    % nvalidtrs_wheel = sum(~isnan(traceEventAlign_wheelRev),3); % timeSamples x 1; number of trials that contribute to each frame for each neuron.
+    % nvalidtrs_wheel = nvalidtrs_wheel(:,1);
+    % subplot(222), plot(nvalidtrs_wheel(:,1)) % shows at each frame of traceEventAlign how many trials are contributing to the average.
+    
+    
+    % the following two should have small difference (eventTime, in ms, based on
+    % wheelRev trace and ca trace):
+    % remember the max rotary array is defined in arduino 25000points (ms), so
+    % if you see a big difference here it should be bc wheelRev reached its max
+    % length.
+    if printsize
+     
+        fprintf('%.3f = diff of eventTime (ms) btwn imaging and wheelRev (should be <33ms!)\n', dd)
+
+        if isequal(25000, max(eventInds_w)*wheelTimeRes) % you don't need this anymore bc u're settting these trials to nan (doing a(f) = nan);
+            fprintf('... the reason for large mismatch seems to be the upper limit of 2500 samples for the rotary encoder')
+            
+            % figure; hold on
+            % plot(eventInds_f*frameLength)
+            % plot(eventInds_w * wheelTimeRes)
+        end
+        
+    end
+    
+    
+    % find where in wheelTimes, eventTime occurred.
+    % bint = {alldata.wheelTimes};
+    % bin0s = findFrame0(bint, eventTime);
+    
+    
+    % subplot(223), plot(timeEventAlign_wheelRev, nvalidtrs_wheel(:,1))
+    % hold on; plot(timeEventAlign, nvalidtrs(:,1))
+    
+else
+    traceEventAlign_wheelRev = [];
+    timeEventAlign_wheelRev = [];
+    nvalidtrs_wheel = [];
+    
 end
-
-
-% find where in wheelTimes, eventTime occurred.
-% bint = {alldata.wheelTimes};
-% bin0s = findFrame0(bint, eventTime);
-
-
-% subplot(223), plot(timeEventAlign_wheelRev, nvalidtrs_wheel(:,1))
-% hold on; plot(timeEventAlign, nvalidtrs(:,1))
-
-
 
 
 

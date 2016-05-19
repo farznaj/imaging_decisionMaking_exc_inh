@@ -2,32 +2,81 @@
 % aligned on particular trial events.
 % It calls avetrialAlign_noTrGroup which calls triggerAlignTraces for
 % alignment : you don't specify prePost frames, it uses NaNs and takes all
-% frames into the average. Then you only look at portion of the trace that
+% frames into the average. Then you only look at parts of the trace that
 % has enough number of trials contributing to the average.
 
-%% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
 
-[timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
-    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
-    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv);
+home
 
+thStimStrength = 4; % 2; % threshold of stim strength for defining hard, medium and easy trials.
+eventsToPlot = 10; % 'all'; % what events to align trials on and plot? % look at evT (below) to find the index of the event you want to plot.
+trials2ana = 'all'; 'incorrEasy'; % 'incorrHard'; % 'all'; 'corrEasy'; 'corrHard'; 'incorr'; 'corr'; % what trials to analyze?
 
-%%
 evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
     'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
     'timeReward', 'timeCommitIncorrResp'}; %,...
 % 'centerLicks', 'leftLicks', 'rightLicks'};
-
 % time1stCenterLick, time1stCorrectResponse, timeStop
 % eventTime = cellfun(@(x)x(1),timeInitTone); %timeInitTone; % first trial initi tone.
 
 
-%%
-f = figure('name', 'Shades for rows 1 & 2: standard errors across neural traces (trial-averaged traces of neurons).  Shades for row 3: stand error across trials');
+%% Set initial vars.
+
+% remember if u want 1stIncorrTry, they are not necessarily
+% outcomes==0... depending on how the commit lick went.
+
+if strcmp(trials2ana , 'all')
+    trs2ana = true(1, length(outcomes));
+else
+    s = abs(stimrate-cb)';
+    allStrn = unique(s);
+    
+    if any(strcmp(trials2ana , {'incorr', 'incorrEasy', 'incorrHard', 'incorrMed'}))
+        incorr = outcomes==0;
+        incorrEasy = outcomes==0  &  (s >= (max(allStrn) - thStimStrength));
+        incorrHard = outcomes==0  &  (s <= thStimStrength);
+        incorrMed = outcomes==0  &  ((s > thStimStrength) & (s < (max(allStrn) - thStimStrength))); % intermediate strength
+%         fprintf('# trials: incorrEasy %i, incorrHard %i, incorrMed %i, (thStimStrength= %i)\n', sum(incorrEasy), sum(incorrHard), sum(incorrMed), thStimStrength)
+    
+    elseif any(strcmp(trials2ana , {'corr', 'corrEasy', 'corrHard', 'corrMed'}))
+        corr = outcomes==1;
+        corrEasy = outcomes==1  &  (s >= (max(allStrn) - thStimStrength));
+        corrHard = outcomes==1  &  (s <= thStimStrength);
+        corrMed = outcomes==1  &  ((s > thStimStrength) & (s < (max(allStrn) - thStimStrength))); % intermediate strength
+%         fprintf('# trials: corrEasy %i, corrHard %i, corrMed %i (thStimStrength= %i)\n', sum(corrEasy), sum(corrHard), sum(corrMed), thStimStrength)        
+    end
+    
+    trs2ana = eval(trials2ana);
+end
+fprintf('Analyzing %s, including %i trials.\n', trials2ana, sum(trs2ana))
+
+
+%%%
+if strcmp(eventsToPlot , 'all')
+    ievents = 1:length(evT);
+else
+    ievents = eventsToPlot;
+end
+
+
+% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
+%{
+[timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
+    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
+    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv);
+%}
+
+
+%% Align traces, average them, and plot them.
+
+f = figure('name', [trials2ana, ' - Shades for rows 1 & 2: standard errors across neural traces (trial-averaged traces of neurons).  Shades for row 3: stand error across trials']);
 doplots = 0;
 unitFrame = 0; % if 1, x axis will be in units of frames. If 0, x axis will be in units of time.
+cnt = 0;
 
-for i = 1:length(evT)
+for i = ievents
+    
+    cnt = cnt+1;
     
     % set DF/F traces (C: temporal component) and wheel traces
     
@@ -35,11 +84,18 @@ for i = 1:length(evT)
     eventTime = eval(evT{i});
     traces = alldataDfofGood; % alldataSpikesGood; %  traces to be aligned.
     
+    % Take only trials in trs2ana for analysis
+    eventTime = eventTime(trs2ana);
+    traces = traces(trs2ana);
+    alldatanow = alldata(trs2ana);
+    
+    alignWheel = 1; printsize = 1;
+    
     [traceEventAlign, timeEventAlign, nvalidtrs, traceEventAlign_wheelRev, ...
         timeEventAlign_wheelRev, nvalidtrs_wheel] = ...
-        avetrialAlign_noTrGroup(eventTime, traces, alldata, frameLength, trs2rmv, doplots);
+        avetrialAlign_noTrGroup(eventTime, traces, alldatanow, frameLength, trs2rmv, alignWheel, printsize, doplots);
     
-    disp('---------------------')
+    %     disp('---------------------')
     %     figure, hold on
     %     plot(timeEventAlign_wheelRev, nvalidtrs_wheel(:,1))
     %     plot(timeEventAlign, nvalidtrs(:,1))
@@ -47,7 +103,7 @@ for i = 1:length(evT)
     
     %% plot wheel revolution
     
-    subplot(3,length(evT),length(evT)*2+i), hold on
+    subplot(3,length(ievents),length(ievents)*2+cnt), hold on
     
     top = nanmean(traceEventAlign_wheelRev,3); % average across trials
     tosd = nanstd(traceEventAlign_wheelRev,[],3);
@@ -73,19 +129,19 @@ for i = 1:length(evT)
     if unitFrame
         e = find(timeEventAlign_wheelRev >= 0, 1);
         plot([e e], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
-%         xlabel('Frame')
+        %         xlabel('Frame')
     else
         plot([0 0], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
-%         xlabel('Time')
+        %         xlabel('Time')
     end
-    
-%     ylabel('Wheel revolution')
+    ylim([min(top(xl1:xl2)-tosd(xl1:xl2))  max(top(xl1:xl2)+tosd(xl1:xl2))])
+    %     ylabel('Wheel revolution')
     
     
     %% plot DF/F
     
     figure(f)
-    subplot(3,length(evT),length(evT)*0+i), hold on
+    subplot(3,length(ievents),length(ievents)*0+cnt), hold on
     
     % subplot(223), hold on
     av = nanmean(traceEventAlign,3);
@@ -114,13 +170,13 @@ for i = 1:length(evT)
     if unitFrame
         e = find(timeEventAlign >= 0, 1);
         plot([e e], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
-%         xlabel('Frame')
+        %         xlabel('Frame')
     else
         plot([0 0], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
-%         xlabel('Time')
+        %         xlabel('Time')
     end
-    
-%     ylabel('DF/F')
+    ylim([min(top(xl1:xl2)-tosd(xl1:xl2))  max(top(xl1:xl2)+tosd(xl1:xl2))])
+    %     ylabel('DF/F')
     title(evT{i})
     
     
@@ -128,17 +184,19 @@ for i = 1:length(evT)
     %% set spikes (S)
     
     traces = alldataSpikesGood; % alldataDfofGood; %  traces to be aligned.
-    printsize = 0;
+    % Take only trials in trs2ana for analysis
+    traces = traces(trs2ana);
     
-    [traceEventAlign, timeEventAlign, nvalidtrs, traceEventAlign_wheelRev, ...
-        timeEventAlign_wheelRev, nvalidtrs_wheel] = ...
-        avetrialAlign_noTrGroup(eventTime, traces, alldata, frameLength, trs2rmv, doplots, printsize);
+    alignWheel = 0; printsize = 0;
     
+    [traceEventAlign, timeEventAlign, nvalidtrs] = ...
+        avetrialAlign_noTrGroup(eventTime, traces, alldatanow, frameLength, trs2rmv, alignWheel, printsize, doplots);
+       
     
     %% plot spikes
     
     figure(f)
-    subplot(3,length(evT),length(evT)*1+i), hold on
+    subplot(3,length(ievents),length(ievents)*1+cnt), hold on
     
     % subplot(223), hold on
     av = nanmean(traceEventAlign,3);
@@ -167,29 +225,29 @@ for i = 1:length(evT)
     if unitFrame
         e = find(timeEventAlign >= 0, 1);
         plot([e e], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
-%         xlabel('Frame')
+        %         xlabel('Frame')
     else
         plot([0 0],[min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
-%         xlabel('Time')
+        %         xlabel('Time')
     end
-    
-%     ylabel('Spiking')    
+    ylim([min(top(xl1:xl2)-tosd(xl1:xl2))  max(top(xl1:xl2)+tosd(xl1:xl2))])
+    %     ylabel('Spiking')
     %     pause
     
 end
 
 
-subplot(3, length(evT), length(evT)*0+1)
+subplot(3, length(ievents), length(ievents)*0+1)
 ylabel('DF/F')
 
-subplot(3, length(evT), length(evT)*1+1)
+subplot(3, length(ievents), length(ievents)*1+1)
 ylabel('Spiking')
 
-subplot(3, length(evT), length(evT)*2+1)
+subplot(3, length(ievents), length(ievents)*2+1)
 ylabel('Wheel revolution')
 
 
-subplot(3, length(evT), length(evT)*2+1)
+subplot(3, length(ievents), length(ievents)*2+1)
 if unitFrame
     xlabel('Frame')
 else
