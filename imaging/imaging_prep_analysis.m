@@ -1,50 +1,65 @@
-% This is the main and starting script for the analysis of your imaging
+function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, good_inhibit, outcomes, allResp, allResp_HR_LR, ...
+        trs2rmv, stimdur, stimrate, stimtype, cb, timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, ...
+        timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ....
+    imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, ...
+        rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, frameLength);
+%
+% This is the main and starting function for the analysis of your imaging
 % data. It gives you the vars that you need for further analyses.
 % it used to be named aveTrialAlign_setVars
-
+%
 % pnev_manual_comp_setVars is also a very nice script (together with
 % pnev_manual_comp_match) that allows you to plot and compare the trace and
 % ROIs of 2 different methods.
 %  you can use it to compare Eftychios vs manual. Or 2 different channels.
 % Or 2 different methods of Eftychios, etc.
-
+%
 % It seems the following is not a concern when using Eftychios's algorithm:
 % worry about bleedthrough, and visual artifact.
-
-% outcomes: 
+%
+% outcomes:
 %    1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation,
 %   -4: no center commit, -5: no side commit
+%
+% Farzaneh Najafi (2016)
+%
 
 
 %% Good days
 % imagingFolder = '151029'; % '151021';
 % mdfFileNumber = 3;
 
-home
 
 %% Set some initial variables.
 
+home
+
+%{
 mouse = 'fni17';
 imagingFolder = '151029'; % '150916'; % '151021';
 mdfFileNumber = 3; % 1; % or tif major
+
+rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
+rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
+
+plot_ave_noTrGroup = 1; % Plot average traces across all neurons and all trials aligned on particular trial events.
+
+setInhibitExcit = true; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
+
+frameLength = 1000/30.9; % sec.
+%}
+    assessInhibitClass = false; % if 1 and inhibitRois not already saved, you will evaluate identification of inhibitory neurons (ie if sigTh is doing a good job).
+    saveInhibitRois = 1; % if 1 and inhibitRois not already saved, ROIs that were identified as inhibit will be saved in imfilename. (ie the output of inhibit_excit_setVars will be saved).
+    sigTh = 1.13; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
+    % 1.1: excit is safe, but u should check inhibit with low sig/surr to make sure they are not excit.
+    % 1.2: u are perhaps missing some inhibit neurons.
+    % 1.13 can be good too.
+
 signalCh = 2;
 pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the latest pnev vile). Set [] to load the latest one.
 
 autoTraceQual = 0; %1; % if 1, automatic measure for trace quality will be used.
 normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
-plot_ave_noTrGroup = 1; % Plot average traces across all neurons and all trials aligned on particular trial events.
-
-setInhibitExcit = true; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
-    assessInhibitClass = false; % if 1 and inhibitRois not already saved, you will evaluate identification of inhibitory neurons (ie if sigTh is doing a good job).
-    saveInhibitRois = 1; % if 1 and inhibitRois not already saved, ROIs that were identified as inhibit will be saved in imfilename. (ie the output of inhibit_excit_setVars will be saved).
-    sigTh = 1.13; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
-        % 1.1: excit is safe, but u should check inhibit with low sig/surr to make sure they are not excit.
-        % 1.2: u are perhaps missing some inhibit neurons.
-        % 1.13 can be good too.
-
-rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
-rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
-
 
 
 excludeShortWaitDur = true; % waitdur_th = .032; % sec  % trials w waitdur less than this will be excluded.
@@ -53,12 +68,6 @@ allowCorrectResp = 'change'; % 'change'; 'remove'; 'nothing'; % if 'change': on 
 uncommittedResp = 'nothing'; % 'change'; 'remove'; 'nothing'; % what to do on trials that mouse made a response (licked the side port) but did not lick again to commit it.
 
 thbeg = 5; % n initial trials to exclude.
-
-helpedInit = []; % [100];
-helpedChoice = []; %31;
-defaultHelpedTrs = 0; % if 1, the program assumes that no trial was helped.
-saveHelpedTrs = 0; % it will only take effect if defaultHelpedTrs is false. If 1, helpedTr fields will be added to alldata.
-analyzeOutcomes = {'all'}; % {'success', 'failure'}; % outcomes that will be analyzed.
 
 furtherAnalyses = 0; % analyses related to choicePref and SVM will be performed.
 plot_ave_trGroup = false; % Plot average traces across all neurons for different trial groups aligned on particular trial events.
@@ -69,15 +78,19 @@ setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials 
 
 manualExamineTraceQual = 0; % if 0, traceQuality array needs to be saved.
     saveTraceQual = 0; % it will only take effect if manualExamineTraceQual is 1.
-analyzeQuality = [1 2]; % 1(good) 2(ok-good) 3(ok-bad) 4(bad) % trace qualities that will be analyzed. It will only take effect if manualExamineTraceQual is 1.
+    analyzeQuality = [1 2]; % 1(good) 2(ok-good) 3(ok-bad) 4(bad) % trace qualities that will be analyzed. It will only take effect if manualExamineTraceQual is 1.
 orderTraces = 0; % if 1, traces will be ordered based on the measure of quality from high to low quality.
 
-
+helpedInit = []; % [100];
+helpedChoice = []; %31;
+defaultHelpedTrs = 0; % if 1, the program assumes that no trial was helped.
+saveHelpedTrs = 0; % it will only take effect if defaultHelpedTrs is false. If 1, helpedTr fields will be added to alldata.
+analyzeOutcomes = {'all'}; % {'success', 'failure'}; % outcomes that will be analyzed.
 % outName = 'fni17-151016';
 
 
 %%
-frameLength = 1000/30.9; % sec.
+% frameLength = 1000/30.9; % sec.
 
 % remember if there are
 % set the names of imaging mat files (one includes pnev results and one
@@ -531,26 +544,26 @@ if setInhibitExcit
         fprintf('Loading inhibitRois...\n')
         load(imfilename, 'inhibitRois')
         
-    else    
+    else
         fprintf('Identifying inhibitory neurons....\n')
-        % inhibitRois will be : 
-            % 1 for inhibit ROIs.
-            % 0 for excit ROIs.        
-            % nan for ROIs that could not be classified as inhibit or excit.
+        % inhibitRois will be :
+        % 1 for inhibit ROIs.
+        % 0 for excit ROIs.
+        % nan for ROIs that could not be classified as inhibit or excit.
         [inhibitRois, roi2surr_sig] = inhibit_excit_setVars(imfilename, pnevFileName, sigTh, assessInhibitClass);
-
+        
         if saveInhibitRois
             fprintf('Saving inhibitRois...\n')
             save(imfilename, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
         end
-
+        
     end
     
     fprintf('Fract inhibit %.3f, excit %.3f, unknown %.3f\n', [...
         nanmean(inhibitRois==1), nanmean(inhibitRois==0), nanmean(isnan(inhibitRois))])
-       
     
-    %% Set good_inhibit and good_excit neurons (ie in good quality neurons which ones are inhibit and which ones are excit).    
+    
+    %% Set good_inhibit and good_excit neurons (ie in good quality neurons which ones are inhibit and which ones are excit).
     
     % goodinds: an array of length of all neurons, with 1s indicating good and 0s bad neurons.
     good_inhibit = inhibitRois(goodinds) == 1; % an array of length of good neurons, with 1s for inhibit. and 0s for excit. neurons and nans for unsure neurons.
@@ -560,8 +573,8 @@ if setInhibitExcit
         nanmean(good_inhibit), nanmean(good_excit)])
     
     % you can use the codes below if you want to be safe:
-%     good_inhibit = inhibitRois(goodinds & roi2surr_sig >= 1.3) == 1;
-%     good_excit = inhibitRois(goodinds & roi2surr_sig <= 1.1) == 0;
+    %     good_inhibit = inhibitRois(goodinds & roi2surr_sig >= 1.3) == 1;
+    %     good_excit = inhibitRois(goodinds & roi2surr_sig <= 1.1) == 0;
     
     if nanmean(goodinds) ~= 1
         fprintf('Fract inhibit in all, good & bad Ns = %.3f  %.3f  %.3f\n', [...
@@ -584,10 +597,10 @@ if setInhibitExcit
     
     % For the matrices below just do (:, good_inhibit) and (:, good_excit)
     % to get their corresponding traces for inhibit and excit neurons :
-        % activityGood
-        % dfofGood
-        % spikesGood
-        % alldataDfofGood_mat
+    % activityGood
+    % dfofGood
+    % spikesGood
+    % alldataDfofGood_mat
     
 end
 
@@ -649,7 +662,7 @@ end
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%% Start some analyses: alignement, choice preference, SVM %%%%%%%%%%%%%%%%%%%%%%%
 
-if furtherAnalyses    
+if furtherAnalyses
     %% Align traces on particular trial events
     
     % remember traces_al_sm has nan for trs2rmv as well as trs in alignedEvent that are nan.
@@ -702,9 +715,9 @@ if furtherAnalyses
     % choicePref_all = choicePref_ROC(traces_al_sm_aveFr, ipsiTrs, contraTrs, makeplots, eventI_stimOn, useEqualNumTrs);
     
     
-    %% SVM    
+    %% SVM
     
-    popClassifier   
+    popClassifier
     
     
 end

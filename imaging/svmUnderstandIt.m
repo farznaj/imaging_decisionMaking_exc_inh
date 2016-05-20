@@ -10,6 +10,13 @@ cnam = {'b','g'};
 
 SVMModel = fitcsvm(X, Y, 'standardize', 1, 'ClassNames', cnam); % 'KernelFunction'. 'BoxConstraint'
 
+% The following will show if SVMModel was formed on standarsize data or
+% not.
+% SVM model:
+SVMModel.ModelParameters.StandardizeData
+% CV SVM Model:
+% ~isempty(CVSVMModel.Trained{1}.Mu)
+
 
 % svmtrain: compute coefficient and bias
 %{
@@ -69,7 +76,17 @@ isequal(SVMModel.SupportVectorLabels, Y(SVMModel.IsSupportVector))
 % probs) it will compute posterior probabilities instead of scores.
 
 [label, score] = resubPredict(SVMModel);
-% [label, score] = predict(SVMModel, SVMModel.X); % does the same thing as the code above.
+% Below does the same thing as the code above. 
+% [label, score] = predict(SVMModel, SVMModel.X); 
+
+
+[label, score] = predict(SVMModel, X); 
+% Remember about predict: If you set 'Standardize',true in fitcsvm to train
+% SVMModel, then the software standardizes the columns of X using the
+% corresponding means in SVMModel.Mu and standard deviations in
+% SVMModel.Sigma. 
+% The variables making up the columns of X must be the same
+% as the variables that trained the SVMModel classifier.
 
 
 %% How are scores computed? f(x)=(x/s)'*beta + b.
@@ -165,6 +182,14 @@ if a > 1e-10
     a
     error('Why is there a mismatch? Read your comments above about "a".')
 end
+
+
+% The following will show if SVMModel was formed on standarsize data or
+% not.
+% SVM model:
+% SVMModel.ModelParameters.StandardizeData
+% CV SVM Model:
+~isempty(CVSVMModel.Trained{1}.Mu)
 
 
 %% Example using Holdout for Cross-validated classification model.

@@ -14,11 +14,11 @@ for id = 1:length(dataType)
                 
         switch dataType{id}
             case 'actual'
-                %                 svm_model_now = CVSVMModel_s_all(s).cv; % CV data
-                svm_model_now = SVMModel_s_all(s).cv; % trained data
+                %                 svm_model_now = CVSVMModel_s_all(s).shuff; % CV data
+                svm_model_now = SVMModel_s_all(s).shuff; % trained data
             case 'shuffled'
-                %                 svm_model_now = CVSVMModelChance_all(s).cv; % shuffled CV data
-                svm_model_now = SVMModelChance_all(s).cv; % shuffled trained data
+                %                 svm_model_now = CVSVMModelChance_all(s).shuff; % shuffled CV data
+                svm_model_now = SVMModelChance_all(s).shuff; % shuffled trained data
         end
         
         wNsHrLrAve_rep = svm_model_now.Beta;

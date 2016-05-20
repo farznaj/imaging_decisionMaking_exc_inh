@@ -23,14 +23,14 @@ end
 
 
 %%
-makePlots_here = 0; % 1;
+makePlots_here = 1;
 
 frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_train = cell(1,length(dataType));
 frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_train = cell(1,length(dataType));
 avePerf_cv_dataVSshuff_train = cell(1,length(dataType));
 
 
-for id = 2; % 1:length(dataType) % there is very little variability for the actual trained data among different iterations... so it makes sense not to go though the actual trained dataset.
+for id = 1:length(dataType) % there is very little variability for the actual trained data among different iterations... so it makes sense not to go though the actual trained dataset.
     
     fprintf('Setting training data projections for %s data\n', dataType{id})
     
@@ -59,11 +59,11 @@ for id = 2; % 1:length(dataType) % there is very little variability for the actu
         
         switch dataType{id}
             case 'actual'
-                %                 svm_model_now = CVSVMModel_s_all(s).cv; % CV data
-                svm_model_now = SVMModel_s_all(s).cv; % trained data
+                %                 svm_model_now = CVSVMModel_s_all(s).shuff; % CV data
+                svm_model_now = SVMModel_s_all(s).shuff; % trained data
             case 'shuffled'
-                %                 svm_model_now = CVSVMModelChance_all(s).cv; % shuffled CV data
-                svm_model_now = SVMModelChance_all(s).cv; % shuffled trained data
+                %                 svm_model_now = CVSVMModelChance_all(s).shuff; % shuffled CV data
+                svm_model_now = SVMModelChance_all(s).shuff; % shuffled trained data
         end
         
         if ~usePooledWeights
@@ -73,11 +73,32 @@ for id = 2; % 1:length(dataType) % there is very little variability for the actu
         end
         
         
-        % Set the test trials beta and traces for kfold ik
+        % set the non-filtered and filtered temporal traces.
+        if exist('trsInChoiceVecUsedInIterS', 'var')
+            non_filtered = traces_al_sm(:, ~NsExcluded, trsInChoiceVecUsedInIterS(:,s));
+            filtered = filtered1(:,:, trsInChoiceVecUsedInIterS(:,s)); % includes smoothed traces only for active neurons and valid trials (ie trials that will go into svm model).
+            
+            if pcaFlg % reduce dimensions on filtered.
+                % filtered
+                filtered_s = NaN(size(filtered)); % includes smoothed traces only for active neurons and valid trials (ie trials that will go into svm model) AFTER projecting them onto PC space.
+                for fr = 1:size(filtered,1)
+                    
+                    Xf = squeeze(filtered(fr,:,:))';
+                    
+                    [PCs_f, ~, l_f] = pca(Xf);
+                    numPCs_f = find(cumsum(l_f/sum(l_f))>0.99, 1, 'first');
+                    
+                    filtered_s(fr,:,:) = bsxfun(@plus, bsxfun(@minus, Xf, mean(Xf))*(PCs_f(:, 1:numPCs_f)*PCs_f(:, 1:numPCs_f)'), mean(Xf))';
+                    
+                    %                     filtered_s(fr,:,:) = bsxfun(@plus, bsxfun(@minus, Xf, mean(Xf))*...
+                    %                         (PCs_f{fr}(:, 1:numPCs_f(fr))*PCs_f{fr}(:, 1:numPCs_f(fr))'), mean(Xf))';
+                    
+                end
+            end
+            
+            Y = choiceVec0(trsInChoiceVecUsedInIterS(:,s));
+        end
         
-        %             trTest = test(svm_model_now.Partition, ik); % index of test trials (in the non-nan array of trials) in repition ik of svm_model_now.Partition
-        %             wNsHrLrAve_rep = svm_model_now.Trained{ik}.Beta; % weights for repitition ik.
-        %             trs2use = trs_s(trTest); % this is crucial in case you have shuffled trials when computing svm_model_now (in those s iterations).
         
         % non-smoothed traces
         traces_bef_proj_nf = non_filtered(:, :, trs2use); % frames x units x trials. % traces_al_sm(:, ~NsExcluded, trsUsedInSVM(trs2use))
@@ -117,8 +138,8 @@ for id = 2; % 1:length(dataType) % there is very little variability for the actu
         
         %% Compute classification accuracy for test trials at all time points using the decoder trained for ep.
         
-        traceNow = traces_bef_proj_f;
-        %         traceNow = traces_bef_proj_nf;
+        %         traceNow = traces_bef_proj_f;
+        traceNow = traces_bef_proj_nf;
         corrClass = NaN(size(traceNow,1), size(traceNow,3)); % frames x trials
         Y_tr_test = Y(trs2use);
         
@@ -141,7 +162,7 @@ for id = 2; % 1:length(dataType) % there is very little variability for the actu
         
         %%
         frameTrProjOnBeta_hr_rep_all_alls_train{s} = frameTrProjOnBeta_hr_rep; % frameTrProjOnBeta_hr_rep_all; % frames x trials (these are all test trials)
-        frameTrProjOnBeta_lr_rep_all_alls{s} = frameTrProjOnBeta_lr_rep; % _all;
+        frameTrProjOnBeta_lr_rep_all_alls_train{s} = frameTrProjOnBeta_lr_rep; % _all;
         frameTrProjOnBeta_rep_all_alls_train{s} = frameTrProjOnBeta_rep; %_all;
         
         traces_bef_proj_nf_all_alls_train{s} = traces_bef_proj_nf; %_all;
@@ -151,7 +172,7 @@ for id = 2; % 1:length(dataType) % there is very little variability for the actu
     end
     
     frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_train{id} = frameTrProjOnBeta_hr_rep_all_alls_train;
-    frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_train{id} = frameTrProjOnBeta_lr_rep_all_alls;
+    frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_train{id} = frameTrProjOnBeta_lr_rep_all_alls_train;
     avePerf_cv_dataVSshuff_train{id} = avePerf_cv;
     
     
@@ -169,7 +190,7 @@ for id = 2; % 1:length(dataType) % there is very little variability for the actu
         size_projection_hr_testTrs = size(frameTrProjOnBeta_hr_rep_all_alls_train{randi(length(CVSVMModel_s_all))});
         fprintf(['size_projection_hr_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_hr_testTrs)), '\n'], size_projection_hr_testTrs)
         
-        size_projection_lr_testTrs = size(frameTrProjOnBeta_lr_rep_all_alls{randi(length(CVSVMModel_s_all))});
+        size_projection_lr_testTrs = size(frameTrProjOnBeta_lr_rep_all_alls_train{randi(length(CVSVMModel_s_all))});
         fprintf(['size_projection_lr_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_lr_testTrs)), '\n'], size_projection_lr_testTrs)
         
         size_orig_traces_testTrs = size(traces_bef_proj_nf_all_alls_train{randi(length(CVSVMModel_s_all))});
@@ -190,8 +211,8 @@ if makePlots_here
     
     %% Plots related to CV dataset
     
-%     col = {'b', 'r'};
-    col = {'k', 'g'};
+    %     col = {'b', 'r'};
+    col = {'g', 'k'};
     figure('name', 'Trained data. Top: actual data. Bottom: shuffled data');
     pb = round((- eventI)*frameLength);
     pe = round((length(time_aligned) - eventI)*frameLength);
@@ -269,7 +290,7 @@ if makePlots_here
         plot([time_aligned(1) time_aligned(end)], [.5 .5], 'k:', 'handleVisibility', 'off')
         
         % plot(time_aligned, top) % average across all iters
-        hh(id) = boundedline(time_aligned, top, top_sd, col2{id}, 'alpha');
+        hh(id) = boundedline(time_aligned, top, top_sd, col{id}, 'alpha');
         
         xlabel('Time since stim onset (ms)')
         ylabel('Correct classification')
@@ -297,4 +318,40 @@ if makePlots_here
     legend boxoff
     
     
+    %% Simple raw averages of neural responses for HR and LR trials.
+    % you sould perhaps choose you training window based on this plot!
+    
+    % traces = traces_al_sm(:, ~NsExcluded, :); % equal number of trs for both conds
+    % av1 = nanmean(nanmean(traces(:,:, choiceVec==1), 3), 2);
+    % av2 = nanmean(nanmean(traces(:,:, choiceVec==0), 3), 2);
+    
+    traces = traces_al_sm(:, ~NsExcluded, :); % analyze all trials
+    av1 = nanmean(nanmean(traces(:,:, choiceVec0==1), 3), 2);
+    av2 = nanmean(nanmean(traces(:,:, choiceVec0==0), 3), 2);
+    
+    sd1 = nanstd(nanmean(traces(:,:, choiceVec0==1), 3), 0, 2) / sqrt(size(traces, 2)); % sd of average-trial traces across neurons.
+    sd2 = nanstd(nanmean(traces(:,:, choiceVec0==0), 3), 0, 2) / sqrt(size(traces, 2));
+    % average for HR vs LR stimulus.
+    % av1 = nanmean(nanmean(traces(:,:, stimrate > cb), 3), 2);
+    % av2 = nanmean(nanmean(traces(:,:, stimrate < cb), 3), 2);
+    
+    mn = min([av1;av2]);
+    mx = max([av1;av2]);
+    
+    subplot(224), hold on
+    % plot([0 0], [mn mx], 'k:', 'handleVisibility', 'off') % [eventI eventI]
+    plot([st st], [mn mx], 'k:', 'handleVisibility', 'off') % [epStart epStart]
+    plot([en en], [mn mx], 'k:', 'handleVisibility', 'off') % [epEnd epEnd]
+    
+    boundedline(time_aligned, av1, sd1, 'b', 'alpha')
+    boundedline(time_aligned, av2, sd2, 'r', 'alpha')
+    % plot(time_aligned, av1, 'b')
+    % plot(time_aligned, av2, 'r')
+    
+    xlabel('Time since stim onset (ms)')
+    ylabel({'Raw average of', 'neural responses'})
+    xlim([pb pe])
+    
+    
 end
+

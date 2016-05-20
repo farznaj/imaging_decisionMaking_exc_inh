@@ -6,11 +6,11 @@
 % has enough number of trials contributing to the average.
 
 
-home
+% home
 
 thStimStrength = 4; % 2; % threshold of stim strength for defining hard, medium and easy trials.
-eventsToPlot = 10; % 'all'; % what events to align trials on and plot? % look at evT (below) to find the index of the event you want to plot.
-trials2ana = 'all'; 'incorrEasy'; % 'incorrHard'; % 'all'; 'corrEasy'; 'corrHard'; 'incorr'; 'corr'; % what trials to analyze?
+eventsToPlot = 'all'; % 10; % what events to align trials on and plot? % look at evT (below) to find the index of the event you want to plot.
+trials2ana = 'all'; % 'incorrEasy'; % 'incorrHard'; % 'all'; 'corrEasy'; 'corrHard'; 'incorr'; 'corr'; % what trials to analyze?
 
 evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
     'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
@@ -69,7 +69,7 @@ end
 
 %% Align traces, average them, and plot them.
 
-f = figure('name', [trials2ana, ' - Shades for rows 1 & 2: standard errors across neural traces (trial-averaged traces of neurons).  Shades for row 3: stand error across trials']);
+f = figure('name', [trials2ana, ' trials - Shades for rows 1 & 2: standard errors across neural traces (trial-averaged traces of neurons).  Shades for row 3: stand error across trials']);
 doplots = 0;
 unitFrame = 0; % if 1, x axis will be in units of frames. If 0, x axis will be in units of time.
 cnt = 0;
@@ -85,7 +85,9 @@ for i = ievents
     traces = alldataDfofGood; % alldataSpikesGood; %  traces to be aligned.
     
     % Take only trials in trs2ana for analysis
-    eventTime = eventTime(trs2ana);
+    if length(eventTime)>1
+        eventTime = eventTime(trs2ana);
+    end
     traces = traces(trs2ana);
     alldatanow = alldata(trs2ana);
     

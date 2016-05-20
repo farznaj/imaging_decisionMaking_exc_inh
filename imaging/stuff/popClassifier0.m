@@ -1,6 +1,15 @@
-function popClassifier(alldata, alldataSpikesGood, outcomes, allResp_HR_LR, frameLength, ...
+function popClassifier0(alldata, alldataSpikesGood, outcomes, allResp_HR_LR, frameLength, ...
     timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, ...
     neuronType, trialHistAnalysis, numShuffs, nPreFrames, nPostFrames, alignedEvent, onlyCorrect, iTiFlg, prevSuccessFlg, vec_iti)
+% This is the 1st popClassifier code that I wrote. The difference with
+% popClassifier is that here you remove extraTrs (so hr and lr have the
+% same number of trials) at the beginning of the code and outside the
+% numShuffs loop. You also do PCA outside the numShuffs loop. But in
+% popClassifier (the newer code) you set extraTrs inside numShuffs loop.
+% The advantage is that if extraTrs includes lots of trials, you will get
+% more random sets of trials in each numShuffs (instead of sticking to one
+% signle set of trials and shuffling them). However because you compute PCA
+% inside numShuffs the newer code is slower.
 %
 % This is the main function for doing SVM analysis on calcium imaging data.
 % Run imaging_prep_analysis to get the required input vars.
@@ -36,7 +45,7 @@ onlyCorrect = 0; % If 1, analyze only correct trials.
 % Set to any other value if you wan to manually specify the number of frames
 % before and after alignedEvent in the aligned traces (ie traces_al_sm).
 nPreFrames = []; % nan; %
-nPostFrames = []; % nan; %
+nPostFrames = []; % nan; % 
 
 % alignedEvent: 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
 if trialHistAnalysis
@@ -47,12 +56,12 @@ end
 %}
 
 %%%%%%%%%% Define training epoch (ie the epoch over which neural activity will be
-% averaged and on which SVM will be trained):
+% averaged and on which SVM will be trained): 
 % epStart: 1st frame (index of frames in traces_al_sm) of the training epoch.
 % epEnd: last frame (index of frames in traces_al_sm) of the training epoch.
 % Alternatively, you can define frame indeces relative to alignedEvent by
 % setting epStartRel2Event and epEndRel2Event.
-% epStartRel2Event: 1st frame (after alignedEvent) of the training epoch.
+% epStartRel2Event: 1st frame (after alignedEvent) of the training epoch. 
 % epEndRel2Event: last frame (after alignedEvent) of the training epoch.
 
 % This helps to figure out what to use as epEnd
@@ -109,7 +118,7 @@ doplot_svmBasics = 0; % if 1, it will plot a figure showing weights, scores, pos
 doplots = true;
 rng(0, 'twister'); % Set random number generation for reproducibility
 % method = 'svm'; % 'logisticRegress';  % classification method for neural population analysis.
-cnam = [0,1]; % LR: negative ; HR: positive
+
 
 %% Align traces on particular trial events
 
@@ -130,11 +139,11 @@ traceTimeVec = {alldata.frameTimes};
 
 switch neuronType
     case 0 % only excitatory
-        %         traces_al_sm(:, good_inhibit, :) = NaN;
-        traces_al_sm = traces_al_sm(:, good_excit, :);
+%         traces_al_sm(:, good_inhibit, :) = NaN;
+    traces_al_sm = traces_al_sm(:, good_excit, :);
     case 1 % only inhibitory
-        %         traces_al_sm(:, good_excit, :) = NaN;
-        traces_al_sm = traces_al_sm(:, good_inhibit, :);
+%         traces_al_sm(:, good_excit, :) = NaN;
+    traces_al_sm = traces_al_sm(:, good_inhibit, :);
 end
 
 
@@ -192,12 +201,12 @@ if ~exist('epStart', 'var') || ~exist('epEnd', 'var')
     % only on for 1000ms. By running the codes below you will make sure
     % that training window won't go beyong 1000ms.)
     if strcmp(alignedEvent, 'stimOn')
-        minStimFrs = floor(min(stimdur*1000)/frameLength); % minimum stimdur of all trials in frames
+        minStimFrs = floor(min(stimdur*1000)/frameLength); % minimum stimdur of all trials in frames    
         if minStimFrs < epEndRel2Event
             warning('Resetting epEndRel2Event to min of stimDur!')
         end
         epLen = min(nPostFrs, minStimFrs); % length of the epoch we are going to analyze.
-        
+
         epEnd = min(eventI+epEndRel2Event, eventI+epLen-1); % eventI_stimOn+epLen-1; % end of the epoch in frames (not ms)
     end
 end
@@ -222,7 +231,7 @@ filtered0 = boxFilter(traces_al_sm, length(ep), 1, 0);
 % hold on, plot(filtered(:,4,13))
 % spikeAveEp0(13,4)
 
-% spikeAveEp00 = spikeAveEp0; % save it before excluding any neurons.
+spikeAveEp00 = spikeAveEp0; % save it before excluding any neurons.
 
 
 %% Identify neurons that are very little active.
@@ -243,7 +252,7 @@ fprintf('%d= # neurons with ave activity in ep < %.4f\n', sum(nonActiveNs), thAc
 thTrsWithSpike = 3; % ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
 
 % nTrsWithSpike = sum(spikeAveEp0 > 0); % in how many trials each neuron
-% had activity (remember this is average spike during ep).
+% had activity (remember this is average spike during ep). 
 % Remember the zero threshold used above really only makes sense if sikes
 % were infered using the MCMC method, otherwise in foopsi, S has arbitrary
 % values and unless a traces is all NaNs (which should not happen)
@@ -263,49 +272,211 @@ a = size(spikeAveEp0,2) - sum(NsExcluded);
 fprintf('included neuros= %d; total neuros= %d; fract= %.3f\n', a, size(spikeAveEp0,2), a/size(spikeAveEp0,2))
 
 
+
 %% Remove neurons that are very little active.
 % Remove (from X) neurons that are active in few trials. Also neurons that
 % have little average activity during epoch ep across all trials.
 
-spikeAveEp0(:, NsExcluded) = []; % trials x neurons
+spikeAveEp0(:, NsExcluded) = [];
 % fprintf('# included neuros = %d, fraction = %.3f\n', size(spikeAveEp0,2), size(spikeAveEp0,2)/size(traces_al_sm,2))
 % figure; plot(max(spikeAveEp))
-% spikeAveEp0_sd = nanstd(spikeAveEp0);
+spikeAveEp0_sd = nanstd(spikeAveEp0);
 
-filtered1 = filtered0(:, ~NsExcluded, :); % includes smoothed traces only for active neurons (excluding NsExcluded).
-
-
-%
-fprintf('# neurons = %d\n', size(spikeAveEp0,2))
-fprintf('# total trials = %d (half for HR and half for LR)\n', min([sum(choiceVec0==0), sum(choiceVec0==1)])*2)
+filtered1 = filtered0(:, ~NsExcluded, :);
 
 
-%% Perhaps do PCA on all trials here (ie don't worry about extraTrs that get removed later and use the same PCs for all iteratons), so you don't have to do it on each iteration of numShuffs.
-%{
-if pcaFlg
-    [PCs, ~, l] = pca(spikeAveEp0); % PCs: units x number of PCs  % l: 1 x number of PCs
+%% Use equal number of trials for both HR and LR conditions.
+
+extraTrs = setRandExtraTrs(find(choiceVec0==0), find(choiceVec0==1)); % find extra trials of the condition with more trials, so u can exclude them later.
+
+choiceVec = choiceVec0;
+% make sure choiceVec has equal number of trials for both lr and hr.
+choiceVec(extraTrs) = NaN; % set to nan some trials (randomly chosen) of the condition with more trials so both conditions have the same number of trials.
+% trsExcluded = isnan(choiceVec);
+
+fprintf('Final # trials for LR and HR = %d  %d\n', [sum(choiceVec==0), sum(choiceVec==1)])
+fprintf('%i= #trials excluded to have same trNums for both HR & LR\n', length(extraTrs))
+
+
+% Make sure spikeAveEp has equal number of trials for both lr and hr.
+spikeAveEp = spikeAveEp0;
+spikeAveEp(extraTrs,:) = NaN; % set to nan some trials (randomly chosen) of the condition with more trials so both conditions have the same number of trials.
+
+
+%% Set X and Y : predictor matrix and response vector.
+
+xx = spikeAveEp0; % spikeAveEp0(extraTrs,:); % trials x units
+yy = choiceVec0; % choiceVec0(extraTrs); % trials x 1
+
+mskNan = isnan(choiceVec);
+if windowAvgFlg
+    X = spikeAveEp(~mskNan, :); % spikeAveEp0(extraTrs,:); % trials x units
+    Y = choiceVec(~mskNan); % choiceVec0(extraTrs); % trials x 1
+else
+    X = reshape(permute(traces_al_sm(ep, ~NsExcluded, ~mskNan), [1 3 2]),...
+        length(ep)*sum(~mskNan), sum(~NsExcluded));
+    Y = repmat(reshape(choiceVec(~mskNan), 1, sum(~mskNan)), length(ep), 1);
+    Y = Y(:);
+end
+% Y(Y==0) = -1; % doesn't make a differece.
+
+non_filtered = traces_al_sm(:, ~NsExcluded, ~mskNan);
+filtered = filtered1(:,:,~mskNan);
+
+
+if pcaFlg    
+    % X
+    [PCs, ~, l] = pca(X);
     numPCs = find(cumsum(l/sum(l))>0.99, 1, 'first');
     fprintf('Number of PCs:\n   %i : total\n   %i : >.99 variance\n', length(l), numPCs)
+
+    X_s = bsxfun(@plus, bsxfun(@minus, X, mean(X))*(PCs(:, 1:numPCs)*PCs(:, 1:numPCs)'), mean(X));
+    
+    
+    % filtered
+    filtered_s = NaN(size(filtered));    
+    for fr = 1:size(filtered,1)
+        Xf = squeeze(filtered(fr,:,:))';        
+        [PCs_f, ~, l] = pca(Xf);
+        numPCs_f = find(cumsum(l/sum(l))>0.99, 1, 'first');        
+        filtered_s(fr,:,:) = bsxfun(@plus, bsxfun(@minus, Xf, mean(Xf))*(PCs_f(:, 1:numPCs_f)*PCs_f(:, 1:numPCs_f)'), mean(Xf))';
+    end    
+end
+
+% trsInChoiceVecUsedInIterS = repmat(find(~mskNan), 1, numShuffs);
+
+
+%% Run SVM (fitcsvm)
+
+cnam = [0,1]; % LR: negative ; HR: positive
+wNsHrLr = NaN(size(spikeAveEp0,2), 1); %numRand);
+biasHrLr = NaN(1, 1); %numRand);
+fractMisMatch_allTrs = NaN(1, 1); %numRand);
+avePerf = NaN(size(traces_al_sm,1), 1); %numRand);
+
+% SVMModel = svmClassifierMS(X, Y, cnam);
+if pcaFlg
+    SVMModel = fitcsvm(X_s, Y, 'standardize', 1, 'ClassNames', cnam, 'KernelFunction', 'linear'); % 'KernelFunction'. 'BoxConstraint'
+else
+    SVMModel = fitcsvm(X, Y, 'standardize', 1, 'ClassNames', cnam, 'KernelFunction', 'linear'); % 'KernelFunction'. 'BoxConstraint'
+end
+wNsHrLr(:,1) = SVMModel.Beta;
+biasHrLr(1) = SVMModel.Bias;
+
+fprintf('# neurons = %d\n', size(SVMModel.Mu, 2))
+fprintf('# total trials = %d\n', SVMModel.NumObservations)
+fprintf('# trials that are support vectors = %d\n', size(SVMModel.Alpha,1))
+
+
+%%% A few checks :
+
+if ~SVMModel.ConvergenceInfo.Converged, error('not converged!'), end
+
+%%% fprintf('converged = %d\n', SVMModel.ConvergenceInfo.Converged)
+% SVMModel.NumObservations == size(choiceVec,1) - (length(extraTrs) + sum(isnan(choiceVec0))) % final number of trials
+% size(SVMModel.X,2) == size(spikeAveEp0,2) - sum(NsFewTrActiv) % final number of neurons
+
+if any(SVMModel.Prior ~= .5), error('The 2 conditions have non-equal number of trials!'), end
+%     fprintf('Prior probs = %.3f  %.3f\n', SVMModel.Prior) % should be .5 for both classes unless you used different number of trials for each class.
+
+
+
+%% Compute label (class) for all trials and see how well it matches the actual class.
+
+% Remember only the following fraction: 
+% length(extraTrs) / sum(~isnan(choiceVec0)) 
+% of trials in xx don't exist in X. So fractMisMatch and
+% fractMisMatch_trainingTrs will be very close.
+
+% Compute it for all trials (not just the trials used for training, ie the
+% equal number trials that were randomly selected).
+% if pcaFlg 
+% this doesn't work bc of nans in xx_s. For this reason if
+% pcaFlg is 1, fractMisMatch will be quite different from
+% fractMisMatch_trainingTrs bc the former is computed on data without
+% dimension reduction (unlike how training was performed) but the later is with.
+%     [label] = predict(SVMModel, xx_s); % predict(SVMModel, SVMModel.X);
+%     label(isnan(sum(xx_s,2))) = NaN;
+%     fractMisMatch(1) = sum(abs(yy - label)>0) / sum(~isnan(yy - label));
+% else
+    [label] = predict(SVMModel, xx); % predict(SVMModel, SVMModel.X);
+    label(isnan(sum(xx,2))) = NaN;
+    fractMisMatch_allTrs(1) = sum(abs(yy - label)>0) / sum(~isnan(yy - label));
+% end
+
+
+% Compute it for those exact trials used for training.
+if pcaFlg
+    [label] = predict(SVMModel, X_s); % predict(SVMModel, SVMModel.X);
+    label(isnan(sum(X_s,2))) = NaN;    
+else
+    [label] = predict(SVMModel, X); % predict(SVMModel, SVMModel.X);
+    label(isnan(sum(X,2))) = NaN;
+end
+fractMisMatch_trainingTrs(1) = sum(abs(Y - label)>0) / sum(~isnan(Y - label));
+fprintf('%.3f = Fract classification error for the training dataset.\n', fractMisMatch_trainingTrs)
+
+
+%%%%
+% Estimate cross-validation predicted labels and scores.
+% For every fold, kfoldPredict predicts class labels for in-fold
+% observations using a model trained on out-of-fold observations.
+CVSVMModel = crossval(SVMModel);
+[elabel, escore] = kfoldPredict(CVSVMModel);
+
+% Estimate the out-of-sample posterior probabilities
+[ScoreCVSVMModel, ScoreParameters] = fitSVMPosterior(CVSVMModel);
+[~, epostp] = kfoldPredict(ScoreCVSVMModel);
+
+% How claassLoss is computed? I think: classLoss = 1 - mean(label == elabel)
+classLossCV = kfoldLoss(CVSVMModel);
+fprintf('%.3f = CV classification error (1 iteration)\n', classLossCV)
+% a = diff([classLossCV, mean(label ~= elabel)]); % This is what you had,
+% but I think it is wrong and you need to use the code below. Double check!
+a = diff([classLossCV, mean(Y ~= elabel)]);
+fprintf('%.3f = Difference in classLoss computed using kfoldLoss vs manually using kfoldPredict labels. This value is expected to be very small!\n', a)
+if a > 1e-10
+    a
+    error('Why is there a mismatch? Read your comments above about "a".')
 end
 
 
-filtered = filtered1; % includes smoothed traces only for active neurons and valid trials (ie trials that will go into svm model).
-PCs_f = cell(1, size(filtered,1));
-l_f = cell(1, size(filtered,1));
-numPCs_f = NaN(1, size(filtered,1));
-if pcaFlg % reduce dimensions on filtered.
-    for fr = 1:size(filtered,1)
-        Xf = squeeze(filtered(fr,:,:))';
-        
-        [PCs_f{fr}, ~, l_f{fr}] = pca(Xf);
-        numPCs_f(fr) = find(cumsum(l_f{fr} / sum(l_f{fr})) > 0.99, 1, 'first');
-        
+%% See how well the SVM decoder trained on our particular epoch can decode other time points.
+
+% corrClass = NaN(size(traces_al_sm,1), size(traces_al_sm,3)); % frames x trials
+corrClass = NaN(size(filtered,1), size(filtered,3)); % frames x trials
+
+for itr = 1 : size(filtered, 3) % size(traces_al_sm, 3) % 
+    
+    % use non-smoother traces (remember in this case classification
+    % accuracy on the window of training wont be very high, bc you trained
+    % the classifier on the smoothed traces, but here you are predicting the
+    % labels on the non-smoothed traces.)
+% %     traces_bef_proj = traces_al_sm(:, ~NsExcluded, itr); % frames x neurons
+%     traces_bef_proj = non_filtered(:,:,itr);
+
+    % use the smoothed traces (smoothing window is of size ep)
+% %     traces_bef_proj = filtered0(:, ~NsExcluded, itr); % frames x neurons 
+    
+    if pcaFlg
+        traces_bef_proj = filtered_s(:, :, itr); % frames x neurons 
+    else
+        traces_bef_proj = filtered(:, :, itr); % frames x neurons 
+    end
+    
+    if any(isnan(traces_bef_proj(:)))
+        if ~all(isnan(traces_bef_proj(:))), error('how did it happen?'), end
+    
+    elseif ~isnan(Y(itr)) % ~isnan(choiceVec0(itr)) 
+        l = predict(SVMModel, traces_bef_proj);
+        corrClass(:, itr) = (l==Y(itr)); % (l==choiceVec0(itr)); % 
     end
 end
-%}                
+% average performance (correct classification) across trials.
+avePerf(:,1) = nanmean(corrClass, 2);  % frames x randomIters
 
 
-%% 1) Set CV SVM models for a number of iterations. 2) Generate shuffled (chance) distributions for each iteration.
+%% 1) Set CV SVM models for a number of iterations. 2) Generate shuffled (chance) distributions for each iteration. 
 % quality relative to shuffles
 
 classLossTrain = NaN(1, numShuffs);
@@ -313,9 +484,9 @@ classLossTest = NaN(1, numShuffs);
 classLossChanceTrain = NaN(1, numShuffs);
 classLossChanceTest = NaN(1, numShuffs);
 
-wNsHrLr_s = NaN(size(spikeAveEp0,2), numShuffs);
+wNsHrLr_s = NaN(length(SVMModel.Beta), numShuffs);
 biasHrLr_s = NaN(1, numShuffs);
-wNsHrLrChance = NaN(size(spikeAveEp0,2), numShuffs);
+wNsHrLrChance = NaN(length(SVMModel.Beta), numShuffs);
 biasHrLrChance = NaN(1, numShuffs);
 
 SVMModel_s_all = struct; % trained SVM models for all iterations.
@@ -323,102 +494,26 @@ SVMModelChance_all = struct; % trained SVM models for shuffled data for all iter
 CVSVMModel_s_all = struct; % CV SVM models for all iterations.
 CVSVMModelChance_all = struct; % CV SVM models for shuffled data for all iterations.
 
-trsInChoiceVecUsedInIterS = NaN(min([sum(choiceVec0==0), sum(choiceVec0==1)])*2, numShuffs); % shows index of trials in choiceVec (which includes nan trs) that are used in each iteration of numShuffs
-shflTrials_alls = NaN(min([sum(choiceVec0==0), sum(choiceVec0==1)])*2, numShuffs); % shows index of trials in Y (ie choiceVec(~mskNan), ie excludes nan trs) after shuffling to set X_s and Y_s in each iteration of numShuffs.
-% clear  Y_alls   non_filtered_alls    filtered_alls   filtered_s_alls
+shflTrials_alls = NaN(length(Y), numShuffs);
 
 for s = 1:numShuffs
     
     fprintf('Iteration %i...\n ----------------------- \n', s)
     
-    %% Use equal number of trials for both HR and LR conditions.
-    
-    % Find random trials to exclude so both HR and LR have the same number
-    % of trials.
-    extraTrs = setRandExtraTrs(find(choiceVec0==0), find(choiceVec0==1)); % find extra trials of the condition with more trials, so u can exclude them later.
-    
-    choiceVec = choiceVec0;
-    % make sure choiceVec has equal number of trials for both lr and hr.
-    choiceVec(extraTrs) = NaN; % set to nan some trials (randomly chosen) of the condition with more trials so both conditions have the same number of trials.
-%     trsExcluded = isnan(choiceVec);
-    
-%     fprintf('Final # trials for LR and HR = %d  %d\n', [sum(choiceVec==0), sum(choiceVec==1)])
-%     fprintf('%i= # random trials excluded to have same trNums for both HR & LR\n', length(extraTrs))
-    
-    
-    % Make sure spikeAveEp has equal number of trials for both lr and hr.
-    spikeAveEp = spikeAveEp0;
-    spikeAveEp(extraTrs,:) = NaN; % set to nan some trials (randomly chosen) of the condition with more trials so both conditions have the same number of trials.
-    
-    
-    %% Set X and Y : predictor matrix and response vector.
-    
-%     xx = spikeAveEp0; % spikeAveEp0(extraTrs,:); % trials x units
-%     yy = choiceVec0; % choiceVec0(extraTrs); % trials x 1
-    
-    mskNan = isnan(choiceVec); % nan trials.
-    if windowAvgFlg
-        X = spikeAveEp(~mskNan, :); % spikeAveEp0(extraTrs,:); % trials x units
-        Y = choiceVec(~mskNan); % choiceVec0(extraTrs); % trials x 1
-    else
-        X = reshape(permute(traces_al_sm(ep, ~NsExcluded, ~mskNan), [1 3 2]),...
-            length(ep)*sum(~mskNan), sum(~NsExcluded));
-        Y = repmat(reshape(choiceVec(~mskNan), 1, sum(~mskNan)), length(ep), 1);
-        Y = Y(:);
-    end
-    % Y(Y==0) = -1; % doesn't make a differece.
-    
-    trsInChoiceVecUsedInIterS(:,s) = find(~mskNan); % index of trials in choiceVec that were used in this iteration.
-%     non_filtered = traces_al_sm(:, ~NsExcluded, ~mskNan); % includes raw (non-smoothed) traces only for active neurons and valid trials (ie trials that will go into svm model).
-%     filtered = filtered1(:,:,~mskNan); % includes smoothed traces only for active neurons and valid trials (ie trials that will go into svm model).    
-       
-%     Y_alls{s} = Y;
-%     non_filtered_alls{s} = non_filtered;
-%     filtered_alls{s} = filtered;
-    
-    
-    %% Shuffle trials for both X_s and Y_s (this is to be conservative in case there is some structure in the data related to trial order that may affect SVM).
-    % (This shuffling is different from the one we do below to create the
-    % chance distributions. There we only shuffle Y and not X).
     
     if shuffleTrsForIters
         shflTrials = randperm(length(Y));
     else
         shflTrials = 1:length(Y);
     end
-    
     X_s = X(shflTrials, :);
     Y_s = Y(shflTrials);
     shflTrials_alls(:,s) = shflTrials;
     
-    
-    %% Reduce features by PCA
-    
+    %%%%%%%% reduce features by PCA
     if pcaFlg
-        % X
-        [PCs, ~, l] = pca(X); % PCs: units x number of PCs  % l: 1 x number of PCs
-        numPCs = find(cumsum(l/sum(l))>0.99, 1, 'first');
-        fprintf('Number of PCs:\n   %i : total\n   %i : >.99 variance\n', length(l), numPCs)
-        
         X_s = bsxfun(@plus, bsxfun(@minus, X_s, mean(X_s))*(PCs(:, 1:numPCs)*PCs(:, 1:numPCs)'), mean(X_s));
-        %     X_s = bsxfun(@plus, bsxfun(@minus, X, mean(X))*(PCs(:, 1:numPCs)*PCs(:, 1:numPCs)'), mean(X));
-
-        %{
-        % filtered
-        filtered_s = NaN(size(filtered)); % includes smoothed traces only for active neurons and valid trials (ie trials that will go into svm model) AFTER projecting them onto PC space.       
-        for fr = 1:size(filtered,1)
-            Xf = squeeze(filtered(fr,:,:))';
-            
-            [PCs_f, ~, l] = pca(Xf);
-            numPCs_f = find(cumsum(l/sum(l))>0.99, 1, 'first');
-            
-            filtered_s(fr,:,:) = bsxfun(@plus, bsxfun(@minus, Xf, mean(Xf))*(PCs_f(:, 1:numPCs_f)*PCs_f(:, 1:numPCs_f)'), mean(Xf))';
-        end
-        
-        filtered_s_alls{s} = filtered_s;
-        %}
     end
-    
     
     %%%%%%%% data augmentation resampling
     % % % %             mskNans = ~isnan(choiceVec);
@@ -447,81 +542,43 @@ for s = 1:numShuffs
     %%%%%%%%%
     
     
-    %% Run SVM on actual data
+    %% Actual data
     
     % trained dataset
     SVMModel_s = fitcsvm(X_s, Y_s, 'standardize', 1, 'ClassNames', cnam); % Linear Kernel
+    classLossTrain(s) = mean(abs(Y_s - predict(SVMModel_s, X_s)));
     
-    classLossTrain(s) = mean(abs(Y_s - predict(SVMModel_s, X_s)));    
     wNsHrLr_s(:, s) = SVMModel_s.Beta;
     biasHrLr_s(s) = SVMModel_s.Bias;
-    
 
     % CV dataset
-    CVSVMModel_s = crossval(SVMModel_s, 'kfold', 10); % CVSVMModel.Trained{1}: model 1 --> there will be KFold of these models. (by default KFold=10);
-    
+    CVSVMModel_s = crossval(SVMModel_s, 'kfold', 10); % CVSVMModel.Trained{1}: model 1 --> there will be KFold of these models. (by default KFold=10);    
     classLossTest(s) = kfoldLoss(CVSVMModel_s); % Classification loss (by default the fraction of misclassified data) for observations not used for training
+        
     
-    
-    %%% A few checks
-%     fprintf('# neurons = %d\n', size(SVMModel_s.Mu, 2))
-%     fprintf('# total trials = %d\n', SVMModel_s.NumObservations)
-    fprintf('# trials that are support vectors = %d\n', size(SVMModel_s.Alpha,1))
-    
-    if ~SVMModel_s.ConvergenceInfo.Converged, error('not converged!'), end    
-    %%% fprintf('converged = %d\n', SVMModel.ConvergenceInfo.Converged)
-    % SVMModel.NumObservations == size(choiceVec,1) - (length(extraTrs) + sum(isnan(choiceVec0))) % final number of trials
-    % size(SVMModel.X,2) == size(spikeAveEp0,2) - sum(NsFewTrActiv) % final number of neurons    
-    if any(SVMModel_s.Prior ~= .5), error('The 2 conditions have non-equal number of trials!'), end
-    %     fprintf('Prior probs = %.3f  %.3f\n', SVMModel.Prior) % should be .5 for both classes unless you used different number of trials for each class.
-
-    %{
-    [elabel, escore] = kfoldPredict(CVSVMModel_s);
-    
-    % Estimate the out-of-sample posterior probabilities
-%     [ScoreCVSVMModel, ScoreParameters] = fitSVMPosterior(CVSVMModel);
-%     [~, epostp] = kfoldPredict(ScoreCVSVMModel);
-    
-    % How claassLoss is computed? I think: classLoss = 1 - mean(label == elabel)
-%     classLossCV = kfoldLoss(CVSVMModel_s);
-    fprintf('%.3f = CV classification error (1 iteration)\n', classLossTest(s))
-    % a = diff([classLossCV, mean(label ~= elabel)]); % This is what you had,
-    % but I think it is wrong and you need to use the code below. Double check!
-    a = diff([classLossTest(s), mean(Y_s ~= elabel)]);
-    fprintf('%.3f = Difference in classLoss computed using kfoldLoss vs manually using kfoldPredict labels. This value is expected to be very small!\n', a)
-    if a > 1e-10
-        a
-        error('Why is there a mismatch? Read your comments above about "a".')
-    end
-    %}
-
-
-    %% Run SVM on shuffled data (for setting chance distributions: Y is shuffled so the link between trials and choices are gone).
+    %% Shuffled data (for setting chance distributions: Y is shuffled so the link between trial and choice is gone).
     
     Y_s_shfld = Y_s(randperm(length(Y_s)));
     
     % shuffled trained dataset
     SVMModelChance = fitcsvm(X_s, Y_s_shfld, 'standardize', 1, 'ClassNames', cnam); %  % Linear Kernel
-    
-    classLossChanceTrain(s) = mean(abs(Y_s_shfld - predict(SVMModelChance, X_s)));    
+    classLossChanceTrain(s) = mean(abs(Y_s_shfld - predict(SVMModelChance, X_s)));
+
     wNsHrLrChance(:, s) = SVMModelChance.Beta;
     biasHrLrChance(:, s) = SVMModelChance.Bias;
     
     % shuffled CV dataset
     CVSVMModelChance = crossval(SVMModelChance, 'kfold', 10); % CVSVMModel.Trained{1}: model 1 --> there will be KFold of these models. (by default KFold=10);
-    
     classLossChanceTest(s) = kfoldLoss(CVSVMModelChance); % Classification loss (by default the fraction of misclassified data) for observations not used for training
+
     
-    
-    %%
-    % Actual trained
+    %%    
+    % Actual
     SVMModel_s_all(s).shuff = SVMModel_s; % actual data: trained SVM model
-    % Shuffled trained
     SVMModelChance_all(s).shuff = SVMModelChance; % shuffled data: trained SVM model
     
-    % Actual CV
+    % Shuffled
     CVSVMModel_s_all(s).shuff = CVSVMModel_s; % actual data: CV SVM model
-    % Shuffled CV
     CVSVMModelChance_all(s).shuff = CVSVMModelChance; % shuffled data: CV SCV model
     
     
@@ -548,35 +605,59 @@ fprintf('%.3f = Average cross-validated classification error for shuffled data\n
 popClassifierSVM_CVdata_set_plot
 
 
-%% Compute and plot class accuracy by manually setting a threshold on hr vs lr projections instead of using matlab's predict.
-
-figure(fcvh)
-popClassifier_thresh_corrClass
-
-
-%% Compute a single decoder (weights vector) 
-% Correct but you are commenting because you compute the normalized pooled
-% weights for trained data in popClassifierSVM_traindata_setWeights, so no
-% need to run this
-%{
-% by normalizing weights (Beta) for each iteration; then averaging weights
-% across all iters; and normalizing the final weight vector. (bagging :
-% bootstrap aggregation). 
+%% Normalize weights (Beta) and in case weights were computed in multiple iterations (with different sets of trials), average beta across all iters (bagging : bootstrap aggregation)
 
 % figure; imagesc(wNsHrLr)
 % figure; errorbar(1:size(wNsHrLr,1), mean(wNsHrLr, 2), std(wNsHrLr, [], 2), 'k.')
 
 % wNsHrLr_s
-bLen = sqrt(sum(wNsHrLr_s.^2)); % norm of wNsHrLr for each rand % 1 x numShuffs
+bLen = sqrt(sum(wNsHrLr.^2)); % norm of wNsHrLr for each rand
 % figure; plot(bLen)
-wNsHrLrNorm = bsxfun(@rdivide, wNsHrLr_s, bLen); % normalize b of each rand by its vector length % neurons x numShuffs
-wNsHrLrAve = mean(wNsHrLrNorm, 2); % average of normalized b across all rands. % neurons x 1
-wNsHrLrAve = wNsHrLrAve / norm(wNsHrLrAve); % normalize it so the final average vector has norm of 1. % neurons x 1
+wNsHrLrNorm = bsxfun(@rdivide, wNsHrLr, bLen); % normalize b of each rand by its vector length
+wNsHrLrAve = mean(wNsHrLrNorm, 2); % average of normalized b across all rands.
+wNsHrLrAve = wNsHrLrAve / norm(wNsHrLrAve); % normalize it so the final average vector has norm of 1.
 % figure; plot(bNsHrLrAve)
 % figure; errorbar(1:size(wNsHrLr,1), mean(wNsHrLrNorm, 2), std(wNsHrLrNorm, [], 2), 'k.')
 
-% wNsHrLrAve is same as w_norm_ave_train_dataVSshuff(:,id) computed in 
-% popClassifierSVM_traindata_setWeights; 
+
+%% Compare fraction of mismatch in classification between original weights and normalized (and bagged) weights.
+% wNsHrLrAve = wNsHrLr;
+
+xx = spikeAveEp0;
+yy = choiceVec0; % (extraTrs); % choiceVec0
+
+% scale xx
+x = bsxfun(@minus, xx, nanmean(xx)); % (x-mu)
+x = bsxfun(@rdivide, x, nanstd(xx)); % (x-mu)/sigma
+x = x / SVMModel.KernelParameters.Scale; % scale is 1 unless u've changed it in svm model.
+
+
+% compute score on the aggregate of all iters of svm.
+s = x * wNsHrLrAve + nanmean(biasHrLr); % score = x*beta + bias % bias should be added too but I'm not sure if averating bias across iters is the right thing to do. Also it seems like not including the bias term gives better separaton of hr and lr.
+
+label = s;
+label(s>0) = 1; % score<0 will be lr and score>0 will be hr, so basically threshold is 0....
+label(s<0) = 0;
+if sum(s==0)>0, error('not sure what to assign as label when score is 0!'), end
+
+fractMisMatch_normalized_iterAveraged_beta = sum(abs(yy - label)>0) / sum(~isnan(yy - label));
+
+fractMisMatchAllTrs_originalBeta_vs_normBaggedBeta = [nanmean(fractMisMatch_allTrs) fractMisMatch_normalized_iterAveraged_beta]
+
+
+%{
+% compare with fractMisMatch on each iter ... see if doing several
+% iters helped w better prediction:
+figure; hold on,
+plot([0 length(fractMisMatch_allTrs)], [fractMisMatch_normalized_iterAveraged_beta fractMisMatch_normalized_iterAveraged_beta])
+plot(fractMisMatch_allTrs)
+title(sprintf('%.3f  %.3f', nanmean(fractMisMatch_allTrs), fractMisMatch_normalized_iterAveraged_beta))
+%}
+
+%{
+%% plot bias
+figure('name', 'bias term'); subplot(211), plot(biasHrLr)
+subplot(212),  errorbar( mean(biasHrLr), std(biasHrLr), 'k.')
 %}
 
 
@@ -584,8 +665,8 @@ wNsHrLrAve = wNsHrLrAve / norm(wNsHrLrAve); % normalize it so the final average 
 
 % plots of projections, and classification accuracy for all trials (the
 % vast majority of them are the training dataset).
-popClassifierSVM_traindata_set_plot
-% popClassifierSVM_plots
+popClassifierSVM_plots
+
 
 
 %% Additional plots
@@ -593,7 +674,7 @@ popClassifierSVM_traindata_set_plot
 if plot_rand_choicePref
     % Compare svm weights with random weights
     popClassifierSVM_rand
-    
+
     % Compare SVM weights with ROC choicePref
     popClassifierSVM_choicePref
 end

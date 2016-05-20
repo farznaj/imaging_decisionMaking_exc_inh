@@ -54,7 +54,7 @@ end
 
 %% Plots related to all trials (majority of which are training dataset
 
-figure('name', 'All trials (a large fraction is the SVM training dataset)');
+fth = figure('name', 'All trials (a large fraction is the SVM training dataset)');;
 
 pb = round((- eventI)*frameLength);
 pe = round((length(time_aligned) - eventI)*frameLength);
@@ -101,7 +101,7 @@ xlim([pb pe])
 
 % decide what weights you want to use:
 % weights = wNsHrLr; % SVMModel.Beta
-weights = wNsHrLrAve; % normalized weights (and bagged in case weights
+weights = wNsHrLrAve;  % w_norm_ave_train_dataVSshuff(:,1); % % normalized weights (and bagged in case weights
 % computed from more than 1 iteration).
 
 % include all trs (not just the random equal trs) and use the average b  across all iters.
@@ -146,6 +146,7 @@ legend([h11 h12], {'HR','LR'}, 'location', 'northwest', 'box', 'off')
 
 
 %% Decoder performance at each time point (decoder trained on epoch ep)
+
 clear hh
 
 top = nanmean(avePerf, 2); % average performance across all iters.
@@ -169,6 +170,7 @@ xlim([pb pe])
 popClassifierSVM_traindata_set_plot
 
 % plot
+figure(fth)
 subplot(222), hold on
 id = 2;
 top = nanmean(avePerf_cv_dataVSshuff{id}, 2); % average performance across all iters.
@@ -220,7 +222,7 @@ yy = choiceVec0; % (extraTrs); % choiceVec0
 % scale xx
 x = bsxfun(@minus, xx, nanmean(xx)); % (x-mu)
 x = bsxfun(@rdivide, x, nanstd(xx)); % (x-mu)/sigma
-x = x / SVMModel.KernelParameters.Scale; % scale is 1 unless u've changed it in svm model.
+x = x / SVMModel_s.KernelParameters.Scale; % scale is 1 unless u've changed it in svm model.
 
 
 %%% Distributions
@@ -242,7 +244,7 @@ weightedAveNs_lr = weightedAveNs_allTrs(SVMModel.Y==0);
 [nh, eh] = histcounts(weightedAveNs_hr, 'normalization', 'probability');
 [nl, el] = histcounts(weightedAveNs_lr, 'normalization', 'probability');
 
-% figure;
+figure(fth);
 subplot(224), hold on
 plot(eh(1:end-1), nh)
 plot(el(1:end-1), nl)
