@@ -100,13 +100,15 @@ for id = 1:length(dataType) % there is very little variability for the actual tr
         end
         
         
-        % non-smoothed traces
-        traces_bef_proj_nf = non_filtered(:, :, trs2use); % frames x units x trials. % traces_al_sm(:, ~NsExcluded, trsUsedInSVM(trs2use))
-        % smoothed traces (with a window of size ep, moving average)
-        if pcaFlg
-            traces_bef_proj_f = filtered_s(:, :, trs2use);
-        else
-            traces_bef_proj_f = filtered(:, :, trs2use);
+        if ~smoothedTraces % non-smoothed traces
+            traces_bef_proj = non_filtered(:, :, trs2use); % frames x units x trials. % traces_al_sm(:, ~NsExcluded, trsUsedInSVM(trs2use))
+            
+        else % smoothed traces (with a window of size ep, moving average)
+            if pcaFlg
+                traces_bef_proj = filtered_s(:, :, trs2use);
+            else
+                traces_bef_proj = filtered(:, :, trs2use);
+            end
         end
         
         
@@ -118,16 +120,11 @@ for id = 1:length(dataType) % there is very little variability for the actual tr
         
         if usePooledWeights
             % project non-filtered traces on the average normalized vector across all iterations and folds
-            frameTrProjOnBeta_rep = einsum(traces_bef_proj_nf, w_norm_ave_train_dataVSshuff(:,id), 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
+            frameTrProjOnBeta_rep = einsum(traces_bef_proj, w_norm_ave_train_dataVSshuff(:,id), 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
         else
             % project non-filtered traces on the weights from a single model.
-            frameTrProjOnBeta_rep = einsum(traces_bef_proj_nf, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
+            frameTrProjOnBeta_rep = einsum(traces_bef_proj, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
         end
-        
-        % project filtered traces
-        %             frameTrProjOnBeta_rep = einsum(traces_bef_proj_f, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
-        %         size(frameTrProjOnBeta_rep) % frames x sum(trTest) (ie number of test trials)
-        
         
         % now separate frameTrProjOnBeta_rep into hr and lr groups.
         %         frameTrProjOnBeta_hr_rep = frameTrProjOnBeta_rep(:, choiceVec0(trsUsedInSVM(trTest))==1); % frames x trials % HR
@@ -138,8 +135,7 @@ for id = 1:length(dataType) % there is very little variability for the actual tr
         
         %% Compute classification accuracy for test trials at all time points using the decoder trained for ep.
         
-        %         traceNow = traces_bef_proj_f;
-        traceNow = traces_bef_proj_nf;
+        traceNow = traces_bef_proj;
         corrClass = NaN(size(traceNow,1), size(traceNow,3)); % frames x trials
         Y_tr_test = Y(trs2use);
         
@@ -165,8 +161,8 @@ for id = 1:length(dataType) % there is very little variability for the actual tr
         frameTrProjOnBeta_lr_rep_all_alls_train{s} = frameTrProjOnBeta_lr_rep; % _all;
         frameTrProjOnBeta_rep_all_alls_train{s} = frameTrProjOnBeta_rep; %_all;
         
-        traces_bef_proj_nf_all_alls_train{s} = traces_bef_proj_nf; %_all;
-        traces_bef_proj_f_all_alls_train{s} = traces_bef_proj_f; %_all;
+        traces_bef_proj_nf_all_alls_train{s} = traces_bef_proj; %_all;
+        traces_bef_proj_f_all_alls_train{s} = traces_bef_proj; %_all;
         
         
     end
@@ -213,7 +209,7 @@ if makePlots_here
     
     %     col = {'b', 'r'};
     col = {'g', 'k'};
-    figure('name', 'Trained data. Top: actual data. Bottom: shuffled data');
+    ftrh = figure('name', 'Trained data. Top: actual data. Bottom: shuffled data');
     pb = round((- eventI)*frameLength);
     pe = round((length(time_aligned) - eventI)*frameLength);
     st = round((epStart - eventI)*frameLength);
@@ -349,7 +345,7 @@ if makePlots_here
     % plot(time_aligned, av2, 'r')
     
     xlabel('Time since stim onset (ms)')
-    ylabel({'Raw average of', 'neural responses'})
+    ylabel({'Raw averages'})
     xlim([pb pe])
     
     

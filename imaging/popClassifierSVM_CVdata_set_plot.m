@@ -23,11 +23,9 @@ end
 
 
 %%
-frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_nf = cell(1,length(dataType));
-frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_nf = cell(1,length(dataType));
-frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_f = cell(1,length(dataType));
-frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_f = cell(1,length(dataType));
-avePerf_cv_dataVSshuff = cell(1,length(dataType));
+frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_cv = cell(1,length(dataType));
+frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_cv = cell(1,length(dataType));
+avePerf_cv_dataVSshuff_cv = cell(1,length(dataType));
 
 
 for id = 1:length(dataType)
@@ -47,15 +45,11 @@ for id = 1:length(dataType)
     
     % use this if you want to pool across folds
     % each cell of frameTrProjOnBeta_hr_rep_all_alls includes frames x test trials for each iteration of s (ie each CVSVMModel you computed in popClassifier).
-    frameTrProjOnBeta_hr_rep_all_alls_nf = cell(1, length(CVSVMModel_s_all));
-    frameTrProjOnBeta_lr_rep_all_alls_nf = cell(1, length(CVSVMModel_s_all));
-    frameTrProjOnBeta_rep_all_alls_nf = cell(1, length(CVSVMModel_s_all));
-    frameTrProjOnBeta_hr_rep_all_alls_f = cell(1, length(CVSVMModel_s_all));
-    frameTrProjOnBeta_lr_rep_all_alls_f = cell(1, length(CVSVMModel_s_all));
-    frameTrProjOnBeta_rep_all_alls_f = cell(1, length(CVSVMModel_s_all));    
+    frameTrProjOnBeta_hr_rep_all_alls_cv = cell(1, length(CVSVMModel_s_all));
+    frameTrProjOnBeta_lr_rep_all_alls_cv = cell(1, length(CVSVMModel_s_all));
+    frameTrProjOnBeta_rep_all_alls_cv = cell(1, length(CVSVMModel_s_all));
     
-    traces_bef_proj_nf_all_alls = cell(1, length(CVSVMModel_s_all));
-    traces_bef_proj_f_all_alls = cell(1, length(CVSVMModel_s_all));
+    traces_bef_proj_all_alls = cell(1, length(CVSVMModel_s_all));
     
     avePerf_cv = [];
     
@@ -85,14 +79,11 @@ for id = 1:length(dataType)
         %     clear frameTrProjOnBeta_lr_rep_all
         
         % use this if you want to pool across folds
-        frameTrProjOnBeta_hr_rep_all_nf = [];
-        frameTrProjOnBeta_lr_rep_all_nf = [];
-        frameTrProjOnBeta_rep_all_nf = [];
-        frameTrProjOnBeta_hr_rep_all_f = [];
-        frameTrProjOnBeta_lr_rep_all_f = [];
-        frameTrProjOnBeta_rep_all_f = [];        
+        frameTrProjOnBeta_hr_rep_all = [];
+        frameTrProjOnBeta_lr_rep_all = [];
+        frameTrProjOnBeta_rep_all = [];
         
-        traces_bef_proj_nf_all = [];
+        traces_bef_proj_all = [];
         traces_bef_proj_f_all = [];
         
         
@@ -150,17 +141,19 @@ for id = 1:length(dataType)
             end
             
             
-            % non-smoothed traces
-            traces_bef_proj_nf = non_filtered(:, :, trs2use); % frames x units x trials. % traces_al_sm(:, ~NsExcluded, trsUsedInSVM(trs2use))
-            % smoothed traces (with a window of size ep, moving average)
-            if pcaFlg
-                traces_bef_proj_f = filtered_s(:, :, trs2use);
-            else
-                traces_bef_proj_f = filtered(:, :, trs2use);
+            if ~smoothedTraces
+                % non-smoothed traces
+                traces_bef_proj = non_filtered(:, :, trs2use); % frames x units x trials. % traces_al_sm(:, ~NsExcluded, trsUsedInSVM(trs2use))
+                
+            else % smoothed traces (with a window of size ep, moving average)
+                if pcaFlg
+                    traces_bef_proj = filtered_s(:, :, trs2use);
+                else
+                    traces_bef_proj = filtered(:, :, trs2use);
+                end
             end
             
-            traces_bef_proj_nf_all = cat(3, traces_bef_proj_nf_all, traces_bef_proj_nf);
-            traces_bef_proj_f_all = cat(3, traces_bef_proj_f_all, traces_bef_proj_f);
+            traces_bef_proj_all = cat(3, traces_bef_proj_all, traces_bef_proj);            
             
             
             %% Set the projections for CV trials.
@@ -171,38 +164,27 @@ for id = 1:length(dataType)
             
             if usePooledWeights
                 % project non-filtered traces on the average normalized vector across all iterations and folds
-                frameTrProjOnBeta_rep_nf = einsum(traces_bef_proj_nf, w_norm_ave_cv_dataVSshuff(:,id), 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
-                frameTrProjOnBeta_rep_f = einsum(traces_bef_proj_f, w_norm_ave_cv_dataVSshuff(:,id), 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
+                frameTrProjOnBeta_rep = einsum(traces_bef_proj, w_norm_ave_cv_dataVSshuff(:,id), 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
             else
                 % project non-filtered traces on the weights from a single model.
-                frameTrProjOnBeta_rep_nf = einsum(traces_bef_proj_nf, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
-                frameTrProjOnBeta_rep_f = einsum(traces_bef_proj_f, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
+                frameTrProjOnBeta_rep = einsum(traces_bef_proj, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
             end
             
-            
-            % project filtered traces
-            %             frameTrProjOnBeta_rep = einsum(traces_bef_proj_f, wNsHrLrAve_rep, 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)
-            %         size(frameTrProjOnBeta_rep) % frames x sum(trTest) (ie number of test trials)
             
             % now separate frameTrProjOnBeta_rep into hr and lr groups.
             %         frameTrProjOnBeta_hr_rep = frameTrProjOnBeta_rep(:, choiceVec0(trsUsedInSVM(trTest))==1); % frames x trials % HR
             %         frameTrProjOnBeta_lr_rep = frameTrProjOnBeta_rep(:, choiceVec0(trsUsedInSVM(trTest))==0); % frames x trials % LR
-            frameTrProjOnBeta_hr_rep_nf = frameTrProjOnBeta_rep_nf(:, Y(trs2use)==1); % frames x trials % HR
-            frameTrProjOnBeta_lr_rep_nf = frameTrProjOnBeta_rep_nf(:, Y(trs2use)==0); % frames x trials % LR
-            frameTrProjOnBeta_hr_rep_f = frameTrProjOnBeta_rep_f(:, Y(trs2use)==1); % frames x trials % HR
-            frameTrProjOnBeta_lr_rep_f = frameTrProjOnBeta_rep_f(:, Y(trs2use)==0); % frames x trials % LR
+            frameTrProjOnBeta_hr_rep = frameTrProjOnBeta_rep(:, Y(trs2use)==1); % frames x trials % HR
+            frameTrProjOnBeta_lr_rep = frameTrProjOnBeta_rep(:, Y(trs2use)==0); % frames x trials % LR
             
             % use this if you don't want to pool across folds
             %         frameTrProjOnBeta_hr_rep_all{ik} = frameTrProjOnBeta_hr_rep;
             %         frameTrProjOnBeta_lr_rep_all{ik} = frameTrProjOnBeta_lr_rep;
             
             % use this if you want to pool across folds
-            frameTrProjOnBeta_hr_rep_all_nf = cat(2, frameTrProjOnBeta_hr_rep_all_nf, frameTrProjOnBeta_hr_rep_nf);
-            frameTrProjOnBeta_lr_rep_all_nf = cat(2, frameTrProjOnBeta_lr_rep_all_nf, frameTrProjOnBeta_lr_rep_nf);
-            frameTrProjOnBeta_rep_all_nf = cat(2, frameTrProjOnBeta_rep_all_nf, frameTrProjOnBeta_rep_nf);
-            frameTrProjOnBeta_hr_rep_all_f = cat(2, frameTrProjOnBeta_hr_rep_all_f, frameTrProjOnBeta_hr_rep_f);
-            frameTrProjOnBeta_lr_rep_all_f = cat(2, frameTrProjOnBeta_lr_rep_all_f, frameTrProjOnBeta_lr_rep_f);
-            frameTrProjOnBeta_rep_all_f = cat(2, frameTrProjOnBeta_rep_all_f, frameTrProjOnBeta_rep_f);            
+            frameTrProjOnBeta_hr_rep_all = cat(2, frameTrProjOnBeta_hr_rep_all, frameTrProjOnBeta_hr_rep);
+            frameTrProjOnBeta_lr_rep_all = cat(2, frameTrProjOnBeta_lr_rep_all, frameTrProjOnBeta_lr_rep);
+            frameTrProjOnBeta_rep_all = cat(2, frameTrProjOnBeta_rep_all, frameTrProjOnBeta_rep);
             
             
             %% Compute classification accuracy for test trials at all time points using the decoder trained for ep.
@@ -211,10 +193,8 @@ for id = 1:length(dataType)
             % non-smoothed traces. (To have the classCorr figure match the
             % projections figure, you should choose the same (smoothed or
             % non-smoothed) traces for both.)
-%             traceNow = traces_bef_proj_f;
-            traceNow = traces_bef_proj_nf;
-%                         traceNow = traces_bef_proj_f(112,:,:);
-            %         traceNow = traces_bef_proj_nf;
+            traceNow = traces_bef_proj;
+%             traceNow = traces_bef_proj_f(112,:,:);
             corrClass = NaN(size(traceNow,1), size(traceNow,3)); % frames x trials
             Y_tr_test = Y(trs2use);
             
@@ -254,19 +234,16 @@ for id = 1:length(dataType)
             
             corrClass_allTrs = cat(2, corrClass_allTrs, corrClass); % corrClass_allTrs includes corrClass for all test trials used in the kfold of cv svm model.
             % average performance (correct classification) across trials.
-            %             avePerf_cv = cat(2, avePerf_cv, nanmean(corrClass, 2));  % frames x (s x kfold)
+%             avePerf_cv = cat(2, avePerf_cv, nanmean(corrClass, 2));  % frames x (s x kfold)
             
             
         end
         
         ave_corrClass_s = nanmean(corrClass_allTrs, 2); % average corrClass across all test trials used in all kfolds.
-        
-        
-        %%
         avePerf_cv = cat(2, avePerf_cv, ave_corrClass_s);        
         
         % sanity check for the number of trials
-        if ~isequal(size(frameTrProjOnBeta_hr_rep_all_nf,2) + size(frameTrProjOnBeta_lr_rep_all_nf,2), ...
+        if ~isequal(size(frameTrProjOnBeta_hr_rep_all,2) + size(frameTrProjOnBeta_lr_rep_all,2), ...
                 sum(svm_model_now.Partition.TestSize))
             error('something wrong!')
         end
@@ -278,24 +255,17 @@ for id = 1:length(dataType)
         %     frameTrProjOnBeta_lr_rep_all_alls = cat(2, frameTrProjOnBeta_lr_rep_all_alls, frameTrProjOnBeta_lr_rep_all);
         
         % use this if you want to pool across folds for each iteration.
-        frameTrProjOnBeta_hr_rep_all_alls_nf{s} = frameTrProjOnBeta_hr_rep_all_nf; % frames x trials (these are all test trials)
-        frameTrProjOnBeta_lr_rep_all_alls_nf{s} = frameTrProjOnBeta_lr_rep_all_nf;
-        frameTrProjOnBeta_rep_all_alls_nf{s} = frameTrProjOnBeta_rep_all_nf;
-        frameTrProjOnBeta_hr_rep_all_alls_f{s} = frameTrProjOnBeta_hr_rep_all_f; % frames x trials (these are all test trials)
-        frameTrProjOnBeta_lr_rep_all_alls_f{s} = frameTrProjOnBeta_lr_rep_all_f;
-        frameTrProjOnBeta_rep_all_alls_f{s} = frameTrProjOnBeta_rep_all_f;
-        
-        traces_bef_proj_nf_all_alls{s} = traces_bef_proj_nf_all;
-        traces_bef_proj_f_all_alls{s} = traces_bef_proj_f_all;
+        frameTrProjOnBeta_hr_rep_all_alls_cv{s} = frameTrProjOnBeta_hr_rep_all; % frames x trials (these are all test trials)
+        frameTrProjOnBeta_lr_rep_all_alls_cv{s} = frameTrProjOnBeta_lr_rep_all;
+        frameTrProjOnBeta_rep_all_alls_cv{s} = frameTrProjOnBeta_rep_all;        
+        traces_bef_proj_all_alls{s} = traces_bef_proj_all;
         
         
     end
     
-    frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_nf{id} = frameTrProjOnBeta_hr_rep_all_alls_nf;
-    frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_nf{id} = frameTrProjOnBeta_lr_rep_all_alls_nf;
-    frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_f{id} = frameTrProjOnBeta_hr_rep_all_alls_f;
-    frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_f{id} = frameTrProjOnBeta_lr_rep_all_alls_f;    
-    avePerf_cv_dataVSshuff{id} = avePerf_cv;
+    frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_cv{id} = frameTrProjOnBeta_hr_rep_all_alls_cv;
+    frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_cv{id} = frameTrProjOnBeta_lr_rep_all_alls_cv;
+    avePerf_cv_dataVSshuff_cv{id} = avePerf_cv;
     
     
     %% Print the size of matrices
@@ -306,16 +276,16 @@ for id = 1:length(dataType)
         % frameTrProjOnBeta_rep_all_alls
         % traces_bef_proj_nf_all_alls
         
-        size_projection_testTrs = size(frameTrProjOnBeta_rep_all_alls_nf{randi(length(CVSVMModel_s_all))});
+        size_projection_testTrs = size(frameTrProjOnBeta_rep_all_alls_cv{randi(length(CVSVMModel_s_all))});
         fprintf(['size_projection_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_testTrs)), '\n'], size_projection_testTrs)
         
-        size_projection_hr_testTrs = size(frameTrProjOnBeta_hr_rep_all_alls_nf{randi(length(CVSVMModel_s_all))});
+        size_projection_hr_testTrs = size(frameTrProjOnBeta_hr_rep_all_alls_cv{randi(length(CVSVMModel_s_all))});
         fprintf(['size_projection_hr_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_hr_testTrs)), '\n'], size_projection_hr_testTrs)
         
-        size_projection_lr_testTrs = size(frameTrProjOnBeta_lr_rep_all_alls_nf{randi(length(CVSVMModel_s_all))});
+        size_projection_lr_testTrs = size(frameTrProjOnBeta_lr_rep_all_alls_cv{randi(length(CVSVMModel_s_all))});
         fprintf(['size_projection_lr_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_lr_testTrs)), '\n'], size_projection_lr_testTrs)
         
-        size_orig_traces_testTrs = size(traces_bef_proj_nf_all_alls{randi(length(CVSVMModel_s_all))});
+        size_orig_traces_testTrs = size(traces_bef_proj_all_alls{randi(length(CVSVMModel_s_all))});
         fprintf(['size_orig_traces_testTrs (frs x ns x trs): ', repmat('%i  ', 1, length(size_orig_traces_testTrs)), '\n'], size_orig_traces_testTrs)
         
         size_avePerf_cv = size(avePerf_cv);
@@ -360,8 +330,8 @@ for id = 1:length(dataType)
 %     av11 = cell2mat(cellfun(@(x)nanmean(x,2), frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_f{id}, 'uniformoutput', 0)); % frames x number of shuffle iters (s)
 %     av22 = cell2mat(cellfun(@(x)nanmean(x,2), frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_f{id}, 'uniformoutput', 0));    
     % plot non-smoothed traces
-    av11 = cell2mat(cellfun(@(x)nanmean(x,2), frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_nf{id}, 'uniformoutput', 0)); % frames x number of shuffle iters (s)
-    av22 = cell2mat(cellfun(@(x)nanmean(x,2), frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_nf{id}, 'uniformoutput', 0));
+    av11 = cell2mat(cellfun(@(x)nanmean(x,2), frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_cv{id}, 'uniformoutput', 0)); % frames x number of shuffle iters (s)
+    av22 = cell2mat(cellfun(@(x)nanmean(x,2), frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_cv{id}, 'uniformoutput', 0));
     
     av1 = nanmean(av11, 2); % average across s
     av2 = nanmean(av22, 2); % average across s
@@ -402,8 +372,8 @@ for id = 1:length(dataType)
     
     %% Decoder performance at each time point (decoder trained on epoch ep)
     
-    top = nanmean(avePerf_cv_dataVSshuff{id}, 2); % average performance across all iters.
-    top_sd = nanstd(avePerf_cv_dataVSshuff{id}, 0, 2) / sqrt(size(avePerf_cv_dataVSshuff{id},2));
+    top = nanmean(avePerf_cv_dataVSshuff_cv{id}, 2); % average performance across all iters.
+    top_sd = nanstd(avePerf_cv_dataVSshuff_cv{id}, 0, 2) / sqrt(size(avePerf_cv_dataVSshuff_cv{id},2));
     
     mn = min(top(:));
     mx = max(top(:));
@@ -440,7 +410,7 @@ if size(avePerf_cv,2) > 1
     p_classAcc = NaN(1, size(avePerf_cv,1));
     h_classAcc = NaN(1, size(avePerf_cv,1));
     for fr = 1:length(p_classAcc)
-        [h_classAcc(fr), p_classAcc(fr)]= ttest2(avePerf_cv_dataVSshuff{1}(fr,:), avePerf_cv_dataVSshuff{2}(fr,:),...
+        [h_classAcc(fr), p_classAcc(fr)]= ttest2(avePerf_cv_dataVSshuff_cv{1}(fr,:), avePerf_cv_dataVSshuff_cv{2}(fr,:),...
             'tail', 'right', 'vartype', 'unequal'); % Test the alternative hypothesis that the population mean of actual data is less than the population mean of shuffled data.
     end
     

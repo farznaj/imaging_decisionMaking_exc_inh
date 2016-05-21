@@ -47,8 +47,87 @@ for s = 1:length(SVMModel_s_all)
 
 end
 
-threshes_ave = nanmean(thresh)
+threshes_ave = nanmean(thresh);
+fprintf('%.3f = Threshold for separating HR vs LR projections computed on training data for training window.\n', threshes_ave)
 % figure; histogram(thresh)
+
+
+%% Now compute classification accuracy for the temporal traces. 
+% Get CV test trials (for each kfold and iter), and project their temporal
+% traces onto weights (either weights of their own cv svm model, or pooled
+% weights of all cv svm models). This (after pooling across kfolds and
+% iters) gives traces_hr and traces_lr, (frames x trials). Then based on the threshes_ave
+% decide what class each point belongs to. Then get the average across all
+% trials to set class accuracy for all trials.
+
+% usePooledWeights = 0 : project traces of test trials onto each cv models' own weights.
+% usePooledWeights = 1 : project traces of test trials onto the normalized averaged pooled weight (of all kfolds and iters).
+
+% id = 1;
+% tracesHR = frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_cv{id};
+% tracesLR = frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_cv{id};
+traces_hr = cell2mat(tracesHR);
+traces_lr = cell2mat(tracesLR);
+
+sa = (traces_hr > threshes_ave);
+sb = (traces_lr < threshes_ave);
+
+corrClass_thresh = [sa, sb]; % frames x trials
+av = nanmean(corrClass_thresh, 2);
+sd = nanstd(corrClass_thresh, [], 2) / sqrt(size(corrClass_thresh,2));
+
+% figure;
+subplot(222)
+boundedline(time_aligned, av, sd, 'c')
+
+
+%{
+% same as above
+ab = [traces_hr, traces_lr];
+p = ab > threshes_ave;
+po = [ones(1, size(traces_hr,2)), zeros(1, size(traces_lr,2))];
+m = bsxfun(@(x,y)(x==y), p, po);
+figure; plot(time_aligned, nanmean(m, 2))
+%}
+
+
+
+
+%% Some checks
+
+% figure; hold on
+% histogram(traces_hr(:))
+% histogram(traces_lr(:))
+% 
+% figure; hold on
+% plot(time_aligned, nanmean(traces_hr,2))
+% plot(time_aligned, nanmean(traces_lr,2))
+
+mu0 = mean(traces_hr(:));
+mu1 = mean(traces_lr(:));
+sd0 = std(traces_hr(:));
+sd1 = std(traces_lr(:));
+th = (sd0 * mu1 + sd1 * mu0) / (sd1 + sd0);
+fprintf('Check: %.3f = threshold computed on HR vs LR temporal projections, all points \n', th)
+
+
+
+% frame that classifier was trained on.
+t = ep(ceil(length(ep)/2)); 
+aa = cell2mat(cellfun(@(x)x(t,:), tracesHR, 'uniformoutput', 0));
+bb = cell2mat(cellfun(@(x)x(t,:), tracesLR, 'uniformoutput', 0));
+% figure; hold on
+% histogram(aa(:))
+% histogram(bb(:))
+
+% Cross point of 2 gaussians when they have similar std:
+mu0 = mean(aa(:));
+mu1 = mean(bb(:));
+sd0 = std(aa(:));
+sd1 = std(bb(:));
+th2 = (sd0 * mu1 + sd1 * mu0) / (sd1 + sd0);
+fprintf('Check: %.3f = threshold computed on HR vs LR temporal projections, training frame \n', th2)
+%}
 
 
 %% Compare average weights for svm models and cv svm models: they are quite close.
@@ -62,89 +141,4 @@ figure; hold on
 boundedline(1:n, nanmean(wNsHrLrAve_train_alls_dataVSshuff{1}, 2), nanstd(wNsHrLrAve_train_alls_dataVSshuff{1}, [], 2))
 boundedline(1:n, nanmean(wNsHrLrAve_cv_alls_dataVSshuff{1}, 2), nanstd(wNsHrLrAve_cv_alls_dataVSshuff{1}, [], 2), 'r')
 %}
-
-
-%% Now compute classification accuracy for the temporal traces. 
-% Get CV test trials (for each kfold and iter), and project their temporal
-% traces onto weights (either weights of their own cv svm model, or pooled
-% weights of all cv svm models). This (after pooling across kfolds and
-% iters) gives a and b, (frames x trials). Then based on the threshes_ave
-% decide what class each point belongs to. Then get the average across all
-% trials to set class accuracy for all trials.
-
-% usePooledWeights = 0 : project traces of test trials onto each cv models' own weights.
-% usePooledWeights = 1 : project traces of test trials onto the normalized averaged pooled weight (of all kfolds and iters).
-
-id = 1;
-% smoothed
-% a = cell2mat(frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_f{id});
-% b = cell2mat(frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_f{id});
-% non-smoothed
-a = cell2mat(frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_nf{id});
-b = cell2mat(frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_nf{id});
-% for training data
-% a = cell2mat(frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_train{id});
-% b = cell2mat(frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_train{id});
-
-
-sa = (a > threshes_ave);
-sb = (b < threshes_ave);
-
-corrClass_thresh = [sa, sb]; % frames x trials
-av = nanmean(corrClass_thresh, 2);
-sd = nanstd(corrClass_thresh, [], 2) / sqrt(size(corrClass_thresh,2));
-
-% figure;
-subplot(222)
-boundedline(time_aligned, av, sd, 'c')
-
-
-%{
-% same as above
-ab = [a, b];
-p = ab > threshes_ave;
-po = [ones(1, size(a,2)), zeros(1, size(b,2))];
-m = bsxfun(@(x,y)(x==y), p, po);
-figure; plot(time_aligned, nanmean(m, 2))
-%}
-
-
-
-
-%% Some checks
-
-% figure; hold on
-% histogram(a(:))
-% histogram(b(:))
-% 
-% figure; hold on
-% plot(time_aligned, nanmean(a,2))
-% plot(time_aligned, nanmean(b,2))
-
-mu0 = mean(a(:));
-mu1 = mean(b(:));
-sd0 = std(a(:));
-sd1 = std(b(:));
-th = (sd0 * mu1 + sd1 * mu0) / (sd1 + sd0)
-
-
-
-% frame that classifier was trained on.
-t = ep(ceil(length(ep)/2)); 
-aa = cell2mat(cellfun(@(x)x(t,:), frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_nf{id}, 'uniformoutput', 0));
-bb = cell2mat(cellfun(@(x)x(t,:), frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_nf{id}, 'uniformoutput', 0));
-% figure; hold on
-% histogram(aa(:))
-% histogram(bb(:))
-
-% Cross point of 2 gaussians when they have similar std:
-mu0 = mean(aa(:));
-mu1 = mean(bb(:));
-sd0 = std(aa(:));
-sd1 = std(bb(:));
-th2 = (sd0 * mu1 + sd1 * mu0) / (sd1 + sd0)
-%}
-
-
-
 

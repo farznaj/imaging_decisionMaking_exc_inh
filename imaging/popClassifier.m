@@ -1,6 +1,6 @@
 function popClassifier(alldata, alldataSpikesGood, outcomes, allResp_HR_LR, frameLength, ...
     timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, ...
-    neuronType, trialHistAnalysis, numShuffs, nPreFrames, nPostFrames, alignedEvent, onlyCorrect, iTiFlg, prevSuccessFlg, vec_iti)
+    neuronType, trialHistAnalysis, numShuffs, nPreFrames, nPostFrames, alignedEvent, onlyCorrect, iTiFlg, prevSuccessFlg, vec_iti, smoothedTraces)
 %
 % This is the main function for doing SVM analysis on calcium imaging data.
 % Run imaging_prep_analysis to get the required input vars.
@@ -14,11 +14,7 @@ function popClassifier(alldata, alldataSpikesGood, outcomes, allResp_HR_LR, fram
 % Author: Farzaneh Najafi with modifications from Gamal Elsayed.
 % Jan 2016
 %
-home
-fprintf('========= SVM analysis started =========\n')
-
-
-%% Set initial variables
+% Example input variables :
 %{
 neuronType = 2; % 0: excitatory, 1: inhibitory, 2: all types.
 trialHistAnalysis = 0; % more parameters are specified in popClassifier_trialHistory.m
@@ -44,7 +40,15 @@ if trialHistAnalysis
 else
     alignedEvent = 'commitIncorrResp'; 'reward'; 'goTone';  % 'stimOn'; % what event align traces on. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward'
 end
+
+smoothedTraces = 0; % if 1, projections and class accuracy of temporal traces will be computed on smoothed traces (window size same as ep, ie training window size).
 %}
+
+
+%% Set initial variables
+
+home
+fprintf('========= SVM analysis started =========\n')
 
 %%%%%%%%%% Define training epoch (ie the epoch over which neural activity will be
 % averaged and on which SVM will be trained):
@@ -548,9 +552,13 @@ fprintf('%.3f = Average cross-validated classification error for shuffled data\n
 popClassifierSVM_CVdata_set_plot
 
 
-%% Compute and plot class accuracy by manually setting a threshold on hr vs lr projections instead of using matlab's predict.
+%% Compute and plot classification accuracy by manually setting a threshold on hr vs lr projections instead of using matlab's predict.
 
+id = 1;
+tracesHR = frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_cv{id};
+tracesLR = frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_cv{id};
 figure(fcvh)
+
 popClassifier_thresh_corrClass
 
 
@@ -586,6 +594,16 @@ wNsHrLrAve = wNsHrLrAve / norm(wNsHrLrAve); % normalize it so the final average 
 % vast majority of them are the training dataset).
 popClassifierSVM_traindata_set_plot
 % popClassifierSVM_plots
+
+
+%% Compute and plot classification accuracy by manually setting a threshold on hr vs lr projections instead of using matlab's predict.
+
+id = 1;
+tracesHR = frameTrProjOnBeta_hr_rep_all_alls_dataVSshuff_train{id};
+tracesLR = frameTrProjOnBeta_lr_rep_all_alls_dataVSshuff_train{id};
+figure(ftrh)
+
+popClassifier_thresh_corrClass
 
 
 %% Additional plots

@@ -23,17 +23,7 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 %
 % Farzaneh Najafi (2016)
 %
-
-
-%% Good days
-% imagingFolder = '151029'; % '151021';
-% mdfFileNumber = 3;
-
-
-%% Set some initial variables.
-
-home
-
+% Example input variales:
 %{
 mouse = 'fni17';
 imagingFolder = '151029'; % '150916'; % '151021';
@@ -48,6 +38,17 @@ setInhibitExcit = true; % if 1, inhibitory and excitatory neurons will be identi
 
 frameLength = 1000/30.9; % sec.
 %}
+
+
+%% Good days
+% imagingFolder = '151029'; % '151021';
+% mdfFileNumber = 3;
+
+
+%% Set some initial variables.
+
+home
+
     assessInhibitClass = false; % if 1 and inhibitRois not already saved, you will evaluate identification of inhibitory neurons (ie if sigTh is doing a good job).
     saveInhibitRois = 1; % if 1 and inhibitRois not already saved, ROIs that were identified as inhibit will be saved in imfilename. (ie the output of inhibit_excit_setVars will be saved).
     sigTh = 1.13; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
