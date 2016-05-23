@@ -36,7 +36,7 @@ if ~exist('allowCorrectResp', 'var')
 end
 
 if ~exist('allowCorrectOutcomeChange', 'var')
-    allowCorrectOutcomeChange = 1; 
+    allowCorrectOutcomeChange = 1;
     % only effective when allowCorrectResp is 'change'. If 0, outcome of
     % allowCorrEntered trials wont be changed (although animal's choice
     % will be changed). If 1, outcome will be changed as well.
@@ -50,31 +50,28 @@ allResp = [alldata.responseSideIndex]; % Note: it will be NaN for any outcome ot
 
 
 %% Take care of outcome and allResp of allowCorrection trials.
-if ~strcmp(allowCorrectResp, 'nothing')
-    % trials that the mouse entered the allow correction state. (remember :
-    % this does not give all trials that the mouse 1st committed error. If the mouse was on sideChoose, he will go to punish (and not punish allow correction).)
-    a = arrayfun(@(x)x.parsedEvents.states.punish_allowcorrection, alldata, 'uniformoutput', 0);
-    allowCorrectEntered = ~cellfun(@isempty, a);
-    fprintf('%.3f = Fraction of trials aninmal entered allowCorrection\n', nanmean(allowCorrectEntered))
+
+% trials that the mouse entered the allow correction state. (remember :
+% this does not give all trials that the mouse 1st committed error. If the mouse was on sideChoose, he will go to punish (and not punish allow correction).)
+a = arrayfun(@(x)x.parsedEvents.states.punish_allowcorrection, alldata, 'uniformoutput', 0);
+allowCorrectEntered = ~cellfun(@isempty, a);
+fprintf('%.3f = Fraction of trials aninmal entered allowCorrection\n', nanmean(allowCorrectEntered))
+
+if sum(allowCorrectEntered) > 0
+    a = nanmean(allowCorrectEntered & outcomes==1) / nanmean(allowCorrectEntered);
+    fprintf('%.3f = Fract of allowCorrectEntered trials with final success\n', a)
+    a = nanmean(allowCorrectEntered & outcomes==0) / nanmean(allowCorrectEntered);
+    fprintf('%.3f = Fract of allowCorrectEntered trials with final failure\n', a)
+    a = nanmean(allowCorrectEntered & outcomes==-5) / nanmean(allowCorrectEntered);
+    fprintf('%.3f = Fract of allowCorrectEntered trials with final no sideLickAgain\n', a)
+    a = nanmean(allowCorrectEntered & outcomes==-2) / nanmean(allowCorrectEntered);
+    fprintf('%.3f = Fract of allowCorrectEntered trials with final noChoice. These are really noSideLickAgain, but must correspond to earlier training days when you did not have the state wait4decision2. \n', a)
     
-    if sum(allowCorrectEntered) > 0
-        a = nanmean(allowCorrectEntered & outcomes==1) / nanmean(allowCorrectEntered);
-        fprintf('%.3f = Fract of allowCorrectEntered trials with final success\n', a)
-        a = nanmean(allowCorrectEntered & outcomes==0) / nanmean(allowCorrectEntered);
-        fprintf('%.3f = Fract of allowCorrectEntered trials with final failure\n', a)
-        a = nanmean(allowCorrectEntered & outcomes==-5) / nanmean(allowCorrectEntered);
-        fprintf('%.3f = Fract of allowCorrectEntered trials with final no sideLickAgain\n', a)
-        a = nanmean(allowCorrectEntered & outcomes==-2) / nanmean(allowCorrectEntered);
-        fprintf('%.3f = Fract of allowCorrectEntered trials with final noChoice. These are really noSideLickAgain, but must correspond to earlier training days when you did not have the state wait4decision2. \n', a)
-        
-        if nanmean(ismember(unique(outcomes(allowCorrectEntered)), [-5 -2 0 1])) ~=1
-            error('This cannot happen!')
-        end
+    if nanmean(ismember(unique(outcomes(allowCorrectEntered)), [-5 -2 0 1])) ~=1
+        error('This cannot happen!')
     end
-    
-else
-    disp('allCorrectEntered trials left unchanged!')
 end
+
 % sum(allowCorrectEntered & outcomes==0) % cases that animal entered allowCorrection and yet didn't change his choice.
 % sum(allowCorrectEntered & outcomes==1) % animal entered allowCorrection but changed his choice later.
 % sum(allowCorrectEntered & outcomes==-5) % animal entered allowCorrection but didn't side lick again eventually.
@@ -116,12 +113,18 @@ switch allowCorrectResp
             end
         end
         
-        if allowCorrectOutcomeChange % change both outcome and allResp
-            disp('Changing the response and outcome of allCorrectEntered trials!')
-            outcomes(allowCorrectEntered) = 0; % their outcome can be 0, 1, or -5, but u're going with mouse's 1st choice so you prefer this to outcomes(allowCorrectEntered & outcomes==1) = 0;
-        else % don't change outcome, only change allResp
-            disp('Changing the response BUT NOT outcome of allCorrectEntered trials!')
+        if sum(allowCorrectEntered) > 0
+            if allowCorrectOutcomeChange % change both outcome and allResp
+                disp('Changing the response and outcome of allCorrectEntered trials!')
+                outcomes(allowCorrectEntered) = 0; % their outcome can be 0, 1, or -5, but u're going with mouse's 1st choice so you prefer this to outcomes(allowCorrectEntered & outcomes==1) = 0;
+            else % don't change outcome, only change allResp
+                disp('Changing the response BUT NOT outcome of allCorrectEntered trials!')
+            end
         end
+        
+        
+    case 'nothing'
+        disp('allCorrectEntered trials left unchanged!')
 end
 
 
@@ -142,23 +145,43 @@ end
 
 %% Deal with trials that mouse made an uncommitted lick first and then switched to the other side.
 
-if ~strcmp(uncommittedResp, 'nothing')
-    % trials that mouse licked the error side during the decision time. Afterwards, the mouse may have committed it
-    % (hence entered allow correction or punish) or may have licked the correct side.
-    a = arrayfun(@(x)x.parsedEvents.states.errorlick_again_wait, alldata, 'uniformoutput', 0);
-    errorlick_again_wait_entered = (~cellfun(@isempty, a));
-    
-    % trials that mouse licked the correct side during the decision time. Afterwards, the mouse may have committed it
-    % (hence reward) or may have licked the error side.
-    a = arrayfun(@(x)x.parsedEvents.states.correctlick_again_wait, alldata, 'uniformoutput', 0);
-    correctlick_again_wait_entered = (~cellfun(@isempty, a));
-    
-    
-    errThenCorr = (errorlick_again_wait_entered & ~allowCorrectEntered & outcomes==1); % uncommitted error lick then committed correct lick.
-    corrThenErr = (correctlick_again_wait_entered & outcomes==0); % uncommitted correct lick then committed error lick.
-    % fract_corrBut1stErr_ErrBut1stCorr = [sum(errThenCorr) / sum(outcomes==1) ...
-    %     sum(corrThenErr) / sum(outcomes==0)]
-end
+% trials that mouse licked the error side during the decision time. Afterwards, the mouse may have committed it
+% (hence entered allow correction or punish) or may have licked the correct side.
+a = arrayfun(@(x)x.parsedEvents.states.errorlick_again_wait, alldata, 'uniformoutput', 0);
+errorlick_again_wait_entered = (~cellfun(@isempty, a));
+
+% trials that mouse licked the correct side during the decision time. Afterwards, the mouse may have committed it
+% (hence reward) or may have licked the error side.
+a = arrayfun(@(x)x.parsedEvents.states.correctlick_again_wait, alldata, 'uniformoutput', 0);
+correctlick_again_wait_entered = (~cellfun(@isempty, a));
+
+
+errThenCorr = (errorlick_again_wait_entered & ~allowCorrectEntered & outcomes==1); % uncommitted error lick then committed correct lick.
+corrThenErr = (correctlick_again_wait_entered & outcomes==0); % uncommitted correct lick then committed error lick.
+
+fract_corrBut1stErr_ErrBut1stCorr = [sum(errThenCorr) / sum(outcomes==1) ,  sum(corrThenErr) / sum(outcomes==0)];
+fprintf('%.2f= fract correct after error try; %.2f= fract incorrect after correct try\n', fract_corrBut1stErr_ErrBut1stCorr)
+
+
+% Some numbers to quantify animal's changes of mind:
+a = arrayfun(@(x)x.parsedEvents.states.errorlick_again, alldata, 'uniformoutput', 0);
+errorlick_again_entered = (~cellfun(@isempty, a));
+
+a = arrayfun(@(x)x.parsedEvents.states.correctlick_again, alldata, 'uniformoutput', 0);
+correctlick_again_entered = (~cellfun(@isempty, a));
+
+% In what fraction of correctlick_wait trials (ie trials that animal
+% made a correct lick during wait4decision), animal made incorrect lick
+% afterwards?
+a = nanmean(errorlick_again_entered(correctlick_again_wait_entered));
+fprintf('%.2f = Fract correct try followed by error try\n', a)
+
+% In what fraction of errorlick_wait trials (ie trials that animal
+% made an error lick during wait4decision), animal made correct lick
+% afterwards?
+a = nanmean(correctlick_again_entered(errorlick_again_wait_entered));
+fprintf('%.2f = Fract error try followed by correct try\n', a)
+
 
 
 switch uncommittedResp
@@ -168,6 +191,9 @@ switch uncommittedResp
         
         outcomes(errThenCorr) = NaN;
         outcomes(corrThenErr) = NaN;
+        
+        disp('Removing correct trials that were preceded by an errorlick try.')
+        disp('Removing incorrect trials that were preceded by a correctlick try.')
         
     case 'change'  % change their outcome and response to the original (1st) lick.
         aa = allResp(errThenCorr);
@@ -185,10 +211,16 @@ switch uncommittedResp
         
         outcomes(errThenCorr) = 0;
         outcomes(corrThenErr) = 1;
+        
+        disp('Changing the outcome and response side of correct (incorrect) trials preceded by a lick to the other side.')
+        
+%     case 'nothing'
+        
 end
 
 
 %%
+
 allResp_HR_LR = allResp;
 % allResp_HR_LR(trs2rmv) = NaN;
 

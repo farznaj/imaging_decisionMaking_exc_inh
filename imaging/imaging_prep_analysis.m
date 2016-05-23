@@ -1,6 +1,6 @@
 function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, good_inhibit, outcomes, allResp, allResp_HR_LR, ...
         trs2rmv, stimdur, stimrate, stimtype, cb, timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, ...
-        timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ....
+        timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename] = ....
     imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, ...
         rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, frameLength);
 %
@@ -164,7 +164,16 @@ end
 
 
 
+% u = unique({all_data.rewardStage}); disp(u);
+rs = {all_data.rewardStage}; 
+ave_rewardStage_allowCorr_chooseSide = [nanmean(strcmp(rs, 'Allow correction')), nanmean(strcmp(rs, 'Choose side'))];
+fprintf('Fraction of trials (rewardStage): allowCorr= %.3f. chooseSide= %.3f\n', ave_rewardStage_allowCorr_chooseSide)
+% rsi = zeros(1, length(rs)); 
+% rsi(strcmp(rs, 'Choose side')) = 1; 
+% figure; plot(rsi); ylim([-.1 1.1])
+% xlabel('Trials'), ylabel('chooseSide'), box off, set(gca,'tickdir','out')
 
+    
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%% Load neural data, merge them into all_data, and assess trace quality %%%%%%%%%%%%%%%%%%%%%%%
@@ -284,11 +293,16 @@ activity = temporalComp'; % frames x units
 % Sdf = S_df';
 
 if size(temporalDf,1) == size(temporalComp,1)+1
+%     bk_df = temporalDf(end,:); % background DF/F
     temporalDf(end,:) = [];
 end
 dFOF = temporalDf';
 % dFOF = dFOF_man;
 clear temporalComp temporalDf spiking
+
+% Use below if you want to look at the backgound component, aligned on different trial events.:
+% load(pnevFileName, 'f')
+% dFOF = f';
 
 
 %% Merge imaging variables into all_data (before removing any trials): activity, dFOF, spikes

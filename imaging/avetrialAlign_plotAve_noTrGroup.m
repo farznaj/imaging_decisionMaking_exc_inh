@@ -14,7 +14,7 @@ trials2ana = 'all'; % 'incorrEasy'; % 'incorrHard'; % 'all'; 'corrEasy'; 'corrHa
 
 evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
     'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
-    'timeReward', 'timeCommitIncorrResp'}; %,...
+    'timeReward', 'timeCommitIncorrResp', 'timeStop'}; %,...
 % 'centerLicks', 'leftLicks', 'rightLicks'};
 % time1stCenterLick, time1stCorrectResponse, timeStop
 % eventTime = cellfun(@(x)x(1),timeInitTone); %timeInitTone; % first trial initi tone.
@@ -90,12 +90,13 @@ for i = ievents
     end
     traces = traces(trs2ana);
     alldatanow = alldata(trs2ana);
+    trs2rmvnow = find(ismember(find(trs2ana), trs2rmv));
     
     alignWheel = 1; printsize = 1;
     
     [traceEventAlign, timeEventAlign, nvalidtrs, traceEventAlign_wheelRev, ...
         timeEventAlign_wheelRev, nvalidtrs_wheel] = ...
-        avetrialAlign_noTrGroup(eventTime, traces, alldatanow, frameLength, trs2rmv, alignWheel, printsize, doplots);
+        avetrialAlign_noTrGroup(eventTime, traces, alldatanow, frameLength, trs2rmvnow, alignWheel, printsize, doplots);
     
     %     disp('---------------------')
     %     figure, hold on
@@ -133,7 +134,7 @@ for i = ievents
         plot([e e], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
         %         xlabel('Frame')
     else
-        plot([0 0], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
+        plot([frameLength/2  frameLength/2], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
         %         xlabel('Time')
     end
     ylim([min(top(xl1:xl2)-tosd(xl1:xl2))  max(top(xl1:xl2)+tosd(xl1:xl2))])
@@ -174,7 +175,7 @@ for i = ievents
         plot([e e], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
         %         xlabel('Frame')
     else
-        plot([0 0], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
+        plot([frameLength/2  frameLength/2], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
         %         xlabel('Time')
     end
     ylim([min(top(xl1:xl2)-tosd(xl1:xl2))  max(top(xl1:xl2)+tosd(xl1:xl2))])
@@ -192,11 +193,11 @@ for i = ievents
     alignWheel = 0; printsize = 0;
     
     [traceEventAlign, timeEventAlign, nvalidtrs] = ...
-        avetrialAlign_noTrGroup(eventTime, traces, alldatanow, frameLength, trs2rmv, alignWheel, printsize, doplots);
+        avetrialAlign_noTrGroup(eventTime, traces, alldatanow, frameLength, trs2rmvnow, alignWheel, printsize, doplots);
        
     
     %% plot spikes
-    
+    %
     figure(f)
     subplot(3,length(ievents),length(ievents)*1+cnt), hold on
     
@@ -229,13 +230,13 @@ for i = ievents
         plot([e e], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
         %         xlabel('Frame')
     else
-        plot([0 0],[min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
+        plot([frameLength/2  frameLength/2],[min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
         %         xlabel('Time')
     end
     ylim([min(top(xl1:xl2)-tosd(xl1:xl2))  max(top(xl1:xl2)+tosd(xl1:xl2))])
     %     ylabel('Spiking')
     %     pause
-    
+    %}
 end
 
 

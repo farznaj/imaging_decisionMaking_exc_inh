@@ -196,6 +196,7 @@ if ~exist('epStart', 'var') || ~exist('epEnd', 'var')
     % only on for 1000ms. By running the codes below you will make sure
     % that training window won't go beyong 1000ms.)
     if strcmp(alignedEvent, 'stimOn')
+        [~, stimdur] = setStimRateType(alldata);
         minStimFrs = floor(min(stimdur*1000)/frameLength); % minimum stimdur of all trials in frames
         if minStimFrs < epEndRel2Event
             warning('Resetting epEndRel2Event to min of stimDur!')

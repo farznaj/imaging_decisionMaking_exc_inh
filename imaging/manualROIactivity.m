@@ -1,4 +1,4 @@
-function [activity, rois] = manualROIactivity(mousename, imagingFolder, mdfFileNumber, signalCh, roiCh)
+function [activity, rois] = manualROIactivity(mouse, imagingFolder, mdfFileNumber, signalCh, roiCh)
 % activity = manualROIactivity(mousename, imagingFolder, mdfFileNumber, signalCh)
 %
 % Computes activity (ie mean pixel intensity of each ROI for each frame)
@@ -30,7 +30,7 @@ elseif ispc
     dataPath = '\\sonas-hs.cshl.edu\churchland\data';
 end
 
-tifFold = fullfile(dataPath, mousename, 'imaging', imagingFolder);
+tifFold = fullfile(dataPath, mouse, 'imaging', imagingFolder);
 pathToROIZip = fullfile(tifFold, sprintf('RoiSet_%s_%03d_ch%d_MCM.zip', imagingFolder, mdfFileNumber, roiCh));
 %
 

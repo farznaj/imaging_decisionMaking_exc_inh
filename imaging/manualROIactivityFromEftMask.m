@@ -1,4 +1,4 @@
-function [activity] = manualROIactivityFromEftMask(mousename, imagingFolder, mdfFileNumber, signalCh)
+function [activity] = manualROIactivityFromEftMask(mouse, imagingFolder, mdfFileNumber, signalCh)
 % activity = manualROIactivity(mousename, imagingFolder, mdfFileNumber, signalCh)
 %
 % Computes activity (ie mean pixel intensity of each ROI for each frame)
@@ -29,7 +29,7 @@ if isunix
 elseif ispc
     dataPath = '\\sonas-hs.cshl.edu\churchland\data';
 end
-tifFold = fullfile(dataPath, mousename, 'imaging', imagingFolder);
+tifFold = fullfile(dataPath, mouse, 'imaging', imagingFolder);
 % pathToROIZip = fullfile(tifFold, sprintf('RoiSet_%s_%03d_ch%d_MCM.zip', imagingFolder, mdfFileNumber, roiCh));
 %
 
@@ -51,9 +51,9 @@ end
 % tifList;
 
 
-%% Set mask for eft results by setting a contour on A.
+%% Create mask for Efty's results by applying contours on A.
 
-[imfilename, pnevFileName] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh);
+[imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh);
 [~,f] = fileparts(pnevFileName);
 disp(f)
 
