@@ -11,6 +11,8 @@ import scipy.linalg as la
 import scipy
 from sklearn import svm
 import matplotlib.pyplot as plt
+from time import time
+
 #%% load data
 XY = scipy.io.loadmat('/Users/gamalamin/git_local_repository/Farzaneh/XY.mat', variable_names=['X', 'Y']);
 X = XY.pop('X')
@@ -26,24 +28,24 @@ data_test = X
 targets_test = np.squeeze(Y)
 #%% create svm
 # Create a classifier: a support vector classifier
-linear_svm = svm.LinearSVC(loss='l2', penalty='l2', dual=False)
+linear_svm = svm.LinearSVC(loss='squared_hinge', penalty='l2', dual=False)
 
 linear_svm_time = time()
 linear_svm.fit(data_train, targets_train)
-linear_svm_score = linear_svm.score(data_test, targets_test)
+linear_svm_scorel2 = linear_svm.score(data_test, targets_test)
 linear_svm_time = time() - linear_svm_time
 wl2 =  np.squeeze(linear_svm.coef_);
 
 # Create a classifier: a support vector classifier
-linear_svm = svm.LinearSVC(loss='l2', penalty='l1', dual=False)
+linear_svm = svm.LinearSVC(C=1, loss='squared_hinge', penalty='l1', dual=False)
 
 linear_svm_time = time()
 linear_svm.fit(data_train, targets_train)
-linear_svm_score = linear_svm.score(data_test, targets_test)
+linear_svm_scorel1 = linear_svm.score(data_test, targets_test)
 linear_svm_time = time() - linear_svm_time
 wl1 =  np.squeeze(linear_svm.coef_);
 
 #%%
 plt.figure('Weights')
-plt.plot(wl1, 'r')
-plt.plot(wl2, 'g')
+plt.plot(np.sort(np.abs(wl1))[::-1], 'r')
+plt.plot(np.sort(np.abs(wl2))[::-1], 'g')
