@@ -4,17 +4,23 @@
 % alignment : you don't specify prePost frames, it uses NaNs and takes all
 % frames into the average. Then you only look at parts of the trace that
 % has enough number of trials contributing to the average.
+% 
+% To align on licks ('centerLicks', 'leftLicks', 'rightLicks), use script 
+% avetrialAlign_plotAve_noTrGroup_licks
 
 
+%%
 % home
 
 thStimStrength = 4; % 2; % threshold of stim strength for defining hard, medium and easy trials.
+outcome2ana = 'all'; % 'all'; 1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
+strength2ana = 'all'; % 'all'; 'eary'; 'medium'; 'hard';
 eventsToPlot = 'all'; % 10; % what events to align trials on and plot? % look at evT (below) to find the index of the event you want to plot.
-trials2ana = 'all'; % 'incorrEasy'; % 'incorrHard'; % 'all'; 'corrEasy'; 'corrHard'; 'incorr'; 'corr'; % what trials to analyze?
+% trials2ana = 'all'; % 'incorrEasy'; % 'incorrHard'; % 'all'; 'corrEasy'; 'corrHard'; 'incorr'; 'corr'; % what trials to analyze?
 
-evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
-    'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
-    'timeReward', 'timeCommitIncorrResp', 'timeStop'}; %,...
+evT = {'timeReward'}; % {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
+%     'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
+%     'timeReward', 'timeCommitIncorrResp', 'timeStop'}; %,...
 % 'centerLicks', 'leftLicks', 'rightLicks'};
 % time1stCenterLick, time1stCorrectResponse, timeStop
 % eventTime = cellfun(@(x)x(1),timeInitTone); %timeInitTone; % first trial initi tone.
@@ -25,6 +31,7 @@ evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_
 % remember if u want 1stIncorrTry, they are not necessarily
 % outcomes==0... depending on how the commit lick went.
 
+%{
 if strcmp(trials2ana , 'all')
     trs2ana = true(1, length(outcomes));
 else
@@ -36,19 +43,38 @@ else
         incorrEasy = outcomes==0  &  (s >= (max(allStrn) - thStimStrength));
         incorrHard = outcomes==0  &  (s <= thStimStrength);
         incorrMed = outcomes==0  &  ((s > thStimStrength) & (s < (max(allStrn) - thStimStrength))); % intermediate strength
-%         fprintf('# trials: incorrEasy %i, incorrHard %i, incorrMed %i, (thStimStrength= %i)\n', sum(incorrEasy), sum(incorrHard), sum(incorrMed), thStimStrength)
-    
+        %         fprintf('# trials: incorrEasy %i, incorrHard %i, incorrMed %i, (thStimStrength= %i)\n', sum(incorrEasy), sum(incorrHard), sum(incorrMed), thStimStrength)
+        
     elseif any(strcmp(trials2ana , {'corr', 'corrEasy', 'corrHard', 'corrMed'}))
         corr = outcomes==1;
         corrEasy = outcomes==1  &  (s >= (max(allStrn) - thStimStrength));
         corrHard = outcomes==1  &  (s <= thStimStrength);
         corrMed = outcomes==1  &  ((s > thStimStrength) & (s < (max(allStrn) - thStimStrength))); % intermediate strength
-%         fprintf('# trials: corrEasy %i, corrHard %i, corrMed %i (thStimStrength= %i)\n', sum(corrEasy), sum(corrHard), sum(corrMed), thStimStrength)        
+        %         fprintf('# trials: corrEasy %i, corrHard %i, corrMed %i (thStimStrength= %i)\n', sum(corrEasy), sum(corrHard), sum(corrMed), thStimStrength)
     end
     
     trs2ana = eval(trials2ana);
 end
 fprintf('Analyzing %s, including %i trials.\n', trials2ana, sum(trs2ana))
+%}
+switch strength2ana
+    case 'easy'
+        str2ana = (s >= (max(allStrn) - thStimStrength));
+    case 'hard'
+        str2ana = (s <= thStimStrength);
+    case 'medium'
+        str2ana = ((s > thStimStrength) & (s < (max(allStrn) - thStimStrength))); % intermediate strength
+    otherwise
+        str2ana = true(1, length(outcomes));
+end
+
+if strcmp(outcome2ana, 'all')
+    trs2ana = str2ana;
+    fprintf('Analyzing outcome %s, %s strengths, including %i trials.\n', outcome2ana, strength2ana, sum(trs2ana))
+else
+    trs2ana = (outcomes==outcome2ana) & str2ana;
+    fprintf('Analyzing outcome %i, %s strengths, including %i trials.\n', outcome2ana, strength2ana, sum(trs2ana))
+end
 
 
 %%%
@@ -66,13 +92,18 @@ end
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv);
 %}
 
-
-%% Align traces, average them, and plot them.
-
-f = figure('name', [trials2ana, ' trials - Shades for rows 1 & 2: standard errors across neural traces (trial-averaged traces of neurons).  Shades for row 3: stand error across trials']);
 doplots = 0;
 unitFrame = 0; % if 1, x axis will be in units of frames. If 0, x axis will be in units of time.
 cnt = 0;
+
+alldatanow = alldata(trs2ana);
+trs2rmvnow = find(ismember(find(trs2ana), trs2rmv));
+
+
+%% Align traces, average them, and plot them.
+
+fn = sprintf('outcome %i, %s, trials - Shades for rows 1 & 2: standard errors across neural traces (trial-averaged traces of neurons).  Shades for row 3: stand error across trials', outcome2ana, strength2ana);
+f = figure('name', fn);
 
 for i = ievents
     
@@ -89,8 +120,6 @@ for i = ievents
         eventTime = eventTime(trs2ana);
     end
     traces = traces(trs2ana);
-    alldatanow = alldata(trs2ana);
-    trs2rmvnow = find(ismember(find(trs2ana), trs2rmv));
     
     alignWheel = 1; printsize = 1;
     
@@ -194,7 +223,7 @@ for i = ievents
     
     [traceEventAlign, timeEventAlign, nvalidtrs] = ...
         avetrialAlign_noTrGroup(eventTime, traces, alldatanow, frameLength, trs2rmvnow, alignWheel, printsize, doplots);
-       
+    
     
     %% plot spikes
     %

@@ -32,7 +32,7 @@ mdfFileNumber = 3; % 1; % or tif major
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
 rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
 
-plot_ave_noTrGroup = 1; % Plot average traces across all neurons and all trials aligned on particular trial events.
+plot_ave_noTrGroup = 0; % Plot average traces across all neurons and all trials aligned on particular trial events.
 
 setInhibitExcit = true; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 

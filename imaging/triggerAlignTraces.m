@@ -1,4 +1,4 @@
-function [traceEventAlign, timeEventAlign, nvalidtrs] = triggerAlignTraces(traceOriginal, frame0s, shiftTime, scaleTime)
+function [traceEventAlign, timeEventAlign, nvalidtrs] = triggerAlignTraces(traceOriginal, frame0s, shiftTime, scaleTime, m, m2)
 % INPUTS
 % frame0s -- the indeces of the events (triggeres) on which the traces will be aligned.
 % traceOriginal -- if an array, dimensions must be frames x units x trials.
@@ -34,10 +34,13 @@ maxNumFramesPerTrial = max(framesPerTrial);
 
 % frames x neurons x trials
 frame0s = round(frame0s);
+if ~exist('m','var') || ~exist('m2','var')
+    m = max(frame0s);
+    m2 = max(framesPerTrial - frame0s);
+end
 % traceEventAlign = NaN(max(frame0s) + maxNumFramesPerTrial, numUnits, numTrials);
-traceEventAlign = NaN(max(frame0s) + max(framesPerTrial - frame0s), numUnits, numTrials);
+traceEventAlign = NaN(m+m2 , numUnits, numTrials);
 
-m = max(frame0s);
 
 if iscell(traceOriginal)
     for tr = 1:numTrials

@@ -43,7 +43,8 @@ end
 %{
 numTrsWevent = sum(~isnan(eventInds_f))
 mnFrame0_mxFrame0_mxNumFrames = [min(eventInds_f) max(eventInds_f) max(framesPerTrial)]
-eventFrameNum = max(eventInds_f) % find(timeEventAlign==frameLength/2) % in what frame of traceEventAlign, the event exists.
+eventFrameNum = max(eventInds_f) % find(timeEventAlign==frameLength/2) % in what
+ frame of traceEventAlign, the event exists.
 %}
 if ~isequal(max(eventInds_f), find(timeEventAlign==frameLength/2)), error('something wrong!'); end
 
