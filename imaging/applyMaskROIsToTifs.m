@@ -1,7 +1,7 @@
 function [activity] = applyMaskROIsToTifs(mask, tifList)
 % activity = applyFijiROIsToTifs(pathToROIZip, tifList)
 %
-% Apply the ROIs generated in Fiji/ImageJ to the tif files in the cell
+% Apply the ROIs in mask "mask" to the tif files in the cell
 % array tifList. Returns an array activity, which is the mean fluorescence
 % over time (rows) in each ROI (columns).
 

@@ -343,7 +343,7 @@ elseif ~isempty(stimAftGoToneParams)
         timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset) = NaN;  % you want this for sure (bc in some trials stim has been still playing after go tone).
     else
         a0 = length(trsGoToneEarlierThanStimOffset) / length(timeCommitCL_CR_Gotone);
-        warning('... you chose not to remove them. In %.2f trials stimulus continues after the goTone!\n', a0)
+        cprintf('blue','... you chose not to remove them. In %.2f trials stimulus continues after the goTone!\n', a0)
     end
     
     

@@ -17,22 +17,29 @@ function [traces_lick_time, traces_lick_frame] = setLickTraces(alldata)
 
 %% Set the time trace for licks (in ms)
 
+% since you are defining time of licks by taking ceil, that means a lick in
+% index i of treaces_lick_time, has happened during window [i-1  i] ms.
+
 traces_lick_time = cell(1, length(alldata));
 for tr = 1:length(alldata)
-    
+%     tr
     % time of center licks relative to the start of the trial in bcontrol (ie state0)
     centLicksRel2TrSt = (alldata(tr).parsedEvents.pokes.C(:,1) * 1000) - (alldata(tr).parsedEvents.states.state_0(2) * 1000);
-    centLicksRel2TrSt = round(centLicksRel2TrSt);
     centLicksRel2TrSt(isnan(centLicksRel2TrSt)) = []; % not sure why it is occasionally nan. (% why for tr 19 it was nan?!)
+    if sum(~centLicksRel2TrSt)
+        fprintf('%i center lick(s) found at time 0\n', sum(~centLicksRel2TrSt)) % not sure why it would be 0!    
+    end
+    centLicksRel2TrSt(~centLicksRel2TrSt) = []; % remove them bc they cause problem for indexing... 
+    centLicksRel2TrSt = ceil(centLicksRel2TrSt); 
     
     % time of left licks relative to the start of the trial in bcontrol (ie state0)
     leftLicksRel2TrSt = (alldata(tr).parsedEvents.pokes.L(:,1) * 1000) - (alldata(tr).parsedEvents.states.state_0(2) * 1000);
-    leftLicksRel2TrSt = round(leftLicksRel2TrSt);
+    leftLicksRel2TrSt = ceil(leftLicksRel2TrSt);
     leftLicksRel2TrSt(isnan(leftLicksRel2TrSt)) = []; % not sure why it is occasionally nan. (% why for tr 19 it was nan?!)
     
     % time of right licks relative to the start of the trial in bcontrol (ie state0)
     rightLicksRel2TrSt = (alldata(tr).parsedEvents.pokes.R(:,1) * 1000) - (alldata(tr).parsedEvents.states.state_0(2) * 1000);
-    rightLicksRel2TrSt = round(rightLicksRel2TrSt);
+    rightLicksRel2TrSt = ceil(rightLicksRel2TrSt);
     rightLicksRel2TrSt(isnan(rightLicksRel2TrSt)) = []; % not sure why it is occasionally nan. (% why for tr 19 it was nan?!)
     
     % trial duration in ms
@@ -49,7 +56,13 @@ for tr = 1:length(alldata)
 end
 
 
-
+% NOTE: Don't be surprised if trial length is different between
+% traces_lick_time and traces_lick_frame. In traces_lick_time you compute
+% trial length from state_o to the beginning of stop_rotary_scope. In
+% traces_lick_frame you compute trials length until the the end of
+% stop_rotary_scope (because you get it from nFrames). I think licks don't
+% get registered in bctonrol right after starting stop_rotary_scope (ie
+% licks during stopScopeDur don't get recorded in bcontrol).
 
 
 %% Set the frame trace for licks (ie show licks in each frame)... this will be helpful when aligning licks with imaging data.

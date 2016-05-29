@@ -62,7 +62,12 @@ end
 if ~exist('dFOF', 'var')
     smoothPts = 6;
     dFOF = konnerthDeltaFOverF(activity, pmtOffFrames, smoothPts, minPts);
+%     if ~exist('S_df', 'var')
+%         S_df = dFOF; % this is just for consistency so alldata has the field spikes
+%         warning('spikes variable was not provided so using dFOF instead!')
+%     end
 end
+
 
 %% Distribute activity to trials
 

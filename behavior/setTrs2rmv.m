@@ -50,7 +50,7 @@ else
 end
 
 if excludeShortWaitDur
-    disp('Excluding trials with waitDur < 32ms!')
+    fprintf('Excluding %i trials with waitDur < 32ms!\n', sum(trs_shortWaitdur(:)))
     trs2rmv = unique([trs2rmv(:); trs_shortWaitdur(:)]);
 else
     disp('Not excluding trials with waitDur < 32ms!')
@@ -75,6 +75,10 @@ if exist('badAlignTrStartCode', 'var')
     % trials that were not imaged. (I believe trs_noTrialCode is a subset
     % of trs_notScanned).
     trs_notScanned = find([alldata.hasActivity]==0);
+    
+    if ~isequal(trs_noTrialCode, trs_notScanned)
+        error('I am curious why and how these two variables are different!')
+    end
     
     trs2rmv = unique([trs2rmv; trs_problemAlign(:); trs_badMotion_pmtOff(:); trs_noTrialCode(:); trs_notScanned(:)]);
 

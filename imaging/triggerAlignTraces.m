@@ -28,7 +28,7 @@ else
     numTrials = size(traceOriginal, 3);
 end
 
-maxNumFramesPerTrial = max(framesPerTrial);
+% maxNumFramesPerTrial = max(framesPerTrial);
 
 %% set the trig-aligned dFOF trace
 

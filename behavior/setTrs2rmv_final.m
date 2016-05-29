@@ -78,6 +78,7 @@ end
 if any(stimRateChanged)
     trsStimTypeScrewed = find(stimRateChanged)'; % in these trials when go tone came stim type (hr vs lr) was different from the entire stim... these are obviously problematic trials.
     fprintf('%d = #trs with a different stim type at Go Tone than the actual stim type\n', length(trsStimTypeScrewed))
+    disp('... excluding them!')
     aveFractFlashBefGoTone_stimRateChanged = nanmean(fractFlashBefGoTone(stimRateChanged));
     fprintf('%.2f= mean fraction of flashes occurred before goTone in trials that stimType changed dur to goTone earier bein than stimOffset\n', aveFractFlashBefGoTone_stimRateChanged)
     

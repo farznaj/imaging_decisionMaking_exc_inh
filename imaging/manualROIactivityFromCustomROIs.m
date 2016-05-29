@@ -60,7 +60,8 @@ pnev2load = [];
 [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
 load(pnevFileName, 'A')
 load(imfilename, 'sdImage', 'imHeight', 'imWidth')
-im = sdImage{2};
+% im = sdImage{2};
+im = mean(cat(3, sdImage{1}, sdImage{2}), 3); % look at sdImage of both channels
 
 contour_threshold = .95;
 % im = sdImage{2};
@@ -72,7 +73,7 @@ contour_threshold = .95;
 clear rois_custom
 disp('Each time select 3 points that identify x and y of a rectangular ROI. By default 20 ROIs will be made. Abort if done earlier.')
 
-for i = 1:20
+for i = 10:20
     fprintf('ROI %i\n', i)
     a = round(ginput(3));
     x = min(a(:,1)) : max(a(:,1));

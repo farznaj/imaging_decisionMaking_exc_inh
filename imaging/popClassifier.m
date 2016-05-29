@@ -28,8 +28,8 @@ onlyCorrect = 0; % If 1, analyze only correct trials.
 % Set nPre and nPost to nan to make sure frames before and after
 % alignedEvent don't have any other events.
 % Set to [] to include all exisiting frames before and after the
-% alignedEvent (regardless of whether they include other frames or not).
-% Set to any other value if you wan to manually specify the number of frames
+% alignedEvent (regardless of whether they include other events or not).
+% Set to any other value if you want to manually specify the number of frames
 % before and after alignedEvent in the aligned traces (ie traces_al_sm).
 nPreFrames = []; % nan; %
 nPostFrames = []; % nan; %

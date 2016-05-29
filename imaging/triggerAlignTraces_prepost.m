@@ -8,6 +8,13 @@ function [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = t
 % traces_aligned_fut : traces aligned on the event. frames x units x trials
 % eventI : index of the frame that contains the event (on which the traces are aligned).
 
+if ~exist('shiftTime', 'var') || isempty(shiftTime)
+    shiftTime = 0;
+end
+
+if ~exist('scaleTime', 'var') || isempty(scaleTime)
+    scaleTime = 1;
+end
 
 if ~exist('flag_traces', 'var')
     flag_traces = true; % if 1, 'traces' contains the temporal traces for each trial. if 0, it contains the movie for each trial.
@@ -55,7 +62,8 @@ else
     nPostFrames = floor(min([framesPerTr(1:length(traces)) - eventInds_f, nPostFrames]));
     
     % pix x pix x frs x trs
-    traces_aligned_fut = NaN(size(traces{1},1), size(traces{1},2), nPreFrames+nPostFrames+1, length(traces));
+%     traces_aligned_fut = NaN(size(traces{1},1), size(traces{1},2), nPreFrames+nPostFrames+1, length(traces));
+    traces_aligned_fut = uint16(NaN(size(traces{1},1), size(traces{1},2), nPreFrames+nPostFrames+1, length(traces)));
     
     if nPreFrames < 1,     warning('nPreFrames is 0!'); end
     if nPostFrames < 1,     warning('nPostFrames is 0!'); end
@@ -68,7 +76,8 @@ else
     
     eventI = nPreFrames+1; % index of the frame that contains the event (on which the traces are aligned).
     
-    time_aligned = scaleTime * ((1:size(traces_aligned_fut, 1)) - eventI) + shiftTime;
+    time_aligned = scaleTime * ((1:size(traces_aligned_fut, 3)) - eventI) + shiftTime;
+    
     
 end
 

@@ -157,9 +157,9 @@ end
 
 fprintf('Total number of imaged trials: %d\n', length(trialNumbers))
 if ~any(trialCodeMissing)
-    fprintf('All trials are triggered :)\n')
+    cprintf('blue', 'All trials are triggered in MScan :)\n')
 else
-    fprintf('There are non-triggered trials! Trial %d\n', find(trialCodeMissing))
+    cprintf('blue', 'There are non-triggered trials in MScan! Trial %d\n', find(trialCodeMissing))
 end
 
 
@@ -200,9 +200,7 @@ if compareManual
     clear activity activity_man_eftMask
     
     % Compute df/f for the manually found activity trace.
-    gcampCh = 2;
-    smoothPts = 6;
-    minPts = 7000; %800;
+    gcampCh = 2; smoothPts = 6; minPts = 7000; %800;
     dFOF_man = konnerthDeltaFOverF(activity_man, pmtOffFrames{gcampCh}, smoothPts, minPts);
     
     
@@ -238,7 +236,7 @@ end
 
 
 %% Set spikes, activity, dFOF by loading vars from pnev mat file.
-
+%
 load(pnevFileName, 'C', 'C_df', 'options') % , 'S')
 %{
 if strcmp(options.deconv_method, 'MCMC')
@@ -299,11 +297,29 @@ end
 dFOF = temporalDf';
 % dFOF = dFOF_man;
 clear temporalComp temporalDf spiking
+%}
 
 % Use below if you want to look at the backgound component, aligned on different trial events.:
-% load(pnevFileName, 'f')
-% dFOF = f';
+%{
+load(pnevFileName, 'f')
+dFOF = f';
+spikes = dFOF;
+%}
 
+% Use below if you want to look at manual DF/F:
+%{
+% load(imfilename, 'activity_custom') % dark ROIs
+% activity = activity_custom{2};
+load(pnevFileName, 'activity_man_eftMask') % manual activity of Efty's ROIs
+activity = activity_man_eftMask;
+gcampCh = 2; smoothPts = 6; minPts = 7000; %800;
+dFOF = konnerthDeltaFOverF(activity, pmtOffFrames{gcampCh}, smoothPts, minPts);
+spikes = dFOF;
+%}
+
+    
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%% Take care of alldata %%%%%%%%%%%%%%%%%%%%%%%
 
 %% Merge imaging variables into all_data (before removing any trials): activity, dFOF, spikes
 
@@ -314,8 +330,10 @@ minPts = 7000; %800;
 % manual
 % activity = activity_man;
 % dFOF = dFOF_man;
-% [all_data, mscanLag] = mergeActivityIntoAlldata_fn(all_data, activity_man, framesPerTrial, ...
-%   trialNumbers, frame1RelToStartOff, badFrames{signalCh}, pmtOffFrames{signalCh}, minPts, dFOF_man, spikes);
+% spikes = dFOF_man;
+% clear dFOF_man activity_man
+% [all_data, mscanLag] = mergeActivityIntoAlldata_fn(all_data, activity, framesPerTrial, ...
+%   trialNumbers, frame1RelToStartOff, badFrames{signalCh}, pmtOffFrames{signalCh}, minPts, dFOF, spikes);
 
 %{
 %% Take care of helped trials: you don't need it. you've done it for all ur behavioral data and appended the helped fields to alldata and saved it. if not the following function will do it.
@@ -359,6 +377,45 @@ alldata = all_data;
 [alldata([alldata.hasActivity]==0).frameTimes] = deal(NaN(1, min(framesPerTrial)));
 
 
+
+%% Set trs2rmv, stimrate, outcome and response side. You will set certain variables to NaN for trs2rmv (but you will never remove them from any arrays).
+
+load(imfilename, 'badAlignTrStartCode', 'trialStartMissing'); %, 'trialCodeMissing') % they get set in framesPerTrialStopStart3An_fn
+
+imagingFlg = 1;
+[trs2rmv, stimdur, stimrate, stimtype, cb] = setTrs2rmv_final(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing);
+
+
+%%%%% Set outcome and response side for each trial, taking into account allcorrection and uncommitted responses.
+% Set some params related to behavior % behavior_info
+[outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp);
+
+% set trs2rmv to nan
+outcomes(trs2rmv) = NaN;
+allResp(trs2rmv) = NaN;
+allResp_HR_LR(trs2rmv) = NaN;
+% stimrate(trs2rmv) = NaN;
+
+% save('151102_001.mat', '-append', 'trs2rmv')  % Do this!
+
+
+%% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
+
+scopeTTLOrigTime = 1;
+stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, setNaN_goToneEarlierThanStimOffset};
+% stimAftGoToneParams = []; % {0,0,0};
+[timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
+    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
+    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams);
+
+% alldata_frameTimes = {alldata.frameTimes};
+% save(imfilename, '-append', 'alldata_frameTimes', 'timeStop')
+
+
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% Take care of neural traces %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %% Assess trace quality of each neuron
 
 if manualExamineTraceQual
@@ -374,7 +431,7 @@ if manualExamineTraceQual
 end
 
 
-%% Automatic assessment of trace quality
+%%%%% Automatic assessment of trace quality
 
 % Compute measures of trace quality
 if autoTraceQual
@@ -430,93 +487,6 @@ fprintf('N good-quality and all neurons: %d, %d. Ratio: %.2f\n', [sum(goodinds),
 
 
 
-
-
-
-%%
-%%%%%%%%%%%%%%%%%%%%%%%%% Take care of behavioral data (all_data) %%%%%%%%%%%%%%%%%%%%%%%
-
-%% Set problematic trials to later exclude them if desired.
-
-% commenting for now but you may need it later.
-%{
-% in set_outcome_allResp you can take care of the following terms... u
-% don't need to worry about them here.
-% Trials that the mouse entered the allow correction state.
-a = arrayfun(@(x)x.parsedEvents.states.punish_allowcorrection, alldata, 'uniformoutput', 0);
-trs_allowCorrectEntered = find(~cellfun(@isempty, a));
-
-% Trials that mouse licked the error side during the decision time. Afterwards, the mouse may have committed it
-% (hence entered allow correction) or may have licked the correct side.
-a = arrayfun(@(x)x.parsedEvents.states.errorlick_again_wait, alldata, 'uniformoutput', 0);
-trs_errorlick_again_wait_entered = find(~cellfun(@isempty, a));
-
-
-% Trials with unwanted outcomes.
-% suc*, fail*, early*, no dec*/cho*, wrong st*/in*, no cen* com*, no s* com
-% labels = [1 0 -1 -2 -3 -4 -5];
-if strcmp(analyzeOutcomes, 'all')
-    trs_unwantedOutcome = [];
-else
-    [~, trs_unwantedOutcome] = trialsToAnalyze(alldata, analyzeOutcomes);
-end
-
-
-% Trials during which mouse was running.
-trs_mouseRunning = [];
-
-%{
-thWheel = .05;
-wheelRevolution = {alldata.wheelRev};
-rangeWheelRev = cellfun(@range, wheelRevolution);
-
-max(rangeWheelRev)
-min(rangeWheelRev)
-mean(rangeWheelRev)
-
-trs_mouseRunning = find(rangeWheelRev > thWheel); % trials in which mouse moved more than thWheel
-length(trs_mouseRunning)
-% trs2rmv = [];
-%}
-
-%}
-
-%% Set trs2rmv, stimrate, outcome and response side. You will set certain variables to NaN for trs2rmv (but you will never remove them from any arrays).
-
-load(imfilename, 'badAlignTrStartCode', 'trialStartMissing'); %, 'trialCodeMissing') % they get set in framesPerTrialStopStart3An_fn
-
-imagingFlg = 1;
-[trs2rmv, stimdur, stimrate, stimtype, cb] = setTrs2rmv_final(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing);
-
-
-%%%%% Set outcome and response side for each trial, taking into account allcorrection and uncommitted responses.
-% Set some params related to behavior % behavior_info
-[outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp);
-
-% set trs2rmv to nan
-outcomes(trs2rmv) = NaN;
-allResp(trs2rmv) = NaN;
-allResp_HR_LR(trs2rmv) = NaN;
-% stimrate(trs2rmv) = NaN;
-
-% save('151102_001.mat', '-append', 'trs2rmv')  % Do this!
-
-
-%% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
-
-scopeTTLOrigTime = 1;
-stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, setNaN_goToneEarlierThanStimOffset};
-% stimAftGoToneParams = []; % {0,0,0};
-[timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
-    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
-    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams);
-
-
-
-
-%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% Take care of neural traces in alldata %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %% In alldata, set good quality traces.
 
 % alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.activity}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
@@ -537,9 +507,9 @@ end
 % alldataDfof_mat = cell2mat(alldataDfof'); % frames x units
 
 
-numUnits = size(alldata(1).dFOF,2); % all units, regardless of the quality.
-numGoodUnits = size(dfofGood,2);
-numTrials = length(alldata);
+% numUnits = size(alldata(1).dFOF,2); % all units, regardless of the quality.
+% numGoodUnits = size(dfofGood,2);
+% numTrials = length(alldata);
 
 
 %% Set inhibit and excit traces.
@@ -739,3 +709,47 @@ end
 
 
 %%
+%% Set problematic trials to later exclude them if desired.
+
+% commenting for now but you may need it later.
+%{
+% in set_outcome_allResp you can take care of the following terms... u
+% don't need to worry about them here.
+% Trials that the mouse entered the allow correction state.
+a = arrayfun(@(x)x.parsedEvents.states.punish_allowcorrection, alldata, 'uniformoutput', 0);
+trs_allowCorrectEntered = find(~cellfun(@isempty, a));
+
+% Trials that mouse licked the error side during the decision time. Afterwards, the mouse may have committed it
+% (hence entered allow correction) or may have licked the correct side.
+a = arrayfun(@(x)x.parsedEvents.states.errorlick_again_wait, alldata, 'uniformoutput', 0);
+trs_errorlick_again_wait_entered = find(~cellfun(@isempty, a));
+
+
+% Trials with unwanted outcomes.
+% suc*, fail*, early*, no dec*/cho*, wrong st*/in*, no cen* com*, no s* com
+% labels = [1 0 -1 -2 -3 -4 -5];
+if strcmp(analyzeOutcomes, 'all')
+    trs_unwantedOutcome = [];
+else
+    [~, trs_unwantedOutcome] = trialsToAnalyze(alldata, analyzeOutcomes);
+end
+
+
+% Trials during which mouse was running.
+trs_mouseRunning = [];
+
+%{
+thWheel = .05;
+wheelRevolution = {alldata.wheelRev};
+rangeWheelRev = cellfun(@range, wheelRevolution);
+
+max(rangeWheelRev)
+min(rangeWheelRev)
+mean(rangeWheelRev)
+
+trs_mouseRunning = find(rangeWheelRev > thWheel); % trials in which mouse moved more than thWheel
+length(trs_mouseRunning)
+% trs2rmv = [];
+%}
+
+%}

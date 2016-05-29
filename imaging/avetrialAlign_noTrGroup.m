@@ -31,6 +31,8 @@ else
     eventInds_f = eventTimeToIdx(eventTime, traceTimeVec); % index of eventTime on traceTimeVec array for each trial.
 end
 
+% align on the last frame
+% eventInds_f = cellfun(@(x)size(x,1), traces);
 
 % Align dfof traces on particular events (like time1stCenterLick).
 % traceEventAlign: frames x units x trials
