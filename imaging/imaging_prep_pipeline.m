@@ -22,10 +22,11 @@ P.pnevActivity = 0; % 1 % whether to run Eftychios's algorithm or not.
     P.ARmodelOrder = 0; % 2;
     P.orderROI_extractDf = 0; % true;
     P.maxFrsForMinPsn = 16000; % 10000 %[] for default % min(Y) and P.sn will be computed on the first maxFrsForMinPsn frames.
-
+    
     P.numComps = 500; % remember to set to 30 or smaller for tests!
     P.tempSub = 3;
     P.spaceSub = 2;
+    P.manualActivity = 1; % if 1, manual activity (ie average pixel intensity over time) will be computed for ROIs found by Eftychios's algorithm.
 
 P.motionCorrDone = 0; % if 0, the below matters.
     % if 1

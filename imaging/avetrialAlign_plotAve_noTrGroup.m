@@ -1,4 +1,4 @@
-function avetrialAlign_plotAve_noTrGroup(evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, timeInitTone, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, timeStop, frameLength)
+function avetrialAlign_plotAve_noTrGroup(evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, timeInitTone, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, timeStop)
 % This functions plots average traces across all neurons and all trials
 % aligned on particular trial events.
 % It calls avetrialAlign_noTrGroup which calls triggerAlignTraces for
@@ -15,7 +15,9 @@ outcome2ana = 'all'; % 1: success, 0: failure, -1: early decision, -2: no decisi
 stimrate2ana = 'all'; % 'all'; 'HR'; 'LR';
 strength2ana = 'all'; % 'all'; 'easy'; 'medium'; 'hard'; 
 evT = {'timeStop'}; % what events to align trials on and plot?
+
 %}
+
 % evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
 %     'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
 %     'timeReward', 'timeCommitIncorrResp', 'timeStop'};

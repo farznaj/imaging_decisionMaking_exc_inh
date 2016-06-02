@@ -1,8 +1,18 @@
-% similar to avetrialAlign_plotAve_noTrGroup.m, but for aligning ca imaging
-% traces (and wheel traces) on center, left and right licks.
+function avetrialAlign_plotAve_noTrGroup_licks(evT, outcome2ana, stimrate2ana, strength2ana, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, nPreFrames, nPostFrames, centerLicks, leftLicks, rightLicks)
+% Align ca imaging traces (and wheel traces) on center, left and right
+% licks. [Similar to avetrialAlign_plotAve_noTrGroup.m, but the events are
+% licks here, instead of trial events.)
+%
+% Example input variables:
+%{
+nPreFrames = 5;
+nPostFrames = 20;
+outcome2ana = 'all'; % 'all'; 1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
+stimrate2ana = 'all'; % 'all'; 'HR'; 'LR';
+strength2ana = 'all'; % 'all'; 'eary'; 'medium'; 'hard';
+evT = {'centerLicks', 'leftLicks', 'rightLicks'}; % times are relative to scopeTTL onset, hence negative values are licks that happened before that (during iti states).
+%}
 
-
-%%
 %{
 clearvars -except alldata alldataSpikesGood alldataDfofGood goodinds good_excit good_inhibit outcomes allResp allResp_HR_LR ...
         trs2rmv stimdur stimrate stimtype cb timeNoCentLickOnset timeNoCentLickOffset timeInitTone time1stCenterLick ...
@@ -11,18 +21,10 @@ clearvars -except alldata alldataSpikesGood alldataDfofGood goodinds good_excit 
 
 
 %%
-nPreFrames = 5;
-nPostFrames = 20;
-outcome2ana = 'all'; % 'all'; 1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
-stimrate2ana = 'all'; % 'all'; 'HR'; 'LR';
-strength2ana = 'all'; % 'all'; 'eary'; 'medium'; 'hard';
-thStimStrength = 4; % 2; % threshold of stim strength for defining hard, medium and easy trials.
+thStimStrength = 3; % 2; % threshold of stim strength for defining hard, medium and easy trials.
 
-
-%%
-evT = {'centerLicks', 'leftLicks', 'rightLicks'}; % times are relative to scopeTTL onset, hence negative values are licks that happened before that (during iti states).
 % Don't be surprised if you only want to analyze LR, correct and then you
-% see some traces for HR; this is because evT includes licks throughoutt the
+% see some traces for HR; this is because evT includes licks throughout the
 % trial (so the HR licks happen perhaps during the ITI).
 s = (stimrate-cb)';
 allStrn = unique(abs(s));
@@ -63,6 +65,7 @@ col = {'k', 'r', 'g'}; % center, left, right
 h = NaN(1, length(evT));
 
 alldatanow = alldata(trs2ana);
+
 wheelTimeRes = alldata(1).wheelSampleInt;
 [traces_wheel, times_wheel] = wheelInfo(alldata);
 
@@ -161,15 +164,21 @@ for isub = 1:3 % plot DF, spikes, wheel
         
         %% For each trial, exclude licks that are preceded by another lick in <= nPreFrames. In the next section you only get those licks that have enough number of frames before and after the aligned event.
         
+        %%%%% Choose one of the cases below, whether you want to include all
+        %%%%% licks, or just licks that lack any other ick during nPre, or
+        %%%%% during nPost, or during both.
+        
+        eventInds_f_all_clean_final = eventInds_f_all_clean;
+%         eventInds_f_all_clean_final = cellfun(@(x) x([0,diff(x) <= nPre]==0), eventInds_f_all_clean, 'uniformoutput', 0);
+%         eventInds_f_all_clean_final = cellfun(@(x) x([diff(x) <= nPost, 0]==0), eventInds_f_all_clean, 'uniformoutput', 0);
+%         eventInds_f_all_clean_final = cellfun(@(x) x([0,diff(x) <= nPre]==0 & [diff(x) <= nPost, 0]==0), eventInds_f_all_clean, 'uniformoutput', 0);
+        
+        % old stuff
         % identify trials with licks happening at intervals shorter than nPreFrames, we later exclude them, bc we want to make sure during nPreFrames (ie baseline of the traces) there has not been any licks.
         % a = cellfun(@(x)(diff(x) < nPreFrames), eventInds_f_all_clean,
         % 'uniformoutput', 0);
         %         lint = cellfun(@(x)sum(diff(x) <= nPreFrames), eventInds_f_all_clean); % trials with licks happening with interval < nPreFrames
         % For each trial, exclude licks that are preceded by another lick in <= nPreFrames.
-%         eventInds_f_all_clean_final = cellfun(@(x) x([0,diff(x) <= nPre]==0), eventInds_f_all_clean, 'uniformoutput', 0);
-%         eventInds_f_all_clean_final = cellfun(@(x) x([0,diff(x) <= nPre]==0 & [diff(x) <= nPost, 0]==0), eventInds_f_all_clean, 'uniformoutput', 0);
-%         eventInds_f_all_clean_final = cellfun(@(x) x([diff(x) <= nPost, 0]==0), eventInds_f_all_clean, 'uniformoutput', 0);
-        eventInds_f_all_clean_final = eventInds_f_all_clean;
         
         
         %% Align traces on licks, ie set tracesa: cell array, each element for 1 trial, and of size frs x units x licks

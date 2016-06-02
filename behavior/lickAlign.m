@@ -1,21 +1,64 @@
-% Align licks on trial events and look at the average across trials.
+function lickAlign(lickInds, evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, frameLength)
+% This function shows licks (no imaging, just behavior):
+% Align licks on trial events and look at their average across trials.
 % Remember these are lick traces (not ca imaging traces).
-
-% Choose below what licks you want to analyze.
-% lickInds = [2,3]; % [1,2,3]; % all licks
-% lickInds = 1; % center lick
-lickInds = 2; % left lick
-% lickInds = 3; % right lick
+% Example input variables:
+%{
+lickInds = [2,3]; % Licks to analyze % 1: center lick, 2: left lick; 3: right lick
 
 outcome2ana = 1; % 'all'; 1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
+stimrate2ana = 'all'; % 'all'; 'HR'; 'LR';
 strength2ana = 'all'; % 'all'; 'eary'; 'medium'; 'hard';
-    thStimStrength = 4; % 2; % threshold of stim strength for defining hard, medium and easy trials.
 
-% what events to align trials on and plot?
-evT = {'timeStop'};
+evT = {'timeStop'}; % what events to align trials on and plot?
+
+%}
+
 % evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
 %     'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
 %     'timeReward', 'timeCommitIncorrResp', 'timeStop'};
+
+thStimStrength = 3; % 2; % threshold of stim strength for defining hard, medium and easy trials.
+
+
+%%
+s = (stimrate-cb)'; 
+allStrn = unique(abs(s));
+switch strength2ana
+    case 'easy'
+        str2ana = (abs(s) >= (max(allStrn) - thStimStrength));
+    case 'hard'
+        str2ana = (abs(s) <= thStimStrength);
+    case 'medium'
+        str2ana = ((abs(s) > thStimStrength) & (abs(s) < (max(allStrn) - thStimStrength))); % intermediate strength
+    otherwise
+        str2ana = true(1, length(outcomes));
+end
+
+if strcmp(outcome2ana, 'all')
+    os = sprintf('%s', outcome2ana);
+    outcome2ana = -5:1;    
+else
+    os = sprintf('%i', outcome2ana);
+end
+
+switch stimrate2ana
+    case 'HR'
+        sr2ana = s > 0;
+    case 'LR'
+        sr2ana = s < 0;
+    otherwise
+        sr2ana = true(1, length(outcomes));
+end
+
+trs2ana = (ismember(outcomes, outcome2ana)) & str2ana & sr2ana;
+% trs2ana = outcomes==0 & timeLastSideLickToStopT > 1000;
+% trs2ana(163:end) = false; % first trials 
+% trs2ana(1:162) = false; % last trials
+
+sl = repmat('%d ', 1, length(lickInds));
+top = sprintf(['licks ', sl, ', %s outcomes, %s strengths, %s stimulus: %i trials'], lickInds, os, strength2ana, stimrate2ana, sum(trs2ana));
+disp(['Analyzing ', top])
 
 
 %% Set the traces for licks (in time and frame resolution)
@@ -25,27 +68,6 @@ evT = {'timeStop'};
 
 
 %%
-
-switch strength2ana
-    case 'easy'
-        str2ana = (s >= (max(allStrn) - thStimStrength));
-    case 'hard'
-        str2ana = (s <= thStimStrength);
-    case 'medium'
-        str2ana = ((s > thStimStrength) & (s < (max(allStrn) - thStimStrength))); % intermediate strength
-    otherwise
-        str2ana = true(1, length(outcomes));
-end
-
-if strcmp(outcome2ana, 'all')
-    trs2ana = str2ana;
-    fprintf('Analyzing outcome: %s, %s strengths, including %i trials.\n', outcome2ana, strength2ana, sum(trs2ana))
-else
-    trs2ana = (outcomes==outcome2ana) & str2ana;
-    fprintf('Analyzing outcome: %i, %s strengths, including %i trials.\n', outcome2ana, strength2ana, sum(trs2ana))
-end
-
-
 alldatanow = alldata(trs2ana);
 trs2rmvnow = find(ismember(find(trs2ana), trs2rmv));
 
@@ -60,8 +82,7 @@ scopeTTLOrigTime = 0;
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime);
 
 
-
-f = figure;
+f = figure('name', top);
 % doplots = 0;
 
 for i = 1:length(evT)
@@ -136,7 +157,7 @@ for i = 1:length(evT)
     %     xlim([timeEventAlign(xl1)  timeEventAlign(xl2)])
     %}
     xlabel('Time (ms)')
-    ylabel('Average licks')
+    ylabel('Fraction trials with licks')
     title(evT{i})
     
     
@@ -183,8 +204,8 @@ scopeTTLOrigTime = 1;
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime);
 
 
-alldatanow = alldata(trs2ana);
-trs2rmvnow = find(ismember(find(trs2ana), trs2rmv));
+% alldatanow = alldata(trs2ana);
+% trs2rmvnow = find(ismember(find(trs2ana), trs2rmv));
 
 
 % f = figure;
@@ -245,7 +266,7 @@ for i = 1:length(evT)
     %     xlim([timeEventAlign(xl1)  timeEventAlign(xl2)])
     %}
     xlabel('Frame')
-    ylabel('Average licks')
+    ylabel('Fraction trials with licks')
     %     title(evT{i})
     
     

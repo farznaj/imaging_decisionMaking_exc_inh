@@ -1,13 +1,13 @@
 function activity_man_eftMask = manualROIactivityFromEftMaskMovieMC(movieMC, A, imHeight, imWidth)
 %
 % Manually computes activity (ie mean pixel intensity of each ROI in every
-% frame) for the ROIs identified by Eftychios's algorithm (using A, spatial
-% components). (The goal is to compare the manual activity with Eftychios's
-% temporal components for the same set of ROIs.
+% frame) for the ROIs identified by Eftychios's algorithm (using the spatial
+% components (A)). (The goal is to compare the manual activity with Eftychios's
+% temporal components for the same set of ROIs.)
 %
-% If you don't have movieMC, and you need to read tifs to get it use the
-% following function instead:
-% [activity] = manualROIactivityFromEftMask(mouse, imagingFolder, mdfFileNumber, signalCh)
+% If you don't have movieMC, and you need to read tifs, use the following
+% function instead: 
+% activity = manualROIactivityFromEftMask(mouse, imagingFolder, mdfFileNumber, signalCh)
 %
 
 %% Set the mask
