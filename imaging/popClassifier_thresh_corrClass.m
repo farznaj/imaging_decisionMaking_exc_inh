@@ -48,7 +48,7 @@ for s = 1:length(SVMModel_s_all)
 end
 
 threshes_ave = nanmean(thresh);
-fprintf('%.3f = Threshold for separating HR vs LR projections computed on training data for training window.\n', threshes_ave)
+cprintf('blue', '%.3f = Threshold for separating HR vs LR projections computed on training data for training window.\n', threshes_ave)
 % figure; histogram(thresh)
 
 
@@ -108,7 +108,7 @@ mu1 = mean(traces_lr(:));
 sd0 = std(traces_hr(:));
 sd1 = std(traces_lr(:));
 th = (sd0 * mu1 + sd1 * mu0) / (sd1 + sd0);
-fprintf('Check: %.3f = threshold computed on HR vs LR temporal projections, all points \n', th)
+fprintf('\t%.3f = threshold computed on HR vs LR temporal projections, all points \n', th)
 
 
 
@@ -126,7 +126,7 @@ mu1 = mean(bb(:));
 sd0 = std(aa(:));
 sd1 = std(bb(:));
 th2 = (sd0 * mu1 + sd1 * mu0) / (sd1 + sd0);
-fprintf('Check: %.3f = threshold computed on HR vs LR temporal projections, training frame \n', th2)
+fprintf('\t%.3f = threshold computed on HR vs LR temporal projections, training frame \n', th2)
 %}
 
 

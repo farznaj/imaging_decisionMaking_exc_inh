@@ -81,12 +81,13 @@ manualExamineTraceQual = 0; % if 0, traceQuality array needs to be saved.
     saveTraceQual = 0; % it will only take effect if manualExamineTraceQual is 1.
     analyzeQuality = [1 2]; % 1(good) 2(ok-good) 3(ok-bad) 4(bad) % trace qualities that will be analyzed. It will only take effect if manualExamineTraceQual is 1.
 orderTraces = 0; % if 1, traces will be ordered based on the measure of quality from high to low quality.
-
+%{
 helpedInit = []; % [100];
 helpedChoice = []; %31;
 defaultHelpedTrs = 0; % if 1, the program assumes that no trial was helped.
 saveHelpedTrs = 0; % it will only take effect if defaultHelpedTrs is false. If 1, helpedTr fields will be added to alldata.
-analyzeOutcomes = {'all'}; % {'success', 'failure'}; % outcomes that will be analyzed.
+%}
+% analyzeOutcomes = {'all'}; % {'success', 'failure'}; % outcomes that will be analyzed.
 % outName = 'fni17-151016';
 
 

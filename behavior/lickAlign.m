@@ -1,5 +1,4 @@
 function lickAlign(lickInds, evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, frameLength)
-% This function shows licks (no imaging, just behavior):
 % Align licks on trial events and look at their average across trials.
 % Remember these are lick traces (not ca imaging traces).
 % Example input variables:

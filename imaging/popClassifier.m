@@ -23,7 +23,7 @@ trialHistAnalysis = 0; % more parameters are specified in popClassifier_trialHis
     vec_iti = [0 9 30]; % [0 10 30]; %[0 6 9 12 30]; % [0 7 30]; % [0 10 30]; % [0 6 9 12 30]; % use [0 40]; if you want to have a single iti bin and in conventioinal analysis look at the effect of current rate on outcome.
     
 numShuffs = 10; % 100 % number of iterations for getting CV models and shuffled data.
-onlyCorrect = 0; % If 1, analyze only correct trials.
+onlyCorrect = 1; % If 1, analyze only correct trials.
 
 % Set nPre and nPost to nan to make sure frames before and after
 % alignedEvent don't have any other events.
@@ -38,7 +38,7 @@ nPostFrames = []; % nan; %
 if trialHistAnalysis
     alignedEvent = 'initTone';
 else
-    alignedEvent = 'commitIncorrResp'; 'reward'; 'goTone';  % 'stimOn'; % what event align traces on. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward'
+    alignedEvent = 'stimOn'; % what event align traces on. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward'
 end
 
 smoothedTraces = 0; % if 1, projections and class accuracy of temporal traces will be computed on smoothed traces (window size same as ep, ie training window size).
@@ -75,18 +75,18 @@ if trialHistAnalysis
     epEnd = nan; %epStart + round(200/frameLength); % if nan, epEnd = time of alignedEvent.
     
 elseif strcmp(alignedEvent, 'stimOn')
-    disp('Training epoch = 600-800ms after stimulus onset.')
+    cprintf('blue', 'Training epoch = 600-800ms after stimulus onset.\n')
     % index of frames after alignedEvent (if epStartRel2Event=1, epStart
     % will be 1 frame after alignedEvent).
     epStartRel2Event = round(600/frameLength); % the start point of the epoch relative to alignedEvent for training SVM. (500ms)
     epEndRel2Event = floor(800/frameLength); % the end point of the epoch relative to alignedEvent for training SVM. (700ms)
 else
-    disp('Training epoch = all frames after alingedEvent and before the next event.')
+    cprintf('blue', 'Training epoch = all frames after alingedEvent and before the next event.\n')
     epStartRel2Event = 1;
     if ~isempty(nPost)
         epEndRel2Event = nPost;
     else
-        disp('... there is no next event, so training epoch = all frames after alignedEvent')
+        cprintf('blue', '... there is no next event, so training epoch = all frames after alignedEvent.\n')
         epEndRel2Event = nan;
     end
 end
@@ -160,10 +160,11 @@ else
     choiceVec0 = allResp_HR_LR';  % trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.
     
     if onlyCorrect
-        fprintf('Analyzing only correct trials.\n')
+        cprintf('blue', 'Analyzing only correct trials.\n')
         choiceVec0(outcomes~=1) = NaN; % analyze only correct trials.
+%         choiceVec0(outcomes~=0) = NaN; % analyze only incorrect trials.
     else
-        fprintf('Analyzing both correct and incorrect trials.\n')
+        cprintf('blue', 'Analyzing both correct and incorrect trials.\n')
     end
 end
 
@@ -212,7 +213,7 @@ if isnan(epEnd)
 end
 
 ep = epStart : epEnd; % frames in traces_al_sm that will be used for analysis. % for now lets use spike counts over the entire stim frames.
-fprintf('%d : %d = Training epoch (frame indeces in traces_al_sm)\n', ep(1), ep(end))
+cprintf('blue', '%d : %d = Training epoch (frame indeces in traces_al_sm)\n', ep(1), ep(end))
 % fprintf([repmat('%d ', 1, length(ep)), '= Training epoch (frame indeces in traces_al_sm)\n'], ep)
 
 
@@ -265,7 +266,7 @@ fprintf('%d= # neurons that are active in less than %i trials.\n', sum(NsFewTrAc
 NsExcluded = logical(NsFewTrActiv + nonActiveNs);
 
 a = size(spikeAveEp0,2) - sum(NsExcluded);
-fprintf('included neuros= %d; total neuros= %d; fract= %.3f\n', a, size(spikeAveEp0,2), a/size(spikeAveEp0,2))
+cprintf('blue', 'included neuros= %d; total neuros= %d; fract= %.3f\n', a, size(spikeAveEp0,2), a/size(spikeAveEp0,2))
 
 
 %% Remove neurons that are very little active.
@@ -281,8 +282,8 @@ filtered1 = filtered0(:, ~NsExcluded, :); % includes smoothed traces only for ac
 
 
 %
-fprintf('# neurons = %d\n', size(spikeAveEp0,2))
-fprintf('# total trials = %d (half for HR and half for LR)\n', min([sum(choiceVec0==0), sum(choiceVec0==1)])*2)
+cprintf('blue', '# neurons = %d\n', size(spikeAveEp0,2))
+cprintf('blue', '# total trials = %d (half for HR and half for LR)\n', min([sum(choiceVec0==0), sum(choiceVec0==1)])*2)
 
 
 %% Perhaps do PCA on all trials here (ie don't worry about extraTrs that get removed later and use the same PCs for all iteratons), so you don't have to do it on each iteration of numShuffs.
@@ -334,7 +335,7 @@ shflTrials_alls = NaN(min([sum(choiceVec0==0), sum(choiceVec0==1)])*2, numShuffs
 
 for s = 1:numShuffs
     
-    fprintf('Iteration %i...\n ----------------------- \n', s)
+    fprintf('------------Iteration %i----------- \n', s)
     
     %% Use equal number of trials for both HR and LR conditions.
     
@@ -534,10 +535,10 @@ end
 
 classLoss = mean(classLossTest);
 
-fprintf('%.3f = Average training classification error\n', mean(classLossTrain))
-fprintf('%.3f = Average training classification error for shuffled data\n', mean(classLossChanceTrain))
-fprintf('%.3f = Average cross-validated classification error\n', classLoss)
-fprintf('%.3f = Average cross-validated classification error for shuffled data\n', mean(classLossChanceTest))
+cprintf('blue', '%.3f = Average training classification error\n', mean(classLossTrain))
+cprintf('blue', '%.3f = Average training classification error for shuffled data\n', mean(classLossChanceTrain))
+cprintf('blue', '%.3f = Average cross-validated classification error\n', classLoss)
+cprintf('blue', '%.3f = Average cross-validated classification error for shuffled data\n', mean(classLossChanceTest))
 
 
 %% Compute and plot projections and classification accuracy (for each time point) for all CV models generated above.

@@ -336,9 +336,9 @@ elseif ~isempty(stimAftGoToneParams)
     
     
     %%
-    fprintf('%d trials with goTone earlier than stimOffset...\n', length(trsGoToneEarlierThanStimOffset))
+    cprintf('blue', '%d trials with goTone earlier than stimOffset...\n', length(trsGoToneEarlierThanStimOffset))
     if rmv_timeGoTone_if_stimOffset_aft_goTone
-        fprintf('... removing them from timeCommitCL_CR_Gotone!\n')
+        cprintf('blue', '... removing them from timeCommitCL_CR_Gotone!\n')
         % timeStimOnset(trsGoToneEarlierThanStimOffset) = NaN; % IMPORTANT: you dont want to look beyond goTone time for these trials, but upto go tone is safe!
         timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset) = NaN;  % you want this for sure (bc in some trials stim has been still playing after go tone).
     else
@@ -350,7 +350,7 @@ elseif ~isempty(stimAftGoToneParams)
     %%
     a = time1stSideTry(trsGoToneEarlierThanStimOffset) - timeStimOffset(trsGoToneEarlierThanStimOffset);
     if sum(a < 3*frameLength)
-        fprintf('%i trials with stimOffset within 3 frames before 1stSideTry.\n', sum(a < 3*frameLength))
+        cprintf('blue','%i trials with stimOffset within 3 frames before 1stSideTry.\n', sum(a < 3*frameLength))
         
         if rmv_time1stSide_if_stimOffset_aft_1stSide
             fprintf('... removing them from 1stSideTry, 1stCorrTry, 1stIncorrTry!\n')
@@ -364,7 +364,7 @@ elseif ~isempty(stimAftGoToneParams)
             warning('... you chose not to remove them. In %.2f trials stimulus continues until 1stSideTry!\n', a0)
         end
     else
-        fprintf('No trials with stimOffset within 3 frames before 1stSideTry. Good :) \n')
+        cprintf('blue','No trials with stimOffset within 3 frames before 1stSideTry. Good :) \n')
     end
     
     

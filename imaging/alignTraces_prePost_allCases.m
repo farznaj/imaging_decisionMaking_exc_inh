@@ -61,7 +61,7 @@ switch alignedEvent
         
         if ~onlySetNPrePost
             [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials                
-            fprintf('alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
+            cprintf('blue', 'alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         end
 
         
@@ -87,7 +87,7 @@ switch alignedEvent
         
         if ~onlySetNPrePost
             [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
-            fprintf('alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
+            cprintf('blue', 'alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         end
         
         % if isempty(nPreFrames)
@@ -132,7 +132,7 @@ switch alignedEvent
         
         if ~onlySetNPrePost
             [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
-            fprintf('alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
+            cprintf('blue', 'alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         end
         
     
@@ -159,7 +159,7 @@ switch alignedEvent
         
         if ~onlySetNPrePost
             [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
-            fprintf('alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
+            cprintf('blue', 'alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         end
         
     
@@ -185,7 +185,7 @@ switch alignedEvent
         
         if ~onlySetNPrePost
             [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
-            fprintf('alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
+            cprintf('blue', 'alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         end
         
     
@@ -211,7 +211,7 @@ switch alignedEvent
         
         if ~onlySetNPrePost
             [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials
-            fprintf('alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
+            cprintf('blue', 'alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         end
         
         
@@ -237,7 +237,7 @@ switch alignedEvent
         
         if ~onlySetNPrePost
             [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials
-            fprintf('alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
+            cprintf('blue', 'alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         end
         
         

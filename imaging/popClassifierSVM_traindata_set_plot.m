@@ -175,25 +175,25 @@ for id = 1:length(dataType) % there is very little variability for the actual tr
     %% Print the size of matrices
     
     if id==1
-        fprintf('Data: %s\n', dataType{id})
+%         fprintf('.... data: %s\n', dataType{id})
         % frameTrProjOnBeta_hr_rep_all_alls % frameTrProjOnBeta_lr_rep_all_alls
         % frameTrProjOnBeta_rep_all_alls
         % traces_bef_proj_nf_all_alls
         
         size_projection_testTrs = size(frameTrProjOnBeta_rep_all_alls_train{randi(length(CVSVMModel_s_all))});
-        fprintf(['size_projection_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_testTrs)), '\n'], size_projection_testTrs)
+        fprintf(['\tsize_projection_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_testTrs)), '\n'], size_projection_testTrs)
         
         size_projection_hr_testTrs = size(frameTrProjOnBeta_hr_rep_all_alls_train{randi(length(CVSVMModel_s_all))});
-        fprintf(['size_projection_hr_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_hr_testTrs)), '\n'], size_projection_hr_testTrs)
+        fprintf(['\tsize_projection_hr_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_hr_testTrs)), '\n'], size_projection_hr_testTrs)
         
         size_projection_lr_testTrs = size(frameTrProjOnBeta_lr_rep_all_alls_train{randi(length(CVSVMModel_s_all))});
-        fprintf(['size_projection_lr_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_lr_testTrs)), '\n'], size_projection_lr_testTrs)
+        fprintf(['\tsize_projection_lr_testTrs (frs x trs): ', repmat('%i  ', 1, length(size_projection_lr_testTrs)), '\n'], size_projection_lr_testTrs)
         
         size_orig_traces_testTrs = size(traces_bef_proj_nf_all_alls_train{randi(length(CVSVMModel_s_all))});
-        fprintf(['size_orig_traces_testTrs (frs x ns x trs): ', repmat('%i  ', 1, length(size_orig_traces_testTrs)), '\n'], size_orig_traces_testTrs)
+        fprintf(['\tsize_orig_traces_testTrs (frs x ns x trs): ', repmat('%i  ', 1, length(size_orig_traces_testTrs)), '\n'], size_orig_traces_testTrs)
         
         size_avePerf_cv = size(avePerf_cv);
-        fprintf(['size_avePerf_cv (frs x shffls): ', repmat('%i  ', 1, length(size_avePerf_cv)), '\n'], size_avePerf_cv)
+        fprintf(['\tsize_avePerf_cv (frs x shffls): ', repmat('%i  ', 1, length(size_avePerf_cv)), '\n'], size_avePerf_cv)
         
     end
     

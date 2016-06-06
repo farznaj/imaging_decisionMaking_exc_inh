@@ -13,12 +13,6 @@ strength2ana = 'all'; % 'all'; 'eary'; 'medium'; 'hard';
 evT = {'centerLicks', 'leftLicks', 'rightLicks'}; % times are relative to scopeTTL onset, hence negative values are licks that happened before that (during iti states).
 %}
 
-%{
-clearvars -except alldata alldataSpikesGood alldataDfofGood goodinds good_excit good_inhibit outcomes allResp allResp_HR_LR ...
-        trs2rmv stimdur stimrate stimtype cb timeNoCentLickOnset timeNoCentLickOffset timeInitTone time1stCenterLick ...
-        timeStimOnset timeStimOffset timeCommitCL_CR_Gotone time1stSideTry time1stCorrectTry time1stIncorrectTry timeReward timeCommitIncorrResp time1stCorrectResponse timeStop centerLicks leftLicks rightLicks imfilename
-%}
-
 
 %%
 thStimStrength = 3; % 2; % threshold of stim strength for defining hard, medium and easy trials.
@@ -288,3 +282,11 @@ for isub = 1:3 % plot DF, spikes, wheel
 end
 
 legend(h, evT, 'box', 'off', 'location', 'northeast')
+
+
+%%
+%{
+clearvars -except alldata alldataSpikesGood alldataDfofGood goodinds good_excit good_inhibit outcomes allResp allResp_HR_LR ...
+        trs2rmv stimdur stimrate stimtype cb timeNoCentLickOnset timeNoCentLickOffset timeInitTone time1stCenterLick ...
+        timeStimOnset timeStimOffset timeCommitCL_CR_Gotone time1stSideTry time1stCorrectTry time1stIncorrectTry timeReward timeCommitIncorrResp time1stCorrectResponse timeStop centerLicks leftLicks rightLicks imfilename
+%}
