@@ -26,13 +26,13 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % Example input variales:
 %{
 mouse = 'fni17';
-imagingFolder = '151029'; % '150916'; % '151021';
-mdfFileNumber = 3; % 1; % or tif major
+imagingFolder = '151101'; % '151029'; % '150916'; % '151021';
+mdfFileNumber = 1; % 1; % or tif major
 
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
 rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
 
-plot_ave_noTrGroup = 0; % Plot average traces across all neurons and all trials aligned on particular trial events.
+plot_ave_noTrGroup = 0; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
 
 setInhibitExcit = true; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 
@@ -134,7 +134,7 @@ plot([all_data.stimDuration])
 plot([all_data.extraStimDuration])
 plot([all_data.stimDur_aftRew])
 plot([all_data.stimDur_diff])
-plot([thbeg thbeg],[-1 12], 'k')
+% plot([thbeg thbeg],[-1 12], 'k')
 legend('waitDur', 'stimDuration', 'extraStimDur', 'stimDur\_aftRew', 'stimDur\_diff')
 set(gcf, 'name', 'stimDuration= stimDur_diff (or if it is 0, waitDur) + extrastim_dur + stimdur_aftrew .')
 m = max([all_data.stimDuration]);
@@ -175,6 +175,14 @@ fprintf('Fraction of trials (rewardStage): allowCorr= %.3f. chooseSide= %.3f\n',
 % xlabel('Trials'), ylabel('chooseSide'), box off, set(gca,'tickdir','out')
 
     
+
+% Assess pixel shifts, ie output of motion correction
+load(imfilename, 'outputsDFT')
+figure; plot(outputsDFT{1}(:,2:3))
+legend('row shift', 'column shift')
+xlabel('Frame')
+ylabel('Pixel shift')
+
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%% Load neural data, merge them into all_data, and assess trace quality %%%%%%%%%%%%%%%%%%%%%%%
@@ -630,7 +638,33 @@ end
 %% Plot average traces across all neurons and all trials aligned on particular trial events.
 
 if plot_ave_noTrGroup
-    avetrialAlign_plotAve_noTrGroup
+
+    outcome2ana = 'all'; % 'all'; 1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
+    stimrate2ana = 'all'; % 'all'; 'HR'; 'LR';
+    strength2ana = 'all'; % 'all'; 'easy'; 'medium'; 'hard';    
+
+    %%%%%% plot average imaging traces aligned on licks
+    evT = {'centerLicks', 'leftLicks', 'rightLicks'}; % times are relative to scopeTTL onset, hence negative values are licks that happened before that (during iti states).
+    nPreFrames = 5;
+    nPostFrames = 20;    
+    excludeLicksPrePost = 'none'; % 'none'; 'pre'; 'post'; 'both';
+    
+    avetrialAlign_plotAve_noTrGroup_licks(evT, outcome2ana, stimrate2ana, strength2ana, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, nPreFrames, nPostFrames, centerLicks, leftLicks, rightLicks, excludeLicksPrePost)
+
+    
+    %%%%%% plot average imaging traces aligned on trial events
+    evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
+        'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
+        'timeReward', 'timeCommitIncorrResp', 'timeStop'};
+    
+    avetrialAlign_plotAve_noTrGroup(evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, timeInitTone, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, timeStop)
+    
+    
+    %%%%%% plot average lick traces aligned on trial events.
+    lickInds = [1, 2,3]; % Licks to analyze % 1: center lick, 2: left lick; 3: right lick
+    
+    lickAlign(lickInds, evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, frameLength)
+    
 end
 
 

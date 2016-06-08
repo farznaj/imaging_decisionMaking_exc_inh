@@ -1,6 +1,6 @@
 function popClassifier(alldata, alldataSpikesGood, outcomes, allResp_HR_LR, frameLength, ...
     timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, ...
-    neuronType, trialHistAnalysis, numShuffs, nPreFrames, nPostFrames, alignedEvent, onlyCorrect, iTiFlg, prevSuccessFlg, vec_iti, smoothedTraces)
+    neuronType, trialHistAnalysis, numShuffs, nPreFrames, nPostFrames, alignedEvent, onlyCorrect, smoothedTraces, iTiFlg, prevSuccessFlg, vec_iti, trs2rmv, stimrate, cb)
 %
 % This is the main function for doing SVM analysis on calcium imaging data.
 % Run imaging_prep_analysis to get the required input vars.

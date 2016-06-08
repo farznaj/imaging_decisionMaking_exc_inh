@@ -88,6 +88,6 @@ if any(stimRateChanged)
     trs2rmv = unique([trs2rmv; trsStimTypeScrewed]);
 end
 
-fprintf('Number of trs2rmv: %d\n', length(trs2rmv))
+cprintf('blue', 'Number of trs2rmv: %d\n', length(trs2rmv))
 % disp(trs2rmv')
 

@@ -40,6 +40,7 @@ uncommittedResp = 'nothing'; % 'change'; %'remove'; % % 'remove', 'change', 'not
 % excludeShortWaitDur = true; % waitdur_th = .032; % sec  % trials w waitdur less than this will be excluded.
 % excludeExtraStim = false;
 th = 5; % 10; 9; % this number of beginning trials will be excluded. also later in the code we want >th trials in each column of ratesDiffInput
+begTrs = 1; % 1st trial of each session
 
 if doplots
     figh = figure;

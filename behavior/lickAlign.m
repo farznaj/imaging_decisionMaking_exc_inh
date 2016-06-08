@@ -3,19 +3,18 @@ function lickAlign(lickInds, evT, outcome2ana, stimrate2ana, strength2ana, trs2r
 % Remember these are lick traces (not ca imaging traces).
 % Example input variables:
 %{
-lickInds = [2,3]; % Licks to analyze % 1: center lick, 2: left lick; 3: right lick
-
-outcome2ana = 1; % 'all'; 1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
+lickInds = [1, 2,3]; % Licks to analyze % 1: center lick, 2: left lick; 3: right lick
+outcome2ana = 'all'; % 'all'; 1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
 stimrate2ana = 'all'; % 'all'; 'HR'; 'LR';
 strength2ana = 'all'; % 'all'; 'eary'; 'medium'; 'hard';
 
-evT = {'timeStop'}; % what events to align trials on and plot?
+% evT = {'timeStop'}; % what events to align trials on and plot?
+evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
+    'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
+    'timeReward', 'timeCommitIncorrResp', 'timeStop'};
 
 %}
 
-% evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
-%     'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
-%     'timeReward', 'timeCommitIncorrResp', 'timeStop'};
 
 thStimStrength = 3; % 2; % threshold of stim strength for defining hard, medium and easy trials.
 
@@ -136,7 +135,7 @@ for i = 1:length(evT)
     
     xlim([xl1 xl2]-e)
     
-    plot([0 0], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r')
+    plot([0 0], [min(top(xl1:xl2)) max(top(xl1:xl2))], 'r:')
     
     %{
     top = nanmean(nanmean(traceEventAlign,3),2); % average across trials and neurons.

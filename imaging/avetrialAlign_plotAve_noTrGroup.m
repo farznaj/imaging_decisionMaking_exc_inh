@@ -11,19 +11,18 @@ function avetrialAlign_plotAve_noTrGroup(evT, outcome2ana, stimrate2ana, strengt
 %
 % Example input variables:
 %{
-outcome2ana = 1; % 1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
-stimrate2ana = 'HR'; % 'all'; 'HR'; 'LR';
+outcome2ana = 'all'; % 'all'; 1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
+stimrate2ana = 'all'; % 'all'; 'HR'; 'LR';
 strength2ana = 'all'; % 'all'; 'easy'; 'medium'; 'hard'; 
-evT = {'timeStop'}; % what events to align trials on and plot?
+% evT = {'timeStop'}; % what events to align trials on and plot?
+
+evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
+    'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
+    'timeReward', 'timeCommitIncorrResp', 'timeStop'};
 
 %}
 
-% evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
-%     'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
-%     'timeReward', 'timeCommitIncorrResp', 'timeStop'};
-
-% 'centerLicks', 'leftLicks', 'rightLicks'};
-% time1stCenterLick, time1stCorrectResponse, timeStop
+% time1stCenterLick, time1stCorrectResponse
 % eventTime = cellfun(@(x)x(1),timeInitTone); %timeInitTone; % first trial initi tone.
 
 thStimStrength = 3; % 2; % threshold of stim strength for defining hard, medium and easy trials.
