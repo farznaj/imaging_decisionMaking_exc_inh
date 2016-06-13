@@ -85,8 +85,8 @@ def optimizeSVMReg(X, Y, kfold):
     ix = np.argmin(CVerror)
     bestc = c[ix]
     plt.figure()
-    plt.plot(c, CVerror, 'k')
-    plt.plot(bestc, CVerror[ix], 'ro')
+    plt.semilogx(c, CVerror, 'k')
+    plt.semilogx(bestc, CVerror[ix], 'ro')
     return bestc, CVerror
     
     
