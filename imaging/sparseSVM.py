@@ -68,7 +68,7 @@ def CVSVM(X, Y, c, kfold):
     
     # Create a classifier: a support vector classifier
     linear_svm = svm.LinearSVC(C = c, loss='squared_hinge', penalty='l1', dual=False)
-    linear_svm.fit(XTrain, YTrain)
+    linear_svm.fit(XTrain, np.squeeze(YTrain))
     Yhat = linear_svm.predict(XCV)
     CVerror = sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(YCV).astype(float)))/len(YCV)
     return CVerror
