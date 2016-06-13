@@ -76,13 +76,17 @@ def CVSVM(X, Y, c, kfold):
 
 def optimizeSVMReg(X, Y, kfold):
     numSamples = 100;
-    c = 10**np.array(np.arange(-3, 3, 0.5))
+    c = 10**np.array(np.arange(-5, 5, 0.5))
     CVerror = np.ones((len(c), numSamples))
     for i in range(len(c)):
         for j in range(numSamples):
             CVerror[i, j] = CVSVM(X, Y, c[i], kfold);
     CVerror = np.mean(CVerror, axis = 1)
-    bestc = c[np.argmin(CVerror)]
+    ix = np.argmin(CVerror)
+    bestc = c[ix]
+    plt.figure()
+    plt.plot(c, CVerror, 'k')
+    plt.plot(bestc, CVerror[ix], 'ro')
     return bestc, CVerror
     
     
