@@ -160,7 +160,7 @@ errThenCorr = (errorlick_again_wait_entered & ~allowCorrectEntered & outcomes==1
 corrThenErr = (correctlick_again_wait_entered & outcomes==0); % uncommitted correct lick then committed error lick.
 
 fract_corrBut1stErr_ErrBut1stCorr = [sum(errThenCorr) / sum(outcomes==1) ,  sum(corrThenErr) / sum(outcomes==0)];
-fprintf('%.2f= fract correct after error try; %.2f= fract incorrect after correct try\n', fract_corrBut1stErr_ErrBut1stCorr)
+fprintf('%.2f= fract correct outcome preceded by error try\n%.2f= fract incorrect outcome preceded by correct try\n', fract_corrBut1stErr_ErrBut1stCorr)
 
 
 % Some numbers to quantify animal's changes of mind:

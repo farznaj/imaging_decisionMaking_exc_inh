@@ -33,9 +33,10 @@ if exist('im', 'var') && ~isempty(im)
     colors = colors(end:-1:1,:);
     
     figure;
-    imagesc(im);
+%     imagesc(im);
+    imagesc(log(im));
     hold on;
-%     colormap gray
+    colormap gray
     
     for rr = 1:length(CC)
         plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))

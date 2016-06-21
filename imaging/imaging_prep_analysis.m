@@ -1,6 +1,6 @@
 function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, good_inhibit, outcomes, allResp, allResp_HR_LR, ...
         trs2rmv, stimdur, stimrate, stimtype, cb, timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, ...
-        timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename] = ....
+        timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename, pnevFileName] = ....
     imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, ...
         rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, frameLength);
 %
@@ -39,6 +39,7 @@ setInhibitExcit = true; % if 1, inhibitory and excitatory neurons will be identi
 frameLength = 1000/30.9; % sec.
 %}
 
+home
 
 %% Good days
 % imagingFolder = '151029'; % '151021';
@@ -47,15 +48,13 @@ frameLength = 1000/30.9; % sec.
 
 %% Set some initial variables.
 
-home
-
-    assessInhibitClass = false; % if 1 and inhibitRois not already saved, you will evaluate identification of inhibitory neurons (ie if sigTh is doing a good job).
-    saveInhibitRois = 1; % if 1 and inhibitRois not already saved, ROIs that were identified as inhibit will be saved in imfilename. (ie the output of inhibit_excit_setVars will be saved).
+    assessInhibitClass = 0; % if 1 and inhibitRois not already saved, you will evaluate identification of inhibitory neurons (ie if sigTh is doing a good job).
+    saveInhibitRois = 0; % if 1 and inhibitRois not already saved, ROIs that were identified as inhibit will be saved in imfilename. (ie the output of inhibit_excit_setVars will be saved).
     sigTh = 1.13; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
     % 1.1: excit is safe, but u should check inhibit with low sig/surr to make sure they are not excit.
     % 1.2: u are perhaps missing some inhibit neurons.
     % 1.13 can be good too.
-
+    
 signalCh = 2;
 pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the latest pnev vile). Set [] to load the latest one.
 
@@ -163,6 +162,12 @@ else
     cprintf('blue', 'There are non-triggered trials in MScan! Trial %d\n', find(trialCodeMissing))
 end
 
+
+pof = cellfun(@sum, pmtOffFrames);
+if any(pof)
+    cprintf('red', 'Number of pmtOffFrames on each channel = %d %d\n', pof)
+    warning('Take care of pmtOffFrames!')
+end
 
 
 % u = unique({all_data.rewardStage}); disp(u);
@@ -327,6 +332,50 @@ spikes = dFOF;
 %}
 
     
+% Assess Efty's tau and noise for each neuron
+load(pnevFileName, 'P')
+tau = nan(size(P.gn,1), 2); 
+for i = 1:length(tau)
+    g = P.gn{i}; 
+    tau(i,:) = tau_d2c(g,1); 
+end
+figure; 
+subplot(211), plot(tau), xlabel('Neuron'), ylabel('Tau'), legend('rise','decay')
+subplot(212), plot(cell2mat(P.neuron_sn)), xlabel('Neuron'), ylabel('neuron\_sn')
+
+
+% Assess a number of parameters related to Efty's A (spatial component)
+figure; 
+subplot(311), plot(sum(A~=0,1)), ylabel('Number of pixels')
+subplot(312), plot(nanmean(A,1)), ylabel('Mean A')
+subplot(313), plot(max(A,[],1)), ylabel('Max A')
+xlabel('Neuron')
+
+
+% Assess the shape of merged ROIs: 
+%{
+% before ordering ROIs, the last components in A and C are the merged
+% components. So srt==lastComps will give the index (in the ordered ROI
+% array) that corresponds to lastComps in the original A, ie the
+% mergedComps.
+load(pnevFileName, 'srt', 'merging_vars')
+figure; plot(srt)
+figure; 
+for i = size(A,2):-1: size(A,2)-length(merging_vars.merged_ROIs)+1 % size(A,2):-1:1
+    imagesc(reshape(A(:,srt==i), imHeight, imWidth))
+    pause
+end
+%}
+
+%{
+figure; 
+for i = size(A,2):-1:1 % 0:(length(merging_vars.merged_ROIs)-1)
+    imagesc(reshape(merging_vars.Am(:,i), imHeight, imWidth)) % (:,end-i)
+    pause
+end
+%}
+
+
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%% Take care of alldata %%%%%%%%%%%%%%%%%%%%%%%
 
@@ -544,7 +593,7 @@ if setInhibitExcit
         % 1 for inhibit ROIs.
         % 0 for excit ROIs.
         % nan for ROIs that could not be classified as inhibit or excit.
-        [inhibitRois, roi2surr_sig] = inhibit_excit_setVars(imfilename, pnevFileName, sigTh, assessInhibitClass);
+        [inhibitRois, roi2surr_sig, sigTh] = inhibit_excit_setVars(imfilename, pnevFileName, sigTh, assessInhibitClass);
         
         if saveInhibitRois
             fprintf('Saving inhibitRois...\n')

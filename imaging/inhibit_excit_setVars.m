@@ -1,4 +1,4 @@
-function [inhibitRois, roi2surr_sig] = inhibit_excit_setVars(imfilename, pnevFileName, sigTh, showResults)
+function [inhibitRois, roi2surr_sig, sigTh] = inhibit_excit_setVars(imfilename, pnevFileName, sigTh, showResults)
 % identify inhibitory neurons.
 
 % sigTh = 1.2;
@@ -11,7 +11,7 @@ end
 
 % [imfilename, pnevFileName] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh);
 
-load(imfilename, 'imHeight', 'imWidth', 'medImage', 'sdImage')
+load(imfilename, 'imHeight', 'imWidth', 'sdImage')
 load(pnevFileName, 'A') % pnevFileName should contain Eft results after merging-again has been performed.
 spatialComp = A; 
 clear A
@@ -25,15 +25,27 @@ end
 
 contour_threshold = .95;
 fprintf('Setting the mask for the gcamp channel....\n')
-[CC, ~, ~, mask] = setCC_cleanCC_plotCC_setMask(spatialComp, imHeight, imWidth, contour_threshold, im);
-% size(CC)
-% size(mask)
+[CC, ~, COMs, mask] = setCC_cleanCC_plotCC_setMask(spatialComp, imHeight, imWidth, contour_threshold, im);
+title('ROIs shown on the sdImage of channel 2')
+% size(CC), % size(mask)
 
 
+%% Load manual activity computed for ch1 and ch2, and compute their DF/F
+
+load(pnevFileName, 'activity_man_eftMask_ch1', 'activity_man_eftMask_ch2')
+load(imfilename, 'pmtOffFrames')
+
+smoothPts = 6; minPts = 7000; %800;
+activity_man_eftMask_ch1 = konnerthDeltaFOverF(activity_man_eftMask_ch1, pmtOffFrames{1}, smoothPts, minPts);
+activity_man_eftMask_ch2 = konnerthDeltaFOverF(activity_man_eftMask_ch2, pmtOffFrames{2}, smoothPts, minPts);
+
+    
 %% identify inhibitory neurons.
 
-im2 = medImage{1};
-[inhibitRois, roi2surr_sig] = inhibitROIselection(mask, im2, sigTh, CC, showResults); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
+load(imfilename, 'medImage'), im2 = medImage{1};
+% load(imfilename, 'quantImage'), im2 = quantImage{1};
+
+[inhibitRois, roi2surr_sig, sigTh] = inhibitROIselection(mask, im2, sigTh, CC, showResults, gcf, COMs, activity_man_eftMask_ch1, activity_man_eftMask_ch2); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
 
 
 % Show the results:
@@ -41,7 +53,7 @@ im2p = sdImage{1};
 colors = hot(2*size(spatialComp,2));
 colors = colors(end:-1:1,:);
 % plot inhibitory ROIs on the image of inhibit channel.
-figure('name', 'Image of inhibit channel'); 
+figure('name', 'sdImage of inhibit channel'); 
 subplot(211)
 imagesc(im2p)
 colormap gray

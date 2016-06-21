@@ -4,6 +4,9 @@
 %
 % you can use it to compare Eftychios vs manual. Or 2 different channels.
 % Or 2 different methods of Eftychios, etc.
+%
+% Remember the main starting function for doing post-proc imaging analysis is :
+% imeging_prep_analysis
 
 
 %%

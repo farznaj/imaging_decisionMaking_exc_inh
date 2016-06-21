@@ -83,6 +83,8 @@ end
 %
 
 
+numPrevTrs = 1; % 1 : what trial in the back you will study. If 3, it means you will study the effect of the 3rd trial in the past on current choice.
+
 % set s_curr indicating the success/failure and HR/LR outcome of the
 % current trial.
 ynew = y;
@@ -91,7 +93,7 @@ s_curr = ynew .* (outcomes==1)'; % 0 or nan for any output other than success. 1
 
 % set s_prev indicating the success/failure and HR/LR outcome of the
 % previous trial. shift s_curr one element front.
-successPrevInput = [NaN; s_curr(1:end-1)]; % s_prev(i) = s_curr(i-1);
+successPrevInput = [NaN(numPrevTrs,1); s_curr(1:end-numPrevTrs)]; % s_prev(i) = s_curr(i-1);
 successPrevInput(begTrs) = NaN; % no previous trial exists for the 1st trial of a session.
 
 a = find(~good_corr_incorr); % these trials will be nan in y and ratesDiffInput
@@ -108,7 +110,7 @@ f_curr = ynew .* (outcomes==0)'; % 0 or nan for any output other than failure. 1
 
 % set f_prev indicating the success/failure and HR/LR outcome of the
 % previous trial. shift f_curr one element front.
-failurePrevInput = [NaN; f_curr(1:end-1)]; % s_prev(i) = s_curr(i-1);
+failurePrevInput = [NaN(numPrevTrs,1); f_curr(1:end-numPrevTrs)]; % s_prev(i) = s_curr(i-1);
 failurePrevInput(begTrs) = NaN; % no previous trial exists for the 1st trial of a session.
 
 
