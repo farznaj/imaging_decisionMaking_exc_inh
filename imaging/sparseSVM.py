@@ -69,14 +69,18 @@ def CVSVM(X, Y, c, kfold):
     # Create a classifier: a support vector classifier
     linear_svm = svm.LinearSVC(C = c, loss='squared_hinge', penalty='l1', dual=False)
     linear_svm.fit(XTrain, np.squeeze(YTrain))
-    Yhat = linear_svm.predict(XCV)
-    CVerror = sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(YCV).astype(float)))/len(YCV)
+    CVerror = predictError(YCV, linear_svm.predict(XCV));
     return CVerror
+    
+def predictError(Y, Yhat):
+    error = sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)
+    return error
+    
 #%%
 
 def optimizeSVMReg(X, Y, kfold):
-    numSamples = 100;
-    c = 10**np.array(np.arange(-5, 5, 0.5))
+    numSamples = 1000;
+    c = 10**np.array(np.arange(-5, 3, 0.5))
     CVerror = np.ones((len(c), numSamples))
     for i in range(len(c)):
         for j in range(numSamples):
@@ -94,3 +98,26 @@ def optimizeSVMReg(X, Y, kfold):
 bestc, CVerror = optimizeSVMReg(X, Y, 10)
             
 #%%
+#%% create svm
+# Create a classifier: a support vector classifier
+linear_svm = svm.LinearSVC(loss='squared_hinge', penalty='l2', dual=False)
+
+linear_svm_time = time()
+linear_svm.fit(data_train, targets_train)
+linear_svm_scorel2 = linear_svm.score(data_test, targets_test)
+linear_svm_time = time() - linear_svm_time
+wl2 =  np.squeeze(linear_svm.coef_);
+
+# Create a classifier: a support vector classifier
+linear_svm = svm.LinearSVC(C = bestc, loss='squared_hinge', penalty='l1', dual=False)
+
+linear_svm_time = time()
+linear_svm.fit(data_train, targets_train)
+linear_svm_scorel1 = linear_svm.score(data_test, targets_test)
+linear_svm_time = time() - linear_svm_time
+wl1 =  np.squeeze(linear_svm.coef_);
+
+#%%
+plt.figure('Weights')
+plt.plot(np.sort(np.abs(wl1))[::-1], 'r')
+plt.plot(np.sort(np.abs(wl2))[::-1], 'g')
