@@ -1,7 +1,11 @@
-function [CC, CR, COMs, mask_eft] = setCC_cleanCC_plotCC_setMask(spatialComp, imHeight, imWidth, contour_threshold, im)
+function [CC, CR, COMs, mask_eft] = setCC_cleanCC_plotCC_setMask(spatialComp, imHeight, imWidth, contour_threshold, im, plotCOMs)
 % [CC, CCorig] = setPnevContours_cleanCC_plotCC(spatialComp, imHeight, imWidth, contour_threshold, im)
 %
 % im = sdImage{2};
+
+if ~exist('plotCOMs', 'var') 
+    plotCOMs = 1; % if 1, a dot will be plotted for the COM of each ROI, otherwise contours will be plotted.
+end
 
 
 %%
@@ -33,14 +37,23 @@ if exist('im', 'var') && ~isempty(im)
     colors = colors(end:-1:1,:);
     
     figure;
-%     imagesc(im);
-    imagesc(log(im));
+    imagesc(im);
+    %     imagesc(log(im));
     hold on;
-    colormap gray
+%     colormap gray
     
     for rr = 1:length(CC)
-        plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
-%         pause
+        if plotCOMs
+            plot(COMs(rr,2), COMs(rr,1), 'r.')
+            
+        else
+            %[CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(Ain, imHeight, imWidth, contour_threshold, im);
+            if ~isempty(CC{rr})
+                plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
+            else
+                fprintf('Contour of ROI %i is empty!\n', rr)
+            end
+        end
     end
 end
 

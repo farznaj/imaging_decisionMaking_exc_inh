@@ -26,7 +26,7 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % Example input variales:
 %{
 mouse = 'fni17';
-imagingFolder = '151101'; % '151029'; % '150916'; % '151021';
+imagingFolder = '151102'; % '151029'; % '150916'; % '151021';
 mdfFileNumber = 1; % 1; % or tif major
 
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
@@ -69,9 +69,10 @@ uncommittedResp = 'nothing'; % 'change'; 'remove'; 'nothing'; % what to do on tr
 
 thbeg = 5; % n initial trials to exclude.
 
+evaluateEftyAC = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
 furtherAnalyses = 0; % analyses related to choicePref and SVM will be performed.
 plot_ave_trGroup = false; % Plot average traces across all neurons for different trial groups aligned on particular trial events.
-plotTraces1by1 = false; % plot traces per neuron and per trial showing all trial events
+plotTrialTraces1by1 = false; % plot traces per neuron and per trial showing all trial events
 compareManual = false; % compare results with manual ROI extraction
 
 setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
@@ -91,13 +92,11 @@ saveHelpedTrs = 0; % it will only take effect if defaultHelpedTrs is false. If 1
 
 
 %%
-% frameLength = 1000/30.9; % sec.
 
-% remember if there are
-% set the names of imaging mat files (one includes pnev results and one
-% includes all other vars)
+% set the names of imaging-related .mat file names.
 % remember the last saved pnev mat file will be the pnevFileName
-
+% signalCh = 2; % because you get A from channel 2, I think this should be always 2.
+% pnev2load = [];
 [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
 [~,f] = fileparts(pnevFileName);
 disp(f)
@@ -105,6 +104,7 @@ cd(fileparts(imfilename))
 
 
 % load alldata
+
 % load(imfilename, 'all_data'), all_data = all_data(1:end-1);   %from the imaging file.  % alldata = removeBegEndTrs(alldata, thbeg);
 % use the following if you want to go with the alldata of the behavior folder
 % set filenames
@@ -123,6 +123,15 @@ fprintf('Total number of behavioral trials: %d\n', length(all_data))
 % begTrs = begTrs(1:end-1);
 begTrs = 1; % 1st trial of each session
 
+
+%% Some plots and prints of info related to behavior and imaging of behavior
+
+%{
+* stimulus is played for stimDuration which equal stimDur_diff (or if it is 0, waitDur) + extrastim_dur + stimdur_aftrew .
+* total waitdur (ie since stim onset, when mouse was allowed to do cent commit) equals waitDuration + postStimDelay
+%}
+
+
 % use the following plot to decide on thbeg: number of begining trials that
 % you want to exclude.
 % stimDur_diff
@@ -140,13 +149,19 @@ m = max([all_data.stimDuration]);
 ylim([-1 m+1])
 set(gca,'tickdir','out')
 
-%{
-- stimulus is played for stimDuration which equal stimDur_diff (or if it is 0, waitDur) + extrastim_dur + stimdur_aftrew .
-- total waitdur (ie since stim onset, when mouse was allowed to do cent commit) equals waitDuration + postStimDelay
-%}
+
+% u = unique({all_data.rewardStage}); disp(u);
+rs = {all_data.rewardStage}; 
+ave_rewardStage_allowCorr_chooseSide = [nanmean(strcmp(rs, 'Allow correction')), nanmean(strcmp(rs, 'Choose side'))];
+fprintf('Fraction of trials (rewardStage): allowCorr= %.3f. chooseSide= %.3f\n', ave_rewardStage_allowCorr_chooseSide)
+% rsi = zeros(1, length(rs)); 
+% rsi(strcmp(rs, 'Choose side')) = 1; 
+% figure; plot(rsi); ylim([-.1 1.1])
+% xlabel('Trials'), ylabel('chooseSide'), box off, set(gca,'tickdir','out')
 
 
-load(imfilename, 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'badFrames', 'pmtOffFrames', 'trialCodeMissing')
+
+load(imfilename, 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'trialCodeMissing')
 trialNumbers(isnan(framesPerTrial)) = [];
 frame1RelToStartOff(isnan(framesPerTrial)) = [];
 framesPerTrial(isnan(framesPerTrial)) = [];
@@ -163,31 +178,6 @@ else
 end
 
 
-pof = cellfun(@sum, pmtOffFrames);
-if any(pof)
-    cprintf('red', 'Number of pmtOffFrames on each channel = %d %d\n', pof)
-    warning('Take care of pmtOffFrames!')
-end
-
-
-% u = unique({all_data.rewardStage}); disp(u);
-rs = {all_data.rewardStage}; 
-ave_rewardStage_allowCorr_chooseSide = [nanmean(strcmp(rs, 'Allow correction')), nanmean(strcmp(rs, 'Choose side'))];
-fprintf('Fraction of trials (rewardStage): allowCorr= %.3f. chooseSide= %.3f\n', ave_rewardStage_allowCorr_chooseSide)
-% rsi = zeros(1, length(rs)); 
-% rsi(strcmp(rs, 'Choose side')) = 1; 
-% figure; plot(rsi); ylim([-.1 1.1])
-% xlabel('Trials'), ylabel('chooseSide'), box off, set(gca,'tickdir','out')
-
-    
-
-% Assess pixel shifts, ie output of motion correction
-load(imfilename, 'outputsDFT')
-figure; plot(outputsDFT{1}(:,2:3))
-legend('row shift', 'column shift')
-xlabel('Frame')
-ylabel('Pixel shift')
-
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%% Load neural data, merge them into all_data, and assess trace quality %%%%%%%%%%%%%%%%%%%%%%%
@@ -197,7 +187,7 @@ ylabel('Pixel shift')
 if compareManual
     
     load(imfilename, 'imHeight', 'imWidth', 'pmtOffFrames')
-    load(pnevFileName, 'activity_man_eftMask')
+    load(pnevFileName, 'activity_man_eftMask*')
     %     load(imfilename, 'activity_man_eftMask')
     
     %{
@@ -208,10 +198,10 @@ if compareManual
     %}
     
     %% manual activity and dfof
-    activity_man = activity_man_eftMask;
+    activity_man = activity_man_eftMask_ch2;
     
     %     activity_man = activity;
-    clear activity activity_man_eftMask
+    clear activity activity_man_eftMask*
     
     % Compute df/f for the manually found activity trace.
     gcampCh = 2; smoothPts = 6; minPts = 7000; %800;
@@ -249,131 +239,93 @@ if compareManual
 end
 
 
-%% Set spikes, activity, dFOF by loading vars from pnev mat file.
-%
-load(pnevFileName, 'C', 'C_df', 'options') % , 'S')
-%{
-if strcmp(options.deconv_method, 'MCMC')
-    load(pnevFileName, 'S') % if mcmc
-    spiking = S; % S; % S_mcmc; % S2;
-elseif strcmp(options.deconv_method, 'constrained_foopsi') % From Efty: S_df as it is derived from S by applying extract_DF_F offers nothing interpretable.
-    load(pnevFileName, 'S_df') % if constrained foopsi
-    spiking = S_df;
-end
-spikes = spiking'; % frames x units
-%}
-load(pnevFileName, 'S')
-spikes = S';
-if normalizeSpikes
-    fprintf('Normalizing spikes traces of each neuron.\n')
-    spikes = bsxfun(@rdivide, spikes, max(spikes,[],1)); % normalize spikes trace of each neuron by its max.
-    %     spikes = bsxfun(@rdivide, spikes, quantile(spikes,.9)); % normalize spikes trace of each neuron by its 90th percentile.
+%% Assess pixel shifts (ie output of motion correction), pmtOffFrames and badFrames (frames with too much motion)
+
+load(imfilename, 'outputsDFT')
+figure; plot(outputsDFT{1}(:,2:3))
+legend('row shift', 'column shift')
+xlabel('Frame')
+ylabel('Pixel shift')
+
+
+load(imfilename, 'pmtOffFrames')
+pof = cellfun(@sum, pmtOffFrames);
+if any(pof)
+    cprintf('red', 'Number of pmtOffFrames on each channel = %d %d\n', pof)
+    warning('Take care of pmtOffFrames!')
 end
 
-if size(C,2) ~= size(C_df,2) % iti-nans were inserted in C and S: remove them.
-    load(imfilename, 'Nnan_nanBeg_nanEnd')
-    nanBeg =  Nnan_nanBeg_nanEnd(2,:);
-    nanEnd = Nnan_nanBeg_nanEnd(3,:);
-    inds2rmv = cell2mat(arrayfun(@(x,y)(x:y), nanBeg, nanEnd, 'uniformoutput', 0)); % index of nan-ITIs (inferred ITIs) on C and S traces.
-    C(:, inds2rmv) = [];
+
+load(imfilename, 'badFrames')
+bf = cellfun(@sum, badFrames);
+if any(bf)
+    cprintf('red', 'Number of badFrames on each channel = %d %d\n', bf)
+    warning('Take care of badFrames!')
+end
+
+
+%% Load and clean Efty's vars
+
+fprintf('Loading Eftys vars...')
+load(pnevFileName, 'C', 'C_df', 'S', 'A', 'P')
+fprintf('...done\n')
+load(imfilename, 'Nnan_nanBeg_nanEnd')
+% normalizeSpikes = 1;
+% frameLength = 1000/30.9; % sec.
+[C, S, C_df] = processEftyOuts(C, S, C_df, Nnan_nanBeg_nanEnd, normalizeSpikes);
+
+% set time constants (in ms) from P.gn
+tau = nan(size(P.gn,1), 2);
+for i = 1:length(tau)
+    g = P.gn{i};
+    tau(i,:) = tau_d2c(g,frameLength); % tau(:,1) is rise, and tau(:,2) is decay time constant (in ms).
+end
+
+
+%% Evaluate A and C of Efty's algorithm
+
+if evaluateEftyAC
+    load(imfilename, 'imHeight', 'imWidth', 'medImage')
+    im = medImage{2};
+    contour_threshold = .95;
+    plotCOMs = 1;
     
-    if size(spikes,1) ~= size(C_df,2)
-        spikes(inds2rmv,:) = [];
+    [CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(A, imHeight, imWidth, contour_threshold, im, plotCOMs);
+
+    inds2plot = 1:size(C,1); % excl'; %excl(randperm(length(excl)))'; % size(C,1):-1:1; % 
+    if ~exist('dFOF_man','var') % use this if you don't have manual activity
+        plotEftManTracesROIs(C_df, S, [], A, [], CC, [], [], im, C, inds2plot, 0, 0, medImage{1});
+    else % use this if you wan to compare with manual activity:
+        plotEftManTracesROIs(C_df, S, dFOF_man', A, [], CC, [], 1:size(C_df,1), im, C, inds2plot, 0, 0, medImage{1});
+        % traceQualManual = plotEftManTracesROIs(C_df, S_df, dFOF, A2, mask_eft, CC, CC_rois, eftMatchIdx_mask, im, C, inds2plot, manualTraceQual, plothists, im2)
     end
 end
 
-an = find(~sum(~isnan(C),2));
-if ~isempty(an)
-    warning(sprintf(['C trace of neuron(s) ', repmat('%i ', 1, length(an)), 'is all NaN. This should not happen!'], an));
-end
-an = find(~sum(~isnan(C_df),2));
-if ~isempty(an)
-    warning(sprintf(['C_df trace of neuron(s) ', repmat('%i ', 1, length(an)), 'is all NaN. This should not happen!'], an));
-end
 
-% load('demo_results_fni17-151102_001.mat', 'C_mcmc', 'C_mcmc_df', 'S_mcmc')
+%% Evaluate tau and some params related to A
 
-% spatialComp = A2; % obj.A;
-temporalComp = C; % C_mcmc; % C2; % obj.C;
-temporalDf = C_df; % C_mcmc_df; % C_df; % obj.C_df;
-
-% spikingDf = S_df; % obj.S_df;
-clear C C_df S % ('C_mcmc', 'C_mcmc_df', 'S_mcmc')
-
-activity = temporalComp'; % frames x units
-% activity = activity_man;
-% Sdf = S_df';
-
-if size(temporalDf,1) == size(temporalComp,1)+1
-%     bk_df = temporalDf(end,:); % background DF/F
-    temporalDf(end,:) = [];
-end
-dFOF = temporalDf';
-% dFOF = dFOF_man;
-clear temporalComp temporalDf spiking
-%}
-
-% Use below if you want to look at the backgound component, aligned on different trial events.:
-%{
-load(pnevFileName, 'f')
-dFOF = f';
-spikes = dFOF;
-%}
-
-% Use below if you want to look at manual DF/F:
-%{
-% load(imfilename, 'activity_custom') % dark ROIs
-% activity = activity_custom{2};
-load(pnevFileName, 'activity_man_eftMask') % manual activity of Efty's ROIs
-activity = activity_man_eftMask;
-gcampCh = 2; smoothPts = 6; minPts = 7000; %800;
-dFOF = konnerthDeltaFOverF(activity, pmtOffFrames{gcampCh}, smoothPts, minPts);
-spikes = dFOF;
-%}
-
-    
-% Assess Efty's tau and noise for each neuron
-load(pnevFileName, 'P')
-tau = nan(size(P.gn,1), 2); 
-for i = 1:length(tau)
-    g = P.gn{i}; 
-    tau(i,:) = tau_d2c(g,1); 
-end
-figure; 
-subplot(211), plot(tau), xlabel('Neuron'), ylabel('Tau'), legend('rise','decay')
+% Assess tau and noise for each neuron
+% load(pnevFileName, 'P')
+figure;
+subplot(211), plot(tau), xlabel('Neuron'), ylabel('Tau (ms)'), legend('rise','decay')
 subplot(212), plot(cell2mat(P.neuron_sn)), xlabel('Neuron'), ylabel('neuron\_sn')
 
-
-% Assess a number of parameters related to Efty's A (spatial component)
-figure; 
+% Assess a number of parameters related to A (spatial component)
+% load(pnevFileName, 'A')
+figure;
 subplot(311), plot(sum(A~=0,1)), ylabel('Number of pixels')
 subplot(312), plot(nanmean(A,1)), ylabel('Mean A')
 subplot(313), plot(max(A,[],1)), ylabel('Max A')
 xlabel('Neuron')
 
 
-% Assess the shape of merged ROIs: 
-%{
-% before ordering ROIs, the last components in A and C are the merged
-% components. So srt==lastComps will give the index (in the ordered ROI
-% array) that corresponds to lastComps in the original A, ie the
-% mergedComps.
-load(pnevFileName, 'srt', 'merging_vars')
-figure; plot(srt)
-figure; 
-for i = size(A,2):-1: size(A,2)-length(merging_vars.merged_ROIs)+1 % size(A,2):-1:1
-    imagesc(reshape(A(:,srt==i), imHeight, imWidth))
-    pause
-end
-%}
+%%
+spikes = S';
+activity = C'; %temporalComp'; % frames x units % temporalComp = C; % C_mcmc; % C2; % obj.C;
+dFOF = C_df'; % temporalDf'; temporalDf = C_df; % C_mcmc_df; % C_df; % obj.C_df;
 
-%{
-figure; 
-for i = size(A,2):-1:1 % 0:(length(merging_vars.merged_ROIs)-1)
-    imagesc(reshape(merging_vars.Am(:,i), imHeight, imWidth)) % (:,end-i)
-    pause
-end
-%}
+clear C C_df S
+
 
 
 %%
@@ -656,7 +608,7 @@ end
 
 %% Look at traces per neuron and per trial and show events during a trial as well. Traces start at the scan start (so not aligned on any particular event.)
 
-if plotTraces1by1
+if plotTrialTraces1by1
     
     % it makes sense to look at all trials and not just ~trs2rmv so do
     % trs2rmv = unique([trs_problemAlign, trs_badMotion_pmtOff]);, and again run setEvent

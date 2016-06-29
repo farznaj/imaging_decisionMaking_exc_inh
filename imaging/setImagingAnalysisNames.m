@@ -26,7 +26,11 @@ end
 
 
 tifFold = fullfile(dataPath, mousename, 'imaging', imagingFolder);
-date_major = sprintf('%s_%03d', imagingFolder(1:6), mdfFileNumber);
+% date_major = sprintf('%s_%03d', imagingFolder(1:6), mdfFileNumber);
+r = repmat('%03d-', 1, length(mdfFileNumber)); 
+r(end) = [];
+date_major = sprintf(['%s_', r], imagingFolder, mdfFileNumber); 
+
 imfilename = fullfile(tifFold, date_major);
 
 pnevFileName = [date_major, '_ch', num2str(signalCh),'-Pnev*'];

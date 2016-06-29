@@ -1,7 +1,10 @@
 function traceQualManual = plotEftManTracesROIs(C_df, S_df, dFOF, A2, mask_eft, CC, CC_rois, eftMatchIdx_mask, im, C, inds2plot, manualTraceQual, plothists, im2)
-% traceQualManual = plotEftManTracesROIs(refTrace_df, refSpikingDf, toMatchTrace_df, refSpatialComp, refMask, CC_ref, CC_toMatch, matchedROI_idx, im, refTrace, inds2plot, manualTraceQual, plothists)
-% traceQualManual = plotEftManTracesROIs(C_df, S_df, dFOF, A2, mask_eft, CC, CC_rois, eftMatchIdx_mask, im, manualTraceQual, inds2plot, plothists)
-% 
+% use the following to evaluate A and C of Efty's algorithm without
+% comparing with the manual method:
+% inds2plot = 1:size(C,1);
+% plotEftManTracesROIs(C_df, S, [], A, [], CC, [], [], im, C, inds2plot, 0, 0, []);
+%
+% remember if you input A2, then you need to input CC and im too.
 % traces are required in format units x frames
 %
 % Plot ROIs and traces found by Eft and manual methods.
@@ -30,31 +33,31 @@ h1_1 = subplot('position', [0.2472    0.6695    0.2145    0.3046]);
 h1_2 = subplot('position', [0.4659    0.6695    0.2145    0.3046]);
 h2 = subplot('position', [0.7099    0.6987    0.1258    0.2696]); % 0.3241    0.6902    0.2539    0.2862
 h3 = subplot('position', [0.8628    0.6987    0.1258    0.2696]); % 0.6029    0.6537    0.1736    0.3211
-htr_1 = subplot('position', [0.0337    0.4430    0.9480    0.1708]);
-htr_2 = subplot('position', [0.0337    0.2557    0.9480    0.1708]);
-htr_3 = subplot('position', [0.0337    0.0671    0.9480    0.1708]);
+htr_1 = subplot('position', [0.0529    0.4430    0.9288    0.1708]);
+htr_2 = subplot('position', [0.0529    0.2557    0.9288    0.1708]);
+htr_3 = subplot('position', [0.0529    0.0671    0.9288    0.1708]);
 
 
 % plot sdImage (or medImage, etc)
 if ~isempty(im)
     
-subplot(h1_0)
-imagesc(im)
-freezeColors
-hold on
-for rr = 1:length(CC)
-    plot(CC{rr}(2,:), CC{rr}(1,:), 'color', [255 215 0]/255)
-end
-
-
-subplot(h1_1)
-imagesc(im)
-freezeColors
-set(gca, 'yticklabel', '')
+    subplot(h1_0)
+    imagesc(im)
+    freezeColors
+    hold on
+    for rr = 1:length(CC)
+        plot(CC{rr}(2,:), CC{rr}(1,:), 'color', [255 215 0]/255)
+    end
+    
+    
+    subplot(h1_1)
+    imagesc(im)
+    freezeColors
+    set(gca, 'yticklabel', '')
     
 end
 
-    
+
 if exist('im2', 'var')
     subplot(h1_2)
     imagesc(im2)
@@ -80,14 +83,14 @@ for rr = inds2plot
     sn = sn/max(sn);
     
     if ~isempty(A2)
-    spcomp = reshape(A2(:,rr), size(im,1), size(im,2));
-    
-    xl = [find(sum(spcomp), 1, 'first')  find(sum(spcomp), 1, 'last')];
-    yl = [find(sum(spcomp,2), 1, 'first')  find(sum(spcomp,2), 1, 'last')];
+        spcomp = reshape(A2(:,rr), size(im,1), size(im,2));
+        
+        xl = [find(sum(spcomp), 1, 'first')  find(sum(spcomp), 1, 'last')];
+        yl = [find(sum(spcomp,2), 1, 'first')  find(sum(spcomp,2), 1, 'last')];
     end
     
     if ~isempty(eftMatchIdx_mask)
-    imatched = eftMatchIdx_mask(rr);
+        imatched = eftMatchIdx_mask(rr);
     end
     
     
@@ -113,75 +116,79 @@ for rr = inds2plot
     
     %% plot the contours on the sdImage
     hp = [];
-    if ~isempty(mask_eft)
     
     % plot ref image with all contours. the contour of interest made thick.
     subplot(h1_0), hold on
     hp(1) = plot(CC{rr}(2,:), CC{rr}(1,:), 'r', 'linewidth', 2);
-    xlim(xl+[-60 60]), ylim(yl+[-60 60])    
+    xlim(xl+[-60 60]), ylim(yl+[-60 60])
     
     % plot ref image w contours
     subplot(h1_1), hold on
     hpn = plot(CC{rr}(2,:), CC{rr}(1,:), 'r:');
     hp = [hp hpn];
     xlim(xl+[-60 60]), ylim(yl+[-60 60])
-    m = mask_eft(:,:,rr);
-    title(['ROI: ', num2str(rr), ' - Mask size: ', num2str(sum(m(:)))])    
-    if ~isnan(imatched)
+    
+    if ~isempty(mask_eft)
+        m = mask_eft(:,:,rr);
+        title(['ROI: ', num2str(rr), ' - Mask size: ', num2str(sum(m(:)))])
+    end
+    
+    if exist('imatched', 'var') && ~isnan(imatched) && ~isempty(CC_rois)
         hpn = plot(CC_rois{imatched}(2,:), CC_rois{imatched}(1,:), ':', 'color', [255 215 0]/255);
         hp = [hp hpn];
     end
     
     % plot toMatch image w contours
-    if exist('im2', 'var')
+    if exist('im2', 'var') && ~isempty(im2)
         % overlap the contour on the other image as well.
         subplot(h1_2), hold on
         hpn = plot(CC{rr}(2,:), CC{rr}(1,:), 'r:');
         xlim(xl+[-60 60]), ylim(yl+[-60 60])
         hp = [hp hpn];
         
-        if ~isnan(imatched)
+        if ~isnan(imatched) && ~isempty(CC_rois) 
             hpn = plot(CC_rois{imatched}(2,:), CC_rois{imatched}(1,:), ':', 'color', [255 215 0]/255);
             hp = [hp hpn];
-        end        
+        end
     end
     
-    end
+    
     
     
     %% plot spatial component and the contour
     if ~isempty(A2)
         
-    subplot(h2)    
-    imagesc(spcomp)
-    
-    freezeColors
-    xlim(xl+[-5 5])
-    ylim(yl+[-5 5])
-    
-    hold on;
-    hpn = plot(CC{rr}(2,:), CC{rr}(1,:), 'r');
-    hp = [hp hpn];
-    end
-    
-    
-    %% compare manual and Eft ROI contours    
-    if ~isempty(CC)
+        subplot(h2)
+        imagesc(spcomp)
         
-    subplot(h3)
-    hold on;
-    hpn = plot(CC{rr}(2,:), CC{rr}(1,:), 'k');
-    hp = [hp hpn];
-    
-    if ~isnan(imatched)
-        hpn = plot(CC_rois{imatched}(2,:), CC_rois{imatched}(1,:), '-', 'color', [77 190 238]/256);
-%         hpn = plot(rois{imatched}.mnCoordinates(:,1), rois{imatched}.mnCoordinates(:,2), '-', 'color', [77 190 238]/256);
+        freezeColors
+        xlim(xl+[-5 5])
+        ylim(yl+[-5 5])
+        
+        hold on;
+        hpn = plot(CC{rr}(2,:), CC{rr}(1,:), 'r');
         hp = [hp hpn];
     end
-    set(gca, 'ydir', 'reverse')
     
+    
+    %% compare manual and Eft ROI contours
+    if exist('imatched', 'var') && ~isempty(CC_rois)
+        if ~isempty(CC)
+            
+            subplot(h3)
+            hold on;
+            hpn = plot(CC{rr}(2,:), CC{rr}(1,:), 'k');
+            hp = [hp hpn];
+            
+            if ~isnan(imatched)
+                hpn = plot(CC_rois{imatched}(2,:), CC_rois{imatched}(1,:), '-', 'color', [77 190 238]/256);
+                %         hpn = plot(rois{imatched}.mnCoordinates(:,1), rois{imatched}.mnCoordinates(:,2), '-', 'color', [77 190 238]/256);
+                hp = [hp hpn];
+            end
+            set(gca, 'ydir', 'reverse')
+            
+        end
     end
-    
     
     %% plot C (or C_df)
     top = C(rr,:); % C_df(rr,:);
@@ -192,6 +199,7 @@ for rr = inds2plot
     hp = [hp hpn];
     xlim([0 size(top,2)+1])
     ylim([min(top)-.05  max(top)+.05])
+    ylabel('C')
     
     title(sprintf('pks %.2f   prom %.2f   prod %.2f   meas %.2f', mean(pks)/std(sn), mean(prom)/std(sn), ...
         mean(pks)/std(sn)*mean(prom)/std(sn), measQual))
@@ -202,7 +210,10 @@ for rr = inds2plot
     hpn = plot(sn, 'r');
     hp = [hp hpn];
     xlim([0 size(refTrace_df,2)+1])
-    ylim([min(sn)-.05  max(sn)+.05])
+    if ~all(isnan(sn))
+        ylim([min(sn)-.05  max(sn)+.05])
+    end
+    ylabel('Normalized S')
     
     
     %% compare Eft trace with manually computed trace
@@ -244,18 +255,19 @@ for rr = inds2plot
     
     xlim([0 size(refTrace_df,2)+1])
     ylim([min(tr)-.05  max(tr)+.05])
+    ylabel('C\_df')
     
     %%%%%
-    if ~isempty(dFOF) && ~isnan(imatched)        
+    if ~isempty(dFOF) && ~isnan(imatched)
         ln = min(length(matchedTrace_df(imatched,:)),  length(refTrace_df(rr,:)));
         c = corr(matchedTrace_df(imatched, 1:ln)' , refTrace_df(rr, 1:ln)');
         handle = title(sprintf('corr: %.2f', c));
         v = axis;
         set(handle,'Position',[v(2)*.5 v(4)-v(4)*.05 0]);
         %     xlabel(sprintf('corr: %.2f', c));
-    end    
+    end
     
-        
+    
     %% plot some hists.
     if plothists
         figure(histf)
@@ -270,7 +282,7 @@ for rr = inds2plot
         xlim([min(edges)-.05  max(edges)+.05])
         ylim([-.05 1.05])
         
-        % plot hist of C_df 
+        % plot hist of C_df
         %     edges = [min(C_df(rr,:)) max(C_df(rr,:))];
         %     [N] = histcounts(C_df(rr,:), edges, 'Normalization', 'probability');
         [N, edges] = histcounts(refTrace_df(rr,:), 'Normalization', 'probability');
@@ -310,7 +322,7 @@ for rr = inds2plot
         traceQualManual(rr) = bttnChoiseDialog_pos({'Good', 'Ok', 'Bad'}, 'Trace quality?', 'Good', '', ...
             [1;3], [.5, .9, .1, .1]); % (dlgOptions, dlgTitle, defOption, qStr, bttnsOredring, pos)
     else
-        pause
+        drawnow, pause
     end
     %     answer = questdlg('Trace quality? ', '1 Good, 2 Ok, 3 Bad', '1', '2', '3', 'abort', '1');
     
