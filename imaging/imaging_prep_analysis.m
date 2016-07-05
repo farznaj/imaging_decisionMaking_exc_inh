@@ -267,7 +267,7 @@ end
 %% Load and clean Efty's vars
 
 fprintf('Loading Eftys vars...')
-load(pnevFileName, 'C', 'C_df', 'S', 'A', 'P')
+load(pnevFileName, 'C', 'C_df', 'S', 'A', 'P', 'f')
 fprintf('...done\n')
 load(imfilename, 'Nnan_nanBeg_nanEnd')
 % normalizeSpikes = 1;
@@ -285,6 +285,8 @@ end
 %% Evaluate A and C of Efty's algorithm
 
 if evaluateEftyAC
+    figure; imagesc(reshape(mean(A,2), imHeight, imWidth)) % look at average of spatial components.
+    
     load(imfilename, 'imHeight', 'imWidth', 'medImage')
     im = medImage{2};
     contour_threshold = .95;
@@ -302,7 +304,19 @@ if evaluateEftyAC
 end
 
 
-%% Evaluate tau and some params related to A
+%% Evaluate C,f,manual activity, also tau, sn as well as some params related to A
+
+% plot C, f, manual activity
+figure;
+subplot(411), plot(mean(C)), title('S')
+subplot(412), plot(mean(C)), title('C')
+subplot(413), plot(f), title('f')
+if exist('activity_man_eftMask', 'var')
+    subplot(414), plot(mean(activity_man_eftMask, 2)), title('manual')
+else
+    warning('activity_man_eftMask does not exist!')
+end
+
 
 % Assess tau and noise for each neuron
 % load(pnevFileName, 'P')
