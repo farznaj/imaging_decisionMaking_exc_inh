@@ -12,7 +12,7 @@ import scipy
 from sklearn import svm
 import matplotlib.pyplot as plt
 from time import time
-
+from scipy import stats
 #%% load data
 XY = scipy.io.loadmat('/Users/gamalamin/git_local_repository/Farzaneh/XY.mat', variable_names=['X', 'Y']);
 X = XY.pop('X')
@@ -79,23 +79,31 @@ def predictError(Y, Yhat):
 #%%
 
 def optimizeSVMReg(X, Y, kfold):
-    numSamples = 1000;
-    c = 10**np.array(np.arange(-5, 3, 0.5))
+    numSamples = 100;
+    c = 10**np.array(np.arange(-5, 3, 0.1))
     CVerror = np.ones((len(c), numSamples))
     for i in range(len(c)):
         for j in range(numSamples):
             CVerror[i, j] = CVSVM(X, Y, c[i], kfold);
-    CVerror = np.mean(CVerror, axis = 1)
-    ix = np.argmin(CVerror)
-    bestc = c[ix]
+    meanCVerror = np.mean(CVerror, axis = 1);
+    semCVerror = stats.sem(CVerror, axis = 1);    
+    ix = np.argmin(meanCVerror)
+   # best error using standard error criteria
+    msk = meanCVerror<=meanCVerror[ix]+semCVerror[ix];    
+    bestc = c[msk][0]
+    bestCVerror = meanCVerror[msk][0]
     plt.figure()
-    plt.semilogx(c, CVerror, 'k')
-    plt.semilogx(bestc, CVerror[ix], 'ro')
-    return bestc, CVerror
+    plt.errorbar(c, meanCVerror,  yerr=semCVerror, color = 'k')
+    plt.plot(bestc, bestCVerror, 'ro')
+    plt.xscale('log')
+    plt.xlabel('inverse lasso regularization parameter (c)')    
+    plt.ylabel('cross-validation error')    
+    return bestc, bestCVerror
     
     
 #%%
-bestc, CVerror = optimizeSVMReg(X, Y, 10)
+kfold = 10;
+bestc, bestCVerror = optimizeSVMReg(X, Y, kfold)
             
 #%%
 #%% create svm
@@ -116,7 +124,7 @@ linear_svm.fit(data_train, targets_train)
 linear_svm_scorel1 = linear_svm.score(data_test, targets_test)
 linear_svm_time = time() - linear_svm_time
 wl1 =  np.squeeze(linear_svm.coef_);
-
+b = linear_svm.intercept_;
 #%%
 plt.figure('Weights')
 plt.plot(np.sort(np.abs(wl1))[::-1], 'r')
