@@ -27,23 +27,28 @@ end
 
 tifFold = fullfile(dataPath, mousename, 'imaging', imagingFolder);
 % date_major = sprintf('%s_%03d', imagingFolder(1:6), mdfFileNumber);
-r = repmat('%03d-', 1, length(mdfFileNumber)); 
+r = repmat('%03d-', 1, length(mdfFileNumber));
 r(end) = [];
-date_major = sprintf(['%s_', r], imagingFolder, mdfFileNumber); 
+date_major = sprintf(['%s_', r], imagingFolder, mdfFileNumber);
 
 imfilename = fullfile(tifFold, date_major);
 
-pnevFileName = [date_major, '_ch', num2str(signalCh),'-Pnev*'];
-pnevFileName = dir(fullfile(tifFold, pnevFileName));
-
-if isempty(pnevFileName)
-    fprintf('No Pnev file was found!\n')
-    pnevFileName = '';
+if exist('signalCh', 'var')
+    pnevFileName = [date_major, '_ch', num2str(signalCh),'-Pnev*'];
+    pnevFileName = dir(fullfile(tifFold, pnevFileName));
+    
+    if isempty(pnevFileName)
+        fprintf('No Pnev file was found!\n')
+        pnevFileName = '';
+    else
+        % in case there are a few pnev files, choose which one you want!
+        [~,i] = sort([pnevFileName.datenum], 'descend');
+        disp({pnevFileName(i).name}')
+        pnevFileName = pnevFileName(i(pnev2load)).name;
+        pnevFileName = fullfile(tifFold, pnevFileName);
+    end
+    
 else
-    % in case there are a few pnev files, choose which one you want!
-    [~,i] = sort([pnevFileName.datenum], 'descend');
-    disp({pnevFileName(i).name}')
-    pnevFileName = pnevFileName(i(pnev2load)).name;
-    pnevFileName = fullfile(tifFold, pnevFileName);
+    pnevFileName = '';
 end
 

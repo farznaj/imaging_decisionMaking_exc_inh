@@ -280,6 +280,7 @@ for i = 1:length(tau)
     g = P.gn{i};
     tau(i,:) = tau_d2c(g,frameLength); % tau(:,1) is rise, and tau(:,2) is decay time constant (in ms).
 end
+figure; histogram(tau(:,2))
 
 
 %% Evaluate A and C of Efty's algorithm

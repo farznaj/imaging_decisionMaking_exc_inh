@@ -24,8 +24,7 @@ end
 % plotPnevROIs(im, CC_swap, colors);
 CCorig = CC;
 
-
-%% In CC set the column of metadata to NaN, so plotting contours would be easy.
+% In CC set the column of metadata to NaN, so plotting contours would be easy.
 CC = ROIContoursPnev_cleanCC(CCorig);
 
 

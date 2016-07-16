@@ -1,4 +1,4 @@
-function [CC] = ROIContoursPnevCC(A, imHeight, imWidth, thr)
+function [CC, CCorig] = ROIContoursPnevCC(A, imHeight, imWidth, thr)
 % Same as ROIContoursPnev, except it only sets CC (not CR or COMs)
 %
 % [contourOutlines, contourPixels, COMs] = ROIContoursPnev(spatialBasis, imHeight, imWidth [, thresh])
@@ -117,3 +117,11 @@ end
 
 % Center of mass
 % COMs = com(A, imHeight, imWidth);
+
+%%
+% plotPnevROIs(im, CC_swap, colors);
+CCorig = CC;
+
+% In CC set the column of metadata to NaN, so plotting contours would be easy.
+CC = ROIContoursPnev_cleanCC(CCorig);
+

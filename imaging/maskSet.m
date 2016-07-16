@@ -67,7 +67,7 @@ if Aprovided
     %%%%%
     rawA(rawA~=1) = 0; % FN added to only keep values = 1!
     
-    mask = logical(reshape(rawA, imHeight, imWidth, []));
+    mask = logical(reshape(full(rawA), imHeight, imWidth, []));
     
     
 else
