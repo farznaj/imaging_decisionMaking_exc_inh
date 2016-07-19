@@ -11,7 +11,8 @@ import scipy
 import matplotlib.pyplot as plt
 from lassoLinearSVM import *
 #%% load data
-XY = scipy.io.loadmat('/Users/gamalamin/git_local_repository/Farzaneh/XY.mat', variable_names=['X', 'Y']);
+#XY = scipy.io.loadmat('/Users/gamalamin/git_local_repository/Farzaneh/XY.mat', variable_names=['X', 'Y']);
+XY = scipy.io.loadmat('//sonas-hs.cshl.edu/churchland/data/fni17/imaging/151029/151029_003_ch2-PnevPanResults-160426-191859.mat', variable_names=['X', 'Y']);
 X = XY.pop('X')
 Y = XY.pop('Y')
 #%% feature normalization and scale

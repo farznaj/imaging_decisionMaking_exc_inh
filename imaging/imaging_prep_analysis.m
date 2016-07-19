@@ -26,15 +26,15 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % Example input variales:
 %{
 mouse = 'fni17';
-imagingFolder = '151102'; % '151029'; % '150916'; % '151021';
-mdfFileNumber = 1; % 1; % or tif major
+imagingFolder = '151029'; % '151102'; % '150916'; % '151021';
+mdfFileNumber = 3; % 1; % or tif major
 
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
 rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
 
 plot_ave_noTrGroup = 0; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
 
-setInhibitExcit = true; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
+setInhibitExcit = 0; %true; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 
 frameLength = 1000/30.9; % sec.
 %}
@@ -286,9 +286,10 @@ figure; histogram(tau(:,2))
 %% Evaluate A and C of Efty's algorithm
 
 if evaluateEftyAC
+    load(imfilename, 'imHeight', 'imWidth', 'medImage')
+    
     figure; imagesc(reshape(mean(A,2), imHeight, imWidth)) % look at average of spatial components.
     
-    load(imfilename, 'imHeight', 'imWidth', 'medImage')
     im = medImage{2};
     contour_threshold = .95;
     plotCOMs = 1;
@@ -308,21 +309,21 @@ end
 %% Evaluate C,f,manual activity, also tau, sn as well as some params related to A
 
 % plot C, f, manual activity
-figure;
-subplot(411), plot(mean(C)), title('S')
-subplot(412), plot(mean(C)), title('C')
-subplot(413), plot(f), title('f')
+figure; h = [];
+subplot(411), plot(nanmean(S)); title('S'), h = [h, gca];
+subplot(412), plot(nanmean(C)); title('C'), h = [h, gca];
+subplot(413), plot(f); title('f'), h = [h, gca];
 if exist('activity_man_eftMask', 'var')
-    subplot(414), plot(mean(activity_man_eftMask, 2)), title('manual')
+    subplot(414), plot(mean(activity_man_eftMask, 2)), title('manual'), h = [h, gca];
 else
     warning('activity_man_eftMask does not exist!')
 end
-
+linkaxes(h, 'x')
 
 % Assess tau and noise for each neuron
 % load(pnevFileName, 'P')
 figure;
-subplot(211), plot(tau), xlabel('Neuron'), ylabel('Tau (ms)'), legend('rise','decay')
+subplot(211), plot(tau(:,2)), xlabel('Neuron'), ylabel('Tau (ms)'), legend('decay') %, legend('rise','decay')
 subplot(212), plot(cell2mat(P.neuron_sn)), xlabel('Neuron'), ylabel('neuron\_sn')
 
 % Assess a number of parameters related to A (spatial component)
@@ -402,6 +403,8 @@ alldata = all_data;
 [alldata([alldata.hasActivity]==0).frameTimes] = deal(NaN(1, min(framesPerTrial)));
 
 
+imaging.alldata = alldata;
+
 
 %% Set trs2rmv, stimrate, outcome and response side. You will set certain variables to NaN for trs2rmv (but you will never remove them from any arrays).
 
@@ -422,6 +425,9 @@ allResp_HR_LR(trs2rmv) = NaN;
 % stimrate(trs2rmv) = NaN;
 
 % save('151102_001.mat', '-append', 'trs2rmv')  % Do this!
+
+imaging.trs2rmv = trs2rmv;
+% save(imfilename, '-append', 'imaging')
 
 
 %% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
@@ -612,6 +618,9 @@ if setInhibitExcit
     % spikesGood
     % alldataDfofGood_mat
     
+else
+    good_excit = [];
+    good_inhibit = [];
 end
 
 

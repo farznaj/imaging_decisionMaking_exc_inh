@@ -13,7 +13,7 @@ function [C, S, C_df] = processEftyOuts(C, S, C_df, Nnan_nanBeg_nanEnd, normaliz
 %%
 
 if normalizeSpikes
-    fprintf('Normalizing spikes traces of each neuron.\n')
+    fprintf('Normalizing spike traces of each neuron to its max.\n')
     S = bsxfun(@rdivide, S, max(S,[],2)); % normalize spikes trace of each neuron by its max.
     %     spikes = bsxfun(@rdivide, spikes, quantile(spikes,.9)); % normalize spikes trace of each neuron by its 90th percentile.
 end

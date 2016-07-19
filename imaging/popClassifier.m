@@ -1,6 +1,6 @@
 function popClassifier(alldata, alldataSpikesGood, outcomes, allResp_HR_LR, frameLength, ...
     timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, ...
-    neuronType, trialHistAnalysis, numShuffs, nPreFrames, nPostFrames, alignedEvent, onlyCorrect, smoothedTraces, iTiFlg, prevSuccessFlg, vec_iti, trs2rmv, stimrate, cb)
+    neuronType, trialHistAnalysis, numShuffs, nPreFrames, nPostFrames, alignedEvent, onlyCorrect, smoothedTraces, iTiFlg, prevSuccessFlg, vec_iti, trs2rmv, stimrate, cb);
 %
 % This is the main function for doing SVM analysis on calcium imaging data.
 % Run imaging_prep_analysis to get the required input vars.
@@ -366,6 +366,7 @@ for s = 1:numShuffs
     if windowAvgFlg
         X = spikeAveEp(~mskNan, :); % spikeAveEp0(extraTrs,:); % trials x units
         Y = choiceVec(~mskNan); % choiceVec0(extraTrs); % trials x 1
+%         save('151029_003_ch2-PnevPanResults-160426-191859.mat', '-append', 'X', 'Y')
     else
         X = reshape(permute(traces_al_sm(ep, ~NsExcluded, ~mskNan), [1 3 2]),...
             length(ep)*sum(~mskNan), sum(~NsExcluded));

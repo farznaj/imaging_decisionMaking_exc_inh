@@ -8,7 +8,7 @@
 % lassoLinearSVM.m
 %
 % This function performs linear SVM classification with l1 penalty. The 
-% l1 regularization parameter is obtain by kfold cross validation with 1SE
+% l1 regularization parameter is obtained by kfold cross validation with 1SE
 % criteria. This function interfaces and calls a python function 
 % (lassoLinearSVM.py), which does all the heavy-duty work.
 %
@@ -27,10 +27,10 @@
 %   	.Standard: values used in feature normalization and scaling
 %           .meanX: center features to have zero mean.
 %           .stdX: scale features to have unity std.
-%   	.CrossValidation: field that contains information the cross
+%   	.CrossValidation: field that contains information about the cross
 %   	validation proceudure used to find the regularization parameters.
 %           .kfold: kfold used in cross validation.
-%           .regularization: regularization valused examined.
+%           .regularization: regularization values examined.
 %           .meanCVerror: mean cross validation error from 100 runs. Different entries reflect result from different values of regularization specified above.
 %           .semCVerror: standard error of the mean of cross validation
 %           error from 100 runs. Different entries reflect result from different values of regularization specified above.
