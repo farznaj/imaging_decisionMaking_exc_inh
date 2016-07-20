@@ -26,7 +26,7 @@ def lassoLinearSVM(X, Y, kfold):
     N = len(X)/L;
     kfold = int(kfold);    
     
-    X = np.reshape(np.array(X), (L, N), order='F');
+    X = np.reshape(np.array(X.astype('float')), (L, N), order='F');
 
     #%% feature normalization and scale
     meanX = np.mean(X, axis = 0);
