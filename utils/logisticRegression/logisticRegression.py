@@ -41,7 +41,7 @@ def logisticRegression(X, Y, l):
     w = shared(rng.randn(numFeatures), name = 'w'); # initialize the weight vector (w) randomly
     b = shared(np.random.randn(), name = 'b'); # initialize the bias variable (b) randomly
     lps = shared(np.random.rand(), name = 'lps'); # initialize the lapse rate variable (lps) randomly between 0 and 1
-    learnRate = shared(1.0*scale, name = 'learnRate')
+    learnRate = shared(0.1*scale, name = 'learnRate')
     #%% functions expressions and compilations
     # function sympolic expressions
     prob1Expression = lps/(1.0 + Tn.exp(- Tn.dot(x, w) + b)); # expression of logistic function (prob of 1)
