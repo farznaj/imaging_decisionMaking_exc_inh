@@ -72,8 +72,8 @@ def logisticRegression(X, Y, l):
     )
 
     #%% Training the model
-    maxIter = 50000;
-    numRepetitions = 5;
+    maxIter = 10000;
+    numRepetitions = 3;
     w_0 = [];
     b_0 = [];
     lps_0 = [];
