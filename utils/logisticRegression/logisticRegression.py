@@ -23,6 +23,7 @@ def logisticRegression(X, Y, l):
     from numpy import random as rng
     import matplotlib.pyplot as plt
     from theano import tensor as Tn
+    
     #%% load data
     l = np.array(l).astype(float);
     numObservations = len(Y);
@@ -31,6 +32,7 @@ def logisticRegression(X, Y, l):
     X = np.reshape(np.array(X).astype('float'), (numObservations, numFeatures), order='F');
     scale = np.sqrt((np.reshape(X, (numObservations*numFeatures), order = 'F')**2).mean());
     Data = (X, Y); # data tuple
+    
     #%% declaration of sympolic variables and initializations
     # Declare theano symbolic input/ output variables
     x = Tn.matrix('x'); # sympolic feature variable
@@ -41,10 +43,11 @@ def logisticRegression(X, Y, l):
     w = shared(rng.randn(numFeatures), name = 'w'); # initialize the weight vector (w) randomly
     b = shared(np.random.randn(), name = 'b'); # initialize the bias variable (b) randomly
     lps = shared(np.random.rand(), name = 'lps'); # initialize the lapse rate variable (lps) randomly between 0 and 1
-    learnRate = shared(0.1*scale, name = 'learnRate')
+    learnRate = shared(scale, name = 'learnRate')
+    
     #%% functions expressions and compilations
     # function sympolic expressions
-    prob1Expression = lps/(1.0 + Tn.exp(- Tn.dot(x, w) + b)); # expression of logistic function (prob of 1)
+    prob1Expression = lps + (1 - 2 * lps)/(1.0 + Tn.exp(- Tn.dot(x, w) + b)); # expression of logistic function (prob of 1)
     prob0Expression = 1.0-prob1Expression; # expression of logistic function (prob of 0)    
     predictExpression = prob1Expression>0.5;
     costExpression1 = - y * Tn.log(prob1Expression) - (1.0 - y) * Tn.log(prob0Expression); # cost function of one sample
@@ -94,6 +97,7 @@ def logisticRegression(X, Y, l):
         if i>500:
             if abs(cost[i-100]-cost[i])<(10.0**-10):
                 break;
+                
     #%% plot results
     #%%
     plt.figure('cost')
@@ -136,6 +140,7 @@ def logisticRegression(X, Y, l):
     plt.ylim(0., 1.)
     plt.xlabel('iteration')
     plt.ylabel('lapse rate')
+    
     #%% save optimization parameters to class
     class optParamsClass:
         cost_per_iter = np.inf;
