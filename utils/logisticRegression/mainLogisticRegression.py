@@ -25,7 +25,7 @@ X = np.random.randn((numObservations*numFeatures))
 Y = np.random.randint(0, high=2, size = numObservations)
 """
 #%% 
-l = [0., 0.]
+l = [0., 0.0]
 wVect = []
 for i in range(1):
     w, b, lps, perClassEr, cost, optParams = logisticRegression(X, Y, l)

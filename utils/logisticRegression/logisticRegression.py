@@ -47,7 +47,8 @@ def logisticRegression(X, Y, l):
     
     #%% functions expressions and compilations
     # function sympolic expressions
-    prob1Expression = lps + (1 - 2 * lps)/(1.0 + Tn.exp(- Tn.dot(x, w) + b)); # expression of logistic function (prob of 1)
+    XW = Tn.dot(x, w);
+    prob1Expression = lps + (1 - 2 * lps)/(1.0 + Tn.exp(- (XW + b))); # expression of logistic function (prob of 1)
     prob0Expression = 1.0-prob1Expression; # expression of logistic function (prob of 0)    
     predictExpression = prob1Expression>0.5;
     costExpression1 = - y * Tn.log(prob1Expression) - (1.0 - y) * Tn.log(prob0Expression); # cost function of one sample
