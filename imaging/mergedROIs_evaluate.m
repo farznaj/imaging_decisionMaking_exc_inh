@@ -4,6 +4,20 @@
 % after removing badComps (ie from A, badComps were removed and then
 % merging ROIs were found).
 
+
+%% index of mergedROIs after sorting
+nNeurons = size(C,1); % 491;
+nMerged = length(merging_vars.merged_ROIs);
+
+mergeI = nNeurons-nMerged+1 : nNeurons; % index of mergedROIs before sorting
+find(ismember(srt, mergeI)) % index of mergedROIs after sorting
+
+
+%% Check tau of merged_ROIs
+tau((ismember(srt, mergeI)), 2)
+figure; plot(tau(:,2))
+
+
 %%
 mouse = 'fni17';
 imagingFolder = '151102';
@@ -56,19 +70,20 @@ size(COMs_m)
 
 %% Plot contours
 
+% [CC, CCorig] = ROIContoursPnevCC(A, imHeight, imWidth, contour_threshold);
+
 sp = A_m;
 contour_threshold = .95;
 plotCOMs = 0;
 
-setCC_cleanCC_plotCC_setMask(sp, imHeight, imWidth, contour_threshold, im, plotCOMs);
+CC = setCC_cleanCC_plotCC_setMask(sp, imHeight, imWidth, contour_threshold, im, plotCOMs);
 % [CC, ~, COMs_m, mask] = setCC_cleanCC_plotCC_setMask(sp, imHeight, imWidth, contour_threshold, im, plotCOMs);
-
 
 
 %%
 %%%%%%%%%%%%%%%% Single round of merging
 
-%% Plot COMs
+%% Plot COMs for all ROIs and color the merged ROIs.
 
 figure;
 imagesc(im) %(medImage{2})
@@ -89,7 +104,7 @@ for i = 1:length(merged_ROIs_m)
         plot(COMs(rr,2), COMs(rr,1), '.', 'color', col(i,:))
 %         plot(COMs(rr,2), COMs(rr,1), '.', 'color', 'r')
     end
-    %     pause
+%     pause
 end
 
 
@@ -101,32 +116,44 @@ merged_1st_ind = lt - lm + 1; % index of 1st merged_ROI in C_df_m
 merged_inds = (1:lm) + (merged_1st_ind-1); % index of merged_ROIs in C_df_m : merged_inds(i)=j means C_df_m(j,:) is the merged trace of ROIs that are in merged_ROIs{i}
 
 f = figure;
-ff = figure; figure(ff), imagesc(im), hold on
+ff = figure; figure(ff), imagesc(log(im)), hold on
 cnt = 0;
+
 for i = merged_inds(end:-1:1) % merged_inds
-    cnt = cnt+1;
-    %     m = merged_ROIs_m{cnt};
-    m = merged_ROIs_m{end-cnt+1};
     
-    % plot traces
-    figure(f), hold on
+    cnt = cnt+1;    
+    m = merged_ROIs_m{end-cnt+1}; % m = merged_ROIs_m{cnt};
+        
+    
+    %% plot traces
+    figure(f), title('k: merged'); hold on
     
     % plot merged trace
     plot(C_df_m(i,:), 'linewidth', 1.5, 'color', 'k')
     % plot individual traces before merging
     plot(C_df(m,:)', 'linewidth', .2)
+    % look at correlations
+    corr(C_df(m,:)')
     
     
-    % Plot ROIs that got merged.
+    %% Plot ROI COMs (and contours if desired) that got merged. (ie before merging)
     figure(ff), hold on
-    %         h = plot(COMs_m(i,2), COMs_m(i,1), 'r.');
+    
     hh = plot(COMs(m,2), COMs(m,1), 'r.');
+%     h = plot(COMs_m(i,2), COMs_m(i,1), 'r.');
+    % plot contours
+    for rr = 1:length(m)
+        hh = [hh, plot(CC{m(rr)}(2,:), CC{m(rr)}(1,:), 'color', 'r')];
+    end
     
     
+    %%
     drawnow, pause
     figure(f), cla
     figure(ff), % delete(h), 
     delete(hh)
+    
+    
 end
 
 

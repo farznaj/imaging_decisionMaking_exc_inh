@@ -291,6 +291,8 @@ if evaluateEftyAC
     figure; imagesc(reshape(mean(A,2), imHeight, imWidth)) % look at average of spatial components.
     
     im = medImage{2};
+    im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt's method.
+    
     contour_threshold = .95;
     plotCOMs = 1;
     
@@ -403,7 +405,7 @@ alldata = all_data;
 [alldata([alldata.hasActivity]==0).frameTimes] = deal(NaN(1, min(framesPerTrial)));
 
 
-imaging.alldata = alldata;
+% imaging.alldata = alldata;
 
 
 %% Set trs2rmv, stimrate, outcome and response side. You will set certain variables to NaN for trs2rmv (but you will never remove them from any arrays).
@@ -426,7 +428,7 @@ allResp_HR_LR(trs2rmv) = NaN;
 
 % save('151102_001.mat', '-append', 'trs2rmv')  % Do this!
 
-imaging.trs2rmv = trs2rmv;
+% imaging.trs2rmv = trs2rmv;
 % save(imfilename, '-append', 'imaging')
 
 

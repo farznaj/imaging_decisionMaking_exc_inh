@@ -1,6 +1,10 @@
 function [CC, CR, COMs, mask_eft] = setCC_cleanCC_plotCC_setMask(spatialComp, imHeight, imWidth, contour_threshold, im, plotCOMs)
 % [CC, CCorig] = setPnevContours_cleanCC_plotCC(spatialComp, imHeight, imWidth, contour_threshold, im)
-%
+% if you just want CC and COMs use the following faster codes:
+% COMs = fastCOMsA(A, [imHeight, imWidth]); % size(medImage{2})
+% [CC, CCorig] = ROIContoursPnevCC(A, imHeight, imWidth, contour_threshold); % contours
+
+
 % im = sdImage{2};
 
 if ~exist('plotCOMs', 'var') 

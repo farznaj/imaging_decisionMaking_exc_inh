@@ -12,7 +12,10 @@ import matplotlib.pyplot as plt
 plt.close('all')
 #%% data
 
-XY = scipy.io.loadmat('/Users/gamalamin/git_local_repository/Farzaneh/utils/logisticRegression/XYbehaviour.mat', variable_names=['X', 'Y']);
+#dirname = '/Users/gamalamin/git_local_repository/Farzaneh/utils/logisticRegression/XYbehaviour.mat';
+dirname = 'C:/Users/fnajafi/Documents/trial_history/utils/logisticRegression/XYbehaviour.mat';
+XY = scipy.io.loadmat(dirname, variable_names=['X', 'Y']);
+
 X = XY.pop('X')[:, 1:]
 Y = XY.pop('Y')
 X = np.reshape(X, (X.shape[0]*X.shape[1]), order = 'F');
