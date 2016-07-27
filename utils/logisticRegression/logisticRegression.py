@@ -72,7 +72,7 @@ def logisticRegression(X, Y, l):
     )
 
     #%% Training the model
-    maxIter = 10000;
+    maxIter = 50000;
     numRepetitions = 4;
     w_0 = [];
     b_0 = [];
@@ -93,7 +93,7 @@ def logisticRegression(X, Y, l):
         cost = [];
         perClassEr = [];
         
-        for i in range(int(maxIter/50.)):
+        for i in range(int(maxIter/100.)):
             Er1, Er2 = trainFn(Data[0], Data[1], l[0], l[1]);
             cost.append(Er1);
             perClassEr.append(Er2);
@@ -106,7 +106,7 @@ def logisticRegression(X, Y, l):
                 b.set_value(b_0[r]);
                 lps.set_value(lps_0[r]);
             if i>500:
-                if abs(cost[i-100]-cost[i])<(10.0**-5):  
+                if abs(cost[i-100]-cost[i])<(10.0**-3):  
                     break;
                     
         if cost[-1]<minCost:
@@ -136,7 +136,7 @@ def logisticRegression(X, Y, l):
     b_i = bbest_i;
     lps_i = lpsbest_i;
 
-    for i in range(int(49.*maxIter/50.)):
+    for i in range(int(95.*maxIter/100.)):
         Er1, Er2 = trainFn(Data[0], Data[1], l[0], l[1]);
         cost.append(Er1);
         perClassEr.append(Er2);
@@ -149,7 +149,25 @@ def logisticRegression(X, Y, l):
             b.set_value(b_0);
             lps.set_value(lps_0);
         if i>500:
-            if abs(cost[i-100]-cost[i])<(10.0**-10):  
+            if abs(cost[i-100]-cost[i])<(10.0**-6):  
+                break;
+                
+    ## pruning the values with smaller learning rate
+    learnRate.set_value(learnRate.get_value()/10.0) 
+    for i in range(int(4.*maxIter/100.)):
+        Er1, Er2 = trainFn(Data[0], Data[1], l[0], l[1]);
+        cost.append(Er1);
+        perClassEr.append(Er2);
+        b_i.append(b.get_value());
+        lps_i.append(lps.get_value());
+        learnRate_i.append(learnRate.get_value());
+        if  np.isnan(w.get_value()).sum()>0 or np.isnan(lps.get_value()).sum()>0 or np.isnan(b.get_value()).sum()>0:   
+            learnRate.set_value(learnRate.get_value()/2.0) 
+            w.set_value(w_0);
+            b.set_value(b_0);
+            lps.set_value(lps_0);
+        if i>500:
+            if abs(cost[i-100]-cost[i])<(10.0**-6):  
                 break;
 
        
