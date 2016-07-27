@@ -42,7 +42,7 @@ def logisticRegression(X, Y, l):
     # Declare and initialize theano shared optimization variables
     w = shared(rng.randn(numFeatures), name = 'w'); # initialize the weight vector (w) randomly
     b = shared(np.random.randn(), name = 'b'); # initialize the bias variable (b) randomly
-    lps = shared(np.random.rand(), name = 'lps'); # initialize the lapse rate variable (lps) randomly between 0 and 1
+    lps = shared(0.5 * np.random.rand(), name = 'lps'); # initialize the lapse rate variable (lps) randomly between 0 and 1
     learnRate = shared(scale, name = 'learnRate')
     
     #%% functions expressions and compilations
@@ -68,36 +68,79 @@ def logisticRegression(X, Y, l):
     trainFn = function(
     inputs = [x, y, lambda_l2, lambda_l1],
     outputs = [costExpression, perClassErExpression],
-    updates = ((w, w - learnRate*grad_w), (b, b - learnRate*grad_b), (lps, Tn.clip((lps - learnRate*grad_lps) , 0.0, 0.999999)))
+    updates = ((w, w - learnRate*grad_w), (b, b - learnRate*grad_b), (lps, Tn.clip((lps - learnRate*grad_lps) , 0.0, 0.4999999)))
     )
 
     #%% Training the model
     maxIter = 50000;
-    w0 = w.get_value();
-    b0 = b.get_value();
-    lps0 = lps.get_value();    
-    cost = [];
-    perClassEr = [];
-    b_i = [b.get_value()];
-    lps_i = [lps.get_value()];
-    learnRate_i = [learnRate.get_value()];
-    for i in range(maxIter):
-        Er1, Er2 = trainFn(Data[0], Data[1], l[0], l[1]);
-        cost.append(Er1);
-        perClassEr.append(Er2);
-        b_i.append(b.get_value());
-        lps_i.append(lps.get_value());
-        learnRate_i.append(learnRate.get_value());
+    numRepetitions = 5;
+    w_0 = [];
+    b_0 = [];
+    lps_0 = [];
+    minCost = np.inf;
+    for r in range(numRepetitions):
+        w_0.append(rng.randn(numFeatures));
+        b_0.append(np.random.rand());
+        lps_0.append(0.5*np.random.rand());    
+        
+        w.set_value(w_0[r])
+        b.set_value(b_0[r])
+        lps.set_value(lps_0[r])        
+        learnRate.set_value(1.0*scale)        
+        b_i = [b.get_value()];
+        lps_i = [lps.get_value()];
+        learnRate_i = [learnRate.get_value()];
+        cost = [];
+        perClassEr = [];
+        
+        for i in range(maxIter):
+            Er1, Er2 = trainFn(Data[0], Data[1], l[0], l[1]);
+            cost.append(Er1);
+            perClassEr.append(Er2);
+            b_i.append(b.get_value());
+            lps_i.append(lps.get_value());
+            learnRate_i.append(learnRate.get_value());
+            if  np.isnan(w.get_value()).sum()>0 or np.isnan(lps.get_value()).sum()>0 or np.isnan(b.get_value()).sum()>0:   
+                learnRate.set_value(learnRate.get_value()/2.0) 
+                w.set_value(w_0[r]);
+                b.set_value(b_0[r]);
+                lps.set_value(lps_0[r]);
+            if i>500:
+                if abs(cost[i-100]-cost[i])<(10.0**-10):
+                    break;
+                    
+        if cost[-1]<minCost:
+            rbest = r;
+            minCost = cost[-1];
+            costbest = cost;
+            perClassErbest = perClassEr;
+            wbest = w.get_value();
+            lpsbest = lps.get_value();
+            bbest = b.get_value();
+            learnRatebest_i = learnRate_i;
+            bbest_i = b_i;
+            lpsbest_i = lps_i;
 
-        if  np.isnan(w.get_value()).sum()>0:   
-            learnRate.set_value(learnRate.get_value()/2.0) 
-            w.set_value(w0);
-            b.set_value(b0);
-            lps.set_value(lps0);
-        if i>500:
-            if abs(cost[i-100]-cost[i])<(10.0**-10):
-                break;
-                
+
+    
+
+       
+    
+    w_0 = w_0[rbest]
+    cost = costbest;
+    perClassEr = perClassErbest;
+    w.set_value(wbest) ;
+    lps.set_value(lpsbest);
+    b.set_value(bbest);
+    learnRate_i = learnRatebest_i;
+    b_i = bbest_i;
+    lps_i = lpsbest_i;
+
+
+
+       
+       
+  
     #%% plot results
     #%%
     plt.figure('cost')
@@ -126,7 +169,7 @@ def logisticRegression(X, Y, l):
 
     plt.figure('weights')
     plt.subplot(3, 1, 1)
-    plt.plot(w0, 'g')
+    plt.plot(w_0, 'g')
     plt.plot(w.get_value(), 'r')
     plt.xlabel('feature number')
     plt.ylabel('feature weight')
