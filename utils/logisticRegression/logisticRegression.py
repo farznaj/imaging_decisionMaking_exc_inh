@@ -23,6 +23,7 @@ def logisticRegression(X, Y, l):
     from numpy import random as rng
     import matplotlib.pyplot as plt
     from theano import tensor as Tn
+    
     #%% load data
     l = np.array(l).astype(float);
     numObservations = len(Y);
@@ -31,6 +32,7 @@ def logisticRegression(X, Y, l):
     X = np.reshape(np.array(X).astype('float'), (numObservations, numFeatures), order='F');
     scale = np.sqrt((np.reshape(X, (numObservations*numFeatures), order = 'F')**2).mean());
     Data = (X, Y); # data tuple
+    
     #%% declaration of sympolic variables and initializations
     # Declare theano symbolic input/ output variables
     x = Tn.matrix('x'); # sympolic feature variable
@@ -40,11 +42,13 @@ def logisticRegression(X, Y, l):
     # Declare and initialize theano shared optimization variables
     w = shared(rng.randn(numFeatures), name = 'w'); # initialize the weight vector (w) randomly
     b = shared(np.random.randn(), name = 'b'); # initialize the bias variable (b) randomly
-    lps = shared(np.random.rand(), name = 'lps'); # initialize the lapse rate variable (lps) randomly between 0 and 1
-    learnRate = shared(0.1*scale, name = 'learnRate')
+    lps = shared(0.5 * np.random.rand(), name = 'lps'); # initialize the lapse rate variable (lps) randomly between 0 and 1
+    learnRate = shared(scale, name = 'learnRate')
+    
     #%% functions expressions and compilations
     # function sympolic expressions
-    prob1Expression = lps/(1.0 + Tn.exp(- Tn.dot(x, w) + b)); # expression of logistic function (prob of 1)
+    XW = Tn.dot(x, w);
+    prob1Expression = lps + (1 - 2 * lps)/(1.0 + Tn.exp(- (XW + b))); # expression of logistic function (prob of 1)
     prob0Expression = 1.0-prob1Expression; # expression of logistic function (prob of 0)    
     predictExpression = prob1Expression>0.5;
     costExpression1 = - y * Tn.log(prob1Expression) - (1.0 - y) * Tn.log(prob0Expression); # cost function of one sample
@@ -65,35 +69,111 @@ def logisticRegression(X, Y, l):
     trainFn = function(
     inputs = [x, y, lambda_l2, lambda_l1],
     outputs = [costExpression, perClassErExpression],
-    updates = ((w, w - learnRate*grad_w), (b, b - learnRate*grad_b), (lps, Tn.clip((lps - learnRate*grad_lps) , 0.0, 0.999999)))
+    updates = ((w, w - learnRate*grad_w), (b, b - learnRate*grad_b), (lps, Tn.clip((lps - learnRate*grad_lps) , 0.0, 0.4999999)))
     )
 
     #%% Training the model
     maxIter = 50000;
-    w0 = w.get_value();
-    b0 = b.get_value();
-    lps0 = lps.get_value();    
-    cost = [];
-    perClassEr = [];
-    b_i = [b.get_value()];
-    lps_i = [lps.get_value()];
-    learnRate_i = [learnRate.get_value()];
-    for i in range(maxIter):
+    numRepetitions = 4;
+    w_0 = [];
+    b_0 = [];
+    lps_0 = [];
+    minCost = np.inf;
+    for r in range(numRepetitions):
+        w_0.append(rng.randn(numFeatures));
+        b_0.append(np.random.rand());
+        lps_0.append(0.5*np.random.rand());    
+        
+        w.set_value(w_0[r])
+        b.set_value(b_0[r])
+        lps.set_value(lps_0[r])        
+        learnRate.set_value(1.0*scale)        
+        b_i = [b.get_value()];
+        lps_i = [lps.get_value()];
+        learnRate_i = [learnRate.get_value()];
+        cost = [];
+        perClassEr = [];
+        
+        for i in range(int(maxIter/100.)):
+            Er1, Er2 = trainFn(Data[0], Data[1], l[0], l[1]);
+            cost.append(Er1);
+            perClassEr.append(Er2);
+            b_i.append(b.get_value());
+            lps_i.append(lps.get_value());
+            learnRate_i.append(learnRate.get_value());
+            if  np.isnan(w.get_value()).sum()>0 or np.isnan(lps.get_value()).sum()>0 or np.isnan(b.get_value()).sum()>0:   
+                learnRate.set_value(learnRate.get_value()/2.0) 
+                w.set_value(w_0[r]);
+                b.set_value(b_0[r]);
+                lps.set_value(lps_0[r]);
+            if i>500:
+                if abs(cost[i-100]-cost[i])<(10.0**-3):  
+                    break;
+                    
+        if cost[-1]<minCost:
+            rbest = r;
+            minCost = cost[-1];
+            costbest = cost;
+            perClassErbest = perClassEr;
+            wbest = w.get_value();
+            lpsbest = lps.get_value();
+            bbest = b.get_value();
+            learnRatebest_i = learnRate_i;
+            bbest_i = b_i;
+            lpsbest_i = lps_i;
+
+
+    
+
+       
+    
+    w_0 = w_0[rbest]
+    cost = costbest;
+    perClassEr = perClassErbest;
+    w.set_value(wbest) ;
+    lps.set_value(lpsbest);
+    b.set_value(bbest);
+    learnRate_i = learnRatebest_i;
+    b_i = bbest_i;
+    lps_i = lpsbest_i;
+
+    for i in range(int(95.*maxIter/100.)):
         Er1, Er2 = trainFn(Data[0], Data[1], l[0], l[1]);
         cost.append(Er1);
         perClassEr.append(Er2);
         b_i.append(b.get_value());
         lps_i.append(lps.get_value());
         learnRate_i.append(learnRate.get_value());
-
-        if  np.isnan(w.get_value()).sum()>0:   
+        if  np.isnan(w.get_value()).sum()>0 or np.isnan(lps.get_value()).sum()>0 or np.isnan(b.get_value()).sum()>0:   
             learnRate.set_value(learnRate.get_value()/2.0) 
-            w.set_value(w0);
-            b.set_value(b0);
-            lps.set_value(lps0);
+            w.set_value(w_0);
+            b.set_value(b_0);
+            lps.set_value(lps_0);
         if i>500:
-            if abs(cost[i-100]-cost[i])<(10.0**-10):
+            if abs(cost[i-100]-cost[i])<(10.0**-6):  
                 break;
+                
+    ## pruning the values with smaller learning rate
+    learnRate.set_value(learnRate.get_value()/10.0) 
+    for i in range(int(4.*maxIter/100.)):
+        Er1, Er2 = trainFn(Data[0], Data[1], l[0], l[1]);
+        cost.append(Er1);
+        perClassEr.append(Er2);
+        b_i.append(b.get_value());
+        lps_i.append(lps.get_value());
+        learnRate_i.append(learnRate.get_value());
+        if  np.isnan(w.get_value()).sum()>0 or np.isnan(lps.get_value()).sum()>0 or np.isnan(b.get_value()).sum()>0:   
+            learnRate.set_value(learnRate.get_value()/2.0) 
+            w.set_value(w_0);
+            b.set_value(b_0);
+            lps.set_value(lps_0);
+        if i>500:
+            if abs(cost[i-100]-cost[i])<(10.0**-6):  
+                break;
+
+       
+       
+  
     #%% plot results
     #%%
     plt.figure('cost')
@@ -122,7 +202,7 @@ def logisticRegression(X, Y, l):
 
     plt.figure('weights')
     plt.subplot(3, 1, 1)
-    plt.plot(w0, 'g')
+    plt.plot(w_0, 'g')
     plt.plot(w.get_value(), 'r')
     plt.xlabel('feature number')
     plt.ylabel('feature weight')
@@ -136,6 +216,7 @@ def logisticRegression(X, Y, l):
     plt.ylim(0., 1.)
     plt.xlabel('iteration')
     plt.ylabel('lapse rate')
+    
     #%% save optimization parameters to class
     class optParamsClass:
         cost_per_iter = np.inf;
