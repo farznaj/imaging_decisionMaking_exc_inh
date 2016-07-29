@@ -286,6 +286,8 @@ figure; histogram(tau(:,2))
 %% Evaluate A and C of Efty's algorithm
 
 if evaluateEftyAC
+%     figure; imagesc(reshape(mean(P.psdx,2), imHeight, imWidth))
+
     load(imfilename, 'imHeight', 'imWidth', 'medImage')
     
     figure; imagesc(reshape(mean(A,2), imHeight, imWidth)) % look at average of spatial components.

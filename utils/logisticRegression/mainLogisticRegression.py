@@ -13,7 +13,8 @@ plt.close('all')
 #%% data
 
 #dirname = '/Users/gamalamin/git_local_repository/Farzaneh/utils/logisticRegression/XYbehaviour.mat';
-dirname = 'C:/Users/fnajafi/Documents/trial_history/utils/logisticRegression/XYbehaviour.mat';
+#dirname = 'C:/Users/fnajafi/Documents/trial_history/utils/logisticRegression/XYbehaviour.mat';
+dirname = '/media/farznaj/OS/Users/fnajafi/Documents/trial_history/utils/logisticRegression/XYbehaviour.mat';
 XY = scipy.io.loadmat(dirname, variable_names=['X', 'Y']);
 
 X = XY.pop('X')[:, 1:]
