@@ -16,9 +16,13 @@ if isempty(strfind(pwd, 'gamalamin')) % Farzaneh
     if ismac
         dataPath = '/Users/Farzaneh/Desktop/Farzaneh/data'; % macbook
     elseif isunix
-        dataPath = '/sonas-hs/churchland/nlsas/data/data'; % server
+        if isempty(strfind(pwd, 'sonas')) % Unix in the office
+            dataPath = '~/Shares/Churchland/data';
+        else % server
+            dataPath = '/sonas-hs/churchland/nlsas/data/data'; 
+        end
     elseif ispc
-        dataPath = '\\sonas-hs.cshl.edu\churchland\data'; % lab PC
+        dataPath = '\\sonas-hs.cshl.edu\churchland\data'; % Office PC
     end
 else % Gamal
     dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data';

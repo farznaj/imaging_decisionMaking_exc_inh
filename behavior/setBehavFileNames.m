@@ -34,12 +34,17 @@ if nargin < 4
     days2exclude = {};
 end
 
+
 if isempty(strfind(pwd, 'gamalamin')) % Farzaneh
     if ismac
     %     dataPath = '/Users/Farzaneh/Desktop/Farzaneh/data'; % macbook
         dataPath = '/Volumes/churchland/data';
     elseif isunix
-        dataPath = '/sonas-hs/churchland/nlsas/data/data'; % server
+        if isempty(strfind(pwd, 'sonas')) % Unix in the office
+            dataPath = '~/Shares/Churchland/data';
+        else
+            dataPath = '/sonas-hs/churchland/nlsas/data/data'; % server
+        end
     elseif ispc
         dataPath = '\\sonas-hs.cshl.edu\churchland\data'; % lab PC
     %     dataPath = '\\sonas-hs.cshl.edu\churchland-norepl\data not likely to be used';

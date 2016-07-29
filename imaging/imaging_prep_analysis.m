@@ -322,16 +322,18 @@ else
 end
 linkaxes(h, 'x')
 
+
 % Assess tau and noise for each neuron
 % load(pnevFileName, 'P')
 figure;
 subplot(211), plot(tau(:,2)), xlabel('Neuron'), ylabel('Tau (ms)'), legend('decay') %, legend('rise','decay')
 subplot(212), plot(cell2mat(P.neuron_sn)), xlabel('Neuron'), ylabel('neuron\_sn')
 
+
 % Assess a number of parameters related to A (spatial component)
 % load(pnevFileName, 'A')
 figure;
-subplot(311), plot(sum(A~=0,1)), ylabel('Number of pixels')
+subplot(311), plot(sum(A~=0,1)), ylabel('Number of pixels in A')
 subplot(312), plot(nanmean(A,1)), ylabel('Mean A')
 subplot(313), plot(max(A,[],1)), ylabel('Max A')
 xlabel('Neuron')
