@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 plt.close('all')
 #%% data
 
-#dirname = '/Users/gamalamin/git_local_repository/Farzaneh/utils/logisticRegression/XYbehaviour.mat';
+dirname = '/Users/gamalamin/git_local_repository/Farzaneh/utils/logisticRegression/XYbehaviour.mat';
 #dirname = 'C:/Users/fnajafi/Documents/trial_history/utils/logisticRegression/XYbehaviour.mat';
-dirname = '/media/farznaj/OS/Users/fnajafi/Documents/trial_history/utils/logisticRegression/XYbehaviour.mat';
+#dirname = '/media/farznaj/OS/Users/fnajafi/Documents/trial_history/utils/logisticRegression/XYbehaviour.mat';
 XY = scipy.io.loadmat(dirname, variable_names=['X', 'Y']);
 
 X = XY.pop('X')[:, 1:]
@@ -29,9 +29,7 @@ X = np.random.randn((numObservations*numFeatures))
 Y = np.random.randint(0, high=2, size = numObservations)
 """
 #%% 
-l = [0., 0.0]
-wVect = []
-for i in range(1):
-    w, b, lps, perClassEr, cost, optParams = logisticRegression(X, Y, l)
-    wVect.append(w)
+scale = np.sqrt((X**2).mean()).astype('float');
+l = scale * np.array([10. , 0.]);
+w, b, lps, perClassEr, cost, optParams = logisticRegression(X, Y, l)
     

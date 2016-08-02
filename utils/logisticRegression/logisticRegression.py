@@ -52,7 +52,7 @@ def logisticRegression(X, Y, l):
     prob0Expression = 1.0-prob1Expression; # expression of logistic function (prob of 0)    
     predictExpression = prob1Expression>0.5;
     costExpression1 = - y * Tn.log(prob1Expression) - (1.0 - y) * Tn.log(prob0Expression); # cost function of one sample
-    costExpression = costExpression1.mean() + scale * lambda_l2 * (w ** 2).sum() + scale * lambda_l1 * abs(w).sum();   # mean cost across all samples with the regularization
+    costExpression = costExpression1.mean() + lambda_l2 * (w ** 2).sum() + lambda_l1 * abs(w).sum();   # mean cost across all samples with the regularization
     perClassErExpression = abs(predictExpression - y).sum()/numObservations*100; # percent classification error expression    
     
     # compiling function expressions for speed    
