@@ -46,7 +46,7 @@ if kfold>0
     elseif strcmpi(regType, 'l1')
         l = [zeros(length(lvect), 1) lvect];
     end
-    numSamples = 10;
+    numSamples = 100;
     L = length(Y);
 
     perClassErrorTest = nan(numSamples, length(lvect));
