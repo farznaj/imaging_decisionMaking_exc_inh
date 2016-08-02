@@ -30,6 +30,6 @@ Y = np.random.randint(0, high=2, size = numObservations)
 """
 #%% 
 scale = np.sqrt((X**2).mean()).astype('float');
-l = scale * np.array([10. , 0.]);
+l = scale * np.array([0. , 0.]);
 w, b, lps, perClassEr, cost, optParams = logisticRegression(X, Y, l)
     
