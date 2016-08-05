@@ -37,6 +37,10 @@ if count(py.sys.path,'') == 0
 insert(py.sys.path,int32(0),'');
 end
 %% perform cross-validation to choose the best regularization parameter
+mskNans = sum(isnan(X), 2)> 0 & isnan(Y);
+X = X(~mskNans, :);
+Y = Y(~mskNans);
+%%
 scale = sqrt(mean(X(:).^2));
 numTrials = length(Y);  
 
@@ -65,7 +69,7 @@ if kfold>0
         XTest = Xs(floor((kfold-1)/kfold*numTrials)+1:numTrials, :);
         
         %%%%% loop over the possible regularization values
-        parfor i = 1:length(lvect)
+        for i = 1:length(lvect)
             %%%% train the model
             outputs = py.logisticRegression.logisticRegression(XTrain(:).', YTrain(:).', l(i, :)*scale);
             Beta =  double(py.array.array('d',py.numpy.nditer(outputs(1))));
