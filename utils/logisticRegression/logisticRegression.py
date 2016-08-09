@@ -48,11 +48,12 @@ def logisticRegression(X, Y, l):
     #%% functions expressions and compilations
     # function sympolic expressions
     XW = Tn.dot(x, w);
+    L_Exp = Tn.shape(y); 
     prob1Expression = lps + (1 - 2 * lps)/(1.0 + Tn.exp(- (XW + b))); # expression of logistic function (prob of 1)
     prob0Expression = 1.0-prob1Expression; # expression of logistic function (prob of 0)    
     predictExpression = prob1Expression>0.5;
-    costExpression1 = - y * Tn.log(prob1Expression) - (1.0 - y) * Tn.log(prob0Expression); # cost function of one sample
-    costExpression = costExpression1.mean() + lambda_l2 * (w ** 2).sum() + lambda_l1 * abs(w).sum();   # mean cost across all samples with the regularization
+    logLikelihood_Exp = (y * Tn.log(prob1Expression) + (1.0 - y) * Tn.log(prob0Expression)).sum(); # loglikelihood expression
+    costExpression = - logLikelihood_Exp/(L_Exp[0]) + lambda_l2 * (w ** 2).sum() + lambda_l1 * abs(w).sum();   # mean cost across all samples with the regularization
     perClassErExpression = abs(predictExpression - y).sum()/numObservations*100; # percent classification error expression    
     
     # compiling function expressions for speed    
@@ -68,7 +69,7 @@ def logisticRegression(X, Y, l):
     # training function
     trainFn = function(
     inputs = [x, y, lambda_l2, lambda_l1],
-    outputs = [costExpression, perClassErExpression],
+    outputs = [costExpression, perClassErExpression, logLikelihood_Exp],
     updates = ((w, w - learnRate*grad_w), (b, b - learnRate*grad_b), (lps, Tn.clip((lps - learnRate*grad_lps) , 0.0, 0.4999999)))
     )
 
@@ -93,9 +94,10 @@ def logisticRegression(X, Y, l):
         learnRate_i = [learnRate.get_value()];
         cost = [];
         perClassEr = [];
-        
+        lklhood_i = [];
         for i in range(int(maxIter/100.)):
-            Er1, Er2 = trainFn(Data[0], Data[1], l[0], l[1]);
+            Er1, Er2, lklhood = trainFn(Data[0], Data[1], l[0], l[1]);
+            lklhood_i.append(lklhood)            
             cost.append(Er1);
             perClassEr.append(Er2);
             b_i.append(b.get_value());
@@ -121,6 +123,9 @@ def logisticRegression(X, Y, l):
             learnRatebest_i = learnRate_i;
             bbest_i = b_i;
             lpsbest_i = lps_i;
+            lklhoodBest_i = lklhood_i;          
+      
+
 
 
     
@@ -136,9 +141,11 @@ def logisticRegression(X, Y, l):
     learnRate_i = learnRatebest_i;
     b_i = bbest_i;
     lps_i = lpsbest_i;
+    lklhood_i = lklhoodBest_i;          
 
     for i in range(int(95.*maxIter/100.)):
-        Er1, Er2 = trainFn(Data[0], Data[1], l[0], l[1]);
+        Er1, Er2, lklhood = trainFn(Data[0], Data[1], l[0], l[1]);
+        lklhood_i.append(lklhood)            
         cost.append(Er1);
         perClassEr.append(Er2);
         b_i.append(b.get_value());
@@ -156,7 +163,8 @@ def logisticRegression(X, Y, l):
     ## pruning the values with smaller learning rate
     learnRate.set_value(learnRate.get_value()/10.0) 
     for i in range(int(4.*maxIter/100.)):
-        Er1, Er2 = trainFn(Data[0], Data[1], l[0], l[1]);
+        Er1, Er2 ,lklhood = trainFn(Data[0], Data[1], l[0], l[1]);
+        lklhood_i.append(lklhood)            
         cost.append(Er1);
         perClassEr.append(Er2);
         b_i.append(b.get_value());
@@ -187,9 +195,9 @@ def logisticRegression(X, Y, l):
     plt.xlabel('iteration')
     plt.ylabel('classification error (%)')
     plt.subplot(3,1,3)
-    plt.plot(learnRate_i)
+    plt.plot(lklhood_i)
     plt.xlabel('iteration')
-    plt.ylabel('learning rate')
+    plt.ylabel('log likelihood')
 
     plt.figure('prediction')
     plt.plot(Data[1], 'go')
@@ -221,13 +229,14 @@ def logisticRegression(X, Y, l):
     class optParamsClass:
         cost_per_iter = np.inf;
         perClassEr_per_iter = 100.;
-    
+        loglikelihood = -np.inf;
         def description(self):
             return 'object contains optimization parameters'
     
     optParams = optParamsClass();
     optParams.cost_per_iter = np.array(cost);
     optParams.perClassEr_per_iter = np.array(perClassEr);
+    optParams.loglikelihood = lklhood_i;
     #%% return parameters
     return w.get_value(), b.get_value(), lps.get_value(), perClassEr[-1], cost[-1], optParams
 
