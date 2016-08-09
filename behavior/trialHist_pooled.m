@@ -6,7 +6,8 @@
 
 
 %%
-miceNames = {'fn03', 'fn04', 'fn05', 'fn06', 'fni16', 'fni17', 'fni18', 'fni19', 'hni01', 'hni04'};
+% % miceNames = {'fn03', 'fn04', 'fn05', 'fn06', 'fni16', 'fni17', 'fni18', 'fni19', 'hni01', 'hni04'};
+miceNames = {'fni17'};
 
 % For allowCorrectResp: change seems to be the best. nothing is fine, except B_rate for easy
 % stimuli looks bad which makes sense. remove is fine too, you just get
@@ -14,7 +15,7 @@ miceNames = {'fn03', 'fn04', 'fn05', 'fn06', 'fni16', 'fni17', 'fni18', 'fni19',
 allowCorrectResp = 'change'; % 'nothing'; %'remove'; % 'change'; % if you set to change, only allResp will change, but outcome will remain the same (this is important because if a trial was at the end successful, we think it should cause bias on the next trial, even if it was an allow correction trial).
 binningRates = 0; 1; % this is for the conventional analysis, if true the effect of outcome will be shown for different stim strength.
 
-doplots = false; % true; % make plots for each mouse for the logistic regression analysis.
+doplots = true; % true; % make plots for each mouse for the logistic regression analysis.
 doplots_conventAnalysis = false; % true; % make plots for each mouse for the conventional analysis.
 
 regressModel = 'rate_outcomeITI'; % 'rate_outcomeITI' (default), 'rate_outcomeRate', 'rateITI_outcomeITI', 'rateITI_outcomeRate'
