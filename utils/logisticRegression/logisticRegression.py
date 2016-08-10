@@ -184,6 +184,18 @@ def logisticRegression(X, Y, l):
   
     #%% plot results
     #%%
+    msk1 = Data[1]>0
+    msk0 = Data[1]<1
+    Y1 = Data[1][msk1]
+    Y0 = Data[1][msk0]
+    Yhat = predictFn(Data[0])
+    Yhat1 = Yhat[msk1];
+    Yhat0 = Yhat[msk0];
+    prob1 = prob1Fn(Data[0])    
+    prob1_1 = prob1[msk1]    
+    prob1_0 = prob1[msk0]    
+    
+    
     plt.figure('cost')
     plt.subplot(3,1,1)
     plt.plot(cost)
@@ -200,13 +212,18 @@ def logisticRegression(X, Y, l):
     plt.ylabel('log likelihood')
 
     plt.figure('prediction')
-    plt.plot(Data[1], 'go')
-    plt.plot(predictFn(Data[0]), 'rx')
+    plt.plot(np.arange(1, len(Y0)+1), Yhat0, 'ro', label='prediction')
+    plt.plot(np.arange(1, len(Y0)+1), prob1_0, 'b.', label='likelihood of success')
+    plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), Yhat1, 'ro')
+    plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), prob1_1, 'b.')
+    plt.plot(np.arange(1, len(Y0)+1), Y0, 'k.', label='data')
+    plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), Y1, 'k.')
+
     plt.ylim(-0.1,1.1)
     plt.xticks([0 , 1])
     plt.xlabel('observation')
     plt.ylabel('class label')
-    plt.legend(('real observations', 'predicted observations'))
+    plt.legend()
 
     plt.figure('weights')
     plt.subplot(3, 1, 1)
@@ -230,6 +247,8 @@ def logisticRegression(X, Y, l):
         cost_per_iter = np.inf;
         perClassEr_per_iter = 100.;
         loglikelihood = -np.inf;
+        prediction = [];
+        likelihood_trial = [];
         def description(self):
             return 'object contains optimization parameters'
     
@@ -237,6 +256,8 @@ def logisticRegression(X, Y, l):
     optParams.cost_per_iter = np.array(cost);
     optParams.perClassEr_per_iter = np.array(perClassEr);
     optParams.loglikelihood = lklhood_i;
+    optParams.prediction = Yhat;
+    optParams.likelihood_trial = prob1;
     #%% return parameters
     return w.get_value(), b.get_value(), lps.get_value(), perClassEr[-1], cost[-1], optParams
 

@@ -5,10 +5,11 @@ Created on Thu Jul 21 12:18:32 2016
 @author: gamalamin
 """
 #%%
-import scipy
+import scipy.io as scio
 import numpy as np
 from logisticRegression import *
 import matplotlib.pyplot as plt
+
 plt.close('all')
 #%% data
 
@@ -32,4 +33,5 @@ Y = np.random.randint(0, high=2, size = numObservations)
 scale = np.sqrt((X**2).mean()).astype('float');
 l = scale * np.array([0. , 0.]);
 w, b, lps, perClassEr, cost, optParams = logisticRegression(X, Y, l)
-    
+
+scio.savemat('logisticResults.mat', {'w':w, 'b': b, 'lps':lps, 'perClassEr': perClassEr, 'cost':cost, 'optParams':optParams})
