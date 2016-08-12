@@ -11,8 +11,10 @@ import scipy
 import matplotlib.pyplot as plt
 from lassoLinearSVM import *
 #%% load data
-#XY = scipy.io.loadmat('/Users/gamalamin/git_local_repository/Farzaneh/XY.mat', variable_names=['X', 'Y']);
-XY = scipy.io.loadmat('//sonas-hs.cshl.edu/churchland/data/fni17/imaging/151029/151029_003_ch2-PnevPanResults-160426-191859.mat', variable_names=['X', 'Y']);
+#dirName = '//sonas-hs.cshl.edu/churchland/data/fni17/imaging/151029/151029_003_ch2-PnevPanResults-160426-191859.mat';
+#dirName = '/Users/gamalamin/git_local_repository/Farzaneh/XY.mat';
+dirName = '/home/farznaj/Shares/Churchland/data/fni17/imaging/151022/XY_fni17_151022 XY_lassoSVM.mat';
+XY = scipy.io.loadmat(dirName, variable_names=['X', 'Y']);
 X = XY.pop('X')
 Y = XY.pop('Y')
 #%% feature normalization and scale
@@ -20,10 +22,9 @@ meanX = np.mean(X, axis = 0);
 stdX = np.std(X, axis = 0);
 X = (X-meanX)/stdX;
 
-
 X = np.reshape(X, (X.shape[0]*X.shape[1], 1), order='F');
 #%% run lasso SVM
-wl1, b, bestCVerror, bestc, linear_svm, _, _, _, _, _ = lassoLinearSVM(X, Y, 10)
+wl1_shuff, b_shuff, wl1, b, bestCVerror, bestc, linear_svm, meanCVerror, semCVerror, c, meanX, stdX = lassoLinearSVM(X, Y, 10)
 
 #%% compare to l2
 from sklearn import svm

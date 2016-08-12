@@ -35,7 +35,7 @@ def lassoLinearSVM(X, Y, kfold):
     
     #%% define functions
     def optimizeSVMReg(X, Y, kfold):
-        numSamples = 100;
+        numSamples = 5; #100;
         c = 10**np.array(np.arange(-5, 3, 0.1))
         CVerror = np.ones((len(c), numSamples))
         for i in range(len(c)):
@@ -83,8 +83,19 @@ def lassoLinearSVM(X, Y, kfold):
     #%% run the linear SVM classifer with best regularization parameter
     # Create a classifier: a support vector classifier
     linear_svm = svm.LinearSVC(C = bestc, loss='squared_hinge', penalty='l1', dual=False)    
+
     linear_svm.fit(X, Y)
     wl1 =  np.squeeze(linear_svm.coef_);
     b = linear_svm.intercept_;
     
-    return wl1, b, bestCVerror, bestc, linear_svm, meanCVerror, semCVerror, c, meanX, stdX
+    #%% shuffle Y for the test distribution
+    L = len(np.squeeze(Y));
+    ix = rng.permutation(np.arange(L))
+    Y_shuff = Y[ix];
+        
+    linear_svm_shuff = linear_svm
+    linear_svm_shuff.fit(X, Y_shuff)
+    wl1_shuff =  np.squeeze(linear_svm_shuff.coef_);
+    b_shuff = linear_svm_shuff.intercept_;    
+    
+    return wl1_shuff, b_shuff, wl1, b, bestCVerror, bestc, linear_svm, meanCVerror, semCVerror, c, meanX, stdX

@@ -63,7 +63,7 @@ fprintf('========= SVM analysis started =========\n')
 defaultPrePostFrames = 2; % default value for nPre and postFrames, if their computed values < 1.
 [~, ~, ~, nPre, nPost] = alignTraces_prePost_allCases(alignedEvent, [], {alldata.frameTimes}, ...
     frameLength, defaultPrePostFrames, [], [], timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, [], 1, nan, nan, 1);
-fprintf('%i = number of post event frames without any other events.\n', nPost)
+fprintf('%i = post-event frames (%.1f ms) without any other events.\n', nPost, nPost*frameLength)
 warning('Double check the start and end point of the training epoch!')
 % fprintf('%i = event frame if nPreFrames was set to NaN.\n%i = number of post event frames without any other events.\n', nPre+1, nPost)
 
@@ -75,11 +75,15 @@ if trialHistAnalysis
     epEnd = nan; %epStart + round(200/frameLength); % if nan, epEnd = time of alignedEvent.
     
 elseif strcmp(alignedEvent, 'stimOn')
-    cprintf('blue', 'Training epoch = 600-800ms after stimulus onset.\n')
+    cprintf('blue', 'Training epoch = 600-%.1fms after stimulus onset.\n', nPost*frameLength)
     % index of frames after alignedEvent (if epStartRel2Event=1, epStart
     % will be 1 frame after alignedEvent).
     epStartRel2Event = round(600/frameLength); % the start point of the epoch relative to alignedEvent for training SVM. (500ms)
-    epEndRel2Event = floor(800/frameLength); % the end point of the epoch relative to alignedEvent for training SVM. (700ms)
+    if isempty(nPost)
+        epEndRel2Event = floor(800/frameLength); % the end point of the epoch relative to alignedEvent for training SVM. (700ms)
+    else
+        epEndRel2Event = nPost; % 
+    end
 else
     cprintf('blue', 'Training epoch = all frames after alingedEvent and before the next event.\n')
     epStartRel2Event = 1;
@@ -407,6 +411,11 @@ for s = 1:numShuffs
         numPCs = find(cumsum(l/sum(l))>0.99, 1, 'first');
         fprintf('Number of PCs:\n   %i : total\n   %i : >.99 variance\n', length(l), numPCs)
         
+        %{
+        x_mean_sub = bsxfun(@minus, X_s, mean(X_s));
+        x_proj_pc = x_mean_sub * (PCs(:, 1:numPCs) * PCs(:, 1:numPCs)');
+        X_s = bsxfun(@plus, x_proj_pc, mean(X_s));
+        %}
         X_s = bsxfun(@plus, bsxfun(@minus, X_s, mean(X_s))*(PCs(:, 1:numPCs)*PCs(:, 1:numPCs)'), mean(X_s));
         %     X_s = bsxfun(@plus, bsxfun(@minus, X, mean(X))*(PCs(:, 1:numPCs)*PCs(:, 1:numPCs)'), mean(X));
 
@@ -591,9 +600,7 @@ wNsHrLrAve = wNsHrLrAve / norm(wNsHrLrAve); % normalize it so the final average 
 %}
 
 
-%% Main summary plots
-
-% plots of projections, and classification accuracy for all trials (the
+%% Plots of projections, and classification accuracy for all trials (the
 % vast majority of them are the training dataset).
 popClassifierSVM_traindata_set_plot
 % popClassifierSVM_plots
