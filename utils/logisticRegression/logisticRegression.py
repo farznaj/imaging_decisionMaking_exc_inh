@@ -23,13 +23,18 @@ def logisticRegression(X, Y, l):
     from numpy import random as rng
     import matplotlib.pyplot as plt
     from theano import tensor as Tn
-    
+    figFlg = False;
     #%% load data
     l = np.array(l).astype(float);
     numObservations = len(Y);
     numFeatures = len(X)/numObservations;
     Y = np.squeeze(np.array(Y).astype('int'));    
     X = np.reshape(np.array(X).astype('float'), (numObservations, numFeatures), order='F');
+    # remove any nans    
+    mskOutNans = (np.sum(np.isnan(X), axis = 1)+ np.squeeze(np.isnan(Y)))<1 ;
+    X = X[mskOutNans, :];
+    Y = Y[mskOutNans];    
+    numObservations, numFeatures = X.shape;
     scale = np.sqrt((np.reshape(X, (numObservations*numFeatures), order = 'F')**2).mean());
     Data = (X, Y); # data tuple
     
@@ -195,53 +200,54 @@ def logisticRegression(X, Y, l):
     prob1_1 = prob1[msk1]    
     prob1_0 = prob1[msk0]    
     
+    if figFlg:
+        
+        plt.figure('cost')
+        plt.subplot(3,1,1)
+        plt.plot(cost)
+        plt.xlabel('iteration')
+        plt.ylabel('cross-entropy loss')
+        plt.subplot(3,1,2)
+        plt.plot(perClassEr)
+        plt.ylim(0,100)
+        plt.xlabel('iteration')
+        plt.ylabel('classification error (%)')
+        plt.subplot(3,1,3)
+        plt.plot(lklhood_i)
+        plt.xlabel('iteration')
+        plt.ylabel('log likelihood')
     
-    plt.figure('cost')
-    plt.subplot(3,1,1)
-    plt.plot(cost)
-    plt.xlabel('iteration')
-    plt.ylabel('cross-entropy loss')
-    plt.subplot(3,1,2)
-    plt.plot(perClassEr)
-    plt.ylim(0,100)
-    plt.xlabel('iteration')
-    plt.ylabel('classification error (%)')
-    plt.subplot(3,1,3)
-    plt.plot(lklhood_i)
-    plt.xlabel('iteration')
-    plt.ylabel('log likelihood')
-
-    plt.figure('prediction')
-    plt.plot(np.arange(1, len(Y0)+1), Yhat0, 'ro', label='prediction')
-    plt.plot(np.arange(1, len(Y0)+1), prob1_0, 'b.', label='likelihood of success')
-    plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), Yhat1, 'ro')
-    plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), prob1_1, 'b.')
-    plt.plot(np.arange(1, len(Y0)+1), Y0, 'k.', label='data')
-    plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), Y1, 'k.')
-
-    plt.ylim(-0.1,1.1)
-    plt.xticks([0 , 1])
-    plt.xlabel('observation')
-    plt.ylabel('class label')
-    plt.legend()
-
-    plt.figure('weights')
-    plt.subplot(3, 1, 1)
-    plt.plot(w_0, 'g')
-    plt.plot(w.get_value(), 'r')
-    plt.xlabel('feature number')
-    plt.ylabel('feature weight')
-    plt.legend(('before optimization', 'after optimization'))
-    plt.subplot(3, 1, 2)
-    plt.plot(b_i)
-    plt.xlabel('iteration')
-    plt.ylabel('bias')
-    plt.subplot(3, 1, 3)
-    plt.plot(lps_i)
-    plt.ylim(0., 1.)
-    plt.xlabel('iteration')
-    plt.ylabel('lapse rate')
+        plt.figure('prediction')
+        plt.plot(np.arange(1, len(Y0)+1), Yhat0, 'ro', label='prediction')
+        plt.plot(np.arange(1, len(Y0)+1), prob1_0, 'b.', label='likelihood of success')
+        plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), Yhat1, 'ro')
+        plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), prob1_1, 'b.')
+        plt.plot(np.arange(1, len(Y0)+1), Y0, 'k.', label='data')
+        plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), Y1, 'k.')
     
+        plt.ylim(-0.1,1.1)
+        plt.xticks([0 , 1])
+        plt.xlabel('observation')
+        plt.ylabel('class label')
+        plt.legend()
+    
+        plt.figure('weights')
+        plt.subplot(3, 1, 1)
+        plt.plot(w_0, 'g')
+        plt.plot(w.get_value(), 'r')
+        plt.xlabel('feature number')
+        plt.ylabel('feature weight')
+        plt.legend(('before optimization', 'after optimization'))
+        plt.subplot(3, 1, 2)
+        plt.plot(b_i)
+        plt.xlabel('iteration')
+        plt.ylabel('bias')
+        plt.subplot(3, 1, 3)
+        plt.plot(lps_i)
+        plt.ylim(0., 1.)
+        plt.xlabel('iteration')
+        plt.ylabel('lapse rate')
+        
     #%% save optimization parameters to class
     class optParamsClass:
         cost_per_iter = np.inf;
@@ -249,6 +255,9 @@ def logisticRegression(X, Y, l):
         loglikelihood = -np.inf;
         prediction = [];
         likelihood_trial = [];
+        predictFn = [];
+        perClassErFn = [];
+        probSucessFn = [];
         def description(self):
             return 'object contains optimization parameters'
     
@@ -258,6 +267,9 @@ def logisticRegression(X, Y, l):
     optParams.loglikelihood = lklhood_i;
     optParams.prediction = Yhat;
     optParams.likelihood_trial = prob1;
+    optParams.predictFn = predictFn;
+    optParams.perClassErFn = perClassErFn;
+    optParams.probSucessFn = prob1Fn;
     #%% return parameters
     return w.get_value(), b.get_value(), lps.get_value(), perClassEr[-1], cost[-1], optParams
 
