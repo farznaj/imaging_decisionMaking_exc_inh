@@ -23,13 +23,18 @@ def logisticRegression(X, Y, l):
     from numpy import random as rng
     import matplotlib.pyplot as plt
     from theano import tensor as Tn
-    
+    figFlg = False;
     #%% load data
     l = np.array(l).astype(float);
     numObservations = len(Y);
     numFeatures = len(X)/numObservations;
     Y = np.squeeze(np.array(Y).astype('int'));    
     X = np.reshape(np.array(X).astype('float'), (numObservations, numFeatures), order='F');
+    # remove any nans    
+    mskOutNans = (np.sum(np.isnan(X), axis = 1)+ np.squeeze(np.isnan(Y)))<1 ;
+    X = X[mskOutNans, :];
+    Y = Y[mskOutNans];    
+    numObservations, numFeatures = X.shape;
     scale = np.sqrt((np.reshape(X, (numObservations*numFeatures), order = 'F')**2).mean());
     Data = (X, Y); # data tuple
     
@@ -195,53 +200,54 @@ def logisticRegression(X, Y, l):
     prob1_1 = prob1[msk1]    
     prob1_0 = prob1[msk0]    
     
+    if figFlg:
+        
+        plt.figure('cost')
+        plt.subplot(3,1,1)
+        plt.plot(cost)
+        plt.xlabel('iteration')
+        plt.ylabel('cross-entropy loss')
+        plt.subplot(3,1,2)
+        plt.plot(perClassEr)
+        plt.ylim(0,100)
+        plt.xlabel('iteration')
+        plt.ylabel('classification error (%)')
+        plt.subplot(3,1,3)
+        plt.plot(lklhood_i)
+        plt.xlabel('iteration')
+        plt.ylabel('log likelihood')
     
-    plt.figure('cost')
-    plt.subplot(3,1,1)
-    plt.plot(cost)
-    plt.xlabel('iteration')
-    plt.ylabel('cross-entropy loss')
-    plt.subplot(3,1,2)
-    plt.plot(perClassEr)
-    plt.ylim(0,100)
-    plt.xlabel('iteration')
-    plt.ylabel('classification error (%)')
-    plt.subplot(3,1,3)
-    plt.plot(lklhood_i)
-    plt.xlabel('iteration')
-    plt.ylabel('log likelihood')
-
-    plt.figure('prediction')
-    plt.plot(np.arange(1, len(Y0)+1), Yhat0, 'ro', label='prediction')
-    plt.plot(np.arange(1, len(Y0)+1), prob1_0, 'b.', label='likelihood of success')
-    plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), Yhat1, 'ro')
-    plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), prob1_1, 'b.')
-    plt.plot(np.arange(1, len(Y0)+1), Y0, 'k.', label='data')
-    plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), Y1, 'k.')
-
-    plt.ylim(-0.1,1.1)
-    plt.xticks([0 , 1])
-    plt.xlabel('observation')
-    plt.ylabel('class label')
-    plt.legend()
-
-    plt.figure('weights')
-    plt.subplot(3, 1, 1)
-    plt.plot(w_0, 'g')
-    plt.plot(w.get_value(), 'r')
-    plt.xlabel('feature number')
-    plt.ylabel('feature weight')
-    plt.legend(('before optimization', 'after optimization'))
-    plt.subplot(3, 1, 2)
-    plt.plot(b_i)
-    plt.xlabel('iteration')
-    plt.ylabel('bias')
-    plt.subplot(3, 1, 3)
-    plt.plot(lps_i)
-    plt.ylim(0., 1.)
-    plt.xlabel('iteration')
-    plt.ylabel('lapse rate')
+        plt.figure('prediction')
+        plt.plot(np.arange(1, len(Y0)+1), Yhat0, 'ro', label='prediction')
+        plt.plot(np.arange(1, len(Y0)+1), prob1_0, 'b.', label='likelihood of success')
+        plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), Yhat1, 'ro')
+        plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), prob1_1, 'b.')
+        plt.plot(np.arange(1, len(Y0)+1), Y0, 'k.', label='data')
+        plt.plot(np.arange(len(Y0)+1, len(Yhat)+1), Y1, 'k.')
     
+        plt.ylim(-0.1,1.1)
+        plt.xticks([0 , 1])
+        plt.xlabel('observation')
+        plt.ylabel('class label')
+        plt.legend()
+    
+        plt.figure('weights')
+        plt.subplot(3, 1, 1)
+        plt.plot(w_0, 'g')
+        plt.plot(w.get_value(), 'r')
+        plt.xlabel('feature number')
+        plt.ylabel('feature weight')
+        plt.legend(('before optimization', 'after optimization'))
+        plt.subplot(3, 1, 2)
+        plt.plot(b_i)
+        plt.xlabel('iteration')
+        plt.ylabel('bias')
+        plt.subplot(3, 1, 3)
+        plt.plot(lps_i)
+        plt.ylim(0., 1.)
+        plt.xlabel('iteration')
+        plt.ylabel('lapse rate')
+        
     #%% save optimization parameters to class
     class optParamsClass:
         cost_per_iter = np.inf;
@@ -249,6 +255,9 @@ def logisticRegression(X, Y, l):
         loglikelihood = -np.inf;
         prediction = [];
         likelihood_trial = [];
+        predictFn = [];
+        perClassErFn = [];
+        probSucessFn = [];
         def description(self):
             return 'object contains optimization parameters'
     
@@ -258,7 +267,83 @@ def logisticRegression(X, Y, l):
     optParams.loglikelihood = lklhood_i;
     optParams.prediction = Yhat;
     optParams.likelihood_trial = prob1;
+    optParams.predictFn = predictFn;
+    optParams.perClassErFn = perClassErFn;
+    optParams.probSucessFn = prob1Fn;
     #%% return parameters
     return w.get_value(), b.get_value(), lps.get_value(), perClassEr[-1], cost[-1], optParams
 
-                   
+
+#%% 
+def crossValidateLogistic(X, Y, regType, kfold, numSamples):
+    import numpy as np
+    from logisticRegression import logisticRegression
+    import matplotlib.pyplot as plt
+    from numpy import random as rng
+    from compiler.ast import flatten
+
+    scale = np.sqrt((X**2).mean());
+    mskOutNans = (np.sum(np.isnan(X), axis = 1)+ np.squeeze(np.isnan(Y)))<1 ;
+    X = X[mskOutNans, :];
+    Y = Y[mskOutNans];  
+    numObservations, numFeatures = X.shape;
+    lvect = flatten([0, list(10**(np.arange(-5, 2,0.5)))]);
+    
+    l = np.zeros((len(lvect), 2))
+    if regType== 'l2':
+        l[:, 0] = lvect; # l2-regularization
+    elif regType== 'l1':
+        l[:, 1] = lvect; # l1-regularization
+    else:
+        lvect = [0., 0.] # no regularization
+        l = [0., 0.]
+            
+    l = l*scale;
+    
+    perClassErrorTest = np.nan+np.ones((numSamples, l.shape[0]));
+    perClassErrorTrain = np.nan+np.ones((numSamples, l.shape[0]));
+    
+    for s in range(numSamples):
+        ## %%%%%% shuffle trials to break any dependencies on the sequence of trails 
+        shfl = rng.permutation(np.arange(0, numObservations));
+        Ys = Y[shfl];
+        Xs = X[shfl, :]; 
+            
+        ## %%%%% divide data to training and testin sets
+        YTrain = Ys[range(int((kfold-1.)/kfold*numObservations))];
+        YTest = Ys[np.arange(int((kfold-1.)/kfold*numObservations), numObservations)];
+            
+        XTrain = Xs[range(int((kfold-1.)/kfold*numObservations)), :];
+        XTest = Xs[np.arange(int((kfold-1.)/kfold*numObservations), numObservations), :];
+        ## %%%%% loop over the possible regularization values
+        for i in range(l.shape[0]):
+            w, b, lps, perClassEr, cost, optParams = logisticRegression(np.reshape(XTrain, (np.prod(XTrain.shape)), order = 'F'), YTrain, l[i, :])
+            perClassErrorTest[s, i] = optParams.perClassErFn(XTest, YTest);
+            perClassErrorTrain[s, i] = optParams.perClassErFn(XTrain, YTrain);
+        print 'cross-validating: %.2f %% completed' % ((s+1.)/(numSamples+0.)*100.) 
+    
+    meanPerClassErrorTrain = np.mean(perClassErrorTrain, axis = 0);
+    semPerClassErrorTrain = np.std(perClassErrorTrain, axis = 0)/np.sqrt(numSamples);
+    
+    meanPerClassErrorTest = np.mean(perClassErrorTest, axis = 0);
+    semPerClassErrorTest = np.std(perClassErrorTest, axis = 0)/np.sqrt(numSamples);
+    ix = np.argmin(meanPerClassErrorTest);
+    l = l[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix]), :];
+    lbest = l[-1, :]; # best regularization term based on minError+SE criteria
+    ix = np.sum(l==lbest,1)==2
+    ##%%%%%% plot coss-validation results
+    plt.figure('cross validation')
+    
+    plt.fill_between(lvect, meanPerClassErrorTrain-semPerClassErrorTrain, meanPerClassErrorTrain+ semPerClassErrorTrain, alpha=0.5, edgecolor='k', facecolor='k')
+    plt.fill_between(lvect, meanPerClassErrorTest-semPerClassErrorTest, meanPerClassErrorTest+ semPerClassErrorTest, alpha=0.5, edgecolor='r', facecolor='r')
+    plt.plot(lvect, meanPerClassErrorTrain, 'k', label = 'training')
+    plt.plot(lvect, meanPerClassErrorTest, 'r', label = 'validation')
+    plt.plot(np.array(lvect)[ix], meanPerClassErrorTest[ix], 'bo')
+    plt.xlim([lvect[1], lvect[-1]])
+    plt.xscale('log')
+    plt.xlabel('regularization parameter')
+    plt.ylabel('classification error (%)')
+    plt.legend()
+    return lbest
+
+            

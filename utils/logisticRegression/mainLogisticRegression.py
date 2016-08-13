@@ -11,16 +11,14 @@ from logisticRegression import *
 import matplotlib.pyplot as plt
 
 plt.close('all')
-#%% data
+#%% load data
 
 dirname = '/Users/gamalamin/git_local_repository/Farzaneh/utils/logisticRegression/XYbehaviour.mat';
 #dirname = 'C:/Users/fnajafi/Documents/trial_history/utils/logisticRegression/XYbehaviour.mat';
 #dirname = '/media/farznaj/OS/Users/fnajafi/Documents/trial_history/utils/logisticRegression/XYbehaviour.mat';
-XY = scipy.io.loadmat(dirname, variable_names=['X', 'Y']);
-
+XY = scio.loadmat(dirname, variable_names=['X', 'Y']);
 X = XY.pop('X')[:, 1:]
-Y = XY.pop('Y')
-X = np.reshape(X, (X.shape[0]*X.shape[1]), order = 'F');
+Y = np.squeeze(XY.pop('Y'));
 
 #%% random data
 """
@@ -29,9 +27,11 @@ numFeatures = 300; # number of features
 X = np.random.randn((numObservations*numFeatures))
 Y = np.random.randint(0, high=2, size = numObservations)
 """
-#%% 
-scale = np.sqrt((X**2).mean()).astype('float');
-l = scale * np.array([0. , 0.]);
-w, b, lps, perClassEr, cost, optParams = logisticRegression(X, Y, l)
+#%% do cross validation and pick the regularization parameter
+kfold = 10
+numSamples = 100
+lbest = crossValidateLogistic(X, Y, 'l2', kfold, numSamples)
 
-scio.savemat('logisticResults.mat', {'w':w, 'b': b, 'lps':lps, 'perClassEr': perClassEr, 'cost':cost, 'optParams':optParams})
+#%%
+w, b, lps, perClassEr, cost, optParams = logisticRegression(np.reshape(X, (np.prod(X.shape)), order = 'F'), Y, lbest)
+scio.savemat('logisticResults.mat', {'w':w, 'b': b, 'lps':lps, 'perClassEr': perClassEr, 'cost':cost})
