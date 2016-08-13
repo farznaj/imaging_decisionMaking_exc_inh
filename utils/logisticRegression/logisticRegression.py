@@ -273,4 +273,77 @@ def logisticRegression(X, Y, l):
     #%% return parameters
     return w.get_value(), b.get_value(), lps.get_value(), perClassEr[-1], cost[-1], optParams
 
-                   
+
+#%% 
+def crossValidateLogistic(X, Y, regType, kfold, numSamples):
+    import numpy as np
+    from logisticRegression import logisticRegression
+    import matplotlib.pyplot as plt
+    from numpy import random as rng
+    from compiler.ast import flatten
+
+    scale = np.sqrt((X**2).mean());
+    mskOutNans = (np.sum(np.isnan(X), axis = 1)+ np.squeeze(np.isnan(Y)))<1 ;
+    X = X[mskOutNans, :];
+    Y = Y[mskOutNans];  
+    numObservations, numFeatures = X.shape;
+    lvect = flatten([0, list(10**(np.arange(-5, 2,0.5)))]);
+    
+    l = np.zeros((len(lvect), 2))
+    if regType== 'l2':
+        l[:, 0] = lvect; # l2-regularization
+    elif regType== 'l1':
+        l[:, 1] = lvect; # l1-regularization
+    else:
+        lvect = [0., 0.] # no regularization
+        l = [0., 0.]
+            
+    l = l*scale;
+    
+    perClassErrorTest = np.nan+np.ones((numSamples, l.shape[0]));
+    perClassErrorTrain = np.nan+np.ones((numSamples, l.shape[0]));
+    
+    for s in range(numSamples):
+        ## %%%%%% shuffle trials to break any dependencies on the sequence of trails 
+        shfl = rng.permutation(np.arange(0, numObservations));
+        Ys = Y[shfl];
+        Xs = X[shfl, :]; 
+            
+        ## %%%%% divide data to training and testin sets
+        YTrain = Ys[range(int((kfold-1.)/kfold*numObservations))];
+        YTest = Ys[np.arange(int((kfold-1.)/kfold*numObservations), numObservations)];
+            
+        XTrain = Xs[range(int((kfold-1.)/kfold*numObservations)), :];
+        XTest = Xs[np.arange(int((kfold-1.)/kfold*numObservations), numObservations), :];
+        ## %%%%% loop over the possible regularization values
+        for i in range(l.shape[0]):
+            w, b, lps, perClassEr, cost, optParams = logisticRegression(np.reshape(XTrain, (np.prod(XTrain.shape)), order = 'F'), YTrain, l[i, :])
+            perClassErrorTest[s, i] = optParams.perClassErFn(XTest, YTest);
+            perClassErrorTrain[s, i] = optParams.perClassErFn(XTrain, YTrain);
+        print 'cross-validating: %.2f %% completed' % ((s+1.)/(numSamples+0.)*100.) 
+    
+    meanPerClassErrorTrain = np.mean(perClassErrorTrain, axis = 0);
+    semPerClassErrorTrain = np.std(perClassErrorTrain, axis = 0)/np.sqrt(numSamples);
+    
+    meanPerClassErrorTest = np.mean(perClassErrorTest, axis = 0);
+    semPerClassErrorTest = np.std(perClassErrorTest, axis = 0)/np.sqrt(numSamples);
+    ix = np.argmin(meanPerClassErrorTest);
+    l = l[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix]), :];
+    lbest = l[-1, :]; # best regularization term based on minError+SE criteria
+    ix = np.sum(l==lbest,1)==2
+    ##%%%%%% plot coss-validation results
+    plt.figure('cross validation')
+    
+    plt.fill_between(lvect, meanPerClassErrorTrain-semPerClassErrorTrain, meanPerClassErrorTrain+ semPerClassErrorTrain, alpha=0.5, edgecolor='k', facecolor='k')
+    plt.fill_between(lvect, meanPerClassErrorTest-semPerClassErrorTest, meanPerClassErrorTest+ semPerClassErrorTest, alpha=0.5, edgecolor='r', facecolor='r')
+    plt.plot(lvect, meanPerClassErrorTrain, 'k', label = 'training')
+    plt.plot(lvect, meanPerClassErrorTest, 'r', label = 'validation')
+    plt.plot(np.array(lvect)[ix], meanPerClassErrorTest[ix], 'bo')
+    plt.xlim([lvect[1], lvect[-1]])
+    plt.xscale('log')
+    plt.xlabel('regularization parameter')
+    plt.ylabel('classification error (%)')
+    plt.legend()
+    return lbest
+
+            
