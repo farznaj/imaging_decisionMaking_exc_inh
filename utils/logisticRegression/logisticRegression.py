@@ -100,7 +100,7 @@ def logisticRegression(X, Y, l, **options):
     for r in range(numRepetitions):
         w_0.append(rng.randn(numFeatures));
         b_0.append(np.random.rand());
-        clps_0.append(0.5*np.random.rand());    
+        clps_0.append(np.random.randn());    
         
         w.set_value(w_0[r])
         b.set_value(b_0[r])
