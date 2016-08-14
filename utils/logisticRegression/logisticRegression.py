@@ -14,8 +14,8 @@
 % l: array of size 2 that contains the regularization parameter for l2 at the 
 % first entry and l1 at the sencond entry
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-def logisticRegression(X, Y, l):
+#%%
+def logisticRegression(X, Y, l, **options):
     #%% imports
     from theano import function
     from theano import shared
@@ -23,7 +23,16 @@ def logisticRegression(X, Y, l):
     from numpy import random as rng
     import matplotlib.pyplot as plt
     from theano import tensor as Tn
-    figFlg = False;
+    from lasagne.updates import adagrad
+    if options.get('plotFigure'):
+        plotFigure = options.get('plotFigure');
+    else:
+        plotFigure = False;
+        
+    if options.get('verbose'):
+        verbose = options.get('verbose');
+    else:
+        verbose = False;         
     #%% load data
     l = np.array(l).astype(float);
     numObservations = len(Y);
@@ -35,7 +44,6 @@ def logisticRegression(X, Y, l):
     X = X[mskOutNans, :];
     Y = Y[mskOutNans];    
     numObservations, numFeatures = X.shape;
-    scale = np.sqrt((np.reshape(X, (numObservations*numFeatures), order = 'F')**2).mean());
     Data = (X, Y); # data tuple
     
     #%% declaration of sympolic variables and initializations
@@ -48,7 +56,6 @@ def logisticRegression(X, Y, l):
     w = shared(rng.randn(numFeatures), name = 'w'); # initialize the weight vector (w) randomly
     b = shared(np.random.randn(), name = 'b'); # initialize the bias variable (b) randomly
     lps = shared(0.5 * np.random.rand(), name = 'lps'); # initialize the lapse rate variable (lps) randomly between 0 and 1
-    learnRate = shared(scale, name = 'learnRate')
     
     #%% functions expressions and compilations
     # function sympolic expressions
@@ -70,21 +77,25 @@ def logisticRegression(X, Y, l):
 
     # cost gradient with respect to all parameters
     grad_w, grad_b, grad_lps = Tn.grad(costExpression, [w, b, lps]);
-    
+
+    updates = adagrad([grad_w, grad_b, grad_lps], [w, b, lps], learning_rate=0.1, epsilon=0.001)
+
     # training function
     trainFn = function(
     inputs = [x, y, lambda_l2, lambda_l1],
     outputs = [costExpression, perClassErExpression, logLikelihood_Exp],
-    updates = ((w, w - learnRate*grad_w), (b, b - learnRate*grad_b), (lps, Tn.clip((lps - learnRate*grad_lps) , 0.0, 0.4999999)))
+    updates = updates    
+    #updates = ((w, w - learnRate*grad_w), (b, b - learnRate*grad_b), (lps, Tn.clip((lps - learnRate*grad_lps) , 0.0, 0.4999999)))
     )
 
     #%% Training the model
-    maxIter = 50000;
-    numRepetitions = 4;
+    maxIter = 10000;
+    numRepetitions = 3;
     w_0 = [];
     b_0 = [];
     lps_0 = [];
     minCost = np.inf;
+    rbest = 0
     for r in range(numRepetitions):
         w_0.append(rng.randn(numFeatures));
         b_0.append(np.random.rand());
@@ -93,30 +104,24 @@ def logisticRegression(X, Y, l):
         w.set_value(w_0[r])
         b.set_value(b_0[r])
         lps.set_value(lps_0[r])        
-        learnRate.set_value(1.0*scale)        
         b_i = [b.get_value()];
         lps_i = [lps.get_value()];
-        learnRate_i = [learnRate.get_value()];
         cost = [];
         perClassEr = [];
         lklhood_i = [];
-        for i in range(int(maxIter/100.)):
+        for i in range(int(maxIter)):
             Er1, Er2, lklhood = trainFn(Data[0], Data[1], l[0], l[1]);
+            lps.set_value(np.clip(lps.get_value(), 0., 0.5)) # enforce constraint
             lklhood_i.append(lklhood)            
             cost.append(Er1);
             perClassEr.append(Er2);
             b_i.append(b.get_value());
             lps_i.append(lps.get_value());
-            learnRate_i.append(learnRate.get_value());
-            if  np.isnan(w.get_value()).sum()>0 or np.isnan(lps.get_value()).sum()>0 or np.isnan(b.get_value()).sum()>0:   
-                learnRate.set_value(learnRate.get_value()/2.0) 
-                w.set_value(w_0[r]);
-                b.set_value(b_0[r]);
-                lps.set_value(lps_0[r]);
             if i>500:
-                if abs(cost[i-100]-cost[i])<(10.0**-3):  
+                if abs(cost[i-100]-cost[i])<(10.0**-5):  
                     break;
-                    
+            if verbose:
+                print 'iteration %d , objective value %.5f, initial conditions %d out of %d' %(i+1, cost[i],r+1, numRepetitions) 
         if cost[-1]<minCost:
             rbest = r;
             minCost = cost[-1];
@@ -125,67 +130,21 @@ def logisticRegression(X, Y, l):
             wbest = w.get_value();
             lpsbest = lps.get_value();
             bbest = b.get_value();
-            learnRatebest_i = learnRate_i;
             bbest_i = b_i;
             lpsbest_i = lps_i;
             lklhoodBest_i = lklhood_i;          
       
-
-
-
-    
-
-       
-    
     w_0 = w_0[rbest]
     cost = costbest;
     perClassEr = perClassErbest;
     w.set_value(wbest) ;
     lps.set_value(lpsbest);
     b.set_value(bbest);
-    learnRate_i = learnRatebest_i;
     b_i = bbest_i;
     lps_i = lpsbest_i;
     lklhood_i = lklhoodBest_i;          
 
-    for i in range(int(95.*maxIter/100.)):
-        Er1, Er2, lklhood = trainFn(Data[0], Data[1], l[0], l[1]);
-        lklhood_i.append(lklhood)            
-        cost.append(Er1);
-        perClassEr.append(Er2);
-        b_i.append(b.get_value());
-        lps_i.append(lps.get_value());
-        learnRate_i.append(learnRate.get_value());
-        if  np.isnan(w.get_value()).sum()>0 or np.isnan(lps.get_value()).sum()>0 or np.isnan(b.get_value()).sum()>0:   
-            learnRate.set_value(learnRate.get_value()/2.0) 
-            w.set_value(w_0);
-            b.set_value(b_0);
-            lps.set_value(lps_0);
-        if i>500:
-            if abs(cost[i-100]-cost[i])<(10.0**-6):  
-                break;
-                
-    ## pruning the values with smaller learning rate
-    learnRate.set_value(learnRate.get_value()/10.0) 
-    for i in range(int(4.*maxIter/100.)):
-        Er1, Er2 ,lklhood = trainFn(Data[0], Data[1], l[0], l[1]);
-        lklhood_i.append(lklhood)            
-        cost.append(Er1);
-        perClassEr.append(Er2);
-        b_i.append(b.get_value());
-        lps_i.append(lps.get_value());
-        learnRate_i.append(learnRate.get_value());
-        if  np.isnan(w.get_value()).sum()>0 or np.isnan(lps.get_value()).sum()>0 or np.isnan(b.get_value()).sum()>0:   
-            learnRate.set_value(learnRate.get_value()/2.0) 
-            w.set_value(w_0);
-            b.set_value(b_0);
-            lps.set_value(lps_0);
-        if i>500:
-            if abs(cost[i-100]-cost[i])<(10.0**-6):  
-                break;
 
-       
-       
   
     #%% plot results
     #%%
@@ -200,7 +159,7 @@ def logisticRegression(X, Y, l):
     prob1_1 = prob1[msk1]    
     prob1_0 = prob1[msk0]    
     
-    if figFlg:
+    if plotFigure:
         
         plt.figure('cost')
         plt.subplot(3,1,1)
@@ -272,6 +231,7 @@ def logisticRegression(X, Y, l):
     optParams.probSucessFn = prob1Fn;
     #%% return parameters
     return w.get_value(), b.get_value(), lps.get_value(), perClassEr[-1], cost[-1], optParams
+
 
 
 #%% 
