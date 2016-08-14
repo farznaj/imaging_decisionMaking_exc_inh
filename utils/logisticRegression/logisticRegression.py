@@ -66,7 +66,7 @@ def logisticRegression(X, Y, l, **options):
     predictExpression = prob1Expression>0.5;
     logLikelihood_Exp = (y * Tn.log(prob1Expression) + (1.0 - y) * Tn.log(prob0Expression)).sum(); # loglikelihood expression
     costExpression = - logLikelihood_Exp/(L_Exp[0]) + lambda_l2 * (w ** 2).sum() + lambda_l1 * abs(w).sum();   # mean cost across all samples with the regularization
-    perClassErExpression = abs(predictExpression - y).sum()/numObservations*100; # percent classification error expression    
+    perClassErExpression = abs(predictExpression - y).sum()/Tn.shape(y)[0]*100; # percent classification error expression    
     
     # compiling function expressions for speed    
     prob1Fn = function(inputs = [x], outputs = prob1Expression); 
@@ -236,6 +236,7 @@ def logisticRegression(X, Y, l, **options):
 
 #%% 
 def crossValidateLogistic(X, Y, regType, kfold, numSamples):
+    #%%
     import numpy as np
     from logisticRegression import logisticRegression
     import matplotlib.pyplot as plt
@@ -270,10 +271,10 @@ def crossValidateLogistic(X, Y, regType, kfold, numSamples):
         Xs = X[shfl, :]; 
             
         ## %%%%% divide data to training and testin sets
-        YTrain = Ys[range(int((kfold-1.)/kfold*numObservations))];
+        YTrain = Ys[np.arange(0, int((kfold-1.)/kfold*numObservations))];
         YTest = Ys[np.arange(int((kfold-1.)/kfold*numObservations), numObservations)];
             
-        XTrain = Xs[range(int((kfold-1.)/kfold*numObservations)), :];
+        XTrain = Xs[np.arange(0, int((kfold-1.)/kfold*numObservations)), :];
         XTest = Xs[np.arange(int((kfold-1.)/kfold*numObservations), numObservations), :];
         ## %%%%% loop over the possible regularization values
         for i in range(l.shape[0]):

@@ -19,7 +19,7 @@ dirname = '/Users/gamalamin/git_local_repository/Farzaneh/utils/logisticRegressi
 XY = scio.loadmat(dirname, variable_names=['X', 'Y']);
 X = XY.pop('X')[:, 1:]
 Y = np.squeeze(XY.pop('Y'));
-
+lbest = [0., 0.]
 #%% random data
 """
 numObservations = 200;
