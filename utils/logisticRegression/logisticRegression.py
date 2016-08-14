@@ -55,12 +55,13 @@ def logisticRegression(X, Y, l, **options):
     # Declare and initialize theano shared optimization variables
     w = shared(rng.randn(numFeatures), name = 'w'); # initialize the weight vector (w) randomly
     b = shared(np.random.randn(), name = 'b'); # initialize the bias variable (b) randomly
-    lps = shared(0.5 * np.random.rand(), name = 'lps'); # initialize the lapse rate variable (lps) randomly between 0 and 1
+    clps = shared(0.5 * np.random.rand(), name = 'clps'); # initialize the lapse rate variable (lps) randomly between 0 and 1
     
     #%% functions expressions and compilations
     # function sympolic expressions
     XW = Tn.dot(x, w);
     L_Exp = Tn.shape(y); 
+    lps = 0.5/(1.+Tn.exp(-10.*clps));
     prob1Expression = lps + (1 - 2 * lps)/(1.0 + Tn.exp(- (XW + b))); # expression of logistic function (prob of 1)
     prob0Expression = 1.0-prob1Expression; # expression of logistic function (prob of 0)    
     predictExpression = prob1Expression>0.5;
@@ -76,9 +77,9 @@ def logisticRegression(X, Y, l, **options):
     perClassErFn = function(inputs = [x, y], outputs = perClassErExpression);
 
     # cost gradient with respect to all parameters
-    grad_w, grad_b, grad_lps = Tn.grad(costExpression, [w, b, lps]);
+    grad_w, grad_b, grad_clps = Tn.grad(costExpression, [w, b, clps]);
 
-    updates = adagrad([grad_w, grad_b, grad_lps], [w, b, lps], learning_rate=0.1, epsilon=0.001)
+    updates = adagrad([grad_w, grad_b, grad_clps], [w, b, clps], learning_rate=0.2, epsilon=0.0001)
 
     # training function
     trainFn = function(
@@ -90,35 +91,35 @@ def logisticRegression(X, Y, l, **options):
 
     #%% Training the model
     maxIter = 10000;
-    numRepetitions = 3;
+    numRepetitions = 4;
     w_0 = [];
     b_0 = [];
-    lps_0 = [];
+    clps_0 = [];
     minCost = np.inf;
     rbest = 0
     for r in range(numRepetitions):
         w_0.append(rng.randn(numFeatures));
         b_0.append(np.random.rand());
-        lps_0.append(0.5*np.random.rand());    
+        clps_0.append(0.5*np.random.rand());    
         
         w.set_value(w_0[r])
         b.set_value(b_0[r])
-        lps.set_value(lps_0[r])        
+        clps.set_value(clps_0[r])        
         b_i = [b.get_value()];
-        lps_i = [lps.get_value()];
+        lps_i = [lps.eval()];
         cost = [];
         perClassEr = [];
         lklhood_i = [];
         for i in range(int(maxIter)):
             Er1, Er2, lklhood = trainFn(Data[0], Data[1], l[0], l[1]);
-            lps.set_value(np.clip(lps.get_value(), 0., 0.5)) # enforce constraint
+            #lps.set_value(np.clip(lps.get_value(), 0., 0.5)) # enforce constraint
             lklhood_i.append(lklhood)            
             cost.append(Er1);
             perClassEr.append(Er2);
             b_i.append(b.get_value());
-            lps_i.append(lps.get_value());
+            lps_i.append(lps.eval());
             if i>500:
-                if abs(cost[i-100]-cost[i])<(10.0**-5):  
+                if abs(cost[i-100]-cost[i])<(10.0**-6):  
                     break;
             if verbose:
                 print 'iteration %d , objective value %.5f, initial conditions %d out of %d' %(i+1, cost[i],r+1, numRepetitions) 
@@ -128,7 +129,7 @@ def logisticRegression(X, Y, l, **options):
             costbest = cost;
             perClassErbest = perClassEr;
             wbest = w.get_value();
-            lpsbest = lps.get_value();
+            clpsbest = clps.get_value();
             bbest = b.get_value();
             bbest_i = b_i;
             lpsbest_i = lps_i;
@@ -138,7 +139,7 @@ def logisticRegression(X, Y, l, **options):
     cost = costbest;
     perClassEr = perClassErbest;
     w.set_value(wbest) ;
-    lps.set_value(lpsbest);
+    clps.set_value(clpsbest);
     b.set_value(bbest);
     b_i = bbest_i;
     lps_i = lpsbest_i;
@@ -230,7 +231,7 @@ def logisticRegression(X, Y, l, **options):
     optParams.perClassErFn = perClassErFn;
     optParams.probSucessFn = prob1Fn;
     #%% return parameters
-    return w.get_value(), b.get_value(), lps.get_value(), perClassEr[-1], cost[-1], optParams
+    return w.get_value(), b.get_value(), lps.eval(), perClassEr[-1], cost[-1], optParams
 
 
 
