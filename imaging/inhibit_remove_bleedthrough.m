@@ -37,14 +37,15 @@ pcs = pca([x' y']);
 slp = pcs(2,1) / pcs(1,1);
 
 % regression
-glmfit(x,y)
-% md1 = fitglm(x,y);
+a = glmfit(x,y);
+% md1 = fitglm(x,y); 
+% md1.Coefficients.Estimate(2)
 
 figure; hold on
 plot(x, y, '.')
 xy = [x(:); y(:)];
 plot([min(xy)  max(xy)] , [min(xy)  max(xy)] , 'b')
-title([slp, md1.Coefficients.Estimate(2)])
+title([slp, a(2)])
 
 
 %%
@@ -76,6 +77,7 @@ trace_ch2 = C_df(1:end-1,:)';
 
 %% Compute correlation between ch1 and ch2 activity for each ROI.
 
+nn = size(trace_ch1,2);
 crr = NaN(1, nn);
 for rr = 1:nn
     t1 = trace_ch1(:,rr);
@@ -87,7 +89,7 @@ figure; plot(crr)
 
 
 %%
-nn = size(trace_ch1, 2);
+% nn = size(trace_ch1, 2);
 
 mu_ch1 = mean(trace_ch1, 1);
 mu_ch2 = mean(trace_ch2, 1);
