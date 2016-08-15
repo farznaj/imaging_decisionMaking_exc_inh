@@ -22,11 +22,14 @@ def lassoLinearSVM(X, Y, kfold):
     
     
     Y = np.squeeze(np.array(Y).astype(int));
-    L = len(Y);
-    N = len(X)/L;
+    
+    if X.shape[0]>Y.shape[0]:
+        L = len(Y);
+        N = len(X)/L;
+        X = np.reshape(np.array(X.astype('float')), (L, N), order='F');
+
     kfold = int(kfold);    
     
-    X = np.reshape(np.array(X.astype('float')), (L, N), order='F');
 
     #%% feature normalization and scale
     meanX = np.mean(X, axis = 0);
