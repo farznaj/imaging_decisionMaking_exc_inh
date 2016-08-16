@@ -1,7 +1,7 @@
 function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, good_inhibit, outcomes, allResp, allResp_HR_LR, ...
         trs2rmv, stimdur, stimrate, stimtype, cb, timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, ...
         timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename, pnevFileName] = ....
-    imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, ...
+   imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, ...
         rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, frameLength);
 %
 % This is the main and starting function for the analysis of your imaging
@@ -26,8 +26,8 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % Example input variales:
 %{
 mouse = 'fni17';
-imagingFolder = '151029'; % '151102'; % '150916'; % '151021';
-mdfFileNumber = 3; % 1; % or tif major
+imagingFolder = '151102'; % '151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2]; % 3; % 1; % or tif major
 
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
 rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
@@ -55,32 +55,35 @@ home
     % 1.2: u are perhaps missing some inhibit neurons.
     % 1.13 can be good too.
     
-signalCh = 2;
-pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the latest pnev vile). Set [] to load the latest one.
-
-autoTraceQual = 0; %1; % if 1, automatic measure for trace quality will be used.
 normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
-
 
 excludeShortWaitDur = true; % waitdur_th = .032; % sec  % trials w waitdur less than this will be excluded.
 excludeExtraStim = false;
 allowCorrectResp = 'change'; % 'change'; 'remove'; 'nothing'; % if 'change': on trials that mouse corrected his choice, go with the original response.
 uncommittedResp = 'nothing'; % 'change'; 'remove'; 'nothing'; % what to do on trials that mouse made a response (licked the side port) but did not lick again to commit it.
 
-thbeg = 5; % n initial trials to exclude.
-
-evaluateEftyAC = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
+evaluateEftyOuts = 0; % set to 1 when first evaluating a session.
+plot_ave_trGroup = 0; % Plot average traces across all neurons for different trial groups aligned on particular trial events.
+plotEftyAC1by1 = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
+plotTrialTraces1by1 = 0; % plot traces per neuron and per trial showing all trial events
 furtherAnalyses = 0; % analyses related to choicePref and SVM will be performed.
-plot_ave_trGroup = false; % Plot average traces across all neurons for different trial groups aligned on particular trial events.
-plotTrialTraces1by1 = false; % plot traces per neuron and per trial showing all trial events
 compareManual = false; % compare results with manual ROI extraction
+
 
 setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
 
+autoTraceQual = 0; %1; % if 1, automatic measure for trace quality will be used.
 manualExamineTraceQual = 0; % if 0, traceQuality array needs to be saved.
     saveTraceQual = 0; % it will only take effect if manualExamineTraceQual is 1.
     analyzeQuality = [1 2]; % 1(good) 2(ok-good) 3(ok-bad) 4(bad) % trace qualities that will be analyzed. It will only take effect if manualExamineTraceQual is 1.
 orderTraces = 0; % if 1, traces will be ordered based on the measure of quality from high to low quality.
+
+
+thbeg = 5; % n initial trials to exclude.
+signalCh = 2;
+pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the latest pnev vile). Set [] to load the latest one.
+
+
 %{
 helpedInit = []; % [100];
 helpedChoice = []; %31;
@@ -135,7 +138,8 @@ begTrs = 1; % 1st trial of each session
 % use the following plot to decide on thbeg: number of begining trials that
 % you want to exclude.
 % stimDur_diff
-figure; hold on
+fhand = figure;
+subplot(221), hold on
 title(sprintf('thbeg = %d', thbeg))
 plot([all_data.waitDuration]+[all_data.postStimDelay])
 plot([all_data.stimDuration])
@@ -160,35 +164,16 @@ fprintf('Fraction of trials (rewardStage): allowCorr= %.3f. chooseSide= %.3f\n',
 % xlabel('Trials'), ylabel('chooseSide'), box off, set(gca,'tickdir','out')
 
 
-
-load(imfilename, 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'trialCodeMissing')
-trialNumbers(isnan(framesPerTrial)) = [];
-frame1RelToStartOff(isnan(framesPerTrial)) = [];
-framesPerTrial(isnan(framesPerTrial)) = [];
-
-if ~exist('trialCodeMissing', 'var') % for those days that you didn't save this var.
-    trialCodeMissing = [];
-end
-
-fprintf('Total number of imaged trials: %d\n', length(trialNumbers))
-if ~any(trialCodeMissing)
-    cprintf('blue', 'All trials are triggered in MScan :)\n')
-else
-    cprintf('blue', 'There are non-triggered trials in MScan! Trial %d\n', find(trialCodeMissing))
-end
-
-
-
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%% Load neural data, merge them into all_data, and assess trace quality %%%%%%%%%%%%%%%%%%%%%%%
 
 %% Load vars related to manual method
 
+load(pnevFileName, 'activity_man_eftMask_ch2')
+
 if compareManual
     
     load(imfilename, 'imHeight', 'imWidth', 'pmtOffFrames')
-    load(pnevFileName, 'activity_man_eftMask*')
-    %     load(imfilename, 'activity_man_eftMask')
     
     %{
     load(imfilename, 'rois', 'activity') % , 'imHeight', 'imWidth', 'pmtOffFrames')
@@ -198,14 +183,13 @@ if compareManual
     %}
     
     %% manual activity and dfof
-    activity_man = activity_man_eftMask_ch2;
-    
+%     activity_man = activity_man_eftMask_ch2;    
     %     activity_man = activity;
-    clear activity activity_man_eftMask*
+%     clear activity activity_man_eftMask*
     
-    % Compute df/f for the manually found activity trace.
+    % Compute Df/f for the manually found activity trace.
     gcampCh = 2; smoothPts = 6; minPts = 7000; %800;
-    dFOF_man = konnerthDeltaFOverF(activity_man, pmtOffFrames{gcampCh}, smoothPts, minPts);
+    dFOF_man = konnerthDeltaFOverF(activity_man_eftMask_ch2, pmtOffFrames{gcampCh}, smoothPts, minPts);
     
     
     %% masks and matching ROIs between the 2 methods.
@@ -242,7 +226,8 @@ end
 %% Assess pixel shifts (ie output of motion correction), pmtOffFrames and badFrames (frames with too much motion)
 
 load(imfilename, 'outputsDFT')
-figure; plot(outputsDFT{1}(:,2:3))
+figure(fhand), subplot(223)
+plot(outputsDFT{1}(:,2:3))
 legend('row shift', 'column shift')
 xlabel('Frame')
 ylabel('Pixel shift')
@@ -271,35 +256,20 @@ load(pnevFileName, 'C', 'C_df', 'S', 'A', 'P', 'f')
 fprintf('...done\n')
 load(imfilename, 'Nnan_nanBeg_nanEnd')
 % normalizeSpikes = 1;
-% frameLength = 1000/30.9; % sec.
 [C, S, C_df] = processEftyOuts(C, S, C_df, Nnan_nanBeg_nanEnd, normalizeSpikes);
 
 % set time constants (in ms) from P.gn
+% frameLength = 1000/30.9; % sec.
 tau = nan(size(P.gn,1), 2);
 for i = 1:length(tau)
     g = P.gn{i};
     tau(i,:) = tau_d2c(g,frameLength); % tau(:,1) is rise, and tau(:,2) is decay time constant (in ms).
 end
-figure; histogram(tau(:,2))
 
 
 %% Evaluate A and C of Efty's algorithm
 
-if evaluateEftyAC
-%     figure; imagesc(reshape(mean(P.psdx,2), imHeight, imWidth))
-
-    load(imfilename, 'imHeight', 'imWidth', 'medImage')
-    
-    figure; imagesc(reshape(mean(A,2), imHeight, imWidth)) % look at average of spatial components.
-    
-    im = medImage{2};
-    im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt's method.
-    
-    contour_threshold = .95;
-    plotCOMs = 1;
-    
-    [CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(A, imHeight, imWidth, contour_threshold, im, plotCOMs);
-
+if plotEftyAC1by1
     inds2plot = 1:size(C,1); % excl'; %excl(randperm(length(excl)))'; % size(C,1):-1:1; % 
     if ~exist('dFOF_man','var') % use this if you don't have manual activity
         plotEftManTracesROIs(C_df, S, [], A, [], CC, [], [], im, C, inds2plot, 0, 0, medImage{1});
@@ -312,33 +282,49 @@ end
 
 %% Evaluate C,f,manual activity, also tau, sn as well as some params related to A
 
-% plot C, f, manual activity
-figure; h = [];
-subplot(411), plot(nanmean(S)); title('S'), h = [h, gca];
-subplot(412), plot(nanmean(C)); title('C'), h = [h, gca];
-subplot(413), plot(f); title('f'), h = [h, gca];
-if exist('activity_man_eftMask', 'var')
-    subplot(414), plot(mean(activity_man_eftMask, 2)), title('manual'), h = [h, gca];
-else
-    warning('activity_man_eftMask does not exist!')
+if evaluateEftyOuts
+    
+    load(imfilename, 'imHeight', 'imWidth', 'medImage')
+    % Plot average of spatial components.
+    figure; imagesc(reshape(mean(A,2), imHeight, imWidth))  %     figure; imagesc(reshape(mean(P.psdx,2), imHeight, imWidth))
+
+    % Plot COMs
+    im = medImage{2};
+    im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt's method.
+    contour_threshold = .95;
+    plotCOMs = 1;
+    [CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(A, imHeight, imWidth, contour_threshold, im, plotCOMs);
+
+
+    % plot C, f, manual activity
+    figure; h = [];
+    subplot(413), plot(nanmean(S)); title('S'), h = [h, gca];
+    subplot(412), plot(nanmean(C)); title('C'), h = [h, gca];
+    subplot(414), plot(f); title('f'), h = [h, gca];
+    if exist('activity_man_eftMask_ch2', 'var')
+        subplot(411), plot(mean(activity_man_eftMask_ch2, 2)), title('manual'), h = [h, gca];
+    else
+        warning('activity_man_eftMask does not exist!')
+    end
+    linkaxes(h, 'x')
+
+
+    % Assess tau and noise for each neuron
+    % load(pnevFileName, 'P')
+    figure;
+    subplot(321), plot(tau(:,2)), xlabel('Neuron'), ylabel('Tau (ms)'), legend('decay'), xlim([0 size(A,2)+1]) %, legend('rise','decay')
+    subplot(323), plot(cell2mat(P.neuron_sn)), xlabel('Neuron'), ylabel('neuron\_sn'), xlim([0 size(A,2)+1])
+    subplot(325), histogram(tau(:,2)), xlabel('Decay tau (ms)'), ylabel('# Neurons')
+
+
+    % Assess a number of parameters related to A (spatial component)
+    % load(pnevFileName, 'A')
+%     figure;
+    subplot(322), plot(sum(A~=0,1)), ylabel('Number of pixels in A'), xlim([0 size(A,2)+1])
+    subplot(324), plot(nanmean(A,1)), ylabel('Mean A'), xlim([0 size(A,2)+1])
+    subplot(326), plot(max(A,[],1)), ylabel('Max A'), xlim([0 size(A,2)+1])
+    xlabel('Neuron')
 end
-linkaxes(h, 'x')
-
-
-% Assess tau and noise for each neuron
-% load(pnevFileName, 'P')
-figure;
-subplot(211), plot(tau(:,2)), xlabel('Neuron'), ylabel('Tau (ms)'), legend('decay') %, legend('rise','decay')
-subplot(212), plot(cell2mat(P.neuron_sn)), xlabel('Neuron'), ylabel('neuron\_sn')
-
-
-% Assess a number of parameters related to A (spatial component)
-% load(pnevFileName, 'A')
-figure;
-subplot(311), plot(sum(A~=0,1)), ylabel('Number of pixels in A')
-subplot(312), plot(nanmean(A,1)), ylabel('Mean A')
-subplot(313), plot(max(A,[],1)), ylabel('Max A')
-xlabel('Neuron')
 
 
 %%
@@ -353,74 +339,90 @@ clear C C_df S
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%% Take care of alldata %%%%%%%%%%%%%%%%%%%%%%%
 
-%% Merge imaging variables into all_data (before removing any trials): activity, dFOF, spikes
+if length(mdfFileNumber)==1
+    
+    load(imfilename, 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'trialCodeMissing')
+    
+    if ~exist('trialCodeMissing', 'var'), trialCodeMissing = []; end  % for those days that you didn't save this var.
+    
+    if length(trialNumbers) ~= length(framesPerTrial)
+        error('Investigate this. Make sure merging with imaging is done correctly.')
+    end
+    
+    trialNumbers(isnan(framesPerTrial)) = [];
+    frame1RelToStartOff(isnan(framesPerTrial)) = [];
+    framesPerTrial(isnan(framesPerTrial)) = [];    
+    
+    
+    fprintf('Total number of imaged trials: %d\n', length(trialNumbers))
+    if ~any(trialCodeMissing)
+        cprintf('blue', 'All trials are triggered in MScan :)\n')
+    else
+        cprintf('blue', 'There are non-triggered trials in MScan! Trial %d\n', find(trialCodeMissing))
+    end
+    
+    
+    %% Remove trials at the end of alldata that are in behavior but not imaging.
+    
+    max_num_imaged_trs = max(length(framesPerTrial), max(trialNumbers)); % I think you should just do : max(trialNumbers)
+    
+    a = length(all_data) - max_num_imaged_trs;
+    if a~=0
+        fprintf('Removing %i trials at the end of alldata bc imaging was aborted.\n', a)
+    else
+        fprintf('Removing no trials at the end of alldata bc imaging was not aborted earlier.\n')
+    end
+    
+    all_data(max_num_imaged_trs+1: end) = []; % remove behavioral trials at the end that with no recording of imaging data.
+    
+    
+    %% Merge imaging variables into all_data (before removing any trials): activity, dFOF, spikes
 
-minPts = 7000; %800;
-[all_data, mscanLag] = mergeActivityIntoAlldata_fn(all_data, activity, framesPerTrial, ...
-    trialNumbers, frame1RelToStartOff, badFrames{signalCh}, pmtOffFrames{signalCh}, minPts, dFOF, spikes);
-
-% manual
-% activity = activity_man;
-% dFOF = dFOF_man;
-% spikes = dFOF_man;
-% clear dFOF_man activity_man
-% [all_data, mscanLag] = mergeActivityIntoAlldata_fn(all_data, activity, framesPerTrial, ...
-%   trialNumbers, frame1RelToStartOff, badFrames{signalCh}, pmtOffFrames{signalCh}, minPts, dFOF, spikes);
-
-%{
-%% Take care of helped trials: you don't need it. you've done it for all ur behavioral data and appended the helped fields to alldata and saved it. if not the following function will do it.
-% [alldata_fileNames, ~] = setBehavFileNames(mouse, {datestr(datenum(imagingFolder, 'yymmdd'))});
-% [all_data, ~] = loadBehavData(alldata_fileNames(mdfFileNumber), defaultHelpedTrs, saveHelpedTrs);
-
-% If defaultHelpedTrs is false and alldata doesn't include the helped fields, add helpedInit and helpedChoice fields to alldata, and save it.
-
-alldata_fileNam = imfilename;
-all_data = setHelpedTrs(all_data, defaultHelpedTrs, saveHelpedTrs, alldata_fileNam, helpedInit, helpedChoice);
-%}
-
-
-%% Take care of trials that are in alldata but not in imaging data.
-
-%{
-if sum(~ismember(1:length(trialNumbers), trialNumbers))~=0
-    error('There are non-triggered trials in mscan! Decide how to proceed!')
-    % try this:
-    % remove the trial that was not recorded in MScan
-    all_data(~ismember(1:length(trialNumbers), trialNumbers)) = []; % FN note: double check this.
+    minPts = 7000; %800;
+    set2nan = 1; % if 1, in trials that were not imaged, set frameTimes, dFOF, spikes and activity traces to all nans (size: min(framesPerTrial) x #neurons).
+    
+    [all_data, mscanLag] = mergeActivityIntoAlldata_fn(all_data, activity, framesPerTrial, ...
+        trialNumbers, frame1RelToStartOff, badFrames{signalCh}, pmtOffFrames{signalCh}, minPts, dFOF, spikes, set2nan);
+    
+    alldata = all_data;
+    
+    
+    % manual
+    % activity = activity_man;
+    % dFOF = dFOF_man;
+    % spikes = dFOF_man;
+    % clear dFOF_man activity_man
+    % [all_data, mscanLag] = mergeActivityIntoAlldata_fn(all_data, activity, framesPerTrial, ...
+    %   trialNumbers, frame1RelToStartOff, badFrames{signalCh}, pmtOffFrames{signalCh}, minPts, dFOF, spikes);
+    
+        
+    %{
+    if sum(~ismember(1:length(trialNumbers), trialNumbers))~=0
+        error('There are non-triggered trials in mscan! Decide how to proceed!')
+        % try this:
+        % remove the trial that was not recorded in MScan
+        all_data(~ismember(1:length(trialNumbers), trialNumbers)) = []; % FN note: double check this.
+    end
+    alldata = all_data(trialNumbers); % in case mscan crashed, you want to remove trials that were recorded in bcontrol but not in mscan.
+    %}    
+    
+    
+    %% Set trs2rmv, stimrate, outcome and response side. You will set certain variables to NaN for trs2rmv (but you will never remove them from any arrays).
+    
+    load(imfilename, 'badAlignTrStartCode', 'trialStartMissing'); %, 'trialCodeMissing') % they get set in framesPerTrialStopStart3An_fn
+    
+    imagingFlg = 1;
+    [trs2rmv, stimdur, stimrate, stimtype, cb] = setTrs2rmv_final(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing);
+    
+    
+else
+    
+    multi_sess_set_vars
 end
-alldata = all_data(trialNumbers); % in case mscan crashed, you want to remove trials that were recorded in bcontrol but not in mscan.
-%}
-
-alldata = all_data;
-
-% clear all_data
-% alldata = alldata(1:end-1);  % you commented it here and added it above. loadBehavData by default removes the last trial.   % alldata = removeBegEndTrs(alldata, thbeg);
-% fprintf('Total number of imaged trials: %d\n', length(alldata))
 
 
-% Add NaN for alldata.dFOF, spikes, and activity of those trials that were
-% not imaged (either at the end, or at the middle due to mscan failure.)
+%% Set outcome and response side for each trial, taking into account allowcorrection and uncommitted responses.
 
-% For trials that were not imaged, set frameTimes, dFOF, spikes and activity traces to all nans (size:
-% min(framesPerTrial) x #neurons).
-[alldata([alldata.hasActivity]==0).dFOF] = deal(NaN(min(framesPerTrial), size(dFOF,2)));
-[alldata([alldata.hasActivity]==0).spikes] = deal(NaN(min(framesPerTrial), size(dFOF,2)));
-[alldata([alldata.hasActivity]==0).activity] = deal(NaN(min(framesPerTrial), size(dFOF,2)));
-[alldata([alldata.hasActivity]==0).frameTimes] = deal(NaN(1, min(framesPerTrial)));
-
-
-% imaging.alldata = alldata;
-
-
-%% Set trs2rmv, stimrate, outcome and response side. You will set certain variables to NaN for trs2rmv (but you will never remove them from any arrays).
-
-load(imfilename, 'badAlignTrStartCode', 'trialStartMissing'); %, 'trialCodeMissing') % they get set in framesPerTrialStopStart3An_fn
-
-imagingFlg = 1;
-[trs2rmv, stimdur, stimrate, stimtype, cb] = setTrs2rmv_final(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing);
-
-
-%%%%% Set outcome and response side for each trial, taking into account allcorrection and uncommitted responses.
 % Set some params related to behavior % behavior_info
 [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp);
 
@@ -434,6 +436,12 @@ allResp_HR_LR(trs2rmv) = NaN;
 
 % imaging.trs2rmv = trs2rmv;
 % save(imfilename, '-append', 'imaging')
+    
+figure(fhand)
+subplot(222)
+plot(outcomes), xlabel('Trials'), ylabel('Outcome'), %  1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
+subplot(224)
+plot(allResp_HR_LR), ylim([-.5 1.5]), xlabel('Trials'), ylabel('Response (HR:1 , LR: 0)')
 
 
 %% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.

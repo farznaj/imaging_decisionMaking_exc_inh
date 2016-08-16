@@ -4,7 +4,17 @@
 % a slope, ie how much of the green signal gets to the red channel (this is
 % due to the properties of the red-channel filters and dichroic mirros that
 % pick up part of the green signal.)
+%
+% slope should be the same for all neurons, since it depends on the filter
+% properties. 
+%
+% model: red = offset + slope * green. 
+% The idea is that we find inhibitory neurons on something like the
+% following, which supposedly controls for bleedthrough.
+% medImage{1} - mean(slope)*medImage{2};
 
+
+%% some qs while working on this:
 
 % is noise really the same for both channels? ... doesn't seem like. It
 % seems to be less for the green channel.
@@ -292,4 +302,33 @@ axes(ha(4)); imagesc(md3), freezeColors, colorbar
 % figure; imagesc(md3)
 
 
+%% Gamal's method
+% model: red = offset + slope * green
+
+frs = size(activity_man_eftMask_ch2,1);
+nn = size(activity_man_eftMask_ch2,2);
+
+Xs = mat2cell(activity_man_eftMask_ch2, frs, ones(1,nn));
+Ys = mat2cell(activity_man_eftMask_ch1, frs, ones(1,nn));
+
+
+[a, bs] = regressCommonSlopeModel(Xs, Ys);
+
+im2 = medImage{1} - a*medImage{2};
+
+%%
+figure('name', 'model: red = offset + slope * green'); 
+ha = tight_subplot(2,2,[.05],[.05],[.05]);
+
+axes(ha(1)); imagesc(medImage{1}), freezeColors, colorbar, title('ch1')
+
+% md2 is what I will use to identify inhibit neurons... this is supposedly
+% the image that is free of the effect of bleedthrough.
+md2 = medImage{1} - mean(slope)*medImage{2}; 
+axes(ha(2)); imagesc(md2), freezeColors, colorbar, title('ch1 - mean(regressSlope)*ch2')
+
+axes(ha(3)); imagesc(medImage{2}), freezeColors, colorbar, title('ch2')
+
+mdg = medImage{1} - a*medImage{2}; 
+axes(ha(4)); imagesc(mdg), freezeColors, colorbar, title('ch1 - gamalSlope*ch2')
 

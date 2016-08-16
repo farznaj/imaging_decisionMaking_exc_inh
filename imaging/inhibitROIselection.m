@@ -64,11 +64,11 @@ for rr = 1 : size(maskGcamp,3)
     
     
     %% Set surrMask : a square mask surrounding roiMask (mask of ch2 ROI)
-    %{
+    %
     xl = [find(sum(roiMask), 1, 'first')  find(sum(roiMask), 1, 'last')];
     yl = [find(sum(roiMask,2), 1, 'first')  find(sum(roiMask,2), 1, 'last')];
     
-    surr_sz = 10; % 1; 5; % remember for 151029_003 you used 5.
+    surr_sz = 5; % 1; 5; % remember for 151029_003 you used 5.
     ccn_y = [max(yl(1)-surr_sz, 1)  max(yl(1)-surr_sz, 1)  min(yl(2)+surr_sz, imHeight) min(yl(2)+surr_sz, imHeight)];
     ccn_x = [max(xl(1)-surr_sz, 1)  min(xl(2)+surr_sz, imHeight)  min(xl(2)+surr_sz, imHeight)  max(xl(1)-surr_sz, 1)];
     ccn = [ccn_y ; ccn_x];

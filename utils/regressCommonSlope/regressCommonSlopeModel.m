@@ -8,13 +8,13 @@
 % 
 % regressCommonSlopeModel.m
 %
-% This function solves the model yi = a xi - bi for the variables a and 
+% This function solves the model yi = a xi + bi for the variables a and 
 % bi for i \in {1, ...., N}. Unlike the 
 %
 % Inputs:
-%   Xs: cell of size (N x 1) with each element is a vector of length 
+%   Xs: cell of size (N x 1) where each element is a vector of length 
 %    (frames x 1)
-%   Ys: cell of size (N x 1) with each element is a vector of length 
+%   Ys: cell of size (N x 1) where each element is a vector of length 
 %    (frames x 1)
 % Outputs:
 %   a: the scalar slope of the regression model

@@ -1,5 +1,5 @@
 function [alldata, mscanLag] = mergeActivityIntoAlldata_fn(alldata, activity, framesPerTrial, ...
-    trialNumbers, frame1RelToStartOff, badFrames, pmtOffFrames, minPts, dFOF, S_df)
+    trialNumbers, frame1RelToStartOff, badFrames, pmtOffFrames, minPts, dFOF, S_df, set2nan)
 % alldata = mergeActivityIntoAlldata(alldata, activity, framesPerTrial, ...
 %   trialNumbers, frame1RelToStartOff [, badFrames])
 %
@@ -35,6 +35,11 @@ nFrames = size(activity, 1);
 
 if ~exist('badFrames', 'var') || isempty(badFrames)
     badFrames = false(1, nFrames);
+end
+
+
+if ~exist('set2nan', 'var') % For trials that were not imaged, set frameTimes, dFOF, spikes and activity traces to all nans (size: min(framesPerTrial) x #neurons).
+    set2nan = 1;
 end
 
 
@@ -170,3 +175,22 @@ if nMissing > 0
 end
 
 fprintf('Data merged.\n');
+
+
+
+%% Take care of trials that are in alldata but not in imaging data.
+
+if set2nan
+    
+    % For trials that were not imaged, set frameTimes, dFOF, spikes and activity traces to all nans (size:
+    % min(framesPerTrial) x #neurons).
+    [alldata([alldata.hasActivity]==0).dFOF] = deal(NaN(min(framesPerTrial), size(dFOF,2)));
+    [alldata([alldata.hasActivity]==0).spikes] = deal(NaN(min(framesPerTrial), size(dFOF,2)));
+    [alldata([alldata.hasActivity]==0).activity] = deal(NaN(min(framesPerTrial), size(dFOF,2)));
+    [alldata([alldata.hasActivity]==0).frameTimes] = deal(NaN(1, min(framesPerTrial)));
+    
+end
+
+
+
+

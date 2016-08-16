@@ -162,6 +162,8 @@ for id = 1:length(dataType)
             % training) onto the decoder. This gives the projection traces
             % named frameTrProjOnBeta_rep.
             
+            % Note: Gamal thinks we need to normalize traces_bef_proj just
+            % how we standardize X in SVM, using the same mean and std.
             if usePooledWeights
                 % project non-filtered traces on the average normalized vector across all iterations and folds
                 frameTrProjOnBeta_rep = einsum(traces_bef_proj, w_norm_ave_cv_dataVSshuff(:,id), 2, 1); % frames x sum(trTest) (ie number of test trials) % (fr x u x tr) * (u x 1) --> (fr x tr)

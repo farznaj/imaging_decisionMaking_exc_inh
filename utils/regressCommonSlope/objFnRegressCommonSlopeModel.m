@@ -8,7 +8,7 @@
 % 
 % regressCommonSlopeModel.m
 %
-% This function calculates the cost ||yi - (a xi - bi)|| and the current
+% This function calculates the cost ||yi - (a xi + bi)|| and the current
 % solution of a and bi for i \in {1, ...., N}. Unlike the 
 %
 % Inputs:
