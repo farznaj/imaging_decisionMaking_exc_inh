@@ -45,7 +45,7 @@ activity_man_eftMask_ch2 = konnerthDeltaFOverF(activity_man_eftMask_ch2, pmtOffF
 load(imfilename, 'medImage'), im2 = medImage{1};
 % load(imfilename, 'quantImage'), im2 = quantImage{1};
 
-[inhibitRois, roi2surr_sig, sigTh] = inhibitROIselection(mask, im2, sigTh, CC, showResults, gcf, COMs, activity_man_eftMask_ch1, activity_man_eftMask_ch2); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
+[inhibitRois, roi2surr_sig, sigTh] = inhibitROIselection(mask, medImage, sigTh, CC, showResults, gcf, COMs, activity_man_eftMask_ch1, activity_man_eftMask_ch2); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
 
 
 % Show the results:

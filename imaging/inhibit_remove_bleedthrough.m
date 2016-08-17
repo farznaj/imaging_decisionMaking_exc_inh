@@ -311,10 +311,13 @@ nn = size(activity_man_eftMask_ch2,2);
 Xs = mat2cell(activity_man_eftMask_ch2, frs, ones(1,nn));
 Ys = mat2cell(activity_man_eftMask_ch1, frs, ones(1,nn));
 
-
 [a, bs] = regressCommonSlopeModel(Xs, Ys);
 
+
 im2 = medImage{1} - a*medImage{2};
+medImageInhibit = im2; 
+figure; imagesc(medImageInhibit)
+
 
 %%
 figure('name', 'model: red = offset + slope * green'); 

@@ -1,4 +1,4 @@
-function [inhibitRois, roi2surr_sig, sigTh] = inhibitROIselection(maskGcamp, medImageInhibit, sigTh, CCgcamp, showResults, figh, COMs, activity_man_eftMask_ch1, activity_man_eftMask_ch2)
+function [inhibitRois, roi2surr_sig, sigTh] = inhibitROIselection(maskGcamp, medImage, sigTh, CCgcamp, showResults, figh, COMs, activity_man_eftMask_ch1, activity_man_eftMask_ch2)
 % inhibitRois = inhibitROIselection(maskGcamp, medImageInhibit, sigTh, CCgcamp);
 %
 % Identifies inhibitory neurons on a gcamp channel (containing both
@@ -28,8 +28,29 @@ function [inhibitRois, roi2surr_sig, sigTh] = inhibitROIselection(maskGcamp, med
 % sigTh = 1.2;
 
 
-%% Set vars
+medImageInhibit = medImage{1};
 
+
+%%
+frs = size(activity_man_eftMask_ch2,1);
+nn = size(activity_man_eftMask_ch2,2);
+
+Xs = mat2cell(activity_man_eftMask_ch2, frs, ones(1,nn));
+Ys = mat2cell(activity_man_eftMask_ch1, frs, ones(1,nn));
+
+[a, bs] = regressCommonSlopeModel(Xs, Ys);
+
+
+im2 = medImage{1} - a*medImage{2};
+medImageInhibit = im2; 
+figure; imagesc(medImageInhibit)
+
+medImageInhibit(medImageInhibit < 0) = 0;
+figure; imagesc(medImageInhibit)
+
+
+%% Set vars
+ 
 if ~exist('showResults', 'var')
     showResults = false;
 end
@@ -47,6 +68,9 @@ for rr = 1 : size(maskGcamp,3)
     % Compute roiSing: signal magnitude of ch2 ROI (maskGcamp) on ch1 image (medImageInhibit).
     
     roiMask = maskGcamp(:,:,rr); % mask of ch2 ROI % figure; imagesc(roiMask)
+    % set pixels outside the ROI to nan. use this if you are doing roiSig = nanmean(roiIm(:)); below
+    roiMask = double(roiMask);
+    roiMask(~roiMask) = NaN;
     
     roiIm = medImageInhibit .* roiMask; % image of ch2 ROI on ch1. % figure; imagesc(roiIm)
     ss = roiIm(:)~=0 & ~isnan(roiIm(:));
@@ -56,15 +80,18 @@ for rr = 1 : size(maskGcamp,3)
     roiSigN = s;
     %     else, roiSig = 0; end
     roi2surr_sig_num(rr) = roiSigN;
-    
+    % if not doing nans for pixels outside ROI, use below.
+    %{ 
     a = roiIm(ss);
-        roiSig = nanmedian(a(:)); % signal magnitude of ch2 ROI on ch1 image.
-%     roiSig = nanmean(a(:)); % signal magnitude of ch2 ROI on ch1 image.
+%     roiSig = nanmedian(a(:)); % signal magnitude of ch2 ROI on ch1 image.
+    roiSig = nanmean(a(:)); % signal magnitude of ch2 ROI on ch1 image.
+    %}
+    roiSig = nanmean(roiIm(:)); % mean of pixels inside the ROI. All pixels outside the ROI are set to nan.
     roi2surr_sig(rr) = roiSig;
     
     
     %% Set surrMask : a square mask surrounding roiMask (mask of ch2 ROI)
-    %
+    %{
     xl = [find(sum(roiMask), 1, 'first')  find(sum(roiMask), 1, 'last')];
     yl = [find(sum(roiMask,2), 1, 'first')  find(sum(roiMask,2), 1, 'last')];
     
@@ -73,7 +100,7 @@ for rr = 1 : size(maskGcamp,3)
     ccn_x = [max(xl(1)-surr_sz, 1)  min(xl(2)+surr_sz, imHeight)  min(xl(2)+surr_sz, imHeight)  max(xl(1)-surr_sz, 1)];
     ccn = [ccn_y ; ccn_x];
     
-    maskn = maskSet({ccn}, imHeight, imWidth);
+    maskn = maskSet({ccn}, imHeight, imWidth, 0);
     
     surrMask = maskn - roiMask;
     %     figure; imagesc(surrMask)
@@ -192,7 +219,7 @@ if exist('CCgcamp', 'var') && showResults
     
     %%
     
-    doEval = 1; % if 0 you will simply go though ROIs one by one, otherwise it will go to getKey and you will be able to change neural classification.    
+    doEval = 0; % Linux hangs with getKey... so make sure this is set to 0! % if 0 you will simply go though ROIs one by one, otherwise it will go to getKey and you will be able to change neural classification.    
     
     % Sort rois based on the roi2surr_signal, so first inhibit neurons
     % (from low to high signal, ie from problematic to reliable) are shown.
