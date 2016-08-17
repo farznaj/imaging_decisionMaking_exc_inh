@@ -30,4 +30,4 @@ def linearSVM(XTrain, YTrain, XTest, YTest, options):
     summary.model = linear_svm;
     return summary
 
-            
+    np.mean()
