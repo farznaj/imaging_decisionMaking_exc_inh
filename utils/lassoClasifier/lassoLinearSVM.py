@@ -17,7 +17,7 @@ def lassoLinearSVM(X, Y, kfold):
     import numpy as np
     import numpy.random as rng
     from sklearn import svm
-    import matplotlib.pyplot as plt
+    #import matplotlib.pyplot as plt
     from scipy import stats
     
     
@@ -32,10 +32,11 @@ def lassoLinearSVM(X, Y, kfold):
     
 
     #%% feature normalization and scale
+    """
     meanX = np.mean(X, axis = 0);
     stdX = np.std(X, axis = 0);
     X = (X-meanX)/stdX;
-    
+    """
     #%% define functions
     def optimizeSVMReg(X, Y, kfold):
         numSamples = 5; #100;
@@ -51,12 +52,14 @@ def lassoLinearSVM(X, Y, kfold):
         msk = meanCVerror<=meanCVerror[ix]+semCVerror[ix];    
         bestc = c[msk][0]
         bestCVerror = meanCVerror[msk][0]
+        """
         plt.figure()
         plt.errorbar(c, meanCVerror,  yerr=semCVerror, color = 'k')
         plt.plot(bestc, bestCVerror, 'ro')
         plt.xscale('log')
         plt.xlabel('inverse lasso regularization parameter (c)')    
         plt.ylabel('cross-validation error')    
+        """
         return bestc, bestCVerror, meanCVerror, semCVerror, c
        
     def CVSVM(X, Y, c, kfold):
@@ -101,4 +104,5 @@ def lassoLinearSVM(X, Y, kfold):
     wl1_shuff =  np.squeeze(linear_svm_shuff.coef_);
     b_shuff = linear_svm_shuff.intercept_;    
     
-    return wl1_shuff, b_shuff, wl1, b, bestCVerror, bestc, linear_svm, meanCVerror, semCVerror, c, meanX, stdX
+    return wl1_shuff, b_shuff, wl1, b, bestCVerror, bestc, linear_svm, meanCVerror, semCVerror, c
+
