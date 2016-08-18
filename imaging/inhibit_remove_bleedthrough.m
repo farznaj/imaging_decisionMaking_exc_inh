@@ -313,10 +313,40 @@ Ys = mat2cell(activity_man_eftMask_ch1, frs, ones(1,nn));
 
 [a, bs] = regressCommonSlopeModel(Xs, Ys);
 
-
 im2 = medImage{1} - a*medImage{2};
 medImageInhibit = im2; 
 figure; imagesc(medImageInhibit)
+
+
+% compare objective cost between the commonSlope and regression methods:
+f = sum(objFnRegressCommonSlopeModel(Xs, Ys, a, bs))./norm(vertcat(Ys{:}))^2*100;  % objective cost in %
+
+% Use regression (assumption: x data doesn't have much noise). % same as
+% Gamal's codes below.
+%{
+slope = NaN(1, nn);
+offset = NaN(1, nn);
+for rr = 1 : nn
+    % model: red = offset + slope * green
+    % y: red, x: green
+    x = activity_man_eftMask_ch2(:,rr); 
+    y = activity_man_eftMask_ch1(:,rr);
+%     pp(:,rr) = glmfit(x,y);  % fitglm(x,y);
+    p = regress(y, [x, ones(size(x,1),1)]);
+    slope(rr) = p(1);
+    offset(rr) = p(2);    
+end
+%}
+bs1 = nan(N,1);
+for j = 1:N
+    p = [Xs{j} ones(size(Xs{j}))]\Ys{j};
+    a1(j) = p(1);
+    bs1(j,1) = p(2);
+end 
+a1 = mean(a1);
+f1 = sum(objFnRegressCommonSlopeModel(Xs, Ys, a1, bs1))./norm(vertcat(Ys{:}))^2*100;
+
+
 
 
 %%

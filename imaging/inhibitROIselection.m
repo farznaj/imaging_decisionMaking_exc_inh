@@ -128,10 +128,12 @@ roi2surr_sig(isnan(roi2surr_sig)) = 0; % There are ROIs that had 0 signal for bo
 
 q_num = quantile(roi2surr_sig_num, 9)
 q_sig_orig = quantile(roi2surr_sig, 9)
+q_sig_nonzero = quantile(roi2surr_sig(roi2surr_sig~=0), 9)
 
 
 %% Set to 0 the value of roi2surr_sig if an ROI has few positive pixels.
-%
+% you may want to add it back
+%{
 posPixTh = 10; %15;
 cprintf('red', '%i defined as the min num of positive pixels for an ROI to be counted as inhibitory!\n', posPixTh)
 roi2surr_sig(roi2surr_sig_num < posPixTh) = 0;
@@ -169,12 +171,13 @@ cprintf('blue', '%d: num, %.3f: fraction of inhibitory neurons in gcamp channel.
 
 
 %%
+%{
 sum(inhibitRois(roi2surr_sig_num < posPixTh))
 inhibitRois(roi2surr_sig_num < posPixTh) = 0;
 
 fract = nanmean(inhibitRois); % fraction of ch2 neurons also present in ch1.
 cprintf('blue', '%d: num, %.3f: fraction of inhibitory neurons in gcamp channel.\n', sum(inhibitRois), fract)
-
+%}
 
 %% Compute correlation in the activity of each ch2 ROI between ch2 movie and ch1 movie.
 %

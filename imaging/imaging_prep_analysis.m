@@ -1,8 +1,7 @@
 function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, good_inhibit, outcomes, allResp, allResp_HR_LR, ...
         trs2rmv, stimdur, stimrate, stimtype, cb, timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, ...
         timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename, pnevFileName] = ....
-   imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, ...
-        rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, frameLength);
+   imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, frameLength);
 %
 % This is the main and starting function for the analysis of your imaging
 % data. It gives you the vars that you need for further analyses.
@@ -26,17 +25,21 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % Example input variales:
 %{
 mouse = 'fni17';
-imagingFolder = '151022'; % '151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2]; % 3; % 1; % or tif major
+imagingFolder = '151101'; % '151029'; %  '150916'; % '151021';
+mdfFileNumber = 1; % [1,2]; % 3; % 1; % or tif major
 
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
 rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
 
+normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
+
 plot_ave_noTrGroup = 0; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
+evaluateEftyOuts = 0; % set to 1 when first evaluating a session.
 
 setInhibitExcit = 1; %true; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 
 frameLength = 1000/30.9; % sec.
+
 %}
 
 home
@@ -55,14 +58,11 @@ home
     % 1.2: u are perhaps missing some inhibit neurons.
     % 1.13 can be good too.
     
-normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
-
 excludeShortWaitDur = true; % waitdur_th = .032; % sec  % trials w waitdur less than this will be excluded.
 excludeExtraStim = false;
 allowCorrectResp = 'change'; % 'change'; 'remove'; 'nothing'; % if 'change': on trials that mouse corrected his choice, go with the original response.
 uncommittedResp = 'nothing'; % 'change'; 'remove'; 'nothing'; % what to do on trials that mouse made a response (licked the side port) but did not lick again to commit it.
 
-evaluateEftyOuts = 0; % set to 1 when first evaluating a session.
 plot_ave_trGroup = 0; % Plot average traces across all neurons for different trial groups aligned on particular trial events.
 plotEftyAC1by1 = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
 plotTrialTraces1by1 = 0; % plot traces per neuron and per trial showing all trial events

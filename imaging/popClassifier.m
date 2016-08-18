@@ -17,7 +17,7 @@ function popClassifier(alldata, alldataSpikesGood, outcomes, allResp_HR_LR, fram
 % Example input variables :
 %{
 neuronType = 2; % 0: excitatory, 1: inhibitory, 2: all types.
-trialHistAnalysis = 0; % more parameters are specified in popClassifier_trialHistory.m
+trialHistAnalysis = 1; % more parameters are specified in popClassifier_trialHistory.m
     iTiFlg = 1; % 0: short ITI, 1: long ITI, 2: all ITIs.
     prevSuccessFlg = true; % true previous sucess trials; false: previous failure.
     vec_iti = [0 9 30]; % [0 10 30]; %[0 6 9 12 30]; % [0 7 30]; % [0 10 30]; % [0 6 9 12 30]; % use [0 40]; if you want to have a single iti bin and in conventioinal analysis look at the effect of current rate on outcome.
@@ -36,12 +36,13 @@ nPostFrames = []; % nan; %
 
 % alignedEvent: 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
 if trialHistAnalysis
-    alignedEvent = 'initTone';
+    alignedEvent = 'initTone'; % I think you should still use stimOn for trial history analysis.
 else
     alignedEvent = 'stimOn'; % what event align traces on. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward'
 end
 
 smoothedTraces = 0; % if 1, projections and class accuracy of temporal traces will be computed on smoothed traces (window size same as ep, ie training window size).
+
 %}
 
 
@@ -123,6 +124,7 @@ cnam = [0,1]; % LR: negative ; HR: positive
 
 % remember traces_al_sm has nan for trs2rmv as well as trs in alignedEvent that are nan.
 
+% alldataSpikesGood = cellfun(@(x)x(:,1:200), alldataSpikesGood, 'uniformoutput', 0);
 traces = alldataSpikesGood; % alldataSpikesGoodExc; % alldataSpikesGoodInh; % alldataSpikesGood;  % traces to be aligned.
 % alignedEvent = 'stimOn'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward'
 dofilter = false; % true;
