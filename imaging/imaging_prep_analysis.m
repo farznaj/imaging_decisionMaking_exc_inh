@@ -25,8 +25,8 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % Example input variales:
 %{
 mouse = 'fni17';
-imagingFolder = '151101'; % '151029'; %  '150916'; % '151021';
-mdfFileNumber = 1; % [1,2]; % 3; % 1; % or tif major
+imagingFolder = '151102'; % '151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2]; % 3; % 1; % or tif major
 
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
 rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
@@ -98,8 +98,10 @@ saveHelpedTrs = 0; % it will only take effect if defaultHelpedTrs is false. If 1
 
 % set the names of imaging-related .mat file names.
 % remember the last saved pnev mat file will be the pnevFileName
-% signalCh = 2; % because you get A from channel 2, I think this should be always 2.
-% pnev2load = [];
+%{
+signalCh = 2; % because you get A from channel 2, I think this should be always 2.
+pnev2load = [];
+%}
 [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
 [~,f] = fileparts(pnevFileName);
 disp(f)
@@ -290,7 +292,7 @@ if evaluateEftyOuts
 
     % Plot COMs
     im = medImage{2};
-    im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt's method.
+    im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt
     contour_threshold = .95;
     plotCOMs = 1;
     [CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(A, imHeight, imWidth, contour_threshold, im, plotCOMs);
@@ -580,7 +582,81 @@ if setInhibitExcit
         % 1 for inhibit ROIs.
         % 0 for excit ROIs.
         % nan for ROIs that could not be classified as inhibit or excit.
-        [inhibitRois, roi2surr_sig, sigTh] = inhibit_excit_setVars(imfilename, pnevFileName, sigTh, assessInhibitClass);
+        %{
+        sigTh = [];
+        assessInhibitClass = 0;
+        %}
+        
+        % load(imfilename, 'medImage')
+        load(imfilename, 'aveImage')
+        
+        %% Correction of bleedthrough        
+        % if no correction of bleedthrough
+%         workingImage = medImage{1};
+        workingImage = aveImage{1};
+        
+        % correct medImage{1} for bleedthrough from the green channel.        
+        inhibit_remove_bleedthrough
+        
+        %% Create the bleedthrough-corrected image
+        
+        % nowImage = medImage;
+        nowImage = aveImage;
+        
+        workingImage = nowImage{1} - slope_common*nowImage{2};
+        medImageInhibit = workingImage;
+        % figure; imagesc(medImageInhibit)
+        medImageInhibit(medImageInhibit < 0) = 0;
+        % figure; imagesc(medImageInhibit)
+        
+        
+        %% Make some plots
+        
+        normims = 0;
+        warning('off', 'MATLAB:nargchk:deprecated')
+        ax1 = [];
+        figure('name', sprintf('model: red = offset + slope * green, commonSlope = %.2f, cost = %.2f', slope_common, f));
+        ha = tight_subplot(2,2,[.05],[.05],[.05]);
+        
+        if normims
+            im = normImage(nowImage{1});
+        else
+            im = nowImage{1};
+        end
+        axes(ha(1)); imagesc(im), freezeColors, colorbar, title('ch1')
+        ax1 = [ax1, gca];
+        
+        im = normImage(nowImage{2});
+        im = nowImage{2};
+        axes(ha(2)); imagesc(im), freezeColors, colorbar, title('ch2')
+        ax1 = [ax1, gca];
+        hold on, plotCOMsCC(COMs)
+        
+        % md2 is what I will use to identify inhibit neurons... this is supposedly
+        % the image that is free of the effect of bleedthrough.
+        % md2 = medImage{1} - mean(slope)*medImage{2};
+        if normims
+            im = normImage(workingImage);
+        else
+            im = workingImage;
+        end
+        axes(ha(3)); imagesc(im), freezeColors, colorbar, title('ch1 - gamalSlope*ch2')
+        ax1 = [ax1, gca];
+        
+        if normims
+            im = normImage(medImageInhibit);
+        else
+            im = medImageInhibit;
+        end
+        axes(ha(4)); imagesc(im), freezeColors, colorbar, title('nonZero: ch1 - gamalSlope*ch2')
+        ax1 = [ax1, gca];
+        hold on, plotCOMsCC(COMs)
+        
+        linkaxes(ax1)
+
+        
+        %%
+        [inhibitRois, roi2surr_sig, sigTh] = inhibit_excit_setVars(imfilename, pnevFileName, workingImage, sigTh, assessInhibitClass);
         
         if saveInhibitRois
             fprintf('Saving inhibitRois...\n')

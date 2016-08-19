@@ -1,4 +1,4 @@
-function [inhibitRois, roi2surr_sig, sigTh] = inhibit_excit_setVars(imfilename, pnevFileName, sigTh, showResults)
+function [inhibitRois, roi2surr_sig, sigTh] = inhibit_excit_setVars(imfilename, pnevFileName, workingImage, sigTh, showResults)
 % identify inhibitory neurons.
 
 % sigTh = 1.2;
@@ -19,15 +19,21 @@ clear A
 if showResults
 %     im = medImage{2};
     im = sdImage{2};
-else
-    im = [];
-end
+ 
+    contour_threshold = .95;
+    fprintf('Setting the mask for the gcamp channel....\n')
+    % COMs = fastCOMsA(A, [imHeight, imWidth]); % size(medImage{2})
+    % CC = ROIContoursPnevCC(A, imHeight, imWidth, contour_threshold);
+    [CC, ~, COMs, mask] = setCC_cleanCC_plotCC_setMask(spatialComp, imHeight, imWidth, contour_threshold, im);
+    if ~isempty(im), title('ROIs shown on the sdImage of channel 2'), end
+    % size(CC), % size(mask)
 
-contour_threshold = .95;
-fprintf('Setting the mask for the gcamp channel....\n')
-[CC, ~, COMs, mask] = setCC_cleanCC_plotCC_setMask(spatialComp, imHeight, imWidth, contour_threshold, im);
-title('ROIs shown on the sdImage of channel 2')
-% size(CC), % size(mask)
+else
+%     im = [];
+    mask = maskSet(spatialComp, imHeight, imWidth);
+    CC = [];
+    COMs = [];
+end
 
 
 %% Load manual activity computed for ch1 and ch2, and compute their DF/F
@@ -35,17 +41,19 @@ title('ROIs shown on the sdImage of channel 2')
 load(pnevFileName, 'activity_man_eftMask_ch1', 'activity_man_eftMask_ch2')
 load(imfilename, 'pmtOffFrames')
 
+%{
 smoothPts = 6; minPts = 7000; %800;
 activity_man_eftMask_ch1 = konnerthDeltaFOverF(activity_man_eftMask_ch1, pmtOffFrames{1}, smoothPts, minPts);
 activity_man_eftMask_ch2 = konnerthDeltaFOverF(activity_man_eftMask_ch2, pmtOffFrames{2}, smoothPts, minPts);
-
+%}
     
-%% identify inhibitory neurons.
-
-load(imfilename, 'medImage'), im2 = medImage{1};
+%% Identify inhibitory neurons.
+%{
+% load(imfilename, 'medImage'), workingImage = medImage;
+load(imfilename, 'aveImage'), workingImage = aveImage;
 % load(imfilename, 'quantImage'), im2 = quantImage{1};
-
-[inhibitRois, roi2surr_sig, sigTh] = inhibitROIselection(mask, medImage, sigTh, CC, showResults, gcf, COMs, activity_man_eftMask_ch1, activity_man_eftMask_ch2); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
+%}
+[inhibitRois, roi2surr_sig, sigTh] = inhibitROIselection(mask, workingImage, sigTh, CC, showResults, gcf, COMs, activity_man_eftMask_ch1, activity_man_eftMask_ch2); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
 
 
 % Show the results:

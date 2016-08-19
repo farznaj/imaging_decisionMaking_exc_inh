@@ -78,7 +78,7 @@ plotCOMs = 0;
 
 CC = setCC_cleanCC_plotCC_setMask(sp, imHeight, imWidth, contour_threshold, im, plotCOMs);
 % [CC, ~, COMs_m, mask] = setCC_cleanCC_plotCC_setMask(sp, imHeight, imWidth, contour_threshold, im, plotCOMs);
-
+% [CC] = ROIContoursPnevCC(A, imHeight, imWidth, contour_threshold);
 
 %%
 %%%%%%%%%%%%%%%% Single round of merging

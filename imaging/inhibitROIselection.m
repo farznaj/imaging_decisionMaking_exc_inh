@@ -1,4 +1,4 @@
-function [inhibitRois, roi2surr_sig, sigTh] = inhibitROIselection(maskGcamp, medImage, sigTh, CCgcamp, showResults, figh, COMs, activity_man_eftMask_ch1, activity_man_eftMask_ch2)
+function [inhibitRois, roi2surr_sig, sigTh] = inhibitROIselection(maskGcamp, workingImage, sigTh, CCgcamp, showResults, figh, COMs, activity_man_eftMask_ch1, activity_man_eftMask_ch2)
 % inhibitRois = inhibitROIselection(maskGcamp, medImageInhibit, sigTh, CCgcamp);
 %
 % Identifies inhibitory neurons on a gcamp channel (containing both
@@ -28,26 +28,17 @@ function [inhibitRois, roi2surr_sig, sigTh] = inhibitROIselection(maskGcamp, med
 % sigTh = 1.2;
 
 
-medImageInhibit = medImage{1};
+%% Correction of bleedthrough
+%{
+% if no correction of bleedthrough
+medImageInhibit = workingImage{1};
 
+% correct medImage{1} for bleedthrough from the green channel.
+inhibit_remove_bleedthrough
+%}
 
-%%
-frs = size(activity_man_eftMask_ch2,1);
-nn = size(activity_man_eftMask_ch2,2);
-
-Xs = mat2cell(activity_man_eftMask_ch2, frs, ones(1,nn));
-Ys = mat2cell(activity_man_eftMask_ch1, frs, ones(1,nn));
-
-[a, bs] = regressCommonSlopeModel(Xs, Ys);
-
-
-im2 = medImage{1} - a*medImage{2};
-medImageInhibit = im2; 
-figure; imagesc(medImageInhibit)
-
-medImageInhibit(medImageInhibit < 0) = 0;
-figure; imagesc(medImageInhibit)
-
+medImageInhibit = workingImage;
+medImageInhibit(medImageInhibit<0) = 0;
 
 %% Set vars
  
@@ -67,8 +58,9 @@ for rr = 1 : size(maskGcamp,3)
     
     % Compute roiSing: signal magnitude of ch2 ROI (maskGcamp) on ch1 image (medImageInhibit).
     
-    roiMask = maskGcamp(:,:,rr); % mask of ch2 ROI % figure; imagesc(roiMask)
+    roiMask0 = maskGcamp(:,:,rr); % mask of ch2 ROI % figure; imagesc(roiMask)
     % set pixels outside the ROI to nan. use this if you are doing roiSig = nanmean(roiIm(:)); below
+    roiMask = roiMask0;
     roiMask = double(roiMask);
     roiMask(~roiMask) = NaN;
     
@@ -87,13 +79,13 @@ for rr = 1 : size(maskGcamp,3)
     roiSig = nanmean(a(:)); % signal magnitude of ch2 ROI on ch1 image.
     %}
     roiSig = nanmean(roiIm(:)); % mean of pixels inside the ROI. All pixels outside the ROI are set to nan.
-    roi2surr_sig(rr) = roiSig;
+    roi2surr_sig(rr) = roiSig; % use this if you don't want to account for surround mask.
     
     
     %% Set surrMask : a square mask surrounding roiMask (mask of ch2 ROI)
-    %{
-    xl = [find(sum(roiMask), 1, 'first')  find(sum(roiMask), 1, 'last')];
-    yl = [find(sum(roiMask,2), 1, 'first')  find(sum(roiMask,2), 1, 'last')];
+    %
+    xl = [find(sum(roiMask0), 1, 'first')  find(sum(roiMask0), 1, 'last')];
+    yl = [find(sum(roiMask0,2), 1, 'first')  find(sum(roiMask0,2), 1, 'last')];
     
     surr_sz = 5; % 1; 5; % remember for 151029_003 you used 5.
     ccn_y = [max(yl(1)-surr_sz, 1)  max(yl(1)-surr_sz, 1)  min(yl(2)+surr_sz, imHeight) min(yl(2)+surr_sz, imHeight)];
@@ -102,9 +94,11 @@ for rr = 1 : size(maskGcamp,3)
     
     maskn = maskSet({ccn}, imHeight, imWidth, 0);
     
-    surrMask = maskn - roiMask;
-    %     figure; imagesc(surrMask)
-    
+    surrMask = maskn - roiMask0;
+%     figure; imagesc(surrMask)
+%     figure; imagesc(maskn)
+%     figure; imagesc(roiMask)
+
     
     %% Compute surrSig: magnitude of ch1 image surrounding ch2 ROI.
     
@@ -113,9 +107,10 @@ for rr = 1 : size(maskGcamp,3)
     %     s = sum(ss); % number of non-zero pixels in the image of ch2 surround ROI on ch1.
     %     surrSig = sum(roiIm(:)~=0);
     a = roiIm(ss);
-    surrSig = nanmedian(a(:));
-%     surrSig = nanmean(a(:));
-    
+%     surrSig = nanmedian(a(:));
+    surrSig = nanmean(a(:));
+%     sa = sort(a(:));
+%     surrSig = nanmean(sa(floor(.3*length(sa)) : floor(.7*length(sa))));
     
     %% Compute ratio of roi signal/surr sig.
     
@@ -124,11 +119,13 @@ for rr = 1 : size(maskGcamp,3)
     
 end
 
+sum(~roi2surr_sig)
 roi2surr_sig(isnan(roi2surr_sig)) = 0; % There are ROIs that had 0 signal for both the ROI and its surrounding, so they should be classified as excit.
+sum(~roi2surr_sig)
 
 q_num = quantile(roi2surr_sig_num, 9)
 q_sig_orig = quantile(roi2surr_sig, 9)
-q_sig_nonzero = quantile(roi2surr_sig(roi2surr_sig~=0), 9)
+% q_sig_nonzero = quantile(roi2surr_sig(roi2surr_sig~=0), 9)
 
 
 %% Set to 0 the value of roi2surr_sig if an ROI has few positive pixels.
@@ -151,7 +148,7 @@ q_sig_nonzero = quantile(roi2surr_sig(roi2surr_sig~=0), 9)
 
 %% Define a threshold for identifying inhibitory neurons
 
-qTh = .5; %.8; % .1;
+qTh = .8; %.5; %.8; % .1;
 cprintf('magenta', 'sigTh defined as %.2f quantile of non-zero values in roi2surr_sig\n', qTh)
 
 sigTh = quantile(roi2surr_sig(roi2surr_sig~=0), qTh);
@@ -169,8 +166,7 @@ inhibitRois = double(inhibitRois); % you do this so the class is consistent with
 fract = nanmean(inhibitRois); % fraction of ch2 neurons also present in ch1.
 cprintf('blue', '%d: num, %.3f: fraction of inhibitory neurons in gcamp channel.\n', sum(inhibitRois), fract)
 
-
-%%
+%
 %{
 sum(inhibitRois(roi2surr_sig_num < posPixTh))
 inhibitRois(roi2surr_sig_num < posPixTh) = 0;
@@ -179,17 +175,31 @@ fract = nanmean(inhibitRois); % fraction of ch2 neurons also present in ch1.
 cprintf('blue', '%d: num, %.3f: fraction of inhibitory neurons in gcamp channel.\n', sum(inhibitRois), fract)
 %}
 
-%% Compute correlation in the activity of each ch2 ROI between ch2 movie and ch1 movie.
-%
-crr = NaN(1, length(CCgcamp));
-for rr = 1:length(CCgcamp)
-    t1 = activity_man_eftMask_ch1(:,rr);
-    t2 = activity_man_eftMask_ch2(:,rr);
-    crr(rr) = corr(t1, t2);
-end
-    
 
-%% Plots related to crr and brightness
+%%
+
+figure; 
+subplot(221), plot(mean(activity_man_eftMask_ch2(:, inhibitRois==1), 2))
+subplot(223),  plot(mean(activity_man_eftMask_ch2(:, inhibitRois==0), 2))
+subplot(222), plot(mean(activity_man_eftMask_ch1(:, inhibitRois==1), 2))
+subplot(224),  plot(mean(activity_man_eftMask_ch1(:, inhibitRois==0), 2))
+%{
+subplot(222), plot(mean(C(inhibitRois==1,:)))
+subplot(224),  plot(mean(C(inhibitRois==0,:)))
+%}
+
+%% Compute correlation in the activity of each ch2 ROI between ch2 movie and ch1 movie.
+
+if showResults
+    crr = NaN(1, size(activity_man_eftMask_ch1,2));
+    for rr = 1:length(crr)
+        t1 = activity_man_eftMask_ch1(:,rr);
+        t2 = activity_man_eftMask_ch2(:,rr);
+        crr(rr) = corr(t1, t2);
+    end
+end
+
+%%% Plots related to crr and brightness
 %{
 plotCrr(crr, inhibitRois, roi2surr_sig)
 
@@ -208,6 +218,7 @@ fract = nanmean(inhibitRois); % fraction of ch2 neurons also present in ch1.
 cprintf('*magenta*', '%d: num, %.3f: fraction of inhibitory neurons in gcamp channel.\n', sum(inhibitRois), fract)
 %}
 
+
 %% Look at ch2 ROIs on ch1 image, 1 by 1.
 
 if exist('CCgcamp', 'var') && showResults
@@ -218,7 +229,7 @@ if exist('CCgcamp', 'var') && showResults
     xlabel('Neuron number')
     ylabel('ROI / surround')
     
-    if ~isvalid(figh), figh = figure; end
+    if ~isvalid(figh), figh = figure; imagesc(workingImage); end
     
     %%
     

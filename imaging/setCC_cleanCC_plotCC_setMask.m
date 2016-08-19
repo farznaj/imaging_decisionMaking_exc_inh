@@ -67,6 +67,7 @@ end
 %% Set the ROI masks for Eftichios's ROIs
 if nargout==4
     mask_eft = maskSet(CR, imHeight, imWidth);
+%     mask_eft = maskSet(spatialComp, imHeight, imWidth);
     
     if (sum(mask_eft(:)>1))
         fprintf('mask has values >1... weird... check it!!\n')
