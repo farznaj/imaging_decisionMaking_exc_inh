@@ -53,7 +53,7 @@ home
 
     assessInhibitClass = 0; % if 1 and inhibitRois not already saved, you will evaluate identification of inhibitory neurons (ie if sigTh is doing a good job).
     saveInhibitRois = 0; % if 1 and inhibitRois not already saved, ROIs that were identified as inhibit will be saved in imfilename. (ie the output of inhibit_excit_setVars will be saved).
-    sigTh = 1.13; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
+    quantTh = .8; % quantile of roi_sig2surr that will be used for inhibit identification. 1.13; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
     % 1.1: excit is safe, but u should check inhibit with low sig/surr to make sure they are not excit.
     % 1.2: u are perhaps missing some inhibit neurons.
     % 1.13 can be good too.
@@ -103,8 +103,8 @@ signalCh = 2; % because you get A from channel 2, I think this should be always 
 pnev2load = [];
 %}
 [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
-[~,f] = fileparts(pnevFileName);
-disp(f)
+[~,pnev_n] = fileparts(pnevFileName);
+disp(pnev_n)
 cd(fileparts(imfilename))
 
 
@@ -569,12 +569,14 @@ end
 if setInhibitExcit
     
     % Load inhibitRois if it already exists, otherwise set it.
+
+%     [~,pnev_n] = fileparts(pnevFileName);
+    finame = sprintf('inhibitROIs_%s', pnev_n); % save inhibit vars under this name.
+    a = matfile(finame);  
     
-    a = matfile(imfilename);
-    
-    if isprop(a, 'inhibitRois')
-        fprintf('Loading inhibitRois...\n')
-        load(imfilename, 'inhibitRois')
+    if ~assessInhibitClass && exist([finame, '.mat'], 'file')  && isprop(a, 'inhibitRois') % if assessInhibit is 0 and the inhibitROI vars are already saved, we will load the results.
+            fprintf('Loading inhibitRois...\n')
+            load(imfilename, 'inhibitRois')
         
     else
         fprintf('Identifying inhibitory neurons....\n')
@@ -582,91 +584,25 @@ if setInhibitExcit
         % 1 for inhibit ROIs.
         % 0 for excit ROIs.
         % nan for ROIs that could not be classified as inhibit or excit.
-        %{
-        sigTh = [];
-        assessInhibitClass = 0;
-        %}
-        
-        % load(imfilename, 'medImage')
-        load(imfilename, 'aveImage')
-        
-        %% Correction of bleedthrough        
-        % if no correction of bleedthrough
-%         workingImage = medImage{1};
-        workingImage = aveImage{1};
-        
-        % correct medImage{1} for bleedthrough from the green channel.        
-        inhibit_remove_bleedthrough
-        
-        %% Create the bleedthrough-corrected image
-        
-        % nowImage = medImage;
-        nowImage = aveImage;
-        
-        workingImage = nowImage{1} - slope_common*nowImage{2};
-        medImageInhibit = workingImage;
-        % figure; imagesc(medImageInhibit)
-        medImageInhibit(medImageInhibit < 0) = 0;
-        % figure; imagesc(medImageInhibit)
-        
-        
-        %% Make some plots
-        
-        normims = 0;
-        warning('off', 'MATLAB:nargchk:deprecated')
-        ax1 = [];
-        figure('name', sprintf('model: red = offset + slope * green, commonSlope = %.2f, cost = %.2f', slope_common, f));
-        ha = tight_subplot(2,2,[.05],[.05],[.05]);
-        
-        if normims
-            im = normImage(nowImage{1});
-        else
-            im = nowImage{1};
-        end
-        axes(ha(1)); imagesc(im), freezeColors, colorbar, title('ch1')
-        ax1 = [ax1, gca];
-        
-        im = normImage(nowImage{2});
-        im = nowImage{2};
-        axes(ha(2)); imagesc(im), freezeColors, colorbar, title('ch2')
-        ax1 = [ax1, gca];
-        hold on, plotCOMsCC(COMs)
-        
-        % md2 is what I will use to identify inhibit neurons... this is supposedly
-        % the image that is free of the effect of bleedthrough.
-        % md2 = medImage{1} - mean(slope)*medImage{2};
-        if normims
-            im = normImage(workingImage);
-        else
-            im = workingImage;
-        end
-        axes(ha(3)); imagesc(im), freezeColors, colorbar, title('ch1 - gamalSlope*ch2')
-        ax1 = [ax1, gca];
-        
-        if normims
-            im = normImage(medImageInhibit);
-        else
-            im = medImageInhibit;
-        end
-        axes(ha(4)); imagesc(im), freezeColors, colorbar, title('nonZero: ch1 - gamalSlope*ch2')
-        ax1 = [ax1, gca];
-        hold on, plotCOMsCC(COMs)
-        
-        linkaxes(ax1)
 
-        
-        %%
-        [inhibitRois, roi2surr_sig, sigTh] = inhibit_excit_setVars(imfilename, pnevFileName, workingImage, sigTh, assessInhibitClass);
+%         quantTh = []; assessInhibitClass = 0;
+        keyEval = 0; % if 1, you will use key presses to evaluate ROIs. Otherwise automatic identification using:
+        % 'inhibit: > .9th quantile. excit: < .8th quantile of roi2surr_sig!
+        % Be very carful if setting to 1: Linux hangs with getKey if you click anywhere, just use the keyboard keys! % if 0 you will simply go though ROIs one by one, otherwise it will go to getKey and you will be able to change neural classification.
+        [inhibitRois, roi2surr_sig, sigTh] = inhibit_excit_setVars(imfilename, pnevFileName, quantTh, assessInhibitClass, keyEval);
         
         if saveInhibitRois
-            fprintf('Saving inhibitRois...\n')
-            save(imfilename, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
-        end
+            fprintf('Saving inhibitRois...\n')            
+            finame = sprintf('inhibitROIs_%s', pnev_n);
+            
+            save(finame, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
+%             save(imfilename, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
+        end        
         
     end
     
     fprintf('Fract inhibit %.3f, excit %.3f, unknown %.3f\n', [...
-        nanmean(inhibitRois==1), nanmean(inhibitRois==0), nanmean(isnan(inhibitRois))])
+        mean(inhibitRois==1), mean(inhibitRois==0), mean(isnan(inhibitRois))])
     
     
     %% Set good_inhibit and good_excit neurons (ie in good quality neurons which ones are inhibit and which ones are excit).
