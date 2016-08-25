@@ -13,8 +13,8 @@ imagingFolder = '151102'
 mdfFileNumber = (1,2)
 
 # optional inputs:
-signalCh = [2]
-pnev2load = []
+signalCh = [2] # since gcamp is channel 2, should be 2.
+pnev2load = [] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
 
 from setImagingAnalysisNamesP import *
 
@@ -64,20 +64,24 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     if len(signalCh)>0:
         pnevFileName = date_major+'_ch'+str(signalCh)+'-Pnev*'
         pnevFileName = glob.glob(tifFold+pnevFileName)   
-        
+        # sort pnevFileNames by date (descending)
+        pnevFileName = sorted(pnevFileName, key=os.path.getmtime)
+        pnevFileName = pnevFileName[::-1]
+        '''
         array = []
         for idx in range(0, len(pnevFileName)):
             array.append(os.path.getmtime(pnevFileName[idx]))
-            
+
+        inds = np.argsort(array)
+        inds = inds[::-1]
+        pnev2load = inds[pnev2load]
+        '''    
         #%%
         if len(pnevFileName)==0:
             c = ("No Pnev file was found"); print("%s\n" % c)
             pnevFileName = ''
-        else:
-            inds = np.argsort(array)
-            inds = inds[::-1]
-                
-        pnevFileName = pnevFileName[inds[pnev2load]]
+        else:                
+        pnevFileName = pnevFileName[pnev2load]
     else:
         pnevFileName = ''
     
