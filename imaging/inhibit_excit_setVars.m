@@ -7,7 +7,7 @@ if ~exist('showResults', 'var')
 end
 
 
-%% Set vars to identify inhibitory neurons: get ROI contours for the gcamp channel.
+%% Set vars to identify inhibitory neurons: mask and ROI contours for the gcamp channel.
 
 % [imfilename, pnevFileName] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh);
 
@@ -40,7 +40,7 @@ end
 % Model: red_ch1 = offset + slope * green_ch2
 
 % If you don't want correction of bleedthrough:
-% workingImage = medImage{1}; % aveImage{1};
+% inhibitImage = medImage{1}; % aveImage{1};
 
 
 %% Load vars 

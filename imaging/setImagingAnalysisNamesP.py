@@ -19,6 +19,7 @@ pnev2load = [] # which pnev file to load: indicates index of date-sorted files: 
 from setImagingAnalysisNamesP import *
 
 imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load)
+
 imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber)
 
 """
@@ -26,13 +27,6 @@ imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, md
 #%%
 def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options):
 
-    #%%
-    import numpy as np
-    import platform
-    import glob
-    import os.path
-    
-    
     if options.get('signalCh'):
         signalCh = options.get('signalCh');    
     else:
@@ -43,6 +37,12 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     else:
         pnev2load = []
         
+    #%%
+    import numpy as np
+    import platform
+    import glob
+    import os.path
+        
     if len(pnev2load)==0:
         pnev2load = 0;
             
@@ -52,18 +52,18 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     # Gamal's dir needed here.
         
     #%%        
-    tifFold = dataPath+mousename+'/imaging/'+imagingFolder+'/'
+    tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
     r = '%03d-'*len(mdfFileNumber)
     r = r[:-1]
-    rr = r % (mdfFileNumber)
+    rr = r % (tuple(mdfFileNumber))
     
     date_major = imagingFolder+'_'+rr
-    imfilename = tifFold+date_major+'.mat'
+    imfilename = os.path.join(tifFold,date_major+'.mat')
     
     #%%
     if len(signalCh)>0:
         pnevFileName = date_major+'_ch'+str(signalCh)+'-Pnev*'
-        pnevFileName = glob.glob(tifFold+pnevFileName)   
+        pnevFileName = glob.glob(os.path.join(tifFold,pnevFileName))   
         # sort pnevFileNames by date (descending)
         pnevFileName = sorted(pnevFileName, key=os.path.getmtime)
         pnevFileName = pnevFileName[::-1]
@@ -76,12 +76,11 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         inds = inds[::-1]
         pnev2load = inds[pnev2load]
         '''    
-        #%%
         if len(pnevFileName)==0:
             c = ("No Pnev file was found"); print("%s\n" % c)
             pnevFileName = ''
         else:                
-        pnevFileName = pnevFileName[pnev2load]
+            pnevFileName = pnevFileName[pnev2load]
     else:
         pnevFileName = ''
     

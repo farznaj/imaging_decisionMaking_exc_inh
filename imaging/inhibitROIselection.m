@@ -547,8 +547,52 @@ if exist('CCgcamp', 'var') && showResults
 end
 
 
+%% some good plots
+
+%{
+meas = roi2surr_sig';
+% meas = bs;
+figure; plot(sort(meas))
+hold on
+
+thq = .8;
+plot([1 length(meas)], [quantile(meas, thq) quantile(meas, thq)], 'g')
+% plot([1 length(meas)], [quantile(meas, thq) quantile(meas, thq)], 'g')
+
+sigTh = quantile(meas, thq);
+% sigTh = 1.2;
+q = [min(meas) sigTh max(meas)+1];
+% q = [min(meas) quantile(meas, .75)  sigTh  max(meas)+1];
+
+normims = 1;
+im = inhibitImage;
+if normims
+    im = normImage(im);
+end
+
+
+for iq = length(q)-2 : length(q)-1 % 1:length(q)-1
+    f = find(meas >= q(iq) & meas < q(iq+1))'; length(f)
+    
+    figure;
+    set(gcf, 'name', num2str(max(meas(f))))
+    imagesc(im), freezeColors, colorbar, title('nonZero: ch1 - gamalSlope*ch2')
+    
+    for rr = f  % ibs'        
+%         ax1 = [ax1, gca];
+        hold on,
+        % a = plot(COMs(rr,2),COMs(rr,1), 'r.');
+        a = plot(CCgcamp{rr}(2,:), CCgcamp{rr}(1,:), 'r');
+        
+        % pause
+        % delete(a)
+    end
+    
+end
+%}
 
 %%
+%{
 function plotCrr(crr, inhibitRois, roi2surr_sig)
 
 % compute for each correlation bin the fraction of excitatory neurons with
@@ -610,4 +654,4 @@ for ei = 1:2
     
 end
 legend('excit', 'inhibit')
-
+%}

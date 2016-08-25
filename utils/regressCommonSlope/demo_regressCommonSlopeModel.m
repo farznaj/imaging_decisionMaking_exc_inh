@@ -7,7 +7,7 @@ Xs = cell(N, 1);
 Ys = cell(N,1);
 for j = 1:N
     Xs{j} = gaussFilter(10, randn(randi([Tmin Tmax]), 1)); % create some smoothly varying signal
-    noiseN{j} = 0.3*randn(size(Xs{j}));
+    noiseN{j} = 0.3*randn(size(Xs{j})); % independent for each neuron but same amount of noise for all neurons (FN)
     Ys{j} = a_true*Xs{j} + bs_true(j) + noiseN{j};
 end
 %% solution using the old method

@@ -17,7 +17,7 @@ function popClassifier(alldata, alldataSpikesGood, outcomes, allResp_HR_LR, fram
 % Example input variables :
 %{
 neuronType = 2; % 0: excitatory, 1: inhibitory, 2: all types.
-trialHistAnalysis = 1; % more parameters are specified in popClassifier_trialHistory.m
+trialHistAnalysis = 0; % more parameters are specified in popClassifier_trialHistory.m
     iTiFlg = 1; % 0: short ITI, 1: long ITI, 2: all ITIs.
     prevSuccessFlg = true; % true previous sucess trials; false: previous failure.
     vec_iti = [0 9 30]; % [0 10 30]; %[0 6 9 12 30]; % [0 7 30]; % [0 10 30]; % [0 6 9 12 30]; % use [0 40]; if you want to have a single iti bin and in conventioinal analysis look at the effect of current rate on outcome.

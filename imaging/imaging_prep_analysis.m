@@ -25,8 +25,8 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % Example input variales:
 %{
 mouse = 'fni17';
-imagingFolder = '151102'; % '151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2]; % 3; % 1; % or tif major
+imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
 rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
@@ -36,7 +36,7 @@ normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by i
 plot_ave_noTrGroup = 0; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
 evaluateEftyOuts = 0; % set to 1 when first evaluating a session.
 
-setInhibitExcit = 1; %true; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
+setInhibitExcit = 0; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 
 frameLength = 1000/30.9; % sec.
 
@@ -574,7 +574,8 @@ if setInhibitExcit
     finame = sprintf('inhibitROIs_%s', pnev_n); % save inhibit vars under this name.
     a = matfile(finame);  
     
-    if ~assessInhibitClass && exist([finame, '.mat'], 'file')  && isprop(a, 'inhibitRois') % if assessInhibit is 0 and the inhibitROI vars are already saved, we will load the results.
+    % if assessInhibit is 0 and the inhibitROI vars are already saved, we will load the results and wont perform inhibit identification anymore.
+    if ~assessInhibitClass && exist([finame, '.mat'], 'file')  && isprop(a, 'inhibitRois') 
             fprintf('Loading inhibitRois...\n')
             load(imfilename, 'inhibitRois')
         
