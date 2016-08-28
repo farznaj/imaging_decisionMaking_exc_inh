@@ -36,7 +36,7 @@ CC = ROIContoursPnev_cleanCC(CCorig);
 % im = reshape(P.sn, imHeight, imWidth);
 % im = sdImage{2};
 if exist('im', 'var') && ~isempty(im)
-    colors = hot(2*size(spatialComp,2));
+    colors = hot(2*size(CC,1));
     colors = colors(end:-1:1,:);
     
     figure;

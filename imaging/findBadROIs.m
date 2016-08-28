@@ -1,5 +1,14 @@
 % Find bad ROI outputs of the CNMF algorithm
 
+savebadROIs01 = 0; % if 1, badROIs01 will be appended to more_pnevFile
+exclude_badHighlightCorr = 1;
+evalBadRes = 1; % plot figures to evaluate the results
+
+% If you don't exclude badHighlightCorr, still most of the neurons will
+% have good trace quality, but they are mostly fragmented parts of ROIs or
+% neuropils. Also remember in most cases of fragmented ROIs, a more
+% complete ROI already exists that is not a badHighlightCorr.
+
 mouse = 'fni17';
 imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
 mdfFileNumber = [1,2];  % 3; %1; % or tif major
@@ -18,25 +27,8 @@ cd(fileparts(imfilename))
 fname = fullfile(pd, sprintf('more_%s.mat', pnev_n));
 
 
-%% Append A and CC to a mat file named more_pnev created in python... (you have to first create this file in python, it includes outputs of Andrea's evaluate components).
+%% Load vars
 
-fname = fullfile(pd, sprintf('more_%s.mat', pnev_n));
-
-load(pnevFileName, 'A')
-load(imfilename, 'imHeight', 'imWidth')
-
-mask = maskSet(A, imHeight, imWidth);
-CC = ROIContoursPnevCC(A, imHeight, imWidth, .95);
-
-if exist(fname,'file')==2
-    save(fname, 'mask', 'CC', '-append')
-else
-    error('You should first creat this mat file in python, otherwise you wont be able to append evaluate_comps vars to it later in python!')
-    save(fname, 'mask', 'CC')
-end
-
-
-%%
 load(pnevFileName, 'activity_man_eftMask_ch2', 'C', 'P', 'srt_val','highlightCorrROI', 'roiPatch', 'highlightPatchAvg', 'A')
 load(imfilename, 'imHeight', 'imWidth', 'sdImage')
 load(fname, 'idx_components', 'fitness', 'mask', 'CC')
@@ -48,7 +40,7 @@ end
 highlightCorrROI = highlightCorrROI';
 fitness = fitness';
 fitnessNow = fitness(idx_components); % turn fitness into an array whose indeces match Efty's outputs.
-% srt_val = full(srt_val);
+srt_val = full(srt_val);
 
 
 %% Set correlation between C and raw trace
@@ -56,7 +48,7 @@ fitnessNow = fitness(idx_components); % turn fitness into an array whose indeces
 c = corr(C', activity_man_eftMask_ch2); % this is generally higher than corr(C_df', dFOF_man)
 temp_corr = diag(c);
 size(temp_corr)
-% c = corr(C_df', dFOF_man); 
+% c = corr(C_df', dFOF_man);
 % cc2 = diag(c);
 
 fht = figure;
@@ -90,7 +82,7 @@ mask_numpix = sum(reshape(mask, imHeight*imWidth, []), 1)';
 figure(fht), subplot(324), histogram(mask_numpix), xlabel('mask # pixels')
 
 
-%% Andrea's fitness measure 
+%% Andrea's fitness measure
 
 figure(fht), subplot(325), histogram(fitnessNow), xlabel('AG fitness')
 
@@ -100,7 +92,18 @@ figure(fht), subplot(325), histogram(fitnessNow), xlabel('AG fitness')
 figure(fht), subplot(326), histogram(srt_val), xlabel('Efty sort\_val')
 
 
-%% Intensity of the sdImage of the ROI 
+%% My measures on highlightPatch and roiPatch comparison
+
+% not sure if you need this:
+highlightROIComp
+
+% The following is great to find bad neurons, but most of it is picked by Andrea's measure as well.
+% ft = (aveHighlightOutRoi>=.75); sum(ft)
+
+% ft = (highlightRoiDiff>=.5);
+
+
+%% Intensity of the sdImage of the ROI
 %{
 im = sdImage{2};
 maskn = double(mask);
@@ -115,7 +118,7 @@ end
 
 %% Plot all the measures for componentes sorted by Eftychios's srt_val
 
-figure; 
+figure;
 subplot(611), plot(srt_val), title('sort value')
 subplot(612), plot(fitnessNow), title('fitness')
 subplot(613), plot(temp_corr), title('temp corr')
@@ -125,42 +128,37 @@ subplot(616), plot(mask_numpix), title('mask # pixels')
 % subplot(616), plot(meansdsig), title('meanSdImage')
 
 
-%% Find nearby neurons.
-%{
-doeval = 0;
-merged_ROIs = mergeROIs_set([], A, C, imHeight, imWidth, [4.8 nan 2], 1, doeval, 0);
-
-% find ROIs near ROI 13
-i=131;
-nearbyROIs = findNearbyROIs(COMs, COMs(i,:), 5);
-%}
-
-
 %% Identify bad components using a combination of criteria
 
-thAG = -20;
-badAG = fitnessNow >= thAG;
+thAG = -20; % you can change it to -30 to exclude more of the poor quality ROIs.
+badAG = fitnessNow >= thAG; fprintf('sum(badAG): %d\n', sum(badAG))
 
 numbad = sum(fitnessNow >= thAG);
 ss = sort(srt_val);
 th_srt_val = ss(numbad); % you are trying to find a good threshold for srt_val (below which ROIs are bad).
-badEP = srt_val < th_srt_val;
+badEP = srt_val < th_srt_val; fprintf('sum(badEP | badAG): %d\n', sum(badEP | badAG)) %
 
 
-smallROI = mask_numpix < 15; % increase this to 20 if you want to get rid of neuropils
-shortDecayTau = tau(:,2) < 200;
-badTempCorr = temp_corr < .4;
-
-badHighlightCorr = highlightCorrROI < .5;
-goodSrtvalButbadHighlightCorr = (highlightCorrROI<.5 & srt_val>=1e4); % these have good trace quality but are mostly neuropils. so you decide to add them or not.
+smallROI = mask_numpix < 15; fprintf('sum(smallROI): %d\n', sum(smallROI)) % increase this to 20 if you want to get rid of neuropils
+shortDecayTau = tau(:,2) < 200; fprintf('sum(shortDecayTau): %d\n', sum(shortDecayTau)) % & ~(badEP | badAG))
+badTempCorr = temp_corr < .4; fprintf('sum(badTempCorr): %d\n', sum(badTempCorr)) % & ~(badEP | badAG))
 
 
-% bada = badEP + badAG + smallROI + shortDecayTau + badTempCorr;
-badAll = badEP + badAG + smallROI + shortDecayTau + badTempCorr + badHighlightCorr;
+badAll = badEP + badAG + smallROI + shortDecayTau + badTempCorr;
 
+badHighlightCorr = highlightCorrROI < .5; fprintf('sum(badHighlightCorr& ~badAll): %d\n', sum(badHighlightCorr& ~badAll))
+% goodSrtvalButbadHighlightCorr = (highlightCorrROI < .5 & srt_val >= 1e4); % these have good trace quality but are mostly neuropils. so you can later decide to add them or not.
+
+% If you don't exclude badHighlightCorr, still most of the neurons will
+% have good trace quality, but they are mostly fragmented parts of ROIs or
+% neuropils. Also remember in most cases of fragmented ROIs, a more
+% complete ROI already exists that is not a badHighlightCorr.
+if exclude_badHighlightCorr
+    badAll = badEP + badAG + smallROI + shortDecayTau + badTempCorr + badHighlightCorr;
+end
 
 badROIs01 = (badAll ~= 0); % any of the above measure is bad.
-fprintf('number of bad ROIs = %d, mean = %.2f\n', sum(badROIs01), mean(badROIs01))
+fprintf('Total number of bad ROIs = %d, mean = %.2f\n', sum(badROIs01), mean(badROIs01))
 
 badROIs = find(badROIs01);
 goodROIs = find(~badROIs01);
@@ -177,98 +175,117 @@ sum(fth)
 
 
 
-
-%% Nice figure to evaluate the results
-COMs = fastCOMsA(A, [imHeight, imWidth]);
-
-
 %%
-rois2p = find(~badROIs01);
-rois2p = nearbyROIs;
+if savebadROIs01
+    save(fname, '-append', 'badROIs01')
+end
 
 
-%%
-rois2p = rois2p(randperm(length(rois2p)));
+%% Find nearby neurons.
+%{
+doeval = 0;
+merged_ROIs = mergeROIs_set([], A, C, imHeight, imWidth, [4.8 nan 2], 1, doeval, 0);
 
-figure; 
-subplot(3,3,[7]); 
-imagesc(log(sdImage{2}))
+% find ROIs near ROI 13
+i=131;
+nearbyROIs = findNearbyROIs(COMs, COMs(i,:), 5);
+%}
 
-for i = rois2p' % % %; %ag_eb % f%ab_eg; %find(bc)' %find(mask_numpix<15); %nearbyROIs' %1:size(C,1) % fb'; % fb'; %220; %477;     
-    [cinall(i) coutall(i)]
-    if ismember(i, badROIs)
-        col = 'r';
-    else
-        col = 'k';
-    end
-%     i
-    set(gcf,'name', sprintf('ROI: %i', i))
+if evalBadRes     
+    
+    COMs = fastCOMsA(A, [imHeight, imWidth]);    
+    
+    %% what ROIs to plot?    
+    
+    rois2p = find(badROIs01);
+    % rois2p = nearbyROIs;
+    rois2p = rois2p(randperm(length(rois2p)));    
+     
+    %% Nice figure to evaluate the results
+    
+    figure;
+    subplot(3,3,[7]);
+    imagesc(log(sdImage{2}))
+    
+    for i = rois2p' % % %; %ag_eb % f%ab_eg; %find(bc)' %find(mask_numpix<15); %nearbyROIs' %1:size(C,1) % fb'; % fb'; %220; %477;
+        [aveHighlightInRoi(i)  aveHighlightOutRoi(i)  highlightRoiDiff(i)] % [cinall(i) coutall(i) ds(i)]
+        if ismember(i, badROIs)
+            col = 'r';
+        else
+            col = 'k';
+        end
+        %     i
+        set(gcf,'name', sprintf('ROI: %i', i))
+        hold on
+        subplot(3,3,[1,2,3]), h1 = plot(C(i,:));
+        %     title(sprintf('tau = %.2f ms', tau(i,2))),  % title(sprintf('%.2f, %.2f', [temp_corr(i), tau(i,2)])),
+        title(sprintf('fitness = %.2f,  srtval = %.2f', fitnessNow(i), full(srt_val(i))), 'color', col)
+        xlim([1 size(C,2)])
+        ylabel('C')% (denoised-demixed trace)')
+        
+        subplot(3,3,[4,5,6]),
+        h2 = plot(activity_man_eftMask_ch2(:,i));
+        %     h2 = plot(yrac(i,:));
+        title(sprintf('tau = %.2f ms, temp corr = %.2f', tau(i,2), temp_corr(i)), 'color', col)
+        xlim([1 size(C,2)])
+        ylabel('Raw') % (averaged pixel intensities)')
+        
+        subplot(3,3,[7]); hold on
+        h3 = plot(CC{i}(2,:), CC{i}(1,:), 'r');
+        xlim([COMs(i,2)-50  COMs(i,2)+50])
+        ylim([COMs(i,1)-50  COMs(i,1)+50])
+        %     imagesc(reshape(A(:,i), imHeight, imWidth))
+        title(sprintf('#pix = %i', mask_numpix(i)), 'color', col)
+        %     title(sprintf('#pix = %i, fitness = %.2f srtval = %.2f', mask_numpix(i), fitness(i), full(srt_val(i))))
+        %     title(sprintf('#pix = %i,  meansdsig = %.2f', mask_numpix(i), meansdsig(i)))
+        
+        plotCorr_FN(roiPatch, highlightPatchAvg, highlightCorrROI, A, CC, COMs, [imHeight, imWidth], i, [3,3,8], [3,3,9])
+        h4 = subplot(3,3,8);
+        h5 = subplot(3,3,9);
+        
+        pause
+        delete([h1,h2,h3,h4,h5])
+    end    
+    
+    
+    %% Plot COMs of bad and good components on the medImage.
+    
+    im = sdImage{2}; % medImage{2};
+    
+    % COMs = fastCOMsA(A, size(im));
+    
+    % bad components
+    figure('name', 'bad components');
+    imagesc(im)
     hold on
-    subplot(3,3,[1,2,3]), h1 = plot(C(i,:)); 
-%     title(sprintf('tau = %.2f ms', tau(i,2))),  % title(sprintf('%.2f, %.2f', [temp_corr(i), tau(i,2)])), 
-    title(sprintf('fitness = %.2f,  srtval = %.2f', fitnessNow(i), full(srt_val(i))), 'color', col)
-    xlim([1 size(C,2)])
-    ylabel('C')% (denoised-demixed trace)')
+    for rr = find(badROIs01')
+        plot(COMs(rr,2), COMs(rr,1), 'r.')
+    end
     
-    subplot(3,3,[4,5,6]), 
-    h2 = plot(activity_man_eftMask_ch2(:,i)); 
-%     h2 = plot(yrac(i,:)); 
-    title(sprintf('tau = %.2f ms, temp corr = %.2f', tau(i,2), temp_corr(i)), 'color', col)
-    xlim([1 size(C,2)])
-    ylabel('Raw') % (averaged pixel intensities)')
+    % good components
+    figure('name', 'good components');
+    imagesc(im)
+    hold on
+    for rr = find(~badROIs01')
+        plot(COMs(rr,2), COMs(rr,1), 'r.')
+    end
     
-    subplot(3,3,[7]); hold on
-    h3 = plot(CC{i}(2,:), CC{i}(1,:), 'r');
-    xlim([COMs(i,2)-50  COMs(i,2)+50])
-    ylim([COMs(i,1)-50  COMs(i,1)+50])
-%     imagesc(reshape(A(:,i), imHeight, imWidth))
-    title(sprintf('#pix = %i', mask_numpix(i)), 'color', col)
-%     title(sprintf('#pix = %i, fitness = %.2f srtval = %.2f', mask_numpix(i), fitness(i), full(srt_val(i))))
-%     title(sprintf('#pix = %i,  meansdsig = %.2f', mask_numpix(i), meansdsig(i)))
     
-    plotCorr_FN(roiPatch, highlightPatchAvg, highlightCorrROI, A, CC, COMs, [imHeight, imWidth], i, [3,3,8], [3,3,9])
-    h4 = subplot(3,3,8);
-    h5 = subplot(3,3,9);
-    
-    pause
-    delete([h1,h2,h3,h4,h5])
 end
-
-
-
-%% Plot COMs of bad and good components on the medImage.
-
-im = sdImage{2}; % medImage{2};
-
-COMs = fastCOMsA(A, size(im));
-
-% bad components
-figure; 
-imagesc(im)
-hold on
-for rr = find(badROIs01')
-    plot(COMs(rr,2), COMs(rr,1), 'r.')
-end
-
-% good components
-figure; 
-imagesc(im)
-hold on
-for rr = find(~badROIs01')
-    plot(COMs(rr,2), COMs(rr,1), 'r.')
-end
-
-
-%%
-A = A(:, ~badROIs01);
-C = C(~badROIs01,:);
-C_df = C_df(~badROIs01,:);
-
 
 
 %%
 %{
-%% 
+A = A(:, ~badROIs01);
+C = C(~badROIs01,:);
+S = S(~badROIs01,:);
+C_df = C_df(~badROIs01,:);
+%}
+
+
+%%
+%{
+%%
 Cnew = C(idx_components, :);
 erfcnew = erfc(idx_components, :);
 
@@ -277,7 +294,7 @@ figure; plot(idx_components)
 xlabel('after-sort index')
 ylabel('before-sort index')
 
-ii = randperm(length(idx_components), 1); 
+ii = randperm(length(idx_components), 1);
 figure; hold on
 plot(C(idx_components(ii),:))
 plot(Cnew(ii,:), 'r')
@@ -380,7 +397,7 @@ end
 %% Identify bad components
 
 f1 = (tau(:,2) < 100); % 50 % (frameLength*tau(:,2) < 50) | (frameLength*tau(:,2) > 2000)
-f2 = temp_corr < .35; % .3; .4; % max([temp_corr,cc2],[],2) < .4; % 
+f2 = temp_corr < .35; % .3; .4; % max([temp_corr,cc2],[],2) < .4; %
 % f3 = full(order_measure < 2000); % very few comps with f1==0 and f3==1... ie if you go with f1==1, then f3 is more of a redundant measure.
 
 % [sum(f1==1) sum(f2==1) sum(f3==1)]
@@ -391,7 +408,7 @@ sum(f1==1 | f2==1)
 
 %%
 f1 = (tau(:,2) < 100); % 50 % (frameLength*tau(:,2) < 50) | (frameLength*tau(:,2) > 2000)
-f2 = temp_corr < .5; % .3; .4; % max([temp_corr,cc2],[],2) < .4; % 
+f2 = temp_corr < .5; % .3; .4; % max([temp_corr,cc2],[],2) < .4; %
 f3 = highlightCorrROI' < .5;
 f4 = mask_numpix' < 15;
 % f5 = srt_val <= quantile(srt_val, .1);
@@ -410,7 +427,7 @@ badComps = (f1==1 | f2==1); % logical array same size as number of comps in C, w
 num_fract_badComps = [sum(badComps) mean(badComps)]
 
 
-%% Append badComps to pnevFile 
+%% Append badComps to pnevFile
 
 % save(pnevFileName, '-append', 'badComps')
 
@@ -418,14 +435,14 @@ num_fract_badComps = [sum(badComps) mean(badComps)]
 %% Look at tau of good components
 
 fb = find(~badComps);
-[n,v] = histcounts(tau(fb,2)); figure; bar(v(1:end-1),n); hold on; plot(median(tau(fb,2)), max(n), 'r*'),  
+[n,v] = histcounts(tau(fb,2)); figure; bar(v(1:end-1),n); hold on; plot(median(tau(fb,2)), max(n), 'r*'),
 
 figure; plot(tau(~badComps,2))
 
 
 %% Assess the results (look at bad and good components (manual and C traces as well as contours)
 
-fb = find(badComps); % [~,is]= sort(tau(fb,2), 'descend'); fb = fb(is); fb = fb(1:10); % fb = fb(randperm(length(fb))); 
+fb = find(badComps); % [~,is]= sort(tau(fb,2), 'descend'); fb = fb(is); fb = fb(1:10); % fb = fb(randperm(length(fb)));
 fg = find(~badComps); % fg = fg(tau(fg,2)<600); fg = fg(2:11); % fb = fb(randperm(length(fb)));
 % length(fb)
 %}

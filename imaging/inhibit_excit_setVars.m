@@ -1,36 +1,51 @@
-function [inhibitRois, roi2surr_sig, sigTh] = inhibit_excit_setVars(imfilename, pnevFileName, quantTh, showResults, keyEval)
+function [inhibitRois, roi2surr_sig, sigTh_IE] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, showResults, keyEval)
 % identify inhibitory neurons.
 
 % sigTh = 1.2;
 if ~exist('showResults', 'var')
     showResults = false; % set to true so u can evaluate if sigTh is doing a good job.
 end
+save_common_slope = 1; % if 1, results will be appended to pnevFile
 
 
-%% Set vars to identify inhibitory neurons: mask and ROI contours for the gcamp channel.
+%%
+[pd,pnev_n] = fileparts(pnevFileName);
+fname = fullfile(pd, sprintf('more_%s.mat', pnev_n));
 
-% [imfilename, pnevFileName] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh);
-
-load(imfilename, 'imHeight', 'imWidth', 'sdImage')
+load(fname, 'badROIs01', 'mask', 'CC')
+load(imfilename, 'imHeight', 'imWidth', 'sdImage', 'aveImage')
 load(pnevFileName, 'A') % pnevFileName should contain Eft results after merging-again has been performed.
-spatialComp = A; 
-clear A
 
+COMs = fastCOMsA(A, [imHeight, imWidth]); % size(medImage{2})
+
+% Remove bad components
+mask = mask(:,:,~badROIs01);
+CC = CC(~badROIs01);
+COMs = COMs(~badROIs01,:);
+
+%{
+load(imfilename, 'pmtOffFrames')
+smoothPts = 6; minPts = 7000; %800;
+activity_man_eftMask_ch1 = konnerthDeltaFOverF(activity_man_eftMask_ch1, pmtOffFrames{1}, smoothPts, minPts);
+activity_man_eftMask_ch2 = konnerthDeltaFOverF(activity_man_eftMask_ch2, pmtOffFrames{2}, smoothPts, minPts);
+%}
+
+%{
 fprintf('Setting mask for the gcamp channel....\n')
 if showResults
     im = []; % normImage(sdImage{2}); % medImage{2};
     contour_threshold = .95;    
-    [CC, ~, COMs, mask] = setCC_cleanCC_plotCC_setMask(spatialComp, imHeight, imWidth, contour_threshold, im);        
+    [CC, ~, COMs, mask] = setCC_cleanCC_plotCC_setMask(A, imHeight, imWidth, contour_threshold, im);        
     % COMs = fastCOMsA(A, [imHeight, imWidth]); % size(medImage{2})
-    % CC = ROIContoursPnevCC(spatialComp, imHeight, imWidth, contour_threshold);
-    % mask = maskSet(spatialComp, imHeight, imWidth);
+    % CC = ROIContoursPnevCC(A, imHeight, imWidth, contour_threshold);
+    % mask = maskSet(A, imHeight, imWidth);
 else
 %     im = [];
-    mask = maskSet(spatialComp, imHeight, imWidth);    
-    COMs = fastCOMsA(spatialComp, [imHeight, imWidth]); % size(medImage{2})
+    mask = maskSet(A, imHeight, imWidth);    
+    COMs = fastCOMsA(A, [imHeight, imWidth]); % size(medImage{2})
     CC = [];
 end
-
+%}
 
 
 
@@ -43,40 +58,33 @@ end
 % inhibitImage = medImage{1}; % aveImage{1};
 
 
-%% Load vars 
+%% Load or compute slope and offsets (model: red_ch1 = offset + slope * green_ch2)
 
-save_common_slope = 1; % if 1, results will be appended to pnevFile
+% [d,pnev_n] = fileparts(pnevFileName);
+% finame = sprintf('inhibitROIs_%s', pnev_n); % save inhibit vars under this name.
+% cd(d)
 
-load(pnevFileName, 'activity_man_eftMask_ch1', 'activity_man_eftMask_ch2')
-load(imfilename, 'aveImage')
+a = matfile(fname);
 
-%{
-load(imfilename, 'pmtOffFrames')
-smoothPts = 6; minPts = 7000; %800;
-activity_man_eftMask_ch1 = konnerthDeltaFOverF(activity_man_eftMask_ch1, pmtOffFrames{1}, smoothPts, minPts);
-activity_man_eftMask_ch2 = konnerthDeltaFOverF(activity_man_eftMask_ch2, pmtOffFrames{2}, smoothPts, minPts);
-%}
+if isprop(a, 'slope_common') % exist([finame, '.mat'], 'file') 
     
-
-%% Compute slope and offsets (model: red_ch1 = offset + slope * green_ch2)
-
-[d,pnev_n] = fileparts(pnevFileName);
-finame = sprintf('inhibitROIs_%s', pnev_n); % save inhibit vars under this name.
-        
-% a = matfile(pnevFileName);
-cd(d)
-if exist([finame, '.mat'], 'file') % isprop(a, 'slope_common')
     fprintf('Loading slope_common and offsets_ch1...\n')
-    load(finame, 'slope_common', 'offsets_ch1')
+    load(fname, 'slope_common', 'offsets_ch1')
     
 else
+    fprintf('Setting slope_common and offsets_ch1...\n')
+        
+    load(pnevFileName, 'activity_man_eftMask_ch1', 'activity_man_eftMask_ch2')
+    activity_man_eftMask_ch1 = activity_man_eftMask_ch1(:, ~badROIs01);
+    activity_man_eftMask_ch2 = activity_man_eftMask_ch2(:, ~badROIs01);
+
     inhibit_remove_bleedthrough
 
     % Save the slope and the offset    
     if save_common_slope
         fprintf('Saving slope_common and offsets_ch1...\n')
         
-        save(finame, 'slope_common', 'offsets_ch1')
+        save(fname, '-append', 'slope_common', 'offsets_ch1') % save to more_pnevFile...
 %         save(pnevFileName, '-append', 'slope_common', 'offsets_ch1')
     end
 
@@ -139,15 +147,25 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
 % keyEval = 0; % if 1, you will use key presses to evaluate ROIs. % Linux hangs with getKey... so make sure this is set to 0! % if 0 you will simply go though ROIs one by one, otherwise it will go to getKey and you will be able to change neural classification.    
 ch2Image = sdImage{2};
 
-[inhibitRois, roi2surr_sig, sigTh] = inhibitROIselection(mask, inhibitImage, quantTh, showResults, keyEval, CC, ch2Image, COMs, activity_man_eftMask_ch1, activity_man_eftMask_ch2); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
+if showResults
+    load(pnevFileName, 'C')
+    C = C(~badROIs01,:);
+else
+    C = [];
+end
+
+% sigTh_IE: threshold value on roi2surr_sig for identifying inhibit and excit neurons: 1st element for inhibit, 2nd element for excit.
+
+[inhibitRois, roi2surr_sig, sigTh_IE] = inhibitROIselection(mask, inhibitImage, manThSet, showResults, keyEval, CC, ch2Image, COMs, C); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
 
 
 %% Show the results
 
 if showResults
     
+    % plot inhibitory and excitatory ROIs on the image of inhibit channel.
     im2p = normImage(sdImage{1});
-    colors = hot(2*size(spatialComp,2));
+    colors = hot(2*size(A,2));
     colors = colors(end:-1:1,:);
 
     % plot inhibitory ROIs on the image of inhibit channel.
@@ -171,19 +189,21 @@ if showResults
     end
     title('gcamp ROIs identified as excitatory');
 
+    
+    %% Compare average C of inhibit and excit neurons
+    
+    figure; 
+    subplot(211), plot(mean(C(inhibitRois==1,:))), title('inhibit')
+    subplot(212),  plot(mean(C(inhibitRois==0,:))), title('excit')
+    
+    %{
+    subplot(221), plot(mean(activity_man_eftMask_ch2(:, inhibitRois==1), 2)), title('ch2, inhibit')
+    subplot(223),  plot(mean(activity_man_eftMask_ch2(:, inhibitRois==0), 2)), title('ch2, excit')
+    subplot(222), plot(mean(activity_man_eftMask_ch1(:, inhibitRois==1), 2)), title('ch1, inhibit')
+    subplot(224),  plot(mean(activity_man_eftMask_ch1(:, inhibitRois==0), 2)), title('ch1, excit')
+    %}
+
 end
-
-%%%%
-figure; 
-subplot(221), plot(mean(activity_man_eftMask_ch2(:, inhibitRois==1), 2)), title('ch2, inhibit')
-subplot(223),  plot(mean(activity_man_eftMask_ch2(:, inhibitRois==0), 2)), title('ch2, excit')
-subplot(222), plot(mean(activity_man_eftMask_ch1(:, inhibitRois==1), 2)), title('ch1, inhibit')
-subplot(224),  plot(mean(activity_man_eftMask_ch1(:, inhibitRois==0), 2)), title('ch1, excit')
-%{
-subplot(222), plot(mean(C(inhibitRois==1,:)))
-subplot(224),  plot(mean(C(inhibitRois==0,:)))
-%}
-
 
 
 %% set good_inhibit and good_excit neurons. (run avetrialAlign_setVars to get goodinds and traces.)

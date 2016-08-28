@@ -44,6 +44,11 @@ frameLength = 1000/30.9; % sec.
 
 home
 
+% Rmemeber once preproc is done, you need to run eval_comp_main in Python
+% to save outputs of Andrea's evaluation of components in a mat file named
+% more_pnevFile... Then run set_A_CC to append to this mat file, A and CC.
+
+
 %% Good days
 % imagingFolder = '151029'; % '151021';
 % mdfFileNumber = 3;
@@ -103,7 +108,7 @@ signalCh = 2; % because you get A from channel 2, I think this should be always 
 pnev2load = [];
 %}
 [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
-[~,pnev_n] = fileparts(pnevFileName);
+[pd, pnev_n] = fileparts(pnevFileName);
 disp(pnev_n)
 cd(fileparts(imfilename))
 
@@ -569,15 +574,16 @@ end
 if setInhibitExcit
     
     % Load inhibitRois if it already exists, otherwise set it.
-
-%     [~,pnev_n] = fileparts(pnevFileName);
-    finame = sprintf('inhibitROIs_%s', pnev_n); % save inhibit vars under this name.
-    a = matfile(finame);  
     
-    % if assessInhibit is 0 and the inhibitROI vars are already saved, we will load the results and wont perform inhibit identification anymore.
-    if ~assessInhibitClass && exist([finame, '.mat'], 'file')  && isprop(a, 'inhibitRois') 
-            fprintf('Loading inhibitRois...\n')
-            load(imfilename, 'inhibitRois')
+%     [pd,pnev_n] = fileparts(pnevFileName);
+    fname = fullfile(pd, sprintf('more_%s.mat', pnev_n)); % This file must be already created in python (when running Andrea's evaluate_comp code).
+    a = matfile(fname);  
+    
+    % If assessInhibit is 0 and the inhibitROI vars are already saved, we will load the results and wont perform inhibit identification anymore.
+    if ~assessInhibitClass && exist(fname, 'file') && isprop(a, 'inhibitRois') 
+        fprintf('Loading inhibitRois...\n')
+        
+        load(imfilename, 'inhibitRois')
         
     else
         fprintf('Identifying inhibitory neurons....\n')
@@ -586,20 +592,22 @@ if setInhibitExcit
         % 0 for excit ROIs.
         % nan for ROIs that could not be classified as inhibit or excit.
 
-%         quantTh = []; assessInhibitClass = 0;
-        keyEval = 0; % if 1, you will use key presses to evaluate ROIs. Otherwise automatic identification using:
-        % 'inhibit: > .9th quantile. excit: < .8th quantile of roi2surr_sig!
-        % Be very carful if setting to 1: Linux hangs with getKey if you click anywhere, just use the keyboard keys! % if 0 you will simply go though ROIs one by one, otherwise it will go to getKey and you will be able to change neural classification.
-        [inhibitRois, roi2surr_sig, sigTh] = inhibit_excit_setVars(imfilename, pnevFileName, quantTh, assessInhibitClass, keyEval);
+        %{
+        assessInhibitClass = 0; % you will go through inhibit and excit ROIs one by one.
+        manThSet = 0; % if 1, you will set the threshold for identifying inhibit neurons by looking at the roi2surr_Sig values.        
+        keyEval = 0; % if 1, you can change class of neurons using key presses. 
+        % If manThSet and keyEval are both 0, automatic identification occurs based on: 
+        % 'inhibit: > .9th quantile. excit: < .8th quantile of roi2surr_sig
+        % Be very carful if setting keyEval to 1: Linux hangs with getKey if you click anywhere, just use the keyboard keys! % if 0 you will simply go though ROIs one by one, otherwise it will go to getKey and you will be able to change neural classification.
+        %}        
+        [inhibitRois, roi2surr_sig, sigTh_IE] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessInhibitClass, keyEval);
         
         if saveInhibitRois
-            fprintf('Saving inhibitRois...\n')            
-            finame = sprintf('inhibitROIs_%s', pnev_n);
+            fprintf('Appending inhibitRois to more_pnevFile...\n')
             
-            save(finame, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
+            save(fname, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
 %             save(imfilename, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
-        end        
-        
+        end
     end
     
     fprintf('Fract inhibit %.3f, excit %.3f, unknown %.3f\n', [...
