@@ -2,7 +2,6 @@ load('SVM_151029_003_ch2-PnevPanResults-160426-191859.mat')
 
 
 
-
 % dataTensor = non_filtered;
 % all_times = time_aligned;
 dataTensor = traces_al_1stSideTry;
@@ -45,11 +44,12 @@ ylabel('time (ms)')
 %% TDR analysis
 stim = stimrate(:);
 decision = Y;
-codedParams = [[stim(:)-min(stim(:))]/range(stim(:)) [decision(:)-mean(decision(:))]/range(decision(:)) ones(R, 1)];
+cb = 16;
+codedParams = [[stim(:)-cb]/range(stim(:)) [decision(:)-mean(decision(:))]/range(decision(:)) ones(R, 1)];
 % cb = 16; stimrate_norm = ((stimrate - cb)/max(abs(stimrate(:) - cb)));
 
-Npcs = 20;
-[dRAs, normdRAs, Summary] = runTDR(dataTensor, Npcs, codedParams, [], false);
+numPCs = 20;
+[dRAs, normdRAs, Summary] = runTDR(dataTensor, numPCs, codedParams, [], false);
 angle = real(acos(abs(dRAs(:,:,1)*dRAs(:,:,1)')))*180/pi;
 angle(:,:,2) = real(acos(abs(dRAs(:,:,2)*dRAs(:,:,2)')))*180/pi;
 angle(:,:,3) = real(acos(abs(dRAs(:,:,3)*dRAs(:,:,3)')))*180/pi;
@@ -89,8 +89,8 @@ colormap(flipud(colormap('jet')))
 colorbar
 title('angle offset')
 caxis([0 90])
-xlabel('decision time (ms)')
-ylabel('stimulus time (ms)')
+xlabel('time (ms)')
+ylabel('time (ms)')
 axis square
 
 subplot(224)
