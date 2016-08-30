@@ -46,6 +46,7 @@ ylabel('time (ms)')
 stim = stimrate(:);
 decision = Y;
 codedParams = [[stim(:)-min(stim(:))]/range(stim(:)) [decision(:)-mean(decision(:))]/range(decision(:)) ones(R, 1)];
+% cb = 16; stimrate_norm = ((stimrate - cb)/max(abs(stimrate(:) - cb)));
 
 [dRAs, normdRAs, Summary] = runTDR(dataTensor, N, codedParams, [], false);
 angle = real(acos(abs(dRAs(:,:,1)*dRAs(:,:,1)')))*180/pi;
@@ -58,7 +59,7 @@ hold on
 plot(all_times, Summary.R2_tk(:,1), 'k')
 plot(all_times, Summary.R2_tk(:,2), 'b')
 xlabel('time (ms)')
-ylabel('signal contribution to rate')
+ylabel('signal contribution to firing rate')
 
 figure;
 subplot(131)

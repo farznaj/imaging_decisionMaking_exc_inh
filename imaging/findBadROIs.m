@@ -13,8 +13,8 @@ evalBadRes = 1; % plot figures to evaluate the results
 % complete ROI already exists that is not a badHighlightCorr.
 
 mouse = 'fni17';
-imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1];  % 3; %1; % or tif major
+imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
 
 %% Set imfilename, pnevFileName
@@ -136,9 +136,13 @@ subplot(616), plot(mask_numpix), title('mask # pixels')
 thAG = -20; % you can change it to -30 to exclude more of the poor quality ROIs.
 badAG = fitnessNow >= thAG; fprintf('sum(badAG): %d\n', sum(badAG))
 
+%{
 numbad = sum(fitnessNow >= thAG);
 ss = sort(srt_val);
 th_srt_val = ss(numbad); % you are trying to find a good threshold for srt_val (below which ROIs are bad).
+fprintf('Threshold for Efty srt_val= %.2f\n', full(th_srt_val))
+%}
+th_srt_val = 4150;
 badEP = srt_val < th_srt_val; fprintf('sum(badEP | badAG): %d\n', sum(badEP | badAG)) %
 
 
@@ -180,7 +184,8 @@ sum(fth)
 fprintf('sum(aveHighlightOutRoi>=.75 & ~badAll): %d\n', sum(~badAll & aveHighlightOutRoi>=.75)) % 
 fprintf('sum(highlightRoiDiff>=.5 & ~badAll): %d\n', sum(highlightRoiDiff>=.5 & ~badAll))
 
-fprintf('sum(highlightRoiDiff>=.5 & ~badAll): %d\n', sum(highlightRoiDiff>=.5 & ~badTempCorr))
+fprintf('sum(highlightRoiDiff>=.5 & ~badTempCorr): %d\n', sum(highlightRoiDiff>=.5 & ~badTempCorr))
+
 
 %%
 if savebadROIs01
@@ -194,7 +199,7 @@ doeval = 0;
 merged_ROIs = mergeROIs_set([], A, C, imHeight, imWidth, [4.8 nan 2], 1, doeval, 0);
 
 % find ROIs near ROI 13
-i=131;
+i=366;
 nearbyROIs = findNearbyROIs(COMs, COMs(i,:), 5);
 %}
 
@@ -214,7 +219,7 @@ if evalBadRes
     subplot(3,3,[7]);
     imagesc(log(sdImage{2}))
     
-    for i = rois2p' % % %; %ag_eb % f%ab_eg; %find(bc)' %find(mask_numpix<15); %nearbyROIs' %1:size(C,1) % fb'; % fb'; %220; %477;
+    for i = rois2p'; % % %; %ag_eb % f%ab_eg; %find(bc)' %find(mask_numpix<15); %nearbyROIs' %1:size(C,1) % fb'; % fb'; %220; %477;
         fprintf('hilight_in_out_hilightROIdiff= %.2f %.2f %.2f\n', [aveHighlightInRoi(i)  aveHighlightOutRoi(i)  highlightRoiDiff(i)]) % [cinall(i) coutall(i) ds(i)]
         if ismember(i, badROIs)
             col = 'r';

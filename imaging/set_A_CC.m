@@ -7,8 +7,8 @@
 %% Change these vars:
 
 mouse = 'fni17';
-imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1];  % 3; %1; % or tif major
+imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
 
 %% Set imfilename, pnevFileName, fname
@@ -45,6 +45,38 @@ else
     save(fname, 'mask', 'CC')
 end
 
+
+
+%%
+%% Plot ROIs found by Eftychios's algorithm on the sdImage
+load(imfilename, 'sdImage')
+% im = sdImage{2};
+im = normImage(sdImage{2});
+plotCOMs= 0;
+
+if exist('im', 'var') && ~isempty(im)
+    colors = hot(2*size(CC,1));
+    colors = colors(end:-1:1,:);
+    
+    figure;
+    imagesc(im);  % imagesc(log(im));
+    hold on;
+%     colormap gray
+    
+    for rr = 1:length(CC)
+        if plotCOMs
+            plot(COMs(rr,2), COMs(rr,1), 'r.')
+            
+        else
+            %[CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(Ain, imHeight, imWidth, contour_threshold, im);
+            if ~isempty(CC{rr})
+                plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
+            else
+                fprintf('Contour of ROI %i is empty!\n', rr)
+            end
+        end
+    end
+end
 
 
 
