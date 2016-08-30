@@ -3,10 +3,10 @@ load('SVM_151029_003_ch2-PnevPanResults-160426-191859.mat')
 
 
 
-dataTensor = non_filtered;
-all_times = time_aligned;
-% % dataTensor = traces_al_1stSideTry;
-% % all_times = time_aligned_1stSideTry;
+% dataTensor = non_filtered;
+% all_times = time_aligned;
+dataTensor = traces_al_1stSideTry;
+all_times = time_aligned_1stSideTry;
 
 %% preprocess
 [T, N, R] = size(dataTensor);
@@ -45,7 +45,7 @@ ylabel('time (ms)')
 %% TDR analysis
 stim = stimrate(:);
 decision = Y;
-codedParams = [[stim(:)-min(stim(:))]/range(stim(:)) [decision(:)-mean(decision(:))]/range(decision(:))];
+codedParams = [[stim(:)-min(stim(:))]/range(stim(:)) [decision(:)-mean(decision(:))]/range(decision(:)) ones(R, 1)];
 
 [dRAs, normdRAs, Summary] = runTDR(dataTensor, N, codedParams, [], false);
 angle = real(acos(abs(dRAs(:,:,1)*dRAs(:,:,1)')))*180/pi;
