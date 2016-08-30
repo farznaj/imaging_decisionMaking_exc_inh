@@ -2,14 +2,21 @@ load('SVM_151029_003_ch2-PnevPanResults-160426-191859.mat')
 
 
 
-% dataTensor = non_filtered;
-% all_times = time_aligned;
-dataTensor = traces_al_1stSideTry;
-all_times = time_aligned_1stSideTry;
+dataTensor = non_filtered;
+all_times = time_aligned;
+% dataTensor = traces_al_1stSideTry;
+% all_times = time_aligned_1stSideTry;
+[T, N, R] = size(dataTensor);
+
+%% average across multiple times
+regressBins = 4;
+dataTensor = dataTensor(1:regressBins*floor(T/regressBins), : , :);
+dataTensor = squeeze(mean(reshape(dataTensor, regressBins, floor(T/regressBins), N, R), 1));
+all_times = all_times(1:floor(T/regressBins)*regressBins);
+all_times = round(mean(reshape(all_times, regressBins, floor(T/regressBins)),1), 2);
 
 %% preprocess
 [T, N, R] = size(dataTensor);
-
 meanN = mean(reshape(permute(dataTensor, [1 3 2]), T*R, N));
 stdN = std(reshape(permute(dataTensor, [1 3 2]), T*R, N));
 meanN = mean(X);
