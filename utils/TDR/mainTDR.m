@@ -52,7 +52,8 @@ Npcs = 20;
 [dRAs, normdRAs, Summary] = runTDR(dataTensor, Npcs, codedParams, [], false);
 angle = real(acos(abs(dRAs(:,:,1)*dRAs(:,:,1)')))*180/pi;
 angle(:,:,2) = real(acos(abs(dRAs(:,:,2)*dRAs(:,:,2)')))*180/pi;
-angle(:,:,3) = real(acos(abs(dRAs(:,:,1)*dRAs(:,:,2)')))*180/pi;
+angle(:,:,3) = real(acos(abs(dRAs(:,:,3)*dRAs(:,:,3)')))*180/pi;
+angle(:,:,4) = real(acos(abs(dRAs(:,:,1)*dRAs(:,:,2)')))*180/pi;
 
 %%
 figure;
@@ -63,7 +64,7 @@ xlabel('time (ms)')
 ylabel('signal contribution to firing rate')
 
 figure;
-subplot(131)
+subplot(221)
 imagesc(all_times, all_times, angle(:,:,1));
 colormap(flipud(colormap('jet')))
 colorbar
@@ -72,7 +73,7 @@ caxis([0 90])
 xlabel('time (ms)')
 ylabel('time (ms)')
 axis square
-subplot(132)
+subplot(222)
 imagesc(all_times, all_times, angle(:,:,2));
 colormap(flipud(colormap('jet')))
 colorbar
@@ -82,8 +83,18 @@ xlabel('time (ms)')
 ylabel('time (ms)')
 axis square
 
-subplot(133)
+subplot(223)
 imagesc(all_times, all_times, angle(:,:,3));
+colormap(flipud(colormap('jet')))
+colorbar
+title('angle offset')
+caxis([0 90])
+xlabel('decision time (ms)')
+ylabel('stimulus time (ms)')
+axis square
+
+subplot(224)
+imagesc(all_times, all_times, angle(:,:,4));
 colormap(flipud(colormap('jet')))
 colorbar
 title('angle stim vs decision')
