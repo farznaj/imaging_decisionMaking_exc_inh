@@ -48,7 +48,8 @@ decision = Y;
 codedParams = [[stim(:)-min(stim(:))]/range(stim(:)) [decision(:)-mean(decision(:))]/range(decision(:)) ones(R, 1)];
 % cb = 16; stimrate_norm = ((stimrate - cb)/max(abs(stimrate(:) - cb)));
 
-[dRAs, normdRAs, Summary] = runTDR(dataTensor, N, codedParams, [], false);
+Npcs = 20;
+[dRAs, normdRAs, Summary] = runTDR(dataTensor, Npcs, codedParams, [], false);
 angle = real(acos(abs(dRAs(:,:,1)*dRAs(:,:,1)')))*180/pi;
 angle(:,:,2) = real(acos(abs(dRAs(:,:,2)*dRAs(:,:,2)')))*180/pi;
 angle(:,:,3) = real(acos(abs(dRAs(:,:,1)*dRAs(:,:,2)')))*180/pi;
@@ -87,8 +88,8 @@ colormap(flipud(colormap('jet')))
 colorbar
 title('angle stim vs decision')
 caxis([0 90])
-xlabel('time (ms)')
-ylabel('time (ms)')
+xlabel('decision time (ms)')
+ylabel('stimulus time (ms)')
 axis square
 
 %%
