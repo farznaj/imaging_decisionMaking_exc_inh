@@ -9,7 +9,7 @@ all_times = time_aligned;
 [T, N, R] = size(dataTensor);
 
 %% average across multiple times
-regressBins = 4;
+regressBins = 2;
 dataTensor = dataTensor(1:regressBins*floor(T/regressBins), : , :);
 dataTensor = squeeze(mean(reshape(dataTensor, regressBins, floor(T/regressBins), N, R), 1));
 all_times = all_times(1:floor(T/regressBins)*regressBins);
