@@ -21,7 +21,11 @@ for i = 1:length(highlightRoiDiff)
     highlightRoiDiff(i) = mean(abs(c(:)));
 %     highlightRoiDiff(i) = mean(c(:));
 end
-figure; plot(highlightRoiDiff)
+
+figure;
+subplot(311)
+plot(highlightRoiDiff)
+ylabel('highlightRoiDiff')
 
 %{
 ft = (~badAll & highlightRoiDiff>=.5);
@@ -106,30 +110,31 @@ end
 
 
 %%
-figure; 
-subplot(211), hold on
+% figure; 
+subplot(312), hold on
 plot(aveHighlightInRoi)
 plot(aveHighlightOutRoi, 'r')
+legend('aveHighlightInRoi', 'aveHighlightOutRoi')
 
-subplot(212)
+subplot(313)
 plot(aveHighlightInRoi ./ aveHighlightOutRoi)
+ylabel('aveHighlight InRoi/OutRoi')
 
 % a = (cinall ./ coutall);
 % sum(a>-1.06)
 
 %% 
-
+%{
 ft = (aveHighlightOutRoi>=.75); sum(ft)
+sum(ft)
 ft = (~badAll & aveHighlightOutRoi>=.75);
 % ft = (~badAll & highlightRoiDiff>=.5);
 % ft = (~badAll & cinall<=.3);
-sum(ft)
-rois2p = find(ft);
 
-%%
+% rois2p = find(ft);
 rois2p = find(~badAll & aveHighlightOutRoi > .7 & fitnessNow >= -30 & fitnessNow <- 20); 
 length(rois2p)
-
+%}
 
 
 

@@ -1,16 +1,17 @@
-% Right after you are done with preproc on the cluster, run python
-% (eval_comp_main) and then this script.
-%
-% Run eval_comp_main in Python to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile... .
-% Then run this script to append to that matfile mask and CC.
+% Right after you are done with preproc on the cluster, run
+% eval_comp_main on Python to save outputs of Andrea's evaluation of
+% components in a mat file named more_pnevFile... . Then run this script to
+% append to that matfile mask and CC.
 
+
+%% Change these vars:
 
 mouse = 'fni17';
 imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
 mdfFileNumber = [1];  % 3; %1; % or tif major
 
 
-%% Set imfilename, pnevFileName
+%% Set imfilename, pnevFileName, fname
 
 signalCh = 2; % because you get A from channel 2, I think this should be always 2.
 pnev2load = [];
@@ -23,7 +24,7 @@ cd(fileparts(imfilename))
 fname = fullfile(pd, sprintf('more_%s.mat', pnev_n));
 
 
-%% Append A and CC to a mat file named more_pnev created in python... (you have to first create this file in python, it includes outputs of Andrea's evaluate components).
+%% Set mask and CC
 
 fname = fullfile(pd, sprintf('more_%s.mat', pnev_n));
 
@@ -32,6 +33,9 @@ load(imfilename, 'imHeight', 'imWidth')
 
 mask = maskSet(A, imHeight, imWidth);
 CC = ROIContoursPnevCC(A, imHeight, imWidth, .95);
+
+
+%% Append A and CC to a mat file named more_pnev created in python... (you have to first create this file in python, it includes outputs of Andrea's evaluate components).
 
 if exist(fname,'file')==2
     fprintf('Appending mask and CC to more_pnevFile....\n')
@@ -43,16 +47,13 @@ end
 
 
 
-%%
-load(pnevFileName, 'A','C','S','P', 'options', 'YrA')
-
-
-
 
 %%
 % Use below for those days that you need to get srt_val, or to normalize
 % S,... in general for all days analysis.
 %{
+load(pnevFileName, 'A','C','S','P', 'options', 'YrA')
+
 %%
 fprintf('Ordering ROIs...\n')
 t1 = tic;

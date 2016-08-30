@@ -7,8 +7,8 @@ Created on Tue Aug 23 09:52:25 2016
 
 #%% Specify file you wish to analyze
 mousename = 'fni17'
-imagingFolder = '151101'
-mdfFileNumber = [1] 
+imagingFolder = '151102'
+mdfFileNumber = [1,2] 
 
 #%% Set pnevFileName 
 pnev2load = [] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
@@ -23,13 +23,19 @@ import scipy
 from scipy import io
 import numpy as np
 import os
+import h5py
 #import numpy.matlib
 from evaluate_components import *
 
 #%% Load C and YrA to set traces
+f = h5py.File(pnevFileName)
+C = np.array(np.transpose(f.get('C')))
+YrA = np.array(np.transpose(f.get('YrA')))
+'''
 a = scipy.io.loadmat(pnevFileName, variable_names=['C', 'YrA']) #.pop('C').astype('float');  
 C = a.pop('C')
 YrA = a.pop('YrA')
+'''
 #a = scipy.io.loadmat(dirname, variable_names=['traces'])
 #a = traces.pop('traces').astype('float')
 traces = C + YrA;

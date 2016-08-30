@@ -1,5 +1,8 @@
 % Find bad ROI outputs of the CNMF algorithm
+% You need to run this after preproc is done. Python eval_comp is run, and
+% Set_A_CC is run.
 
+%%
 savebadROIs01 = 0; % if 1, badROIs01 will be appended to more_pnevFile
 exclude_badHighlightCorr = 1;
 evalBadRes = 1; % plot figures to evaluate the results
@@ -10,8 +13,8 @@ evalBadRes = 1; % plot figures to evaluate the results
 % complete ROI already exists that is not a badHighlightCorr.
 
 mouse = 'fni17';
-imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2];  % 3; %1; % or tif major
+imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1];  % 3; %1; % or tif major
 
 
 %% Set imfilename, pnevFileName
@@ -141,7 +144,7 @@ badEP = srt_val < th_srt_val; fprintf('sum(badEP | badAG): %d\n', sum(badEP | ba
 
 smallROI = mask_numpix < 15; fprintf('sum(smallROI): %d\n', sum(smallROI)) % increase this to 20 if you want to get rid of neuropils
 shortDecayTau = tau(:,2) < 200; fprintf('sum(shortDecayTau): %d\n', sum(shortDecayTau)) % & ~(badEP | badAG))
-badTempCorr = temp_corr < .4; fprintf('sum(badTempCorr): %d\n', sum(badTempCorr)) % & ~(badEP | badAG))
+badTempCorr = temp_corr < .4; fprintf('sum(badTempCorr) & ~(badEP | badAG): %d\n', sum(badTempCorr & ~(badEP | badAG))) % 
 
 
 badAll = badEP + badAG + smallROI + shortDecayTau + badTempCorr;
@@ -158,7 +161,7 @@ if exclude_badHighlightCorr
 end
 
 badROIs01 = (badAll ~= 0); % any of the above measure is bad.
-fprintf('Total number of bad ROIs = %d, mean = %.2f\n', sum(badROIs01), mean(badROIs01))
+cprintf('blue', 'Total number of good, bad ROIs= %d %d, mean(bad)=%.2f\n', sum(~badROIs01), sum(badROIs01), mean(badROIs01))
 
 badROIs = find(badROIs01);
 goodROIs = find(~badROIs01);
@@ -173,7 +176,11 @@ fth = (badsdimage==1 & badROIs01==0);
 sum(fth)
 %}
 
+% For now you are not including below in badROIs
+fprintf('sum(aveHighlightOutRoi>=.75 & ~badAll): %d\n', sum(~badAll & aveHighlightOutRoi>=.75)) % 
+fprintf('sum(highlightRoiDiff>=.5 & ~badAll): %d\n', sum(highlightRoiDiff>=.5 & ~badAll))
 
+fprintf('sum(highlightRoiDiff>=.5 & ~badAll): %d\n', sum(highlightRoiDiff>=.5 & ~badTempCorr))
 
 %%
 if savebadROIs01
@@ -208,7 +215,7 @@ if evalBadRes
     imagesc(log(sdImage{2}))
     
     for i = rois2p' % % %; %ag_eb % f%ab_eg; %find(bc)' %find(mask_numpix<15); %nearbyROIs' %1:size(C,1) % fb'; % fb'; %220; %477;
-        [aveHighlightInRoi(i)  aveHighlightOutRoi(i)  highlightRoiDiff(i)] % [cinall(i) coutall(i) ds(i)]
+        fprintf('hilight_in_out_hilightROIdiff= %.2f %.2f %.2f\n', [aveHighlightInRoi(i)  aveHighlightOutRoi(i)  highlightRoiDiff(i)]) % [cinall(i) coutall(i) ds(i)]
         if ismember(i, badROIs)
             col = 'r';
         else
@@ -217,18 +224,20 @@ if evalBadRes
         %     i
         set(gcf,'name', sprintf('ROI: %i', i))
         hold on
-        subplot(3,3,[1,2,3]), h1 = plot(C(i,:));
+        a1=subplot(3,3,[1,2,3]); 
+        h1 = plot(C(i,:));
         %     title(sprintf('tau = %.2f ms', tau(i,2))),  % title(sprintf('%.2f, %.2f', [temp_corr(i), tau(i,2)])),
         title(sprintf('fitness = %.2f,  srtval = %.2f', fitnessNow(i), full(srt_val(i))), 'color', col)
         xlim([1 size(C,2)])
         ylabel('C')% (denoised-demixed trace)')
         
-        subplot(3,3,[4,5,6]),
+        a2=subplot(3,3,[4,5,6]);
         h2 = plot(activity_man_eftMask_ch2(:,i));
         %     h2 = plot(yrac(i,:));
         title(sprintf('tau = %.2f ms, temp corr = %.2f', tau(i,2), temp_corr(i)), 'color', col)
         xlim([1 size(C,2)])
         ylabel('Raw') % (averaged pixel intensities)')
+        linkaxes([a1,a2], 'x')
         
         subplot(3,3,[7]); hold on
         h3 = plot(CC{i}(2,:), CC{i}(1,:), 'r');

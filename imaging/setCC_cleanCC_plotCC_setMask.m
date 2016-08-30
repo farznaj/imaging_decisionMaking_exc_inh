@@ -35,13 +35,13 @@ CC = ROIContoursPnev_cleanCC(CCorig);
 %% Plot ROIs found by Eftychios's algorithm on the sdImage
 % im = reshape(P.sn, imHeight, imWidth);
 % im = sdImage{2};
+% plotCOMs= 0;
 if exist('im', 'var') && ~isempty(im)
     colors = hot(2*size(CC,1));
     colors = colors(end:-1:1,:);
     
     figure;
-    imagesc(im);
-    %     imagesc(log(im));
+    imagesc(im);  % imagesc(log(im));
     hold on;
 %     colormap gray
     
