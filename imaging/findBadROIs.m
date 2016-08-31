@@ -1,20 +1,31 @@
+function [badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight] = findBadROIs(mouse, imagingFolder, mdfFileNumber, fixed_th_srt_val, savebadROIs01, exclude_badHighlightCorr,evalBadRes, th_AG, th_srt_val, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr);
 % Find bad ROI outputs of the CNMF algorithm
 % You need to run this after preproc is done. Python eval_comp is run, and
 % Set_A_CC is run.
+%{
+mouse = 'fni17';
+imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
+
 
 %%
+fixed_th_srt_val = 1; % if fixed 4150 will be used as the threshold on srt_val, if not, we will find the srt_val threshold by employing Andrea's measure
 savebadROIs01 = 0; % if 1, badROIs01 will be appended to more_pnevFile
 exclude_badHighlightCorr = 1;
-evalBadRes = 1; % plot figures to evaluate the results
+evalBadRes = 0; % plot figures to evaluate the results
+
+th_AG = -20; % you can change it to -30 to exclude more of the poor quality ROIs.
+th_srt_val = 4150;
+th_smallROI = 15;
+th_shortDecayTau = 200;
+th_badTempCorr = .4;
+th_badHighlightCorr = .5;
 
 % If you don't exclude badHighlightCorr, still most of the neurons will
 % have good trace quality, but they are mostly fragmented parts of ROIs or
 % neuropils. Also remember in most cases of fragmented ROIs, a more
 % complete ROI already exists that is not a badHighlightCorr.
-
-mouse = 'fni17';
-imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2];  % 3; %1; % or tif major
+%}
 
 
 %% Set imfilename, pnevFileName
@@ -50,12 +61,13 @@ srt_val = full(srt_val);
 
 c = corr(C', activity_man_eftMask_ch2); % this is generally higher than corr(C_df', dFOF_man)
 temp_corr = diag(c);
-size(temp_corr)
+% size(temp_corr)
 % c = corr(C_df', dFOF_man);
 % cc2 = diag(c);
 
 fht = figure;
 figure(fht), subplot(321), histogram(temp_corr)
+hold on, plot([th_badTempCorr th_badTempCorr],[0 100],'r')
 xlabel('Raw vs C temp corr')
 ylabel('# Neurons')
 
@@ -70,33 +82,42 @@ for i = 1:length(tau)
 end
 
 figure(fht), subplot(322), histogram(tau(:,2))
+hold on, plot([th_shortDecayTau th_shortDecayTau],[0 100],'r')
 xlabel('Tau\_decay (ms)')
 
 
 %% Highlight-reel vs spatial component correaltion
 
 figure(fht), subplot(323), histogram(highlightCorrROI)
+hold on, plot([th_badHighlightCorr th_badHighlightCorr],[0 100],'r')
 xlabel('highlight-raw vs spatial-comp corr')
 
 
 %% Size of ROI
 
 mask_numpix = sum(reshape(mask, imHeight*imWidth, []), 1)';
-figure(fht), subplot(324), histogram(mask_numpix), xlabel('mask # pixels')
+
+figure(fht), subplot(324), histogram(mask_numpix)
+hold on, plot([th_smallROI th_smallROI],[0 100],'r')
+xlabel('mask # pixels')
 
 
 %% Andrea's fitness measure
 
-figure(fht), subplot(325), histogram(fitnessNow), xlabel('AG fitness')
+figure(fht), subplot(325), histogram(fitnessNow)
+hold on, plot([th_AG th_AG],[0 100],'r')
+xlabel('AG fitness')
 
 
 %% Eftychios srt_val
 
-figure(fht), subplot(326), histogram(srt_val), xlabel('Efty sort\_val')
+figure(fht), subplot(326), histogram(srt_val)
+hold on, plot([th_srt_val th_srt_val],[0 100],'r')
+xlabel('Efty sort\_val')
 
 
 %% My measures on highlightPatch and roiPatch comparison
-
+%{
 % not sure if you need this:
 highlightROIComp
 
@@ -104,7 +125,7 @@ highlightROIComp
 % ft = (aveHighlightOutRoi>=.75); sum(ft)
 
 % ft = (highlightRoiDiff>=.5);
-
+%}
 
 %% Intensity of the sdImage of the ROI
 %{
@@ -131,45 +152,53 @@ subplot(616), plot(mask_numpix), title('mask # pixels')
 % subplot(616), plot(meansdsig), title('meanSdImage')
 
 
-%% Identify bad components using a combination of criteria
+%% Identify bad components for each criterion
 
-thAG = -20; % you can change it to -30 to exclude more of the poor quality ROIs.
-badAG = fitnessNow >= thAG; fprintf('sum(badAG): %d\n', sum(badAG))
+badAG = fitnessNow >= th_AG; fprintf('sum(badAG): %d\n', sum(badAG))
 
-%{
-numbad = sum(fitnessNow >= thAG);
+numbad = sum(fitnessNow >= th_AG);
 ss = sort(srt_val);
-th_srt_val = ss(numbad); % you are trying to find a good threshold for srt_val (below which ROIs are bad).
-fprintf('Threshold for Efty srt_val= %.2f\n', full(th_srt_val))
-%}
-th_srt_val = 4150;
+fprintf('\tThreshold of Efty based on Andrea measure = %.2f\n', ss(numbad))
+if ~fixed_th_srt_val
+    th_srt_val = ss(numbad); % you are trying to find a good threshold for srt_val (below which ROIs are bad).
+end
+% fprintf('Threshold for Efty srt_val= %.2f\n', full(th_srt_val)) 
 badEP = srt_val < th_srt_val; fprintf('sum(badEP | badAG): %d\n', sum(badEP | badAG)) %
 
+smallROI = mask_numpix < th_smallROI; fprintf('sum(smallROI & ~(badEP | badAG)): %d\n', sum(smallROI & ~(badEP | badAG))) % increase this to 20 if you want to get rid of neuropils
+shortDecayTau = tau(:,2) < th_shortDecayTau; fprintf('sum(shortDecayTau & ~(badEP | badAG)): %d\n', sum(shortDecayTau & ~(badEP | badAG)))
+badTempCorr = temp_corr < th_badTempCorr; fprintf('sum(badTempCorr & ~(badEP | badAG)): %d\n', sum(badTempCorr & ~(badEP | badAG))) % 
 
-smallROI = mask_numpix < 15; fprintf('sum(smallROI): %d\n', sum(smallROI)) % increase this to 20 if you want to get rid of neuropils
-shortDecayTau = tau(:,2) < 200; fprintf('sum(shortDecayTau): %d\n', sum(shortDecayTau)) % & ~(badEP | badAG))
-badTempCorr = temp_corr < .4; fprintf('sum(badTempCorr) & ~(badEP | badAG): %d\n', sum(badTempCorr & ~(badEP | badAG))) % 
-
-
-badAll = badEP + badAG + smallROI + shortDecayTau + badTempCorr;
-
-badHighlightCorr = highlightCorrROI < .5; fprintf('sum(badHighlightCorr& ~badAll): %d\n', sum(badHighlightCorr& ~badAll))
+badHighlightCorr = highlightCorrROI < th_badHighlightCorr; fprintf('sum(badHighlightCorr& ~badAll): %d\n', sum(badHighlightCorr& ~(badEP | badAG | smallROI | shortDecayTau | badTempCorr)))
 % goodSrtvalButbadHighlightCorr = (highlightCorrROI < .5 & srt_val >= 1e4); % these have good trace quality but are mostly neuropils. so you can later decide to add them or not.
+
+
+%% Define final bad ROIs using a combination of measures
+
+bad_EP_AG_size_tau_tempCorr_hiLight = [badEP, badAG, smallROI, shortDecayTau, badTempCorr, badHighlightCorr];
 
 % If you don't exclude badHighlightCorr, still most of the neurons will
 % have good trace quality, but they are mostly fragmented parts of ROIs or
 % neuropils. Also remember in most cases of fragmented ROIs, a more
 % complete ROI already exists that is not a badHighlightCorr.
-if exclude_badHighlightCorr
-    badAll = badEP + badAG + smallROI + shortDecayTau + badTempCorr + badHighlightCorr;
+if ~exclude_badHighlightCorr
+    badAll = sum(bad_EP_AG_size_tau_tempCorr_hiLight(:,[1:5]),2);
+else
+    badAll = sum(bad_EP_AG_size_tau_tempCorr_hiLight,2);
 end
 
 badROIs01 = (badAll ~= 0); % any of the above measure is bad.
 cprintf('blue', 'Total number of good, bad ROIs= %d %d, mean(bad)=%.2f\n', sum(~badROIs01), sum(badROIs01), mean(badROIs01))
 
 badROIs = find(badROIs01);
-goodROIs = find(~badROIs01);
+% goodinds = ~badROIs01;
 
+if savebadROIs01
+    save(fname, '-append', 'bad_EP_AG_size_tau_tempCorr_hiLight', 'badROIs01')
+end
+
+
+%%
 %{
 % ROIs that are in very low intensity parts of the image.
 badsdimage = meansdsig < 1000; % 800
@@ -181,19 +210,15 @@ sum(fth)
 %}
 
 % For now you are not including below in badROIs
-fprintf('sum(aveHighlightOutRoi>=.75 & ~badAll): %d\n', sum(~badAll & aveHighlightOutRoi>=.75)) % 
+%{
+fprintf('sum(aveHighlightOutRoi>=.75 & ~badAll): %d\n', sum(aveHighlightOutRoi>=.75 & ~badAll)) % 
 fprintf('sum(highlightRoiDiff>=.5 & ~badAll): %d\n', sum(highlightRoiDiff>=.5 & ~badAll))
-
-fprintf('sum(highlightRoiDiff>=.5 & ~badTempCorr): %d\n', sum(highlightRoiDiff>=.5 & ~badTempCorr))
+% fprintf('sum(highlightRoiDiff>=.5 & ~badTempCorr): %d\n', sum(highlightRoiDiff>=.5 & ~badTempCorr))
+%}
 
 
 %%
-if savebadROIs01
-    save(fname, '-append', 'badROIs01')
-end
-
-
-%% Find nearby neurons.
+% Find nearby neurons.
 %{
 doeval = 0;
 merged_ROIs = mergeROIs_set([], A, C, imHeight, imWidth, [4.8 nan 2], 1, doeval, 0);
@@ -203,6 +228,15 @@ i=366;
 nearbyROIs = findNearbyROIs(COMs, COMs(i,:), 5);
 %}
 
+%{
+f = (smallROI & ~(badEP | badAG));
+f = (shortDecayTau & ~(badEP | badAG));
+f = (badTempCorr & ~(badEP | badAG));
+f = (fitnessNow > -20 & fitnessNow <-15);
+rois2p = find(f);
+size(rois2p)
+%}
+
 if evalBadRes     
     
     COMs = fastCOMsA(A, [imHeight, imWidth]);    
@@ -210,6 +244,7 @@ if evalBadRes
     %% what ROIs to plot?    
     
     rois2p = find(badROIs01);
+%     rois2p = find(~badROIs01);
     % rois2p = nearbyROIs;
     rois2p = rois2p(randperm(length(rois2p)));    
      

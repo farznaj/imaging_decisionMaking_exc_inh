@@ -469,7 +469,39 @@ stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Take care of neural traces %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Assess trace quality of each neuron
+fname = fullfile(pd, sprintf('more_%s.mat', pnev_n));
+load(fname, 'badROIs01')
 
+%{
+%{
+mouse = 'fni17';
+imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
+%}
+fixed_th_srt_val = 1; % if fixed 4150 will be used as the threshold on srt_val, if not, we will find the srt_val threshold by employing Andrea's measure
+savebadROIs01 = 0; % if 1, badROIs01 will be appended to more_pnevFile
+exclude_badHighlightCorr = 1;
+evalBadRes = 0; % plot figures to evaluate the results
+
+th_AG = -20; % you can change it to -30 to exclude more of the poor quality ROIs.
+th_srt_val = 4150;
+th_smallROI = 15;
+th_shortDecayTau = 200;
+th_badTempCorr = .4;
+th_badHighlightCorr = .5;
+
+[badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight] = findBadROIs(mouse, imagingFolder, mdfFileNumber, fixed_th_srt_val, savebadROIs01, exclude_badHighlightCorr,evalBadRes, th_AG, th_srt_val, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr);
+%}
+goodinds = ~badROIs01;
+
+% If you don't exclude badHighlightCorr, still most of the neurons will
+% have good trace quality, but they are mostly fragmented parts of ROIs or
+% neuropils. Also remember in most cases of fragmented ROIs, a more
+% complete ROI already exists that is not a badHighlightCorr.
+
+
+% Old method
+%{
 if manualExamineTraceQual
     %     assessCaTraceQaulity % another script to look at traces 1 by 1.
     
@@ -536,7 +568,7 @@ else % stick to the original order
 end
 
 fprintf('N good-quality and all neurons: %d, %d. Ratio: %.2f\n', [sum(goodinds), size(activity,2), sum(goodinds)/ size(activity,2)]); % number and fraction of good neurons vs number of all neurons.
-
+%}
 
 
 %% In alldata, set good quality traces.
@@ -571,51 +603,18 @@ end
 % neurons.
 
 
-if setInhibitExcit
+if setInhibitExcit    
     
-    % Load inhibitRois if it already exists, otherwise set it.
+    load(fname, 'inhibitRois')
+%     inhibit_excit_prep % preps vars and calls inhibitROIselection
     
-%     [pd,pnev_n] = fileparts(pnevFileName);
-    fname = fullfile(pd, sprintf('more_%s.mat', pnev_n)); % This file must be already created in python (when running Andrea's evaluate_comp code).
-    a = matfile(fname);  
+    % Set good_inhibit and good_excit neurons (ie in good quality neurons which ones are inhibit and which ones are excit).
     
-    % If assessInhibit is 0 and the inhibitROI vars are already saved, we will load the results and wont perform inhibit identification anymore.
-    if ~assessInhibitClass && exist(fname, 'file') && isprop(a, 'inhibitRois') 
-        fprintf('Loading inhibitRois...\n')
-        
-        load(imfilename, 'inhibitRois')
-        
-    else
-        fprintf('Identifying inhibitory neurons....\n')
-        % inhibitRois will be :
-        % 1 for inhibit ROIs.
-        % 0 for excit ROIs.
-        % nan for ROIs that could not be classified as inhibit or excit.
-
-        %{
-        assessInhibitClass = 0; % you will go through inhibit and excit ROIs one by one.
-        manThSet = 0; % if 1, you will set the threshold for identifying inhibit neurons by looking at the roi2surr_Sig values.        
-        keyEval = 0; % if 1, you can change class of neurons using key presses. 
-        % If manThSet and keyEval are both 0, automatic identification occurs based on: 
-        % 'inhibit: > .9th quantile. excit: < .8th quantile of roi2surr_sig
-        % Be very carful if setting keyEval to 1: Linux hangs with getKey if you click anywhere, just use the keyboard keys! % if 0 you will simply go though ROIs one by one, otherwise it will go to getKey and you will be able to change neural classification.
-        %}        
-        [inhibitRois, roi2surr_sig, sigTh_IE] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessInhibitClass, keyEval);
-        
-        if saveInhibitRois
-            fprintf('Appending inhibitRois to more_pnevFile...\n')
-            
-            save(fname, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
-%             save(imfilename, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
-        end
-    end
+    good_inhibit = inhibitRois==1;
+    good_excit = inhibitRois==0;
     
-    fprintf('Fract inhibit %.3f, excit %.3f, unknown %.3f\n', [...
-        mean(inhibitRois==1), mean(inhibitRois==0), mean(isnan(inhibitRois))])
-    
-    
-    %% Set good_inhibit and good_excit neurons (ie in good quality neurons which ones are inhibit and which ones are excit).
-    
+    % use below if you find inhibitory neurons on all (good and bad) ROIs.
+    %{
     % goodinds: an array of length of all neurons, with 1s indicating good and 0s bad neurons.
     good_inhibit = inhibitRois(goodinds) == 1; % an array of length of good neurons, with 1s for inhibit. and 0s for excit. neurons and nans for unsure neurons.
     good_excit = inhibitRois(goodinds) == 0; % an array of length of good neurons, with 1s for excit. and 0s for inhibit neurons and nans for unsure neurons.
@@ -636,7 +635,7 @@ if setInhibitExcit
         % as if for some reason tdtomato neruons have low quality on the
         % green channel.
     end
-    
+    %}
     
     %% Set traces for good inhibit and excit neurons.
     

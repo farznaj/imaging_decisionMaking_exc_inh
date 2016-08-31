@@ -1,5 +1,5 @@
 function [inhibitRois, roi2surr_sig, sigTh_IE] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, showResults, keyEval)
-% identify inhibitory neurons.
+% identify inhibitory neurons (only on good neurons (not badROIs))
 
 % sigTh = 1.2;
 if ~exist('showResults', 'var')
@@ -12,7 +12,7 @@ save_common_slope = 1; % if 1, results will be appended to pnevFile
 [pd,pnev_n] = fileparts(pnevFileName);
 fname = fullfile(pd, sprintf('more_%s.mat', pnev_n));
 
-load(fname, 'badROIs01', 'mask', 'CC')
+load(fname, 'mask', 'CC', 'badROIs01')
 load(imfilename, 'imHeight', 'imWidth', 'sdImage', 'aveImage')
 load(pnevFileName, 'A') % pnevFileName should contain Eft results after merging-again has been performed.
 
@@ -22,6 +22,7 @@ COMs = fastCOMsA(A, [imHeight, imWidth]); % size(medImage{2})
 mask = mask(:,:,~badROIs01);
 CC = CC(~badROIs01);
 COMs = COMs(~badROIs01,:);
+%
 
 %{
 load(imfilename, 'pmtOffFrames')
@@ -147,21 +148,24 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
 % keyEval = 0; % if 1, you will use key presses to evaluate ROIs. % Linux hangs with getKey... so make sure this is set to 0! % if 0 you will simply go though ROIs one by one, otherwise it will go to getKey and you will be able to change neural classification.    
 ch2Image = sdImage{2};
 
-if showResults
+% if showResults
     load(pnevFileName, 'C')
     C = C(~badROIs01,:);
-else
-    C = [];
-end
+% else
+%     C = [];
+% end
 
 % sigTh_IE: threshold value on roi2surr_sig for identifying inhibit and excit neurons: 1st element for inhibit, 2nd element for excit.
+
+
+%%
 
 [inhibitRois, roi2surr_sig, sigTh_IE] = inhibitROIselection(mask, inhibitImage, manThSet, showResults, keyEval, CC, ch2Image, COMs, C); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
 
 
 %% Show the results
 
-if showResults
+% if showResults
     
     % plot inhibitory and excitatory ROIs on the image of inhibit channel.
     im2p = normImage(sdImage{1});
@@ -203,7 +207,7 @@ if showResults
     subplot(224),  plot(mean(activity_man_eftMask_ch1(:, inhibitRois==0), 2)), title('ch1, excit')
     %}
 
-end
+% end
 
 
 %% set good_inhibit and good_excit neurons. (run avetrialAlign_setVars to get goodinds and traces.)

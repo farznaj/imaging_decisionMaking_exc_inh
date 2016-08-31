@@ -42,14 +42,14 @@ end
 
 imHeight = size(maskGcamp,1);
 imWidth = size(maskGcamp,2);
-roi2surr_sig = NaN(1, size(maskGcamp,3));
-roi2surr_sig_num = NaN(1, size(maskGcamp,3));
 
 % inhibitImage(inhibitImage<0) = 0;
 
 %%
+roi2surr_sig = NaN(1, size(maskGcamp,3));
+roi2surr_sig_num = NaN(1, size(maskGcamp,3));
 
-for rr = 1 : size(maskGcamp,3)
+for rr = 1 : size(maskGcamp,3);
     
     % Compute roiSing: signal magnitude of ch2 ROI (maskGcamp) on ch1 image (inhibitImage).
     
@@ -314,7 +314,7 @@ if exist('CCgcamp', 'var') && showResults
     plotInhFirst = 1; % if 1, first inhibitory ROIs will be plotted then excit. If 0, ROIs will be plotted in their original order.
     
         
-    %%
+    %
     disp('=====================')
     disp('Evaluate inhibitory neuron identification. Figure shows medImage of inhibit neurons.')
     %     disp('Red contours are inhibitory. Yellow: excitatory')
@@ -379,7 +379,7 @@ if exist('CCgcamp', 'var') && showResults
             
             figure(fimag)
             h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r');
-            title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'k')
+            title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
 %             title(sprintf('sig/surr = %.2f   corr = %.3f', roi2surr_sig(rr2), crr(rr2)), 'color', 'r')
             
         else

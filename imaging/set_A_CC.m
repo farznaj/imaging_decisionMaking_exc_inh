@@ -3,6 +3,8 @@
 % components in a mat file named more_pnevFile... . Then run this script to
 % append to that matfile mask and CC.
 
+% then run findBadROIs
+% then run inhibit_excit_prep
 
 %% Change these vars:
 
@@ -63,7 +65,7 @@ if exist('im', 'var') && ~isempty(im)
     hold on;
 %     colormap gray
     
-    for rr = 1:length(CC)
+    for rr = find(~badROIs01)'   % 1:length(CC)
         if plotCOMs
             plot(COMs(rr,2), COMs(rr,1), 'r.')
             
