@@ -244,7 +244,7 @@ filtered0 = boxFilter(traces_al_sm, length(ep), 1, 0);
 % Set nonActiveNs, ie neurons whose average activity during ep is less than thAct.
 spikeAveEpAveTrs = nanmean(spikeAveEp0); % 1 x units % response of each neuron averaged across epoch ep and trials.
 thAct = quantile(spikeAveEpAveTrs, .1);
-warning('You are using .1 quantile of average activity during ep across all neurons as threshold for identifying non-active neurons. This is arbitrary and needs evaluation!')
+cprintf('m','You are using .1 quantile of average activity during ep across all neurons as threshold for identifying non-active neurons. This is arbitrary and needs evaluation!\n')
 % thAct = 1e-3; % could be a good th for excluding neurons w too little activity.
 nonActiveNs = spikeAveEpAveTrs < thAct;
 fprintf('%d= # neurons with ave activity in ep < %.4f\n', sum(nonActiveNs), thAct)
@@ -261,7 +261,7 @@ thTrsWithSpike = 3; % ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove 
 % values and unless a traces is all NaNs (which should not happen)
 % spikeAveEp0 will be > 0 all the time.
 
-nTrsWithSpike = sum(spikeAveEp0 > thAct);
+nTrsWithSpike = sum(spikeAveEp0 > thAct); % shows for each neuron, in how many trials the activity was above thAct.
 NsFewTrActiv = nTrsWithSpike < thTrsWithSpike;
 fprintf('%d= # neurons that are active in less than %i trials.\n', sum(NsFewTrActiv), thTrsWithSpike)
 
