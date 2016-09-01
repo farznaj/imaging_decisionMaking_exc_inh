@@ -36,7 +36,7 @@ normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by i
 plot_ave_noTrGroup = 0; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
 evaluateEftyOuts = 0; % set to 1 when first evaluating a session.
 
-setInhibitExcit = 0; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
+setInhibitExcit = 1; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 
 frameLength = 1000/30.9; % sec.
 
@@ -56,12 +56,14 @@ home
 
 %% Set some initial variables.
 
+    %{
     assessInhibitClass = 0; % if 1 and inhibitRois not already saved, you will evaluate identification of inhibitory neurons (ie if sigTh is doing a good job).
     saveInhibitRois = 0; % if 1 and inhibitRois not already saved, ROIs that were identified as inhibit will be saved in imfilename. (ie the output of inhibit_excit_setVars will be saved).
     quantTh = .8; % quantile of roi_sig2surr that will be used for inhibit identification. 1.13; % signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
     % 1.1: excit is safe, but u should check inhibit with low sig/surr to make sure they are not excit.
     % 1.2: u are perhaps missing some inhibit neurons.
     % 1.13 can be good too.
+    %}
     
 excludeShortWaitDur = true; % waitdur_th = .032; % sec  % trials w waitdur less than this will be excluded.
 excludeExtraStim = false;
@@ -77,12 +79,13 @@ compareManual = false; % compare results with manual ROI extraction
 
 setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
 
+%{
 autoTraceQual = 0; %1; % if 1, automatic measure for trace quality will be used.
 manualExamineTraceQual = 0; % if 0, traceQuality array needs to be saved.
     saveTraceQual = 0; % it will only take effect if manualExamineTraceQual is 1.
     analyzeQuality = [1 2]; % 1(good) 2(ok-good) 3(ok-bad) 4(bad) % trace qualities that will be analyzed. It will only take effect if manualExamineTraceQual is 1.
 orderTraces = 0; % if 1, traces will be ordered based on the measure of quality from high to low quality.
-
+%}
 
 thbeg = 5; % n initial trials to exclude.
 signalCh = 2;
@@ -111,6 +114,8 @@ pnev2load = [];
 [pd, pnev_n] = fileparts(pnevFileName);
 disp(pnev_n)
 cd(fileparts(imfilename))
+
+moreName = fullfile(pd, sprintf('more_%s.mat', pnev_n));
 
 
 % load alldata
@@ -234,7 +239,7 @@ end
 
 load(imfilename, 'outputsDFT')
 figure(fhand), subplot(223)
-plot(outputsDFT{1}(:,2:3))
+plot(outputsDFT{1}(:,3:4))
 legend('row shift', 'column shift')
 xlabel('Frame')
 ylabel('Pixel shift')
@@ -439,6 +444,12 @@ allResp(trs2rmv) = NaN;
 allResp_HR_LR(trs2rmv) = NaN;
 % stimrate(trs2rmv) = NaN;
 
+%%%%% Save outcomes and allResp to a file named post_pnev... 
+postName = fullfile(pd, sprintf('post_%s.mat', pnev_n));
+if ~exist(postName, 'file')
+    save(postName, 'outcomes', 'allResp_HR_LR')
+end
+
 % save('151102_001.mat', '-append', 'trs2rmv')  % Do this!
 
 % imaging.trs2rmv = trs2rmv;
@@ -460,6 +471,8 @@ stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_
     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams);
 
+% trsGoToneEarlierThanStimOffset = find(timeCommitCL_CR_Gotone < timeStimOffset)';
+
 % alldata_frameTimes = {alldata.frameTimes};
 % save(imfilename, '-append', 'alldata_frameTimes', 'timeStop')
 
@@ -469,8 +482,10 @@ stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Take care of neural traces %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Assess trace quality of each neuron
-fname = fullfile(pd, sprintf('more_%s.mat', pnev_n));
-load(fname, 'badROIs01')
+
+load(moreName, 'badROIs01')
+
+goodinds = ~badROIs01;
 
 %{
 %{
@@ -492,7 +507,6 @@ th_badHighlightCorr = .5;
 
 [badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight] = findBadROIs(mouse, imagingFolder, mdfFileNumber, fixed_th_srt_val, savebadROIs01, exclude_badHighlightCorr,evalBadRes, th_AG, th_srt_val, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr);
 %}
-goodinds = ~badROIs01;
 
 % If you don't exclude badHighlightCorr, still most of the neurons will
 % have good trace quality, but they are mostly fragmented parts of ROIs or
@@ -605,7 +619,7 @@ end
 
 if setInhibitExcit    
     
-    load(fname, 'inhibitRois')
+    load(moreName, 'inhibitRois')
 %     inhibit_excit_prep % preps vars and calls inhibitROIselection
     
     % Set good_inhibit and good_excit neurons (ie in good quality neurons which ones are inhibit and which ones are excit).
@@ -751,8 +765,8 @@ if furtherAnalyses
     dofilter = false; true; % false;
     % set nPre and nPost to nan if you want to go with the numbers that are based on eventBef and eventAft.
     % set to [] to include all frames before and after the alignedEvent.
-    nPreFrames = nan; []; % nan;
-    nPostFrames = nan; []; % nan;
+    nPreFrames = []; % nan;
+    nPostFrames = []; % nan;
     
     traceTimeVec = {alldata.frameTimes}; % time vector of the trace that you want to realign.
     

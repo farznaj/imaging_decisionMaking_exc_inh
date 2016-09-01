@@ -130,7 +130,7 @@ for ise = 1:length(mdfFileNumber)
 end
 
 len_alldata_eachsess = cellfun(@length, all_data_sess);
-fprintf(['length of alldata of each session: ', repmat('%i  ', 1, length(len_alldata_eachsess)), '.Total: %i\n'], [len_alldata_eachsess, sum(len_alldata_eachsess)])
+cprintf('blue', ['length of alldata of each session: ', repmat('%i  ', 1, length(len_alldata_eachsess)), '.Total: %i\n'], [len_alldata_eachsess, sum(len_alldata_eachsess)])
 cs_alldata = cumsum([0 len_alldata_eachsess]);
 
 

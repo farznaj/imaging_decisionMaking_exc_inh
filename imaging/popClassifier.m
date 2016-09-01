@@ -149,7 +149,7 @@ end
 
 
 % set to nan those trials in outcomes and allRes that are nan in traces_al_sm
-a = find(sum(sum(~isnan(traces_al_sm),1),3), 1);
+a = find(sum(sum(~isnan(traces_al_sm),1),3), 1); % first non-nan neuron
 allTrs2rmv = find(squeeze(sum(isnan(traces_al_sm(:,a,:)))));
 % fprintf('%d= final number of NaN trials in the aligned traces\n', length(allTrs2rmv))
 
