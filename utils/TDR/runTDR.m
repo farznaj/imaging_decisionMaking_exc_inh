@@ -38,11 +38,11 @@ function [B, lambda] = linearRegression(R, P, numConds, kfold)
 lambdas =  [0 2.^[0:12]*0.01 inf];
 T = size(R,1)/numConds;
 K = size(P, 2);
-R = reshape(R, T, numConds);
-P = reshape(P, T, numConds, K);
 
 if islogical(kfold) || isempty(kfold)
     if kfold
+        R = reshape(R, T, numConds);
+        P = reshape(P, T, numConds, K);
         erTrain = nan(length(lambdas), numConds);
         erTest = nan(length(lambdas), numConds);
         parfor c = 1:numConds
@@ -67,6 +67,8 @@ if islogical(kfold) || isempty(kfold)
         B = regress(R, P);
     end
 else
+    R = reshape(R, T, numConds);
+    P = reshape(P, T, numConds, K);
     numSamples = 10;
     erTrain = nan(length(lambdas), numSamples);
     erTest = nan(length(lambdas), numSamples);
