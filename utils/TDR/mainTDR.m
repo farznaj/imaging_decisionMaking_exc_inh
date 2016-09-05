@@ -2,10 +2,10 @@ load('SVM_151029_003_ch2-PnevPanResults-160426-191859.mat')
 
 
 
-% dataTensor = non_filtered;
-% all_times = time_aligned;
-dataTensor = traces_al_1stSideTry;
-all_times = time_aligned_1stSideTry;
+dataTensor = non_filtered;
+all_times = time_aligned;
+% dataTensor = traces_al_1stSideTry;
+% all_times = time_aligned_1stSideTry;
 [T, N, R] = size(dataTensor);
 
 %% average across multiple times
@@ -31,7 +31,7 @@ plot(all_times, mean(mean(dataTensor(:, :, Y==1), 3), 2), 'r')
 xlabel('time (ms)')
 ylabel('normalized firing rates')
 %% alignment of top variance subspaces
-numDim = 2; % define dimensionality of subspace
+numDim = 10; % define dimensionality of subspace
 [PCs_t, Summary] = pca_t(dataTensor, numDim); % identify subspaces
 aIx = nan(T, T); % alignement index between subspaces
 for i = 1:T
