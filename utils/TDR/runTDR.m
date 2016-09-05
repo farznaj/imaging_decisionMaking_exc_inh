@@ -1,4 +1,4 @@
-function [dRAs, normdRAs, Summary] = runTDR(dataTensor, numPCs, codedParams, trCountmtx, loocvFlg)
+function [dRAs, normdRAs, Summary] = runTDR(dataTensor, numPCs, codedParams, trCountmtx, kfold)
 [T, N, C] = size(dataTensor);
 if isempty(trCountmtx);
     trCountmtx = ones(N, C);
@@ -20,11 +20,7 @@ for t = 1:T
    parfor n = 1:N
        scaledCodedParams = repmat(sqrtTrCountmtx(n, :)', 1, K).*codedParams; % scaled coded parameters by the square root of trial counts
        scaledRbar_tn = sqrtTrCountmtx(n, :)'.*reshape(dataTensor(t, n, :), C, 1); % scaled coded parameters by the square root of trial counts
-       if loocvFlg
-           [Betas(t, n, :), lambda(t, n)] = crossValRegress(scaledRbar_tn, scaledCodedParams, C);
-       else
-           Betas(t, n, :) = regress(scaledRbar_tn, scaledCodedParams);
-       end
+       [Betas(t, n, :), lambda(t, n)] = linearRegression(scaledRbar_tn, scaledCodedParams, C, kfold);
    end
 end
 [Summary.f_t, Summary.R2_t, Summary.R2_tk] = TDRobjectiveFn(dataTensor, codedParams, Betas, trCountmtx);
@@ -38,35 +34,67 @@ normdRAs = reshape(normdRAs, T, K);
 end
 
 
-function [B, lambda] = crossValRegress(R,P, numConds)
+function [B, lambda] = linearRegression(R, P, numConds, kfold)
 lambdas =  [0 2.^[0:12]*0.01 inf];
 T = size(R,1)/numConds;
 K = size(P, 2);
 R = reshape(R, T, numConds);
 P = reshape(P, T, numConds, K);
-erTrain = nan(length(lambdas), numConds);
-erTest = nan(length(lambdas), numConds);
-parfor c = 1:numConds
-msk = false(numConds, 1);
-msk(c) = true;
-RTest = R(:, msk);
-PTest = reshape(P(:, msk, :), T, K);
 
-RTrain =  R(:, ~msk).';
-PTrain = reshape(P(:, ~msk, :), T*(numConds-1), K);
-[erTrain(:, c), erTest(:, c)] =  ridgeRegress(PTrain,RTrain(:), PTest, RTest, lambdas);
+if islogical(kfold) || isempty(kfold)
+    if kfold
+        erTrain = nan(length(lambdas), numConds);
+        erTest = nan(length(lambdas), numConds);
+        parfor c = 1:numConds
+        msk = false(numConds, 1);
+        msk(c) = true;
+        RTest = R(:, msk);
+        PTest = reshape(P(:, msk, :), T, K);
+
+        RTrain =  R(:, ~msk).';
+        PTrain = reshape(P(:, ~msk, :), T*(numConds-1), K);
+        [erTrain(:, c), erTest(:, c)] =  ridgeRegress(PTrain,RTrain(:), PTest, RTest, lambdas);
+        end
+        [minEr,ix] = min(bsxfun(@times, sum(erTest,2), 1));
+        lambda = lambdas(ix);
+
+        R =  R(:, :).';
+        P = reshape(P(:, :, :), T*(numConds), K);
+
+        [Er,~, B] =  ridgeRegress(P, R(:), P, R(:), lambda);
+    else
+        lambda = nan;
+        B = regress(R, P);
+    end
+else
+    numSamples = 10;
+    erTrain = nan(length(lambdas), numSamples);
+    erTest = nan(length(lambdas), numSamples);
+    for c = 1:numSamples
+        shfl = randperm(numConds);
+        Rs = R(:, shfl);
+        Ps = P(:, shfl, :); 
+        mskTrain = 1:floor((kfold-1)/kfold*numConds);
+        mskTest =  floor((kfold-1)/kfold*numConds)+1:numConds;       
+        RTest = Rs(:, mskTest).';
+        PTest = reshape(Ps(:, mskTest, :), [], K);
+
+        RTrain =  R(:, mskTrain).';
+        PTrain = reshape(P(:, mskTrain, :), [], K);
+        [erTrain(:, c), erTest(:, c)] =  ridgeRegress(PTrain, RTrain(:), PTest, RTest, lambdas);
+    end
+    [minEr,ix] = min(bsxfun(@times, mean(erTest,2), 1));
+    lambda = lambdas(ix);
+
+    R =  R(:, :).';
+    P = reshape(P(:, :, :), T*(numConds), K);
+
+    [Er,~, B] =  ridgeRegress(P, R(:), P, R(:), lambda);
+    
+    
 end
-% [minEr,ix] = min(bsxfun(@times, sum(erTest,2), 1./norm(R(:)).^2)); % problem of nan if R =0, but good for plotting
-[minEr,ix] = min(bsxfun(@times, sum(erTest,2), 1));
-lambda = lambdas(ix);
-
-R =  R(:, :).';
-P = reshape(P(:, :, :), T*(numConds), K);
-
-[Er,~, B] =  ridgeRegress(P, R(:), P, R(:), lambda);
-
 end
-function [erTrain,erTest,Xlast]=  ridgeRegress(Atrain,Btrain, Atest, Btest, lambdas)
+function [erTrain,erTest,Xlast]=  ridgeRegress(Atrain, Btrain, Atest, Btest, lambdas)
 [~,n]=size(Atrain);
 
 erTrain = nan(length(lambdas),1);
