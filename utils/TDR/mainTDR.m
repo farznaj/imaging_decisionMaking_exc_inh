@@ -2,10 +2,10 @@ load('SVM_151029_003_ch2-PnevPanResults-160426-191859.mat')
 
 
 
-dataTensor = non_filtered;
-all_times = time_aligned;
-% dataTensor = traces_al_1stSideTry;
-% all_times = time_aligned_1stSideTry;
+% dataTensor = non_filtered;
+% all_times = time_aligned;
+dataTensor = traces_al_1stSideTry;
+all_times = time_aligned_1stSideTry;
 [T, N, R] = size(dataTensor);
 
 %% average across multiple times
@@ -52,11 +52,11 @@ ylabel('time (ms)')
 stim = stimrate(:);
 decision = Y;
 cb = 16;
+kfold = 10;
 codedParams = [[stim(:)-cb]/range(stim(:)) [decision(:)-mean(decision(:))]/range(decision(:)) ones(R, 1)];
 % cb = 16; stimrate_norm = ((stimrate - cb)/max(abs(stimrate(:) - cb)));
-
-numPCs = 20;
-[dRAs, normdRAs, Summary] = runTDR(dataTensor, numPCs, codedParams, [], false);
+numPCs = 10;
+[dRAs, normdRAs, Summary] = runTDR(dataTensor, numPCs, codedParams, [], kfold);
 angle = real(acos(abs(dRAs(:,:,1)*dRAs(:,:,1)')))*180/pi;
 angle(:,:,2) = real(acos(abs(dRAs(:,:,2)*dRAs(:,:,2)')))*180/pi;
 angle(:,:,3) = real(acos(abs(dRAs(:,:,3)*dRAs(:,:,3)')))*180/pi;
@@ -64,12 +64,17 @@ angle(:,:,4) = real(acos(abs(dRAs(:,:,1)*dRAs(:,:,2)')))*180/pi;
 
 %%
 figure;
+subplot(211)
+plot(all_times, Summary.R2_t, 'k')
+xlabel('time (ms)')
+ylabel('R^2')
+subplot(212);
 hold on
-plot(all_times, Summary.R2_tk(:,1), 'k')
+plot(all_times, Summary.R2_tk(:,1), 'g')
 plot(all_times, Summary.R2_tk(:,2), 'b')
 xlabel('time (ms)')
 ylabel('signal contribution to firing rate')
-
+legend('stimulus', 'decision')
 figure;
 subplot(221)
 imagesc(all_times, all_times, angle(:,:,1));
