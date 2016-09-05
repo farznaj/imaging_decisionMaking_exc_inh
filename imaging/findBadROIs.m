@@ -1,18 +1,19 @@
 function [badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight] = findBadROIs(mouse, imagingFolder, mdfFileNumber, fixed_th_srt_val, savebadROIs01, exclude_badHighlightCorr,evalBadRes, th_AG, th_srt_val, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr);
 % Find bad ROI outputs of the CNMF algorithm
-% You need to run this after preproc is done. Python eval_comp is run, and
-% Set_A_CC is run.
+% You need to run this after preproc is done. Python eval_comp is run, and Set_A_CC is run.
+%
 %{
+% example inputs:
+
 mouse = 'fni17';
-imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2];  % 3; %1; % or tif major
+imagingFolder = '151028'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2,3];  % 3; %1; % or tif major
 
 
-%%
 fixed_th_srt_val = 1; % if fixed 4150 will be used as the threshold on srt_val, if not, we will find the srt_val threshold by employing Andrea's measure
 savebadROIs01 = 0; % if 1, badROIs01 will be appended to more_pnevFile
 exclude_badHighlightCorr = 1;
-evalBadRes = 0; % plot figures to evaluate the results
+evalBadRes = 1; % plot figures to evaluate the results
 
 th_AG = -20; % you can change it to -30 to exclude more of the poor quality ROIs.
 th_srt_val = 4150;
@@ -162,12 +163,12 @@ fprintf('\tThreshold of Efty based on Andrea measure = %.2f\n', ss(numbad))
 if ~fixed_th_srt_val
     th_srt_val = ss(numbad); % you are trying to find a good threshold for srt_val (below which ROIs are bad).
 end
-% fprintf('Threshold for Efty srt_val= %.2f\n', full(th_srt_val)) 
+% fprintf('Threshold for Efty srt_val= %.2f\n', full(th_srt_val))
 badEP = srt_val < th_srt_val; fprintf('sum(badEP | badAG): %d\n', sum(badEP | badAG)) %
 
 smallROI = mask_numpix < th_smallROI; fprintf('sum(smallROI & ~(badEP | badAG)): %d\n', sum(smallROI & ~(badEP | badAG))) % increase this to 20 if you want to get rid of neuropils
 shortDecayTau = tau(:,2) < th_shortDecayTau; fprintf('sum(shortDecayTau & ~(badEP | badAG)): %d\n', sum(shortDecayTau & ~(badEP | badAG)))
-badTempCorr = temp_corr < th_badTempCorr; fprintf('sum(badTempCorr & ~(badEP | badAG)): %d\n', sum(badTempCorr & ~(badEP | badAG))) % 
+badTempCorr = temp_corr < th_badTempCorr; fprintf('sum(badTempCorr & ~(badEP | badAG)): %d\n', sum(badTempCorr & ~(badEP | badAG))) %
 
 badHighlightCorr = highlightCorrROI < th_badHighlightCorr; fprintf('sum(badHighlightCorr& ~badAll): %d\n', sum(badHighlightCorr& ~(badEP | badAG | smallROI | shortDecayTau | badTempCorr)))
 % goodSrtvalButbadHighlightCorr = (highlightCorrROI < .5 & srt_val >= 1e4); % these have good trace quality but are mostly neuropils. so you can later decide to add them or not.
@@ -190,8 +191,6 @@ end
 badROIs01 = (badAll ~= 0); % any of the above measure is bad.
 cprintf('blue', 'Total number of good, bad ROIs= %d %d, mean(bad)=%.2f\n', sum(~badROIs01), sum(badROIs01), mean(badROIs01))
 
-badROIs = find(badROIs01);
-% goodinds = ~badROIs01;
 
 if savebadROIs01
     save(fname, '-append', 'bad_EP_AG_size_tau_tempCorr_hiLight', 'badROIs01')
@@ -211,10 +210,36 @@ sum(fth)
 
 % For now you are not including below in badROIs
 %{
-fprintf('sum(aveHighlightOutRoi>=.75 & ~badAll): %d\n', sum(aveHighlightOutRoi>=.75 & ~badAll)) % 
+fprintf('sum(aveHighlightOutRoi>=.75 & ~badAll): %d\n', sum(aveHighlightOutRoi>=.75 & ~badAll)) %
 fprintf('sum(highlightRoiDiff>=.5 & ~badAll): %d\n', sum(highlightRoiDiff>=.5 & ~badAll))
 % fprintf('sum(highlightRoiDiff>=.5 & ~badTempCorr): %d\n', sum(highlightRoiDiff>=.5 & ~badTempCorr))
 %}
+
+
+%% Plot COMs of bad and good components on the medImage.
+
+COMs = fastCOMsA(A, [imHeight, imWidth]);
+im = sdImage{2}; % medImage{2};
+
+
+% bad components
+figure
+subplot(211);
+imagesc(im)
+hold on
+for rr = find(badROIs01')
+    plot(COMs(rr,2), COMs(rr,1), 'r.')
+end
+title('bad components')
+
+% good components
+subplot(212)
+imagesc(im)
+hold on
+for rr = find(~badROIs01')
+    plot(COMs(rr,2), COMs(rr,1), 'r.')
+end
+title('good components')
 
 
 %%
@@ -233,29 +258,34 @@ f = (smallROI & ~(badEP | badAG));
 f = (shortDecayTau & ~(badEP | badAG));
 f = (badTempCorr & ~(badEP | badAG));
 f = (fitnessNow > -20 & fitnessNow <-15);
+
+f = (bad_EP_AG_size_tau_tempCorr_hiLight(:,[5]) & ~sum(bad_EP_AG_size_tau_tempCorr_hiLight(:,[1:4,6]),2));
+
 rois2p = find(f);
 size(rois2p)
 %}
 
-if evalBadRes     
+if evalBadRes
     
-    COMs = fastCOMsA(A, [imHeight, imWidth]);    
-    
-    %% what ROIs to plot?    
+    % which ROIs to plot?
     
     rois2p = find(badROIs01);
 %     rois2p = find(~badROIs01);
-    % rois2p = nearbyROIs;
+%     rois2p = nearbyROIs;
     rois2p = rois2p(randperm(length(rois2p)));    
-     
+    
     %% Nice figure to evaluate the results
     
+    badROIs = find(badROIs01);
+    % goodinds = ~badROIs01;
+
     figure;
     subplot(3,3,[7]);
     imagesc(log(sdImage{2}))
     
     for i = rois2p'; % % %; %ag_eb % f%ab_eg; %find(bc)' %find(mask_numpix<15); %nearbyROIs' %1:size(C,1) % fb'; % fb'; %220; %477;
-        fprintf('hilight_in_out_hilightROIdiff= %.2f %.2f %.2f\n', [aveHighlightInRoi(i)  aveHighlightOutRoi(i)  highlightRoiDiff(i)]) % [cinall(i) coutall(i) ds(i)]
+        
+%         fprintf('hilight_in_out_hilightROIdiff= %.2f %.2f %.2f\n', [aveHighlightInRoi(i)  aveHighlightOutRoi(i)  highlightRoiDiff(i)]) % [cinall(i) coutall(i) ds(i)]
         if ismember(i, badROIs)
             col = 'r';
         else
@@ -264,7 +294,7 @@ if evalBadRes
         %     i
         set(gcf,'name', sprintf('ROI: %i', i))
         hold on
-        a1=subplot(3,3,[1,2,3]); 
+        a1=subplot(3,3,[1,2,3]);
         h1 = plot(C(i,:));
         %     title(sprintf('tau = %.2f ms', tau(i,2))),  % title(sprintf('%.2f, %.2f', [temp_corr(i), tau(i,2)])),
         title(sprintf('fitness = %.2f,  srtval = %.2f', fitnessNow(i), full(srt_val(i))), 'color', col)
@@ -294,31 +324,7 @@ if evalBadRes
         
         pause
         delete([h1,h2,h3,h4,h5])
-    end    
-    
-    
-    %% Plot COMs of bad and good components on the medImage.
-    
-    im = sdImage{2}; % medImage{2};
-    
-    % COMs = fastCOMsA(A, size(im));
-    
-    % bad components
-    figure('name', 'bad components');
-    imagesc(im)
-    hold on
-    for rr = find(badROIs01')
-        plot(COMs(rr,2), COMs(rr,1), 'r.')
     end
-    
-    % good components
-    figure('name', 'good components');
-    imagesc(im)
-    hold on
-    for rr = find(~badROIs01')
-        plot(COMs(rr,2), COMs(rr,1), 'r.')
-    end
-    
     
 end
 

@@ -1,16 +1,19 @@
-% Right after you are done with preproc on the cluster, run
-% eval_comp_main on Python to save outputs of Andrea's evaluation of
-% components in a mat file named more_pnevFile... . Then run this script to
-% append to that matfile mask and CC.
+% Right after you are done with preproc on the cluster:
+
+% run eval_comp_main on Python to save outputs of Andrea's evaluation of
+% components in a mat file named more_pnevFile... . Then: 
+
+% run this script to append to that matfile mask and CC.
 
 % then run findBadROIs
 % then run inhibit_excit_prep
 
+
 %% Change these vars:
 
 mouse = 'fni17';
-imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2];  % 3; %1; % or tif major
+imagingFolder = '151028'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2,3];  % 3; %1; % or tif major
 
 
 %% Set imfilename, pnevFileName, fname
@@ -49,8 +52,10 @@ end
 
 
 
-%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %% Plot ROIs found by Eftychios's algorithm on the sdImage
+
 load(imfilename, 'sdImage')
 % im = sdImage{2};
 im = normImage(sdImage{2});
@@ -65,7 +70,7 @@ if exist('im', 'var') && ~isempty(im)
     hold on;
 %     colormap gray
     
-    for rr = find(~badROIs01)'   % 1:length(CC)
+    for rr = 1:length(CC) % find(~badROIs01)' 
         if plotCOMs
             plot(COMs(rr,2), COMs(rr,1), 'r.')
             

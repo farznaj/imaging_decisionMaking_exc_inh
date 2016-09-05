@@ -1,3 +1,9 @@
+"""
+crossValidateModel: divides data into training and test datasets. Calls linearSVM.py, which does linear SVM 
+using XTrain, and returns percent class loss for XTrain and XTest.
+
+"""
+
 #%%
 def crossValidateModel(X, Y, modelFn, **options):
     import numpy as np

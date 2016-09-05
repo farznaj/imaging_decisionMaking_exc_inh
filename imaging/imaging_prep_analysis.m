@@ -28,6 +28,7 @@ mouse = 'fni17';
 imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
 mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
+% best is to set the 2 vars below to 0 so u get times of events for all trials; later decide which ones to set to nan.
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
 rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
 
@@ -40,6 +41,8 @@ setInhibitExcit = 1; % if 1, inhibitory and excitatory neurons will be identifie
 
 frameLength = 1000/30.9; % sec.
 
+% Once done use set_aligned_traces to set aligned traces on different trial
+events with carefully chosen trials.
 %}
 
 home
@@ -77,7 +80,7 @@ furtherAnalyses = 0; % analyses related to choicePref and SVM will be performed.
 compareManual = false; % compare results with manual ROI extraction
 
 
-setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
+setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan provided that rmv_timeGoTone_if_stimOffset_aft_goTone = 1
 
 %{
 autoTraceQual = 0; %1; % if 1, automatic measure for trace quality will be used.
@@ -143,7 +146,12 @@ begTrs = 1; % 1st trial of each session
 
 %{
 * stimulus is played for stimDuration which equal stimDur_diff (or if it is 0, waitDur) + extrastim_dur + stimdur_aftrew .
+bur remember if the animal made the choice earlier than the end of stim_duration, then the actual stimulus duration is shorter than this value, bc stim gets stopped when the animal makes a choice.
+but if rmv_timeGoTone_if_stimOffset_aft_goTone = 1, you will remove all 
 * total waitdur (ie since stim onset, when mouse was allowed to do cent commit) equals waitDuration + postStimDelay
+% The following 2 are the same:
+figure; plot([alldata.stimDuration])
+figure; plot([alldata.stimDur_diff]+[alldata.stimDur_aftRew]+[alldata.extraStimDuration])
 %}
 
 
@@ -436,6 +444,10 @@ end
 %% Set outcome and response side for each trial, taking into account allowcorrection and uncommitted responses.
 
 % Set some params related to behavior % behavior_info
+%{
+allowCorrectResp = 'change'; % 'change'; 'remove'; 'nothing'; % if 'change': on trials that mouse corrected his choice, go with the original response.
+uncommittedResp = 'nothing'; % 'change'; 'remove'; 'nothing'; % what to do on trials that mouse made a response (licked the side port) but did not lick again to commit it.
+%}
 [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp);
 
 % set trs2rmv to nan
@@ -464,13 +476,21 @@ plot(allResp_HR_LR), ylim([-.5 1.5]), xlabel('Trials'), ylabel('Response (HR:1 ,
 
 %% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
 
+%{
+% best is to set the 2 vars below to 0 so u get times of events for all trials; later decide which ones to set to nan.
+rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
+rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
+setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
+%}
 scopeTTLOrigTime = 1;
 stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, setNaN_goToneEarlierThanStimOffset};
 % stimAftGoToneParams = []; % {0,0,0};
 [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
-    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams);
+    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams, outcomes);
 
+% below are problematic trials in which go tone happened earlier than
+% stimulus offset... you need to take care of them for your analyses!
 % trsGoToneEarlierThanStimOffset = find(timeCommitCL_CR_Gotone < timeStimOffset)';
 
 % alldata_frameTimes = {alldata.frameTimes};

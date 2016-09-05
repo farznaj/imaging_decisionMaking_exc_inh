@@ -155,6 +155,14 @@ errorlick_again_wait_entered = (~cellfun(@isempty, a));
 a = arrayfun(@(x)x.parsedEvents.states.correctlick_again_wait, alldata, 'uniformoutput', 0);
 correctlick_again_wait_entered = (~cellfun(@isempty, a));
 
+%{
+% use set_change_of_mind_trs for a more accurate way of doing this:
+% find change-of-mind trials (trials that mouse made a try and then another
+% try on the other side).
+a = [errorlick_again_wait_entered; correctlick_again_wait_entered];
+b = sum(a);
+fprintf('# change-of-mind trials= %i\n', sum(b==2))
+%}
 
 errThenCorr = (errorlick_again_wait_entered & ~allowCorrectEntered & outcomes==1); % uncommitted error lick then committed correct lick.
 corrThenErr = (correctlick_again_wait_entered & outcomes==0); % uncommitted correct lick then committed error lick.

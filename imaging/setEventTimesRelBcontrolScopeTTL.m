@@ -1,6 +1,6 @@
 function [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
-    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams)
+    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams, outcomes)
 % Set the time of events that happen during each trial.
 %
 % By default all times (ms) are relative to when bcontrol sent scope ttl. 
@@ -22,9 +22,13 @@ elseif ~isempty(stimAftGoToneParams)
     % stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, setNaN_goToneEarlierThanStimOffset};    
 end
 
+% remember if you change outcomes for allowCorrEntered trials, then time of
+% events will reflect that, bc outcomes is provided as input.
 
 %%
-outcomes = [alldata.outcome];
+% if you define outcomes as below, you wont correct for trials that mouse
+% did allow correction.
+% outcomes = [alldata.outcome]; 
 %{
 % set to failure the outcome of trials on which the mouse used allow correction (bc we want to consider the outcome of the first choice)
 a = arrayfun(@(x)x.parsedEvents.states.punish_allowcorrection, alldata, 'uniformoutput', 0);
@@ -159,7 +163,7 @@ for tr = 1:length(alldata)
         % note: in some of these trials, mouse eventually corrected his
         % choice.
         
-        if ~ismember(outcomes(tr), [invalid, noSideCommit])
+        if ~ismember(outcomes(tr), [invalid, noSideCommit]) % remember if outcomes is defined as [alldata.outcome], it means mouse may commit a wrong choice and then switch to a correct one and not commit it, and it will be counted as noSideCommit.
             if ~isempty(alldata(tr).parsedEvents.states.punish_allowcorrection)
                 % Mouse may enter punish_allowcorrection more than once :
                 % He enters it and then exits it by doing a correct lick.
@@ -234,7 +238,7 @@ for tr = 1:length(alldata)
 %         end
 
         
-        %% first correct lick (not the 2nd, commit lick) that resulted in a reward ---> doesn't seem very useful... but keep it there.
+        %% first correct lick (not the 2nd, commit lick) that resulted in a reward. It is a useful var in case mouse made side licks without committing them: time1stCorrectResponse assures that this lick try was followed by a commit lick (unlike time1stCorrectTry).
         
         if ismember(outcomes(tr), 1)
             caw = alldata(tr).parsedEvents.states.correctlick_again_wait;

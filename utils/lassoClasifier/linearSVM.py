@@ -1,3 +1,7 @@
+"""
+Fits SVM using XTrain, and returns percnet class loss for XTrain and XTest
+"""
+#%%
 def linearSVM(XTrain, YTrain, XTest, YTest, options):
     import numpy as np
     from sklearn import svm
@@ -11,7 +15,9 @@ def linearSVM(XTrain, YTrain, XTest, YTest, options):
         l2 = options.get('l2');        
         #print 'running l2 svm classification\r' 
         linear_svm = svm.LinearSVC(C = l2, loss='squared_hinge', penalty='l2', dual=True)
+        
     linear_svm.fit(XTrain, np.squeeze(YTrain))    
+
     def perClassError(Y, Yhat):
         import numpy as np
         perClassEr = sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
