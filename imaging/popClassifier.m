@@ -79,9 +79,9 @@ elseif strcmp(alignedEvent, 'stimOn')
     cprintf('blue', 'Training epoch = 600-%.1fms after stimulus onset.\n', nPost*frameLength)
     % index of frames after alignedEvent (if epStartRel2Event=1, epStart
     % will be 1 frame after alignedEvent).
-    epStartRel2Event = round(600/frameLength); % the start point of the epoch relative to alignedEvent for training SVM. (500ms)
+    epStartRel2Event = ceil(600/frameLength); % round % the start point of the epoch relative to alignedEvent for training SVM. (500ms)
     if isempty(nPost)
-        epEndRel2Event = floor(800/frameLength); % the end point of the epoch relative to alignedEvent for training SVM. (700ms)
+        epEndRel2Event = ceil(800/frameLength); % floor % the end point of the epoch relative to alignedEvent for training SVM. (700ms)
     else
         epEndRel2Event = nPost; % 
     end
@@ -161,7 +161,7 @@ allResp_HR_LR(allTrs2rmv) = NaN;
 %% Start setting Y: the response vector
 
 if trialHistAnalysis
-    popClassifier_trialHistory
+    popClassifier_trialHistory % compute choiceVec0; % trials x 1;  1 for HR choice, 0 for LR prev choice.
 else
     choiceVec0 = allResp_HR_LR';  % trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.
     
