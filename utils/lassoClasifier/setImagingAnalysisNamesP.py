@@ -47,10 +47,11 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         pnev2load = 0;
             
     #%%
+    dataPath = []
     if platform.system()=='Linux':
         dataPath = '/home/farznaj/Shares/Churchland/data/'
     else:
-        dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data';        
+        dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data'        
     #%%        
     tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
     r = '%03d-'*len(mdfFileNumber)
