@@ -1,4 +1,10 @@
-% Set event-aligned traces. Extremely careful thought is taken in what trials will be
+iTiFlg = 1; % 0: short ITI, 1: long ITI, 2: all ITIs.
+prevSuccessFlg = true; % true previous sucess trials; false: previous failure.
+vec_iti = [0 9 30]; % [0 10 30]; %[0 6 9 12 30]; % [0 7 30]; % [0 10 30]; % [0 6 9 12 30]; % use [0 40]; if you want to have a single iti bin and in conventioinal analysis look at the effect of current rate on outcome.
+
+popClassifier_trialHistory
+
+%% Set event-aligned traces. Extremely careful thought is taken in what trials will be
 % included for each alighment:
 
 % Run imaging_prep_analysis to get the required vars.
@@ -31,8 +37,8 @@ nPostFrames = []; % nan;
 
 
 %%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Set outcomes
 
 allowCorrectResp = 'change'; % 'change'; 'remove'; 'nothing'; % if 'change': on trials that mouse corrected his choice, go with the original response.
@@ -76,7 +82,56 @@ timeCommitIncorrResp0 = timeCommitIncorrResp;
 set_change_of_mind_trs % set change-of-mind trials. output will be trs_com.
 
 
-%% Set ep (SVM will be trained on ep frames to decode choice) and set to nan timeStimOnset of those trials 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Align traces on initiation tone (I don't think you need to exclude any trials from timeInitTone)
+
+% remember traces_al_sm has nan for trs2rmv as well as trs in alignedEvent that are nan.
+alignedEvent = 'initTone'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
+
+[traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
+    (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
+    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
+
+clear stimAl
+initToneAl.traces = traces_al_sm;
+initToneAl.time = time_aligned;
+initToneAl.eventI = eventI;
+
+initToneAl
+
+% Remember ep for trial-history analysis will be 1:eventI 
+% epStart = 1;
+% epEnd = eventI;
+% ep = epStart : epEnd;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Align traces on stimulus, including all timeStimOnset trials.
+
+% remember traces_al_sm has nan for trs2rmv as well as trs in alignedEvent that are nan.
+alignedEvent = 'stimOn'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
+
+[traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
+    (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset0, ...
+    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
+
+clear stimAl_allTrs
+stimAl_allTrs.traces = traces_al_sm;
+stimAl_allTrs.time = time_aligned;
+stimAl_allTrs.eventI = eventI;
+
+stimAl_allTrs
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% clean up timeStimOnset for setting stim-aligned traces that will be used for SVM classifying of current choice (make sure go tone is not within ep and stimDur is long enough (800ms))
+% Set ep (SVM will be trained on ep frames to decode choice) and set to nan timeStimOnset of those trials 
 % that have issues with this ep: ie their go tone is within ep, or their stimDur is not long enough (800ms).
 
 % include in timeStimOnset trials that are:
@@ -406,7 +461,7 @@ commitIncorrAl
 %%
 
 if save_aligned_traces
-    save(postName, '-append', 'stimAl', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl')
+    save(postName, '-append', 'stimAl', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs')
 end
 
 
