@@ -1,11 +1,7 @@
-iTiFlg = 1; % 0: short ITI, 1: long ITI, 2: all ITIs.
-prevSuccessFlg = true; % true previous sucess trials; false: previous failure.
-vec_iti = [0 9 30]; % [0 10 30]; %[0 6 9 12 30]; % [0 7 30]; % [0 10 30]; % [0 6 9 12 30]; % use [0 40]; if you want to have a single iti bin and in conventioinal analysis look at the effect of current rate on outcome.
-
-popClassifier_trialHistory
-
-%% Set event-aligned traces. Extremely careful thought is taken in what trials will be
+% Set event-aligned traces. Extremely careful thought is taken in what trials will be
 % included for each alighment:
+
+% Also set choiceVec0 of the previous trial.
 
 % Run imaging_prep_analysis to get the required vars.
 
@@ -102,10 +98,6 @@ initToneAl.eventI = eventI;
 
 initToneAl
 
-% Remember ep for trial-history analysis will be 1:eventI 
-% epStart = 1;
-% epEnd = eventI;
-% ep = epStart : epEnd;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -126,6 +118,11 @@ stimAl_allTrs.eventI = eventI;
 
 stimAl_allTrs
 
+% # difference with traces_al_stim: in traces_al_stim, some of the trials are set to nan bc their stim duration is 
+% # <800ms or bc their go tone happens before ep(end)=700ms. But in traces_al_stimAll, all trials are included. 
+% # You need traces_al_stim for decoding the upcoming choice bc you average responses during ep and you want to 
+% # control for what happens there. But for trial-history analysis you average responses before stimOnset, so you 
+% # don't care about when go tone happened or how long the stimulus was.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -467,3 +464,30 @@ end
 
 
 
+%% Set choiceVec0 for the previous trial (ie for the trial-history case).
+% You will need this when doing SVM decoding of the previous choice.
+
+clear trialHistory
+trialHistory.prevSuccessFlg = true; % true previous sucess trials; false: previous failure.
+trialHistory.vec_iti = [0 9 30]; % [0 10 30]; %[0 6 9 12 30]; % [0 7 30]; % [0 10 30]; % [0 6 9 12 30]; % use [0 40]; if you want to have a single iti bin and in conventioinal analysis look at the effect of current rate on outcome.
+trialHistory.choiceVec0 = NaN(length(timeStimOnset), 3);
+allTrs2rmv = [];
+
+for iTiFlg = 0:2; % 0: short ITI, 1: long ITI, 2: all ITIs.
+    popClassifier_trialHistory % computes choiceVec0; % trials x 1;  1 for HR choice, 0 for LR prev choice.
+    trialHistory.choiceVec0(:, iTiFlg+1) = choiceVec0;
+end
+
+% Remember ep for trial-history analysis will be 1:eventI 
+% epStart = 1;
+% epEnd = eventI;
+% ep = epStart : epEnd;
+
+if save_aligned_traces
+    save(postName, '-append', 'trialHistory')    
+end
+
+
+   
+
+    
