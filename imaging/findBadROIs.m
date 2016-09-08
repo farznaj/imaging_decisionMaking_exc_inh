@@ -6,8 +6,8 @@ function [badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight] = findBadROIs(mouse, i
 % example inputs:
 
 mouse = 'fni17';
-imagingFolder = '151028'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2,3];  % 3; %1; % or tif major
+imagingFolder = '151029'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [2,3];  % 3; %1; % or tif major
 
 
 fixed_th_srt_val = 1; % if fixed 4150 will be used as the threshold on srt_val, if not, we will find the srt_val threshold by employing Andrea's measure
@@ -32,7 +32,7 @@ th_badHighlightCorr = .5;
 %% Set imfilename, pnevFileName
 
 signalCh = 2; % because you get A from channel 2, I think this should be always 2.
-pnev2load = [];
+pnev2load = 2;[];
 
 [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
 [pd,pnev_n] = fileparts(pnevFileName);
