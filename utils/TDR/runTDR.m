@@ -23,7 +23,7 @@ for t = 1:T
        [Betas(t, n, :), lambda(t, n)] = linearRegression(scaledRbar_tn, scaledCodedParams, C, kfold);
    end
 end
-[Summary.f_t, Summary.R2_t, Summary.R2_tk] = TDRobjectiveFn(dataTensor, codedParams, Betas, trCountmtx);
+[Summary.f_t, ~, Summary.R2_t, Summary.R2_tk] = TDRobjectiveFn(dataTensor, codedParams, Betas, trCountmtx);
 Summary.lambda = lambda;
 
 %% divide by magnitude and direction  
