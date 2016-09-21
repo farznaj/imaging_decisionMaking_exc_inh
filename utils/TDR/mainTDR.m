@@ -54,6 +54,7 @@ decision = Y;
 cb = 16;
 kfold = 10;
 codedParams = [[stim(:)-cb]/range(stim(:)) [decision(:)-mean(decision(:))]/range(decision(:)) ones(R, 1)];
+[~, codedParams] = normVects(codedParams); % each parameter is unit vector
 % cb = 16; stimrate_norm = ((stimrate - cb)/max(abs(stimrate(:) - cb)));
 numPCs = 10;
 [dRAs, normdRAs, Summary] = runTDR(dataTensor, numPCs, codedParams, [], kfold);
