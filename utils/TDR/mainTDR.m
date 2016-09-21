@@ -28,6 +28,8 @@ figure;
 hold on
 plot(all_times, mean(mean(dataTensor(:, :, Y==0), 3), 2), 'b')
 plot(all_times, mean(mean(dataTensor(:, :, Y==1), 3), 2), 'r')
+plot(all_times, mean(mean(dataTensor(:, :, :), 3), 2), 'k')
+legend('low rate', 'high rate', 'all')
 xlabel('time (ms)')
 ylabel('normalized firing rates')
 %% alignment of top variance subspaces
