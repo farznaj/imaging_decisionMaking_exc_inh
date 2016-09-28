@@ -25,8 +25,8 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % Example input variales:
 %{
 mouse = 'fni17';
-imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2];  % 3; %1; % or tif major
+imagingFolder = '151029'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [2,3];  % 3; %1; % or tif major
 
 % best is to set the 2 vars below to 0 so u get times of events for all trials; later decide which ones to set to nan.
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
@@ -290,6 +290,16 @@ end
 %% Evaluate A and C of Efty's algorithm
 
 if plotEftyAC1by1
+    
+    load(moreName, 'CC')
+    
+    load(imfilename, 'imHeight', 'imWidth', 'medImage')
+    im = medImage{2};
+    im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt
+    
+%     C_df0 = konnerthDeltaFOverF(C', pmtOffFrames{gcampCh}, smoothPts, minPts);
+%     C_df = C_df0';
+    
     inds2plot = 1:size(C,1); % excl'; %excl(randperm(length(excl)))'; % size(C,1):-1:1; % 
     if ~exist('dFOF_man','var') % use this if you don't have manual activity
         plotEftManTracesROIs(C_df, S, [], A, [], CC, [], [], im, C, inds2plot, 0, 0, medImage{1});
@@ -297,6 +307,7 @@ if plotEftyAC1by1
         plotEftManTracesROIs(C_df, S, dFOF_man', A, [], CC, [], 1:size(C_df,1), im, C, inds2plot, 0, 0, medImage{1});
         % traceQualManual = plotEftManTracesROIs(C_df, S_df, dFOF, A2, mask_eft, CC, CC_rois, eftMatchIdx_mask, im, C, inds2plot, manualTraceQual, plothists, im2)
     end
+    
 end
 
 
@@ -305,12 +316,13 @@ end
 if evaluateEftyOuts
     
     load(imfilename, 'imHeight', 'imWidth', 'medImage')
+    
     % Plot average of spatial components.
     figure; imagesc(reshape(mean(A,2), imHeight, imWidth))  %     figure; imagesc(reshape(mean(P.psdx,2), imHeight, imWidth))
 
     % Plot COMs
     im = medImage{2};
-    im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt
+    im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt        
     contour_threshold = .95;
     plotCOMs = 1;
     [CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(A, imHeight, imWidth, contour_threshold, im, plotCOMs);
@@ -327,7 +339,21 @@ if evaluateEftyOuts
         warning('activity_man_eftMask does not exist!')
     end
     linkaxes(h, 'x')
-
+    
+    % shift and scale C, man, etc to compare them... this is a much more
+    % useful plot than the one above.
+    load(imfilename, 'cs_frtrs')
+    figure; hold on
+    h = plot([cs_frtrs; cs_frtrs], [-.3; .5], 'g');
+    set(h, 'handlevisibility', 'off')
+    plot(shiftScaleY(f), 'y')
+    plot(shiftScaleY(mean(activity_man_eftMask_ch2,2)), 'b')
+    plot(shiftScaleY(mean(C)), 'k')
+    plot(shiftScaleY(mean(S)), 'm')
+    xlim([1 1500])
+    legend('f','manAct', 'C', 'S')
+    title('Average of all neurons')
+    
 
     % Assess tau and noise for each neuron
     % load(pnevFileName, 'P')
@@ -505,7 +531,7 @@ stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_
 
 load(moreName, 'badROIs01')
 
-goodinds = ~badROIs01;
+goodinds = ~badROIs01; % goodinds = true(size(C,1),1);
 
 %{
 %{
@@ -704,7 +730,7 @@ if plotTrialTraces1by1
     
     % it makes sense to look at all trials and not just ~trs2rmv so do
     % trs2rmv = unique([trs_problemAlign, trs_badMotion_pmtOff]);, and again run setEvent
-    plotTrs1by1 = 1; %1;
+    plotTrs1by1 = 0; %1;
     interactZoom = 0;
     markQuantPeaks = 1; % 1;
     showitiFrNums = 1;

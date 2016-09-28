@@ -43,11 +43,18 @@ np.shape(traces)
 
 #%% Run the function evaluate_components
 idx_components, fitness, erfc = evaluate_components(traces, 5, 0)
+'''
+traces = np.diff(traces, axis=1)
+np.shape(traces)
+idx_components, fitness, erfc = evaluate_components(traces, 5, 0)
+'''
 
 #%% Save results to mat file named "more_pnevFileName"
 fname = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
 
 io.savemat(fname,{'idx_components':idx_components, 'fitness':fitness, 'erfc':erfc})
+#with open(fname,'ab') as f:
+#    io.savemat(fname,{'idx_componentsD':idx_components, 'fitnessD':fitness, 'erfcD':erfc})
   
 #%% Append (didn't work!)
 '''

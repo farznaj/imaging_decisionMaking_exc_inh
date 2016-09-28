@@ -21,7 +21,8 @@ for ise = 1:length(sess)
     date_major_se{ise} = sprintf('%06d_%03d', tifNumsOrig(find(s,1), 1:2)); % if there is only one mdfFile in tifNums, date_major_se will be same as date_major.
     for itm = 1:length(tifMinor)
         if ~any(params.oldTifName)
-            a = dir(fullfile(params.tifFold, [date_major_se{ise}, '_00', num2str(tifMinor(itm)), '.mat']));
+%             a = dir(fullfile(params.tifFold, [date_major_se{ise}, '_00', num2str(tifMinor(itm)), '.mat']));
+            a = dir(fullfile(params.tifFold, [date_major_se{ise}, ['_', repmat('0', 1, 3-length(num2str(tifMinor(itm))))], num2str(tifMinor(itm)), '.mat']));
         elseif all(params.oldTifName)
             a = dir(fullfile(params.tifFold, [date_major_se{ise}, '_0', num2str(tifMinor(itm)), '.mat']));
         else

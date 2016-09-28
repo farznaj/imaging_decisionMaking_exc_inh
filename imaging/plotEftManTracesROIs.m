@@ -146,7 +146,7 @@ for rr = inds2plot
         xlim(xl+[-60 60]), ylim(yl+[-60 60])
         hp = [hp hpn];
         
-        if ~isnan(imatched) && ~isempty(CC_rois) 
+        if exist('imatched', 'var') && ~isnan(imatched) && ~isempty(CC_rois) 
             hpn = plot(CC_rois{imatched}(2,:), CC_rois{imatched}(1,:), ':', 'color', [255 215 0]/255);
             hp = [hp hpn];
         end
@@ -237,20 +237,26 @@ for rr = inds2plot
     ylim([min(C_df(rr,:))-.05  max(C_df(rr,:))+.05])
     %}
     
-    tr = refTrace_df(rr,:);
+    tr = shiftScaleY(refTrace_df(rr,:)); % shift and scale the traces for superimposition.
+%     tr = refTrace_df(rr,:);    
     
     %%% matched df/f
     subplot(htr_3)
     hold on;
     if ~isempty(dFOF) && ~isnan(imatched)
-        hpn = plot(matchedTrace_df(imatched,:), 'color', [77 190 238]/256);
+        
+        y1 = shiftScaleY(matchedTrace_df(imatched,:));
+%         y1 = matchedTrace_df(imatched,:);
+        hpn = plot(y1, 'color', [77 190 238]/256);
         hp = [hp hpn];
         
-        tr = [tr, matchedTrace_df(imatched,:)];
+        tr = [tr, y1];
     end
     
     %%%%% ref df/f
-    hpn = plot(refTrace_df(rr,:), 'k');
+    y2 = shiftScaleY(refTrace_df(rr,:));
+%     y2 = refTrace_df(rr,:);
+    hpn = plot(y2, 'k');
     hp = [hp hpn];
     
     xlim([0 size(refTrace_df,2)+1])

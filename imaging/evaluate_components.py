@@ -38,6 +38,7 @@ def evaluate_components(traces, N=5, robust_std=False):
 
     """
     
+    T=np.shape(traces)[-1]
    # import pdb
    # pdb.set_trace()
     md = mode_robust(traces, axis=1)
@@ -73,6 +74,7 @@ def evaluate_components(traces, N=5, robust_std=False):
     filt = np.ones(N)
     # moving sum
     erfc = np.apply_along_axis(lambda m: np.convolve(m, filt, mode='full'), axis=1, arr=erf)
+    erfc = erfc[:,:T]
 
     # select the maximum value of such probability for each trace
     fitness = np.min(erfc, 1)
@@ -80,8 +82,8 @@ def evaluate_components(traces, N=5, robust_std=False):
     ordered = np.argsort(fitness)
 
     idx_components = ordered  # [::-1]# selec only portion of components
-    fitness = fitness[idx_components]
-    erfc = erfc[idx_components]
+#    fitness = fitness[idx_components] % FN commented bc we want the indexing to match C and YrA.
+#    erfc = erfc[idx_components] % FN commented bc we want the indexing to match C and YrA.
 
     return idx_components, fitness, erfc
 #%%

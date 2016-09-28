@@ -32,7 +32,7 @@ th_badHighlightCorr = .5;
 %% Set imfilename, pnevFileName
 
 signalCh = 2; % because you get A from channel 2, I think this should be always 2.
-pnev2load = 2;[];
+pnev2load = [];
 
 [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
 [pd,pnev_n] = fileparts(pnevFileName);
@@ -48,13 +48,19 @@ load(pnevFileName, 'activity_man_eftMask_ch2', 'C', 'P', 'srt_val','highlightCor
 load(imfilename, 'imHeight', 'imWidth', 'sdImage')
 load(fname, 'idx_components', 'fitness', 'mask', 'CC')
 
+fitnessNow = fitness';
+% below commented bc u modified Andrea's python code so fitness and erfc
+% are not sorted and their indexing matches C (Efty's out) indexing.
+%{
+% idx_components(i) = j; i: after-sort index; j: before-sort index.
 if ~min(idx_components)
-    idx_components = idx_components+1; % bc python's indeces are from 0! % idx_components(i) = j; i: after-sort index; j: before-sort index.
+    idx_components = idx_components+1; % bc python's indeces are from 0! 
 end
+fitnessNow = NaN(size(fitness')); % turn fitness into an array whose indeces match Efty's outputs.
+fitnessNow(idx_components) = fitness;
+%}
 
 highlightCorrROI = highlightCorrROI';
-fitness = fitness';
-fitnessNow = fitness(idx_components); % turn fitness into an array whose indeces match Efty's outputs.
 srt_val = full(srt_val);
 
 
@@ -260,6 +266,8 @@ f = (badTempCorr & ~(badEP | badAG));
 f = (fitnessNow > -20 & fitnessNow <-15);
 
 f = (bad_EP_AG_size_tau_tempCorr_hiLight(:,[5]) & ~sum(bad_EP_AG_size_tau_tempCorr_hiLight(:,[1:4,6]),2));
+
+f = (bad_EP_AG_size_tau_tempCorr_hiLight(:,[2]) & ~sum(bad_EP_AG_size_tau_tempCorr_hiLight(:,[1,3:6]),2));
 
 rois2p = find(f);
 size(rois2p)
