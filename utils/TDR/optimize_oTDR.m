@@ -16,8 +16,8 @@ Q = orth(randn(N, numSignals-1));
 Beta0 = randn(N, T);
 a = ones(T, numSignals-1);
 %% random initialization within data space
-maxIter = 5000;
-stp = 0.5;
+maxIter = 200;
+stp = 10000;
 for i = 1:maxIter
  i
 for t = randperm(T)
