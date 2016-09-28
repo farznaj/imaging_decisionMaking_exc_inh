@@ -140,16 +140,19 @@ end
 
 clr = redgreencmap(S, 'interpolation', 'linear');
 figure;
-subplot(211)
+subplot(121)
 hold on
 for s = 1:S
 plot(all_times, proj1(:, s, 1), '--', 'color', clr(s, :))
 plot(all_times, proj1(:, s, 2), '-', 'color', clr(s, :))
 end
-subplot(212)
+title('stimulus projection')
+subplot(122)
 hold on
 for s = 1:S
 plot(all_times, proj2(:, s, 1), '--', 'color', clr(s, :))
 plot(all_times, proj2(:, s, 2), '-', 'color', clr(s, :))
 end
+title('choice projection')
+
 %%
