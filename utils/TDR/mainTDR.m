@@ -119,8 +119,10 @@ ylabel('stimulus time (ms)')
 axis square
 
 %%
-dataTensor_proj(:, 1, :) = projectTensor(dataTensor, squeeze(dRAs(end-20, :, 1)).');
-dataTensor_proj(:, 2, :) = projectTensor(dataTensor, squeeze(dRAs(end, :, 2)).');
+Q = optimize_oTDR(dataTensor, codedParams, [], []);
+%%
+dataTensor_proj(:, 1, :) = projectTensor(dataTensor, squeeze(Q(:, 1)));
+dataTensor_proj(:, 2, :) = projectTensor(dataTensor, squeeze(Q(:, 2)));
 
 uniqueStim = unique(stim);
 uniqueDecision = unique(decision);
@@ -136,18 +138,18 @@ for s = 1:S
     end
 end
 
-% % clr = redgreencmap(S, 'interpolation', 'linear');
-% % figure;
-% % subplot(211)
-% % hold on
-% % for s = 1:S
-% % plot(all_times, proj1(:, s, 1), '--', 'color', clr(s, :))
-% % plot(all_times, proj1(:, s, 2), '-', 'color', clr(s, :))
-% % end
-% % subplot(212)
-% % hold on
-% % for s = 1:S
-% % plot(all_times, proj2(:, s, 1), '--', 'color', clr(s, :))
-% % plot(all_times, proj2(:, s, 2), '-', 'color', clr(s, :))
-% % end
+clr = redgreencmap(S, 'interpolation', 'linear');
+figure;
+subplot(211)
+hold on
+for s = 1:S
+plot(all_times, proj1(:, s, 1), '--', 'color', clr(s, :))
+plot(all_times, proj1(:, s, 2), '-', 'color', clr(s, :))
+end
+subplot(212)
+hold on
+for s = 1:S
+plot(all_times, proj2(:, s, 1), '--', 'color', clr(s, :))
+plot(all_times, proj2(:, s, 2), '-', 'color', clr(s, :))
+end
 %%
