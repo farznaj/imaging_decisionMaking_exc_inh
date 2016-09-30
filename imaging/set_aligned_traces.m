@@ -124,9 +124,13 @@ stimAl_allTrs
 % # control for what happens there. But for trial-history analysis you average responses before stimOnset, so you 
 % # don't care about when go tone happened or how long the stimulus was.
 
+
+%% All these parts commented bc you are removing trials with short stimDur or with goTone<ep_end from stimAl_allTrs.traces in python. So you don't need to set a separate variable named stimAl.traces
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%{
 %% clean up timeStimOnset for setting stim-aligned traces that will be used for SVM classifying of current choice (make sure go tone is not within ep and stimDur is long enough (800ms))
 % Set ep (SVM will be trained on ep frames to decode choice) and set to nan timeStimOnset of those trials 
 % that have issues with this ep: ie their go tone is within ep, or their stimDur is not long enough (800ms).
@@ -164,7 +168,7 @@ th_stim_dur = 800; % min stim duration to include a trial in timeStimOnset
 figure; hold on
 plot(timeCommitCL_CR_Gotone - timeStimOnset)
 plot(timeStimOffset - timeStimOnset)
-plot([1 length(b)],[th_stim_dur th_stim_dur],'g')
+plot([1 length(timeCommitCL_CR_Gotone)],[th_stim_dur th_stim_dur],'g')
 ylabel('Time relative to stim onset (ms)')
 legend('stimOffset','goTone', 'th\_stim\_dur')
 minStimDurNoGoTone = min(timeCommitCL_CR_Gotone - timeStimOnset); % this is the duration after stim onset during which no go tone occurred for any of the trials.
@@ -174,7 +178,7 @@ cprintf('blue', 'minStimDurNoGoTone = %.2f ms\n', minStimDurNoGoTone)
 % exclude trials whose stim duration was < th_stim_dur
 j = (timeStimOffset - timeStimOnset) < th_stim_dur;
 if sum(j)>0
-    fprintf('Excluding %i trials from timeStimOnset bc their stimDur-w/out-goTone < 800ms\n', sum(j))
+    fprintf('Excluding %i trials from timeStimOnset bc their stimDur-without-goTone < 800ms\n', sum(j))
     timeStimOnset(j) = NaN;
 else
     fprintf('No trials with stimDur-w/out-goTone < 800ms. Good :)\n')
@@ -213,6 +217,8 @@ epEndRel2Event = ceil(ep_ms(2)/frameLength); % the end point of the epoch relati
 stimAl.ep = eventI+epStartRel2Event : eventI+epEndRel2Event; % frames on stimAl.traces that will be used for trainning SVM.
 
 stimAl
+
+%}
 
 
 %% Now take care of trials you want to use for 1stSideTry alignment.
@@ -458,7 +464,7 @@ commitIncorrAl
 %%
 
 if save_aligned_traces
-    save(postName, '-append', 'stimAl', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs')
+    save(postName, '-append', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs')
 end
 
 

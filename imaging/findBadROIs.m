@@ -46,7 +46,7 @@ fname = fullfile(pd, sprintf('more_%s.mat', pnev_n));
 
 load(pnevFileName, 'activity_man_eftMask_ch2', 'C', 'P', 'srt_val','highlightCorrROI', 'roiPatch', 'highlightPatchAvg', 'A')
 load(imfilename, 'imHeight', 'imWidth', 'sdImage')
-load(fname, 'idx_components', 'fitness', 'mask', 'CC')
+load(fname, 'fitness', 'mask', 'CC') % 'idx_components', 
 
 fitnessNow = fitness';
 % below commented bc u modified Andrea's python code so fitness and erfc
@@ -254,9 +254,16 @@ title('good components')
 doeval = 0;
 merged_ROIs = mergeROIs_set([], A, C, imHeight, imWidth, [4.8 nan 2], 1, doeval, 0);
 
-% find ROIs near ROI 13
-i=366;
+% find ROIs near ROI i
+i = 39;
 nearbyROIs = findNearbyROIs(COMs, COMs(i,:), 5);
+
+figure, subplot(211); 
+imagesc(im); hold on
+for rr = nearbyROIs %find(badROIs01')
+    plot(COMs(rr,2), COMs(rr,1), 'r.')
+end
+
 %}
 
 %{
@@ -302,21 +309,23 @@ if evalBadRes
         %     i
         set(gcf,'name', sprintf('ROI: %i', i))
         hold on
-        a1=subplot(3,3,[1,2,3]);
-        h1 = plot(C(i,:));
+        a1 = subplot(3,3,[1,2,3]);
+%         h1 = plot(C(i,:));
+        % superimpose C and raw (shift and scale for comparison)
+        h2 = plot(shiftScaleY(activity_man_eftMask_ch2(:,i)), 'b'); hold on; h1 = plot(shiftScaleY(C(i,:)), 'r');
         %     title(sprintf('tau = %.2f ms', tau(i,2))),  % title(sprintf('%.2f, %.2f', [temp_corr(i), tau(i,2)])),
         title(sprintf('fitness = %.2f,  srtval = %.2f', fitnessNow(i), full(srt_val(i))), 'color', col)
         xlim([1 size(C,2)])
         ylabel('C')% (denoised-demixed trace)')
-        
-        a2=subplot(3,3,[4,5,6]);
+        %{
+        a2 = subplot(3,3,[4,5,6]);
         h2 = plot(activity_man_eftMask_ch2(:,i));
         %     h2 = plot(yrac(i,:));
         title(sprintf('tau = %.2f ms, temp corr = %.2f', tau(i,2), temp_corr(i)), 'color', col)
         xlim([1 size(C,2)])
         ylabel('Raw') % (averaged pixel intensities)')
         linkaxes([a1,a2], 'x')
-        
+        %}
         subplot(3,3,[7]); hold on
         h3 = plot(CC{i}(2,:), CC{i}(1,:), 'r');
         xlim([COMs(i,2)-50  COMs(i,2)+50])

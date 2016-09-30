@@ -41,8 +41,8 @@ setInhibitExcit = 1; % if 1, inhibitory and excitatory neurons will be identifie
 
 frameLength = 1000/30.9; % sec.
 
-% Once done use set_aligned_traces to set aligned traces on different trial
-events with carefully chosen trials.
+% Once done use set_aligned_traces to set aligned traces on different trial events with carefully chosen trials.
+
 %}
 
 home
@@ -300,7 +300,7 @@ if plotEftyAC1by1
 %     C_df0 = konnerthDeltaFOverF(C', pmtOffFrames{gcampCh}, smoothPts, minPts);
 %     C_df = C_df0';
     
-    inds2plot = 1:size(C,1); % excl'; %excl(randperm(length(excl)))'; % size(C,1):-1:1; % 
+    inds2plot = randperm(size(C,1)); % 1:size(C,1); % randperm(size(C,1)) % excl(randperm(length(excl)))'; % size(C,1):-1:1;  
     if ~exist('dFOF_man','var') % use this if you don't have manual activity
         plotEftManTracesROIs(C_df, S, [], A, [], CC, [], [], im, C, inds2plot, 0, 0, medImage{1});
     else % use this if you wan to compare with manual activity:
@@ -485,7 +485,7 @@ allResp_HR_LR(trs2rmv) = NaN;
 %%%%% Save outcomes and allResp to a file named post_pnev... 
 postName = fullfile(pd, sprintf('post_%s.mat', pnev_n));
 if ~exist(postName, 'file')
-    save(postName, 'outcomes', 'allResp_HR_LR')
+    save(postName, 'outcomes', 'allResp_HR_LR', 'stimrate')
 end
 
 % save('151102_001.mat', '-append', 'trs2rmv')  % Do this!
