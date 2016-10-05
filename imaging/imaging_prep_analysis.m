@@ -537,8 +537,15 @@ stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_
 %% Assess trace quality of each neuron
 
 load(moreName, 'badROIs01')
-
+%{
+% Use below if you want to change what measures % define a bad component
+(ie redifine badROIs01)
+load(moreName, 'bad_EP_AG_size_tau_tempCorr_hiLight')
+badAll = sum(bad_EP_AG_size_tau_tempCorr_hiLight(:,[2:4]),2);
+badROIs01 = (badAll ~= 0); % any of the above measure is bad.
+%}
 goodinds = ~badROIs01; % goodinds = true(size(C,1),1);
+
 
 %{
 %{

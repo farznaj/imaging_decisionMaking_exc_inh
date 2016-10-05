@@ -272,7 +272,7 @@ fprintf('%d= # neurons that are active in less than %i trials.\n', sum(NsFewTrAc
 NsExcluded = logical(NsFewTrActiv + nonActiveNs);
 
 a = size(spikeAveEp0,2) - sum(NsExcluded);
-cprintf('blue', 'included neuros= %d; total neuros= %d; fract= %.3f\n', a, size(spikeAveEp0,2), a/size(spikeAveEp0,2))
+cprintf('blue', 'included neurons= %d; total neurons= %d; fract= %.3f\n', a, size(spikeAveEp0,2), a/size(spikeAveEp0,2))
 
 
 %% Remove neurons that are very little active.

@@ -8,6 +8,12 @@
 % then run findBadROIs
 % then run inhibit_excit_prep
 
+% In brief, right after preproc do the following:
+% - python eval_comp
+% - set_A_CC
+% - find_badROIs
+% - imaging_prep_analysis
+% - set_aligned_traces
 
 %% Change these vars:
 
