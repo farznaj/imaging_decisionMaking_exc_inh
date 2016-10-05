@@ -12,8 +12,8 @@
 %% Change these vars:
 
 mouse = 'fni17';
-imagingFolder = '151028'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2,3];  % 3; %1; % or tif major
+imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
 
 %% Set imfilename, pnevFileName, fname
@@ -59,7 +59,7 @@ end
 load(imfilename, 'sdImage')
 % im = sdImage{2};
 im = normImage(sdImage{2});
-plotCOMs= 0;
+plotCOMs = 0;
 
 if exist('im', 'var') && ~isempty(im)
     colors = hot(2*size(CC,1));

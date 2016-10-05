@@ -79,9 +79,9 @@ elseif strcmp(alignedEvent, 'stimOn')
     cprintf('blue', 'Training epoch = 600-%.1fms after stimulus onset.\n', nPost*frameLength)
     % index of frames after alignedEvent (if epStartRel2Event=1, epStart
     % will be 1 frame after alignedEvent).
-    epStartRel2Event = ceil(600/frameLength); % round % the start point of the epoch relative to alignedEvent for training SVM. (500ms)
+    epStartRel2Event = ceil(700/frameLength); % 600 round % the start point of the epoch relative to alignedEvent for training SVM. (500ms)
     if isempty(nPost)
-        epEndRel2Event = ceil(800/frameLength); % floor % the end point of the epoch relative to alignedEvent for training SVM. (700ms)
+        epEndRel2Event = ceil(900/frameLength); % 800 floor % the end point of the epoch relative to alignedEvent for training SVM. (700ms)
     else
         epEndRel2Event = nPost; % 
     end
@@ -252,7 +252,7 @@ fprintf('%d= # neurons with ave activity in ep < %.4f\n', sum(nonActiveNs), thAc
 
 % Set NsFewTrActiv, ie neurons that are active in very few trials (by active I mean average activity during epoch ep)
 % thMinFractTrs = .05; %.01; % a neuron must be active in >= .1 fraction of trials to be used in the population analysis.
-thTrsWithSpike = 3; % ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
+thTrsWithSpike = 3; % 1; % ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
 
 % nTrsWithSpike = sum(spikeAveEp0 > 0); % in how many trials each neuron
 % had activity (remember this is average spike during ep).

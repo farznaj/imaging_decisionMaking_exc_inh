@@ -44,7 +44,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     import os.path
         
     if len(pnev2load)==0:
-        pnev2load = 0;
+        pnev2load = [0];
             
     #%%
     dataPath = []
@@ -81,7 +81,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
             c = ("No Pnev file was found"); print("%s\n" % c)
             pnevFileName = ''
         else:                
-            pnevFileName = pnevFileName[pnev2load]
+            pnevFileName = pnevFileName[pnev2load[0]]
     else:
         pnevFileName = ''
     

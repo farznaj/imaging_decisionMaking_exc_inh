@@ -6,8 +6,8 @@ function [badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight] = findBadROIs(mouse, i
 % example inputs:
 
 mouse = 'fni17';
-imagingFolder = '151029'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [2,3];  % 3; %1; % or tif major
+imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
 
 fixed_th_srt_val = 1; % if fixed 4150 will be used as the threshold on srt_val, if not, we will find the srt_val threshold by employing Andrea's measure
@@ -20,7 +20,7 @@ th_srt_val = 4150;
 th_smallROI = 15;
 th_shortDecayTau = 200;
 th_badTempCorr = .4;
-th_badHighlightCorr = .5;
+th_badHighlightCorr = .4; % .5;
 
 % If you don't exclude badHighlightCorr, still most of the neurons will
 % have good trace quality, but they are mostly fragmented parts of ROIs or
@@ -44,7 +44,8 @@ fname = fullfile(pd, sprintf('more_%s.mat', pnev_n));
 
 %% Load vars
 
-load(pnevFileName, 'activity_man_eftMask_ch2', 'C', 'P', 'srt_val','highlightCorrROI', 'roiPatch', 'highlightPatchAvg', 'A')
+load(pnevFileName, 'activity_man_eftMask_ch2', 'C', 'P', 'srt_val', 'A', 'highlightCorrROI', 'roiPatch', 'highlightPatchAvg')
+load(pnevFileName, 'rval_space') % Efty's version of our highlightCorr measure.
 load(imfilename, 'imHeight', 'imWidth', 'sdImage')
 load(fname, 'fitness', 'mask', 'CC') % 'idx_components', 
 
@@ -60,7 +61,8 @@ fitnessNow = NaN(size(fitness')); % turn fitness into an array whose indeces mat
 fitnessNow(idx_components) = fitness;
 %}
 
-highlightCorrROI = highlightCorrROI';
+% highlightCorrROI = highlightCorrROI';
+highlightCorrROI = rval_space; 
 srt_val = full(srt_val);
 
 
@@ -161,22 +163,27 @@ subplot(616), plot(mask_numpix), title('mask # pixels')
 
 %% Identify bad components for each criterion
 
-badAG = fitnessNow >= th_AG; fprintf('sum(badAG): %d\n', sum(badAG))
+badAG = fitnessNow >= th_AG; 
 
 numbad = sum(fitnessNow >= th_AG);
 ss = sort(srt_val);
-fprintf('\tThreshold of Efty based on Andrea measure = %.2f\n', ss(numbad))
+fprintf('\tThreshold of Efty based on Andrea measure = %.2f. Fixed th=%.1f\n', ss(numbad), th_srt_val)
 if ~fixed_th_srt_val
     th_srt_val = ss(numbad); % you are trying to find a good threshold for srt_val (below which ROIs are bad).
 end
 % fprintf('Threshold for Efty srt_val= %.2f\n', full(th_srt_val))
-badEP = srt_val < th_srt_val; fprintf('sum(badEP | badAG): %d\n', sum(badEP | badAG)) %
+badEP = srt_val < th_srt_val; 
+smallROI = mask_numpix < th_smallROI; 
+shortDecayTau = tau(:,2) < th_shortDecayTau; 
+badTempCorr = temp_corr < th_badTempCorr; 
+badHighlightCorr = highlightCorrROI < th_badHighlightCorr; 
 
-smallROI = mask_numpix < th_smallROI; fprintf('sum(smallROI & ~(badEP | badAG)): %d\n', sum(smallROI & ~(badEP | badAG))) % increase this to 20 if you want to get rid of neuropils
-shortDecayTau = tau(:,2) < th_shortDecayTau; fprintf('sum(shortDecayTau & ~(badEP | badAG)): %d\n', sum(shortDecayTau & ~(badEP | badAG)))
-badTempCorr = temp_corr < th_badTempCorr; fprintf('sum(badTempCorr & ~(badEP | badAG)): %d\n', sum(badTempCorr & ~(badEP | badAG))) %
-
-badHighlightCorr = highlightCorrROI < th_badHighlightCorr; fprintf('sum(badHighlightCorr& ~badAll): %d\n', sum(badHighlightCorr& ~(badEP | badAG | smallROI | shortDecayTau | badTempCorr)))
+fprintf('sum(badAG): %d\n', sum(badAG))
+fprintf('sum(badEP & ~badAll): %d\n', sum(badEP & ~(badAG | smallROI | shortDecayTau | badTempCorr | badHighlightCorr))) %
+fprintf('sum(smallROI & ~badAll): %d\n', sum(smallROI & ~(badEP | badAG | shortDecayTau | badTempCorr | badHighlightCorr))) % increase this to 20 if you want to get rid of neuropils
+fprintf('sum(shortDecayTau & ~badAll): %d\n', sum(shortDecayTau & ~(badEP | badAG | smallROI | badTempCorr | badHighlightCorr)))
+fprintf('sum(badTempCorr & ~badAll)): %d\n', sum(badTempCorr & ~(badEP | badAG | smallROI | shortDecayTau | badHighlightCorr))) %
+fprintf('sum(badHighlightCorr& ~badAll): %d\n', sum(badHighlightCorr& ~(badEP | badAG | smallROI | shortDecayTau | badTempCorr)))
 % goodSrtvalButbadHighlightCorr = (highlightCorrROI < .5 & srt_val >= 1e4); % these have good trace quality but are mostly neuropils. so you can later decide to add them or not.
 
 
@@ -255,8 +262,9 @@ doeval = 0;
 merged_ROIs = mergeROIs_set([], A, C, imHeight, imWidth, [4.8 nan 2], 1, doeval, 0);
 
 % find ROIs near ROI i
-i = 39;
-nearbyROIs = findNearbyROIs(COMs, COMs(i,:), 5);
+i = 182;
+nearbyROIs = findNearbyROIs(COMs, COMs(i,:), 5)
+rois2p = nearbyROIs;
 
 figure, subplot(211); 
 imagesc(im); hold on
@@ -274,7 +282,10 @@ f = (fitnessNow > -20 & fitnessNow <-15);
 
 f = (bad_EP_AG_size_tau_tempCorr_hiLight(:,[5]) & ~sum(bad_EP_AG_size_tau_tempCorr_hiLight(:,[1:4,6]),2));
 
-f = (bad_EP_AG_size_tau_tempCorr_hiLight(:,[2]) & ~sum(bad_EP_AG_size_tau_tempCorr_hiLight(:,[1,3:6]),2));
+f = (sum(bad_EP_AG_size_tau_tempCorr_hiLight(:,[1:5]),2) & ~sum(bad_EP_AG_size_tau_tempCorr_hiLight(:,[6]),2));
+
+% goodMeas_badMeaus
+f = (sum(bad_EP_AG_size_tau_tempCorr_hiLight(:,[2:4]),2)==0 & sum(bad_EP_AG_size_tau_tempCorr_hiLight(:,[1,5,6]),2))~=0;
 
 rois2p = find(f);
 size(rois2p)
@@ -284,9 +295,9 @@ if evalBadRes
     
     % which ROIs to plot?
     
-    rois2p = find(badROIs01);
-%     rois2p = find(~badROIs01);
+    rois2p = find(~badROIs01);
 %     rois2p = nearbyROIs;
+%     rois2p = find(badROIs01);
     rois2p = rois2p(randperm(length(rois2p)));    
     
     %% Nice figure to evaluate the results
@@ -294,11 +305,11 @@ if evalBadRes
     badROIs = find(badROIs01);
     % goodinds = ~badROIs01;
 
-    figure;
-    subplot(3,3,[7]);
+    figure('position', [-249         248        2365         609]);
+    subplot(3,6,13);
     imagesc(log(sdImage{2}))
     
-    for i = rois2p'; % % %; %ag_eb % f%ab_eg; %find(bc)' %find(mask_numpix<15); %nearbyROIs' %1:size(C,1) % fb'; % fb'; %220; %477;
+    for i = rois2p' % 589 %413; 589; %412; 432; % rois2p'; % % %; %ag_eb % f%ab_eg; %find(bc)' %find(mask_numpix<15); %nearbyROIs' %1:size(C,1) % fb'; % fb'; %220; %477;
         
 %         fprintf('hilight_in_out_hilightROIdiff= %.2f %.2f %.2f\n', [aveHighlightInRoi(i)  aveHighlightOutRoi(i)  highlightRoiDiff(i)]) % [cinall(i) coutall(i) ds(i)]
         if ismember(i, badROIs)
@@ -309,7 +320,7 @@ if evalBadRes
         %     i
         set(gcf,'name', sprintf('ROI: %i', i))
         hold on
-        a1 = subplot(3,3,[1,2,3]);
+        a1 = subplot(3,6,[1:6]);
 %         h1 = plot(C(i,:));
         % superimpose C and raw (shift and scale for comparison)
         h2 = plot(shiftScaleY(activity_man_eftMask_ch2(:,i)), 'b'); hold on; h1 = plot(shiftScaleY(C(i,:)), 'r');
@@ -317,16 +328,16 @@ if evalBadRes
         title(sprintf('fitness = %.2f,  srtval = %.2f', fitnessNow(i), full(srt_val(i))), 'color', col)
         xlim([1 size(C,2)])
         ylabel('C')% (denoised-demixed trace)')
-        %{
-        a2 = subplot(3,3,[4,5,6]);
-        h2 = plot(activity_man_eftMask_ch2(:,i));
+        %
+        a2 = subplot(3,6,[7:12]);
+        h0 = plot(C(i,:)); % plot(activity_man_eftMask_ch2(:,i));
         %     h2 = plot(yrac(i,:));
         title(sprintf('tau = %.2f ms, temp corr = %.2f', tau(i,2), temp_corr(i)), 'color', col)
         xlim([1 size(C,2)])
         ylabel('Raw') % (averaged pixel intensities)')
         linkaxes([a1,a2], 'x')
         %}
-        subplot(3,3,[7]); hold on
+        subplot(3,6,13); hold on
         h3 = plot(CC{i}(2,:), CC{i}(1,:), 'r');
         xlim([COMs(i,2)-50  COMs(i,2)+50])
         ylim([COMs(i,1)-50  COMs(i,1)+50])
@@ -335,12 +346,12 @@ if evalBadRes
         %     title(sprintf('#pix = %i, fitness = %.2f srtval = %.2f', mask_numpix(i), fitness(i), full(srt_val(i))))
         %     title(sprintf('#pix = %i,  meansdsig = %.2f', mask_numpix(i), meansdsig(i)))
         
-        plotCorr_FN(roiPatch, highlightPatchAvg, highlightCorrROI, A, CC, COMs, [imHeight, imWidth], i, [3,3,8], [3,3,9])
-        h4 = subplot(3,3,8);
-        h5 = subplot(3,3,9);
+        plotCorr_FN(roiPatch, highlightPatchAvg, highlightCorrROI, A, CC, COMs, [imHeight, imWidth], i, [3,6,14], [3,6,15])
+        h4 = subplot(3,6,14);
+        h5 = subplot(3,6,15);
         
         pause
-        delete([h1,h2,h3,h4,h5])
+        delete([h0,h1,h2,h3,h4,h5])
     end
     
 end

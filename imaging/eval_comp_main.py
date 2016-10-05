@@ -7,16 +7,17 @@ Created on Tue Aug 23 09:52:25 2016
 
 #%% Specify file you wish to analyze
 mousename = 'fni17'
-imagingFolder = '151029'
-mdfFileNumber = [2,3] 
+imagingFolder = '151102'
+mdfFileNumber = [1,2] 
 
 #%% Set pnevFileName 
-pnev2load = [] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
+pnev2load = []; #[3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
 signalCh = [2] # since gcamp is channel 2, should be always 2.
 
 from setImagingAnalysisNamesP import *
 
 imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load)
+print pnevFileName
 
 #%% Do imports
 import scipy     
@@ -49,6 +50,19 @@ np.shape(traces)
 idx_components, fitness, erfc = evaluate_components(traces, 5, 0)
 '''
 
+# Plot
+from matplotlib import pyplot as plt
+plt.figure
+plt.subplot(2,1,1)
+plt.plot(fitness)
+plt.ylabel('fitness')
+plt.subplot(2,1,2)
+plt.plot(idx_components)
+plt.xlabel('new index')
+plt.ylabel('old index')
+print np.shape(erfc)
+
+
 #%% Save results to mat file named "more_pnevFileName"
 fname = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
 
@@ -71,15 +85,3 @@ CC = a.pop('CC')
 mask = a.pop('mask')
 io.savemat(fname, {'idx_components':idx_components, 'fitness':fitness, 'erfc':erfc, 'CC':CC, 'mask':mask})
 '''
-
-#%% Plot
-from matplotlib import pyplot as plt
-plt.figure
-plt.subplot(2,1,1)
-plt.plot(fitness)
-plt.ylabel('fitness')
-plt.subplot(2,1,2)
-plt.plot(idx_components)
-plt.xlabel('new index')
-plt.ylabel('old index')
-print np.shape(erfc)

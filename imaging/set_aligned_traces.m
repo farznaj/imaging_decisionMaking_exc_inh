@@ -77,7 +77,9 @@ timeCommitIncorrResp0 = timeCommitIncorrResp;
 
 set_change_of_mind_trs % set change-of-mind trials. output will be trs_com.
 
-
+if save_aligned_traces
+    save(postName, '-append', 'cb', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset')
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -464,7 +466,7 @@ commitIncorrAl
 %%
 
 if save_aligned_traces
-    save(postName, '-append', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs')
+    save(postName, '-append', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs')
 end
 
 
@@ -478,6 +480,8 @@ trialHistory.prevSuccessFlg = true; % true previous sucess trials; false: previo
 trialHistory.vec_iti = [0 9 30]; % [0 10 30]; %[0 6 9 12 30]; % [0 7 30]; % [0 10 30]; % [0 6 9 12 30]; % use [0 40]; if you want to have a single iti bin and in conventioinal analysis look at the effect of current rate on outcome.
 trialHistory.choiceVec0 = NaN(length(timeStimOnset), 3);
 allTrs2rmv = [];
+prevSuccessFlg = trialHistory.prevSuccessFlg;
+vec_iti = trialHistory.vec_iti;
 
 for iTiFlg = 0:2; % 0: short ITI, 1: long ITI, 2: all ITIs.
     popClassifier_trialHistory % computes choiceVec0; % trials x 1;  1 for HR choice, 0 for LR prev choice.

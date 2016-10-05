@@ -25,8 +25,8 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % Example input variales:
 %{
 mouse = 'fni17';
-imagingFolder = '151029'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [2,3];  % 3; %1; % or tif major
+imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
 % best is to set the 2 vars below to 0 so u get times of events for all trials; later decide which ones to set to nan.
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
@@ -37,7 +37,7 @@ normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by i
 plot_ave_noTrGroup = 0; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
 evaluateEftyOuts = 0; % set to 1 when first evaluating a session.
 
-setInhibitExcit = 1; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
+setInhibitExcit = 0; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 
 frameLength = 1000/30.9; % sec.
 
@@ -311,6 +311,12 @@ if plotEftyAC1by1
 end
 
 
+%% Set number of frames per session
+if length(mdfFileNumber)>1
+    set_nFrsSess
+end
+
+    
 %% Evaluate C,f,manual activity, also tau, sn as well as some params related to A
 
 if evaluateEftyOuts
@@ -344,13 +350,14 @@ if evaluateEftyOuts
     % useful plot than the one above.
     load(imfilename, 'cs_frtrs')
     figure; hold on
-    h = plot([cs_frtrs; cs_frtrs], [-.3; .5], 'g');
-    set(h, 'handlevisibility', 'off')
+    h = plot([cs_frtrs; cs_frtrs], [-.3; .5], 'g'); % mark trial beginings
+    if exist('nFrsSess', 'var'), h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); end % mark session beginings
+    set([h; h0], 'handlevisibility', 'off')
     plot(shiftScaleY(f), 'y')
     plot(shiftScaleY(mean(activity_man_eftMask_ch2,2)), 'b')
     plot(shiftScaleY(mean(C)), 'k')
     plot(shiftScaleY(mean(S)), 'm')
-    xlim([1 1500])
+    xlim([1 size(C,2)]) % xlim([1 1500])
     legend('f','manAct', 'C', 'S')
     title('Average of all neurons')
     
@@ -856,6 +863,7 @@ if furtherAnalyses
     
     %% SVM
     
+    set_aligned_traces.m
     popClassifier
     
     
