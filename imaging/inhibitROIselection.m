@@ -1,4 +1,4 @@
-function [inhibitRois, roi2surr_sig, sigThIE] = inhibitROIselection(maskGcamp, inhibitImage, manThSet, showResults, keyEval, CCgcamp, ch2Image, COMs, C)
+function [inhibitRois, roi2surr_sig, sigTh_IE] = inhibitROIselection(maskGcamp, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CCgcamp, ch2Image, COMs, C)
 % inhibitRois = inhibitROIselection(maskGcamp, inhibitImage, sigTh, CCgcamp);
 %
 % Identifies inhibitory neurons on a gcamp channel (containing both
@@ -11,7 +11,7 @@ function [inhibitRois, roi2surr_sig, sigThIE] = inhibitROIselection(maskGcamp, i
 % sigTh: signal to noise threshold for identifying inhibitory neurons on tdtomato channel. eg. sigTh = 1.2;
 % CCgcamp: optional, cell array: 1 x units. coordinates of ROI contours on
 %   gcamp channel. If provided, a plot will be made to assess the output of the algorithm.
-% showResults: if 1, plots will be made to assess the classification of inhibitory neurons. If 1, you will need the following 2 vars.
+% assessClass_unsure_inh_excit: 3 elements, each specify whether to assess a specific class or not (unsure, inh, exc). if 1, plots will be made to assess the classification of inhibitory neurons. If 1, you will need the following 2 vars.
 % figh: handle to figure that shows all ROIs on the gcamp channel.
 % COMs: center of mass of ROIs
 %
@@ -36,8 +36,8 @@ if ~exist('manThSet', 'var')
     manThSet = 0;
 end
 
-if ~exist('showResults', 'var')
-    showResults = false;
+if ~exist('assessClass_unsure_inh_excit', 'var')
+    assessClass_unsure_inh_excit = false(1,3);
 end
 
 imHeight = size(maskGcamp,1);
@@ -45,7 +45,8 @@ imWidth = size(maskGcamp,2);
 
 % inhibitImage(inhibitImage<0) = 0;
 
-%%
+%% Compute roi2surr_sig, ie average pixel intensity inside ROI relative to its immediate surrounding. This measure will be used to identify inhibitory neurons.
+
 roi2surr_sig = NaN(1, size(maskGcamp,3));
 roi2surr_sig_num = NaN(1, size(maskGcamp,3));
 
@@ -68,7 +69,7 @@ for rr = 1 : size(maskGcamp,3);
     %     else, roiSig = 0; end
     roi2surr_sig_num(rr) = roiSigN;
     % if not doing nans for pixels outside ROI, use below.
-    %{ 
+    %{
     a = roiIm(ss);
 %     roiSig = nanmedian(a(:)); % signal magnitude of ch2 ROI on ch1 image.
     roiSig = nanmean(a(:)); % signal magnitude of ch2 ROI on ch1 image.
@@ -77,7 +78,7 @@ for rr = 1 : size(maskGcamp,3);
     if roiSig<0
         roiSig = nan;
     end
-%     roi2surr_sig(rr) = roiSig; % use this if you don't want to account for surround mask.
+    %     roi2surr_sig(rr) = roiSig; % use this if you don't want to account for surround mask.
     
     
     %% Set surrMask : a square mask surrounding roiMask (mask of ch2 ROI)
@@ -93,10 +94,10 @@ for rr = 1 : size(maskGcamp,3);
     maskn = maskSet({ccn}, imHeight, imWidth, 0);
     
     surrMask = maskn - roiMask0;
-%     figure; imagesc(surrMask)
-%     figure; imagesc(maskn)
-%     figure; imagesc(roiMask)
-
+    %     figure; imagesc(surrMask)
+    %     figure; imagesc(maskn)
+    %     figure; imagesc(roiMask)
+    
     
     %% Compute surrSig: magnitude of ch1 image surrounding ch2 ROI.
     
@@ -105,10 +106,10 @@ for rr = 1 : size(maskGcamp,3);
     %     s = sum(ss); % number of non-zero pixels in the image of ch2 surround ROI on ch1.
     %     surrSig = sum(roiIm(:)~=0);
     a = roiIm(ss);
-%     surrSig = nanmedian(a(:));
+    %     surrSig = nanmedian(a(:));
     surrSig = nanmean(a(:));
-%     sa = sort(a(:));
-%     surrSig = nanmean(sa(floor(.3*length(sa)) : floor(.7*length(sa))));
+    %     sa = sort(a(:));
+    %     surrSig = nanmean(sa(floor(.3*length(sa)) : floor(.7*length(sa))));
     
     %% Compute ratio of roi signal/surr sig.
     
@@ -153,18 +154,19 @@ quantTh = .8; % .5; % .1; % threshold for finding inhibit neurons will be sigTh 
 sigTh = quantile(roi2surr_sig, quantTh);
 % sigTh = quantile(roi2surr_sig(roi2surr_sig~=0), quantTh);
 
-figure('position', [1188         739         695         237]); hold on
-plot(sort(roi2surr_sig))
+figure('position', [1188         622         453         354]); hold on
+h = plot(sort(roi2surr_sig)); set(h, 'handlevisibility', 'off')
 plot([0 length(roi2surr_sig)], [sigTh sigTh], 'r')
 plot([0 length(roi2surr_sig)], [quantile(roi2surr_sig, .9)  quantile(roi2surr_sig, .9)], 'g')
 xlabel('Neuron number')
 ylabel('ROI / surround')
+legend('.8 quant of roi2surr\_sig', '.9 quantile of roi2surr\_sig')
 
 if manThSet % if 1, you will change the default .8 quantile to whatever you wish :)
     disp('use Data Cursor to find a threshold, then type dbcont to return to the function')
     keyboard % pause and give control to the keyboard
     sigTh = input('What threshold you like? ');
-
+    
 end
 
 
@@ -172,14 +174,11 @@ end
 
 if ~keyEval & ~manThSet % fully automatic
     
-    % Alternative approach that will not require assessing:    
+    % Alternative approach that will not require assessing:
     % count ROIs with sig_surr > .9th quantile as inhibit.
     % those with sig_surr < .8th quantile as excit.
     % those with sig_surr between .8 and .9th quantile as unknown (nan).
-    
-    cprintf('red', 'Not performing manual evaulation!\n')
-    cprintf('red', 'inhibit: > .9th quantile. excit: < .8th quantile of roi2surr_sig!\n')
-
+        
     inhibitRois = NaN(1, length(roi2surr_sig));
     
     sigThI = quantile(roi2surr_sig, .9); %.9
@@ -188,23 +187,26 @@ if ~keyEval & ~manThSet % fully automatic
     sigThE = quantile(roi2surr_sig, .8);
     inhibitRois(roi2surr_sig <= sigThE) = 0;
     
-    sigThIE = [sigThI, sigThE];
+    sigTh_IE = [sigThI, sigThE];
+    
+    cprintf('red', 'Not performing manual evaulation!\n')
+    cprintf('red', 'inhibit: > .9th quantile (%.2f)\nexcit: < .8th quantile (%.2f) of roi2surr_sig\n', sigThI, sigThE)    
     
 else
     % Above .8 quantile is defined as inhibitory and below as excitatory. Evaluate it
     % manually though!
-    cprintf('black', 'sigTh defined as %.2f quantile of roi2surr_sig\n', quantTh)
-    fprintf('Using %.2f as the threshold for finding inhibitory ROIs.\n', sigTh)
+    cprintf('black', 'sigTh defined as %.2f quantile of roi2surr_sig, = %.2f\n', quantTh, sigTh)
+    fprintf('Using %.2f as the threshold for finding inhibitory ROIs, = %.2f\n', sigTh, sigTh)
     
     inhibitRois = roi2surr_sig > sigTh; % neurons in ch2 that are inhibitory. (ie present in ch1).
     inhibitRois = double(inhibitRois); % you do this so the class is consistent with when you do manual evaluation (below)
-
-    sigThIE = [sigTh, sigTh];
+    
+    sigTh_IE = [sigTh, sigTh];
     
 end
 
 fract = mean(inhibitRois==1); % fraction of ch2 neurons also present in ch1.
-cprintf('blue', '%d: num, %.3f: fraction of inhibitory neurons in gcamp channel.\n', sum(inhibitRois==1), fract)
+cprintf('blue', '%d inhibitory neurons (%.2f%%) in gcamp channel.\n', sum(inhibitRois==1), fract*100)
 
 
 %
@@ -241,7 +243,7 @@ thCrr = .4;
 cprintf('magenta', '%.2f= threshold for finding neurons with high correlation between ch1 and ch2\n', thCrr)
 cprintf('blue', '%d= number of inhibitory neurons with high correlation\n', sum(inhibitRois(crr > thCrr)))
 
-inhibitRois(crr > thCrr) = 0; 
+inhibitRois(crr > thCrr) = 0;
 
 fract = nanmean(inhibitRois); % fraction of ch2 neurons also present in ch1.
 cprintf('*magenta*', '%d: num, %.3f: fraction of inhibitory neurons in gcamp channel.\n', sum(inhibitRois), fract)
@@ -250,41 +252,42 @@ cprintf('*magenta*', '%d: num, %.3f: fraction of inhibitory neurons in gcamp cha
 
 %% Look at ch2 ROIs on ch1 image, 1 by 1.
 
-if exist('CCgcamp', 'var') && showResults
+if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
     
-%     keyEval = 0; % Linux hangs with getKey if you click while it is running... so make sure this is set to 0! % if 0 you will simply go though ROIs one by one, otherwise it will go to getKey and you will be able to change neural classification.    
-   
+    %     keyEval = 0; % Linux hangs with getKey if you click while it is running... so make sure this is set to 0! % if 0 you will simply go though ROIs one by one, otherwise it will go to getKey and you will be able to change neural classification.
+    
     
     %% Plot ch2 image
     
     colors = hot(2*length(CCgcamp));
     colors = colors(end:-1:1,:);
     
-    figh = figure; 
+    figh = figure;
     set(figh, 'position', [1   676   415   300])
     imagesc(ch2Image);
-%     imagesc(normImage(ch2Image));
+    %     imagesc(normImage(ch2Image));
     hold on;
-%     colormap gray
+    %     colormap gray
     
     for rr = 1:length(CCgcamp)
-%         if plotCOMs
-%             plot(COMs(rr,2), COMs(rr,1), 'r.')
-%             
-%         else
-            %[CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(Ain, imHeight, imWidth, contour_threshold, im);
-            if ~isempty(CCgcamp{rr})
-                plot(CCgcamp{rr}(2,:), CCgcamp{rr}(1,:), 'color', colors(rr, :))
-            else
-                fprintf('Contour of ROI %i is empty!\n', rr)
-            end
-%         end
+        %         if plotCOMs
+        %             plot(COMs(rr,2), COMs(rr,1), 'r.')
+        %
+        %         else
+        %[CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(Ain, imHeight, imWidth, contour_threshold, im);
+        if ~isempty(CCgcamp{rr})
+            plot(CCgcamp{rr}(2,:), CCgcamp{rr}(1,:), 'color', colors(rr, :))
+        else
+            fprintf('Contour of ROI %i is empty!\n', rr)
+        end
+        %         end
     end
     title('ROIs shown on the sdImage of channel 2')
-%     if ~isvalid(figh), figh = figure; imagesc(inhibitImage); end
+    %     if ~isvalid(figh), figh = figure; imagesc(inhibitImage); end
     
-
-    %%    
+    
+    %% Set vars
+    
     % Sort rois based on the roi2surr_signal, so first inhibit neurons
     % (from low to high signal, ie from problematic to reliable) are shown.
     % Then excit neurons (from high to low signal, ie from problematic to
@@ -293,7 +296,6 @@ if exist('CCgcamp', 'var') && showResults
     % inhibit
     a = roi2surr_sig(inhibitRois==1);
     [~, i] = sort(a);
-    
     f = find(inhibitRois==1);
     inhibit_inds_lo2hi = f(i); % indeces of inhibit neurons in the array that includes all neurons, sorted from low to high value of roi2surr_sig
     % first elements (low values of roi2surr_sig) are problematic and may not be really inhibit.
@@ -302,265 +304,440 @@ if exist('CCgcamp', 'var') && showResults
     % excit
     a = roi2surr_sig(inhibitRois==0);
     [~, i] = sort(a, 'descend');
-    
     f = find(inhibitRois==0);
-    excit_inds_hi2lo = f(i); % indeces of excit neurons in the array that includes all neurons, sorted from low to high value of roi2surr_sig
+    excit_inds_hi2lo = f(i); % indeces of excit neurons in the array that includes all neurons, sorted from high to low value of roi2surr_sig
     % first elements (high values of roi2surr_sig) are problematic and may not be really excit.
     
     %     inds_inh_exc = [inhibit_inds_lo2hi, excit_inds_hi2lo]; % 1st see inhibit (ordered from low to high value of roi2surr_sig), then see excit (ordered from high to low value of roi2surr_sig)
     %     inds_inh_exc = [find(inhibitRois), find(~inhibitRois)]; % 1st see inhibit, then excit neurons
     
     
-    plotInhFirst = 1; % if 1, first inhibitory ROIs will be plotted then excit. If 0, ROIs will be plotted in their original order.
+    % unsure
+    a = roi2surr_sig(isnan(inhibitRois));  % look at unsure cases.
+    [~, i] = sort(a, 'descend');
+    f = find(isnan(inhibitRois)); % look at unsure cases.
+    unsure_inds_hi2lo = f(i); % indeces of excit neurons in the array that includes all neurons, sorted from high to low value of roi2surr_sig
     
-        
-    %
+    %     plotInhFirst = 1; % if 1, first inhibitory ROIs will be plotted then excit. If 0, ROIs will be plotted in their original order.
+    
+    
+    inhibitRois_new = double(inhibitRois); % array indicating neurons' class after manual assessment.
+    
+    
+    %{
     disp('=====================')
     disp('Evaluate inhibitory neuron identification. Figure shows medImage of inhibit neurons.')
-    %     disp('Red contours are inhibitory. Yellow: excitatory')
-    disp('Esc: quit evaluation.')
-    disp('Other keys: keep showing the same ROI.')
-    disp('When contour is shown :')
-    disp('... press Enter if happy with classification and want to see next ROI.')
-    disp('... press 0 if classification is wrong.')
-    disp('... press 2 if unsure about classification.')
-    if keyEval, cprintf('red', 'DO NOT CLICK OR THE COMPUTER WILL HANG!! only use keyboard keys!!\n'), end
+    if keyEval
+        %     disp('Red contours are inhibitory. Yellow: excitatory')
+        disp('Esc: quit evaluation.')
+        disp('Other keys: keep showing the same ROI.')
+        disp('When contour is shown :')
+        disp('... press Enter if happy with classification and want to see next ROI.')
+        disp('... press 0 if classification is wrong.')
+        disp('... press 2 if unsure about classification.')
+        cprintf('red', 'DO NOT CLICK OR THE COMPUTER WILL HANG!! only use keyboard keys!!\n')
+    else
+        disp('Press any key to go through neurons one by one.')
+    end
+    %}
     
+    %% Plot and evaluate unsure neurons
+    
+    if assessClass_unsure_inh_excit(1)
+        disp('------- Evaluating unsure neurons -------')
+        if keyEval
+            %     disp('Red contours are inhibitory. Yellow: excitatory')
+            disp('Esc: quit evaluation.')
+            disp('Other keys: keep showing the same ROI.')
+            disp('When contour is shown :')
+            disp('... press Enter if happy with classification and want to see next ROI.')
+            disp('... press 0 if neuron must be excit.')
+            disp('... press 1 if neuron muyst be inhibit.')
+            cprintf('red', 'DO NOT CLICK OR THE COMPUTER WILL HANG!! only use keyboard keys!!\n')
+        else
+            disp('Press any key to go through neurons one by one.')
+        end
+        
+        
+        fimag = figure;
+        set(fimag, 'position', [1   -18   693   610]); %[28   133   805   658]) % get(groot, 'screensize'))
+        set(gca, 'position', [0.0519    0.0656    0.9019    0.8951])
+        imagesc(inhibitImage)
+        %     imagesc(normImage(inhibitImage))
+        hold on
+        
+        ftrace = figure('position', [383   682   987   236], 'name', 'C is plotted');
+        
+        unsureEval = NaN(1, length(CCgcamp));
+        rr = 1;
+        while rr <= length(unsure_inds_hi2lo); % length(CCgcamp)
+            
+            %         if plotInhFirst
+            %             rr2 = inds_inh_exc(rr); % first plot all inhibit neurons, then all excit neurons.
+            rr2 = unsure_inds_hi2lo(rr); % rr2 is the index in the array including all neurons
+            %         else
+            %             rr2 = rr; % plot ROIs in the original order
+            %         end
+            
+            set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
+            
+            % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
+            figure(figh)
+            comd = 20;
+            xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
+            ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
+            plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5)
+            % axis image
+            
+            %         ch = 0;
+            %         while ch~=13
+            
+            % lines will be red for neurons identified as inhibitory.
+            if isnan(inhibitRois(rr2))
+                % Plot the trace
+                %             t1 = activity_man_eftMask_ch1(:,rr2);
+                %             t2 = activity_man_eftMask_ch2(:,rr2);
+                %                 crr = corr(t1, t2);
+                figure(ftrace), cla
+                plot(C(rr2,:))
+                %             ht = plot(t1); hold on
+                %             ht2 = plot(t2);
+                xlim([0  size(C, 2)])
+                %             title(crr(rr2))
+                
+                
+                % Plot ROI contour on the image
+                figure(fimag)
+                h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r');
+                title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
+                %             title(sprintf('sig/surr = %.2f   corr = %.3f', roi2surr_sig(rr2), crr(rr2)), 'color', 'r')
+                
+            else
+                figure(fimag)
+                h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'y');
+                title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'k')
+            end
+            
+            if keyEval
+                ch = getkey;
+                delete(h)
+                
+                % if enter, then go to next roi
+                if ch==13
+                    %{
+                q = input('happy? ');
+                if isempty(q)
+                    inhibitEval(rr2) = true;
+                end
+                    %}
+                    rr = rr+1;
+                    %                 break
+                    
+                    
+                    % if number 0 pressed, you want to assign this unsure ROI as excit.
+                elseif ch==48
+                    unsureEval(rr2) = 0; % rr2 is index in the all neurons array (not the inhibit neurons array).
+                    
+                    
+                    % if number 1 pressed, you want to assign this unsure ROI as inhibit.
+                elseif ch==49
+                    unsureEval(rr2) = 1;
+                    
+                    
+                    % if escape button, stop showing ROIs
+                elseif ch==27
+                    rr = length(CCgcamp);
+                    break
+                    
+                    % if any key other than enter and escape, then keep deleting and reploting the same roi
+                else
+                    ch = getkey;
+                end
+                
+            else
+                figure(figh), drawnow
+                figure(fimag), drawnow
+                figure(ftrace), drawnow
+                pause
+                delete(h)
+                rr = rr+1;
+            end
+            %         end
+            %         rr = rr+1;
+        end
+        
+        % now correct unsureRois based on your evaluation.
+        fprintf('%i of unsure ROIs are reset as excitatory.\n', sum(unsureEval==0))
+        fprintf('%i of unsure ROIs are reset as inhibitory.\n', sum(unsureEval==1))
+        inhibitRois_new(unsureEval==0) = 0; % these ROIs are misidentified as unsure, and must be excit.
+        inhibitRois_new(unsureEval==1) = 1; % these ROIs are misidentified as unsure, and must be inhibit.
+    end
     
     
     %% Plot and evaluate inhibitory neurons
     
-    disp('------- evaluating inhibitory neurons -------')
-    
-    fimag = figure;
-    set(fimag, 'position', [1   -18   693   610]); %[28   133   805   658]) % get(groot, 'screensize'))
-    set(gca, 'position', [0.0519    0.0656    0.9019    0.8951])
-    imagesc(inhibitImage)
-%     imagesc(normImage(inhibitImage))
-    hold on
-    
-    ftrace = figure('position', [383   682   987   236]);    
-    
-    inhibitEval = NaN(1, length(CCgcamp));
-    rr = 1;
-    while rr <= length(inhibit_inds_lo2hi); % length(CCgcamp)
+    if assessClass_unsure_inh_excit(2)
+        disp('------- Evaluating inhibitory neurons -------')
+        if keyEval
+            %     disp('Red contours are inhibitory. Yellow: excitatory')
+            disp('Esc: quit evaluation.')
+            disp('Other keys: keep showing the same ROI.')
+            disp('When contour is shown :')
+            disp('... press Enter if happy with classification and want to see next ROI.')
+            disp('... press 0 if classification is wrong.')
+            disp('... press 2 if unsure about classification.')
+            cprintf('red', 'DO NOT CLICK OR THE COMPUTER WILL HANG!! only use keyboard keys!!\n')
+        else
+            disp('Press any key to go through neurons one by one.')
+        end
         
-        if plotInhFirst
+        fimag = figure;
+        set(fimag, 'position', [1   -18   693   610]); %[28   133   805   658]) % get(groot, 'screensize'))
+        set(gca, 'position', [0.0519    0.0656    0.9019    0.8951])
+        imagesc(inhibitImage)
+        %     imagesc(normImage(inhibitImage))
+        hold on
+        
+        ftrace = figure('position', [383   682   987   236], 'name', 'C is plotted');
+        
+        inhibitEval = NaN(1, length(CCgcamp));
+        rr = 1;
+        while rr <= length(inhibit_inds_lo2hi); % length(CCgcamp)
+            
+            %         if plotInhFirst
             %             rr2 = inds_inh_exc(rr); % first plot all inhibit neurons, then all excit neurons.
             rr2 = inhibit_inds_lo2hi(rr); % rr2 is the index in the array including all neurons
-        else
-            rr2 = rr; % plot ROIs in the original order
-        end
-        
-        set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
-        
-        % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
-        figure(figh)
-        comd = 20;
-        xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
-        ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
-        plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5)
-        % axis image
-        
-        %         ch = 0;
-        %         while ch~=13
-        
-        % lines will be red for neurons identified as inhibitory.
-        if inhibitRois(rr2)
-%             t1 = activity_man_eftMask_ch1(:,rr2);
-%             t2 = activity_man_eftMask_ch2(:,rr2);
-            %                 crr = corr(t1, t2);
-            figure(ftrace), cla
-            plot(C(rr2,:))
-%             ht = plot(t1); hold on
-%             ht2 = plot(t2);
-            xlim([0  size(C, 2)])
-%             title(crr(rr2))
+            %         else
+            %             rr2 = rr; % plot ROIs in the original order
+            %         end
             
-            figure(fimag)
-            h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r');
-            title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
-%             title(sprintf('sig/surr = %.2f   corr = %.3f', roi2surr_sig(rr2), crr(rr2)), 'color', 'r')
+            set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
             
-        else
-            figure(fimag)
-            h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'y');
-            title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'k')
-        end
-        
-        if keyEval
-            ch = getkey;
-            delete(h)
+            % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
+            figure(figh)
+            comd = 20;
+            xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
+            ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
+            plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5)
+            % axis image
             
-            % if enter, then go to next roi
-            if ch==13
-                %{
+            %         ch = 0;
+            %         while ch~=13
+            
+            % lines will be red for neurons identified as inhibitory.
+            if inhibitRois(rr2)
+                % Plot the trace
+                %             t1 = activity_man_eftMask_ch1(:,rr2);
+                %             t2 = activity_man_eftMask_ch2(:,rr2);
+                %                 crr = corr(t1, t2);
+                figure(ftrace), cla
+                plot(C(rr2,:))
+                %             ht = plot(t1); hold on
+                %             ht2 = plot(t2);
+                xlim([0  size(C, 2)])
+                %             title(crr(rr2))
+                
+                
+                % Plot ROI contour on the image
+                figure(fimag)
+                h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r');
+                title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
+                %             title(sprintf('sig/surr = %.2f   corr = %.3f', roi2surr_sig(rr2), crr(rr2)), 'color', 'r')
+                
+            else
+                figure(fimag)
+                h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'y');
+                title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'k')
+            end
+            
+            if keyEval
+                ch = getkey;
+                delete(h)
+                
+                % if enter, then go to next roi
+                if ch==13
+                    %{
                 q = input('happy? ');
                 if isempty(q)
                     inhibitEval(rr2) = true;
                 end
-                %}
-                rr = rr+1;
-                %                 break
+                    %}
+                    rr = rr+1;
+                    %                 break
+                    
+                    
+                    % if number 0 pressed, you want to exclude this ROI from inhibit neurons.
+                elseif ch==48
+                    inhibitEval(rr2) = 0; % rr2 is index in the all neurons array (not the inhibit neurons array).
+                    
+                    
+                    % if number 2 pressed, you are unsure if this neuron is an inhibit neuron.
+                elseif ch==50
+                    inhibitEval(rr2) = 2;
+                    
+                    
+                    % if escape button, stop showing ROIs
+                elseif ch==27
+                    rr = length(CCgcamp);
+                    break
+                    
+                    % if any key other than enter and escape, then keep deleting and reploting the same roi
+                else
+                    ch = getkey;
+                end
                 
-                
-                % if number 0 pressed, you want to exclude this ROI from inhibit neurons.
-            elseif ch==48
-                inhibitEval(rr2) = 0; % rr2 is index in the all neurons array (not the inhibit neurons array).
-                
-                
-                % if number 2 pressed, you are unsure if this neuron is an inhibit neuron.
-            elseif ch==50
-                inhibitEval(rr2) = 2;
-                
-                
-                % if escape button, stop showing ROIs
-            elseif ch==27
-                rr = length(CCgcamp);
-                break
-                
-                % if any key other than enter and escape, then keep deleting and reploting the same roi
             else
-                ch = getkey;
+                figure(figh), drawnow
+                figure(fimag), drawnow
+                figure(ftrace), drawnow
+                pause
+                delete(h)
+                rr = rr+1;
             end
-            
-        else
-            figure(figh), drawnow
-            figure(fimag), drawnow
-            figure(ftrace), drawnow
-            pause
-            delete(h)
-            rr = rr+1;
+            %         end
+            %         rr = rr+1;
         end
-        %         end        
-        %         rr = rr+1;
+        
+        % now correct inhibitRois based on your evaluation.
+        %     inhibitRois_new = double(inhibitRois);
+        fprintf('%i of inhibitory ROIs are reset as excitatory.\n', sum(inhibitEval==0))
+        fprintf('%i of inhibitory ROIs are reset as unknown.\n', sum(inhibitEval==2))
+        inhibitRois_new(inhibitEval==0) = 0; % these ROIs are misidentified as inhibit, and must be excit.
+        inhibitRois_new(inhibitEval==2) = nan; % we don't know whether to classify these ROIs as excit or inhibit.
     end
-    
-    % now correct inhibitRois based on your evaluation.
-    aa = double(inhibitRois);
-    fprintf('%i of inhibitory ROIs are reset as excitatory.\n', sum(inhibitEval==0))
-    fprintf('%i of inhibitory ROIs are reset as unknown.\n', sum(inhibitEval==2))
-    aa(inhibitEval==0) = 0; % these ROIs are misidentified as inhibit, and must be excit.
-    aa(inhibitEval==2) = nan; % we don't know whether to classify these ROIs as excit or inhibit.
     
     
     %% Plot and evaluate excitatory neurons
     
-    disp('------- evaluating excitatory neurons -------')
-    
-    fimag = figure;
-    set(fimag, 'position', [1   -18   693   610]); %[28   133   805   658]) % get(groot, 'screensize'))
-    set(gca, 'position', [0.0519    0.0656    0.9019    0.8951])
-    imagesc(inhibitImage)
-    hold on
-    
-    ftrace = figure('position', [383   682   987   236]);
-    set(gca, 'position', [0.0290    0.1637    0.9524    0.7119])
-    
-    excitEval = NaN(1, length(CCgcamp));
-    rr = 1;
-    while rr <= length(excit_inds_hi2lo) % length(CCgcamp)
+    if assessClass_unsure_inh_excit(3)
+        disp('------- Evaluating excitatory neurons -------')
+        if keyEval
+            %     disp('Red contours are inhibitory. Yellow: excitatory')
+            disp('Esc: quit evaluation.')
+            disp('Other keys: keep showing the same ROI.')
+            disp('When contour is shown :')
+            disp('... press Enter if happy with classification and want to see next ROI.')
+            disp('... press 0 if classification is wrong.')
+            disp('... press 2 if unsure about classification.')
+            cprintf('red', 'DO NOT CLICK OR THE COMPUTER WILL HANG!! only use keyboard keys!!\n')
+        else
+            disp('Press any key to go through neurons one by one.')
+        end
         
-        if plotInhFirst
+        fimag = figure;
+        set(fimag, 'position', [1   -18   693   610]); %[28   133   805   658]) % get(groot, 'screensize'))
+        set(gca, 'position', [0.0519    0.0656    0.9019    0.8951])
+        imagesc(inhibitImage)
+        hold on
+        
+        ftrace = figure('position', [383   682   987   236], 'name', 'C is plotted');
+        set(gca, 'position', [0.0290    0.1637    0.9524    0.7119])
+        
+        excitEval = NaN(1, length(CCgcamp));
+        rr = 1;
+        while rr <= length(excit_inds_hi2lo) % length(CCgcamp)
+            
+            %         if plotInhFirst
             %             rr2 = inds_inh_exc(rr); % first plot all inhibit neurons, then all excit neurons.
             rr2 = excit_inds_hi2lo(rr);
-        else
-            rr2 = rr; % plot ROIs in the original order
-        end
-        
-        set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
-        
-        % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
-        figure(figh)
-        comd = 20;
-        xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
-        ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
-        % axis image
-        
-        %         ch = 0;
-        %         while ch~=13
-        
-        % lines will be red for neurons identified as inhibitory.
-        if inhibitRois(rr2)
-            figure(fimag)
-            h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r');
-            title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
-        else
-%             t1 = activity_man_eftMask_ch1(:,rr2);
-%             t2 = activity_man_eftMask_ch2(:,rr2);
-            %                 crr = corr(t1, t2);
-            figure(ftrace), cla
-            plot(C(rr2,:))
-%             ht = plot(t1); hold on
-%             ht2 = plot(t2);
-            xlim([0  size(C, 2)])
-%             title(crr(rr2))
+            %         else
+            %             rr2 = rr; % plot ROIs in the original order
+            %         end
             
+            set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
             
-            figure(fimag)
-            h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'y');
-            title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'k')
-%             title(sprintf('sig/surr = %.2f   corr = %.3f', roi2surr_sig(rr2), crr(rr2)), 'color', 'k')
-        end
-        
-        if(keyEval)
-            ch = getkey;
-            delete(h)
+            % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
+            figure(figh)
+            comd = 20;
+            xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
+            ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
+            % axis image
             
-            % if enter, then go to next roi
-            if ch==13
-                %{
+            %         ch = 0;
+            %         while ch~=13
+            
+            % lines will be red for neurons identified as inhibitory.
+            if inhibitRois(rr2)
+                figure(fimag)
+                h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r');
+                title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
+            else
+                %             t1 = activity_man_eftMask_ch1(:,rr2);
+                %             t2 = activity_man_eftMask_ch2(:,rr2);
+                %                 crr = corr(t1, t2);
+                figure(ftrace), cla
+                plot(C(rr2,:))
+                %             ht = plot(t1); hold on
+                %             ht2 = plot(t2);
+                xlim([0  size(C, 2)])
+                %             title(crr(rr2))
+                
+                
+                figure(fimag)
+                h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'y');
+                title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'k')
+                %             title(sprintf('sig/surr = %.2f   corr = %.3f', roi2surr_sig(rr2), crr(rr2)), 'color', 'k')
+            end
+            
+            if(keyEval)
+                ch = getkey;
+                delete(h)
+                
+                % if enter, then go to next roi
+                if ch==13
+                    %{
                 q = input('happy? ');
                 if isempty(q)
                     inhibitEval(rr2) = true;
                 end
-                %}
-                rr = rr+1;
-                %                 break
-                
-                
-                % if number 0 pressed, you want to exclude this ROI from excit neurons.
-            elseif ch==48
-                excitEval(rr2) = 0;
-                
-                
-                % if number 2 pressed, you are unsure if this neuron is an excit neuron.
-            elseif ch==50
-                excitEval(rr2) = 2;
-                
-                
-                % if escape button, stop showing ROIs
-            elseif ch==27
-                rr = length(CCgcamp);
-                break
-                
-                % if any key other than enter and escape, then keep deleting and reploting the same roi
+                    %}
+                    rr = rr+1;
+                    %                 break
+                    
+                    
+                    % if number 0 pressed, you want to exclude this ROI from excit neurons.
+                elseif ch==48
+                    excitEval(rr2) = 0;
+                    
+                    
+                    % if number 2 pressed, you are unsure if this neuron is an excit neuron.
+                elseif ch==50
+                    excitEval(rr2) = 2;
+                    
+                    
+                    % if escape button, stop showing ROIs
+                elseif ch==27
+                    rr = length(CCgcamp);
+                    break
+                    
+                    % if any key other than enter and escape, then keep deleting and reploting the same roi
+                else
+                    ch = getkey;
+                end
             else
-                ch = getkey;
+                figure(figh), drawnow
+                figure(fimag), drawnow
+                figure(ftrace), drawnow
+                pause
+                delete(h)
+                rr = rr+1;
             end
-        else
-            figure(figh), drawnow
-            figure(fimag), drawnow
-            figure(ftrace), drawnow
-            pause
-            delete(h)
-            rr = rr+1;
+            %         end
+            %         rr = rr+1;
         end
-        %         end        
-        %         rr = rr+1;
+        
+        % now correct inhibitRois based on your evaluation.
+        %%%     inhibitRois_new = inhibitRois;
+        fprintf('%i of excitatory ROIs are reset as inhibitory.\n', sum(excitEval==0))
+        fprintf('%i of excitatory ROIs are reset as unknown.\n', sum(excitEval==2))
+        inhibitRois_new(excitEval==0) = 1; % these ROIs are misidentified as excit, and must be inhibit.
+        inhibitRois_new(excitEval==2) = nan; % we don't know whether to classify these ROIs as excit or inhibit.
     end
-    
-    % now correct inhibitRois based on your evaluation.
-    %%%     aa = inhibitRois;
-    fprintf('%i of excitatory ROIs are reset as inhibitory.\n', sum(excitEval==0))
-    fprintf('%i of excitatory ROIs are reset as unknown.\n', sum(excitEval==2))
-    aa(excitEval==0) = 1; % these ROIs are misidentified as excit, and must be inhibit.
-    aa(excitEval==2) = nan; % we don't know whether to classify these ROIs as excit or inhibit.
     
     
     %% Finally reset inhibitRois after evaluation is done.
     
-    inhibitRois = aa;
+    inhibitRois = inhibitRois_new;
     
     
 end
@@ -597,7 +774,7 @@ for iq = length(q)-2 : length(q)-1 % 1:length(q)-1
     set(gcf, 'name', num2str(max(meas(f))))
     imagesc(im), freezeColors, colorbar, title('nonZero: ch1 - gamalSlope*ch2')
     
-    for rr = f  % ibs'        
+    for rr = f  % ibs'
 %         ax1 = [ax1, gca];
         hold on,
         % a = plot(COMs(rr,2),COMs(rr,1), 'r.');
@@ -617,7 +794,7 @@ function plotCrr(crr, inhibitRois, roi2surr_sig)
 % compute for each correlation bin the fraction of excitatory neurons with
 % that correlation and the fraction of inhibitory neurons with that
 % correlation.
-figure('position', [1248        -162         560         420]); 
+figure('position', [1248        -162         560         420]);
 
 [n,v,i] = histcounts(crr,0:.1:1);
 ex = NaN(1, length(v));

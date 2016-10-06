@@ -3,6 +3,16 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
         timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename, pnevFileName] = ....
    imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, frameLength);
 %
+% Right after you are done with preproc on the cluster, run the following scripts:
+% - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
+% - set_A_CC
+% - find_badROIs
+% - inhibit_excit_prep
+% - imaging_prep_analysis
+% - set_aligned_traces
+%
+%
+%
 % This is the main and starting function for the analysis of your imaging
 % data. It gives you the vars that you need for further analyses.
 % it used to be named aveTrialAlign_setVars
@@ -349,7 +359,7 @@ if evaluateEftyOuts
     % shift and scale C, man, etc to compare them... this is a much more
     % useful plot than the one above.
     load(imfilename, 'cs_frtrs')
-    figure; hold on
+    figure; subplot(211), hold on
     h = plot([cs_frtrs; cs_frtrs], [-.3; .5], 'g'); % mark trial beginings
     if exist('nFrsSess', 'var'), h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); end % mark session beginings
     set([h; h0], 'handlevisibility', 'off')
@@ -361,7 +371,10 @@ if evaluateEftyOuts
     legend('f','manAct', 'C', 'S')
     title('Average of all neurons')
     
-
+    subplot(212),
+    plot(mean(C_df), 'k')
+    legend('C_df')
+    
     % Assess tau and noise for each neuron
     % load(pnevFileName, 'P')
     figure;

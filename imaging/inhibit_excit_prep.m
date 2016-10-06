@@ -6,8 +6,8 @@ mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
 
 saveInhibitRois = 0;
-assessInhibitClass = 0; % you will go through inhibit and excit ROIs one by one.
-keyEval = 0; % if 1, you can change class of neurons using key presses.
+assessClass_unsure_inh_excit = [1,0,0]; % whether to assess unsure, inhibit, excit neuron classes. % you will go through unsure, inhibit and excit ROIs one by one. (if keyEval is 1, you can change class, if 0, you will only look at the images)
+keyEval = 1; % if 1, you can change class of neurons using key presses.
 manThSet = 0; % if 1, you will set the threshold for identifying inhibit neurons by looking at the roi2surr_Sig values.
 % If manThSet and keyEval are both 0, automatic identification occurs based on:
 % 'inhibit: > .9th quantile. excit: < .8th quantile of roi2surr_sig
@@ -25,11 +25,11 @@ cd(fileparts(imfilename))
 %% Load inhibitRois if it already exists, otherwise set it.
 
 %     [pd,pnev_n] = fileparts(pnevFileName);
-fname = fullfile(pd, sprintf('more_%s.mat', pnev_n)); % This file must be already created in python (when running Andrea's evaluate_comp code).
-a = matfile(fname);
+moreName = fullfile(pd, sprintf('more_%s.mat', pnev_n)); % This file must be already created in python (when running Andrea's evaluate_comp code).
+a = matfile(moreName);
 
 % If assessInhibit is 0 and the inhibitROI vars are already saved, we will load the results and wont perform inhibit identification anymore.
-if ~assessInhibitClass && exist(fname, 'file') && isprop(a, 'inhibitRois')
+if ~(sum(assessClass_unsure_inh_excit)) && exist(moreName, 'file') && isprop(a, 'inhibitRois')
     fprintf('Loading inhibitRois...\n')    
     load(imfilename, 'inhibitRois')
     
@@ -40,11 +40,11 @@ else
     % 0 for excit ROIs.
     % nan for ROIs that could not be classified as inhibit or excit.
     
-    [inhibitRois, roi2surr_sig, sigTh_IE] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessInhibitClass, keyEval);
+    [inhibitRois, roi2surr_sig, sigTh_IE] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval);
     
     if saveInhibitRois
         fprintf('Appending inhibitRois to more_pnevFile...\n')        
-        save(fname, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh_IE')
+        save(moreName, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh_IE')
         %             save(imfilename, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
     end
 end

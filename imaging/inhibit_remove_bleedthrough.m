@@ -76,6 +76,6 @@ plot(objc_common_n)
 plot(objc_regress_n)
 legend('commonSlope', 'regress')
 ylabel('Percent cost')
-
+xlabel('Neurons (only good neurons)')
 
 

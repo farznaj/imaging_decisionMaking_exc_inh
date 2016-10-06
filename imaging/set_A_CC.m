@@ -1,19 +1,11 @@
-% Right after you are done with preproc on the cluster:
-
-% run eval_comp_main on Python to save outputs of Andrea's evaluation of
-% components in a mat file named more_pnevFile... . Then: 
-
-% run this script to append to that matfile mask and CC.
-
-% then run findBadROIs
-% then run inhibit_excit_prep
-
-% In brief, right after preproc do the following:
-% - python eval_comp
+% Right after you are done with preproc on the cluster, run the following scripts:
+% - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
 % - set_A_CC
 % - find_badROIs
+% - inhibit_excit_prep
 % - imaging_prep_analysis
 % - set_aligned_traces
+
 
 %% Change these vars:
 

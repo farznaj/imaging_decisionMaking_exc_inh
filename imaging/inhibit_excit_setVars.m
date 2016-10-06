@@ -1,9 +1,9 @@
-function [inhibitRois, roi2surr_sig, sigTh_IE] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, showResults, keyEval)
+function [inhibitRois, roi2surr_sig, sigTh_IE] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval)
 % identify inhibitory neurons (only on good neurons (not badROIs))
 
 % sigTh = 1.2;
-if ~exist('showResults', 'var')
-    showResults = false; % set to true so u can evaluate if sigTh is doing a good job.
+if ~exist('assessClass_unsure_inh_excit', 'var')
+    assessClass_unsure_inh_excit = false(1,3); % set to true so u can evaluate if sigTh is doing a good job.
 end
 save_common_slope = 1; % if 1, results will be appended to pnevFile
 
@@ -160,7 +160,7 @@ ch2Image = sdImage{2};
 
 %%
 
-[inhibitRois, roi2surr_sig, sigTh_IE] = inhibitROIselection(mask, inhibitImage, manThSet, showResults, keyEval, CC, ch2Image, COMs, C); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
+[inhibitRois, roi2surr_sig, sigTh_IE] = inhibitROIselection(mask, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CC, ch2Image, COMs, C); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
 
 
 %% Show the results
