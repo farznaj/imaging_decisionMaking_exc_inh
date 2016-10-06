@@ -1,44 +1,49 @@
 load('SVM_151029_003_ch2-PnevPanResults-160426-191859.mat')
 
 
+% X: trials x neurons; includes average of window ep (defined in SVM codes) for each neuron at each trial. 
+% Y: trials x 1; animal's choice on the current trial (0: LR, 1:HR)
+% non_filtered: frames x units x trials; stimulus aligned traces. Only for active neurons and valid (non-nan) trials.
+% time_aligned: 1 x frames; time points for non-filtered trace.
 
-dataTensor = non_filtered;
+dataTensor = non_filtered; % stimulus aligned traces. Only for active neurons and valid (non-nan) trials.
 all_times = time_aligned;
 % dataTensor = traces_al_1stSideTry;
 % all_times = time_aligned_1stSideTry;
 [T, N, R] = size(dataTensor);
 
-%% average across multiple times
+%% average across multiple times (downsampling; not a moving average. we only average every regressBins points.)
 regressBins = 2;
 dataTensor = dataTensor(1:regressBins*floor(T/regressBins), : , :);
-dataTensor = squeeze(mean(reshape(dataTensor, regressBins, floor(T/regressBins), N, R), 1));
+dataTensor = squeeze(mean(reshape(dataTensor, regressBins, floor(T/regressBins), N, R), 1)); % not a moving average. we only average every regressBins points. 
 all_times = all_times(1:floor(T/regressBins)*regressBins);
 all_times = round(mean(reshape(all_times, regressBins, floor(T/regressBins)),1), 2);
 
-%% preprocess
+%% preprocess dataTensor: do mean subtraction and feature normalization (for each neuron)
 [T, N, R] = size(dataTensor);
-meanN = mean(reshape(permute(dataTensor, [1 3 2]), T*R, N));
+meanN = mean(reshape(permute(dataTensor, [1 3 2]), T*R, N)); % 1xneurons; includes the average of all time points for all trials for each neuron.
 stdN = std(reshape(permute(dataTensor, [1 3 2]), T*R, N));
-meanN = mean(X);
+meanN = mean(X); % X: trials x neurons; includes average of window ep (defined in SVM codes) for each neuron at each trial.
 stdN = std(X);
-dataTensor = bsxfun(@times, bsxfun(@minus, dataTensor, meanN), 1./(stdN+sqrt(0)));
+dataTensor = bsxfun(@times, bsxfun(@minus, dataTensor, meanN), 1./(stdN+sqrt(0))); 
 
-%% plot average per decsision
+%% plot average of dataTensor per decision (average across trials and neurons)
 figure;
 hold on
 plot(all_times, mean(mean(dataTensor(:, :, Y==0), 3), 2), 'b')
 plot(all_times, mean(mean(dataTensor(:, :, Y==1), 3), 2), 'r')
 plot(all_times, mean(mean(dataTensor(:, :, :), 3), 2), 'k')
 legend('low rate', 'high rate', 'all')
-xlabel('time (ms)')
+xlabel('time (ms)') % since stimulus onset.
 ylabel('normalized firing rates')
-%% alignment of top variance subspaces
+
+%% alignment of top variance subspaces 
 numDim = 10; % define dimensionality of subspace
-[PCs_t, Summary] = pca_t(dataTensor, numDim); % identify subspaces
+[PCs_t, Summary] = pca_t(dataTensor, numDim); % identify subspaces (FN: each row is the PC space (neurons x numPCs) for a particular time point).
 aIx = nan(T, T); % alignement index between subspaces
 for i = 1:T
     for j = 1:T
-        aIx(i,j) = alignIx(squeeze(PCs_t(i, :, :)), squeeze(PCs_t(j, :, :)));
+        aIx(i,j) = alignIx(squeeze(PCs_t(i, :, :)), squeeze(PCs_t(j, :, :))); % compute alignment between PC spaces at time points i and j. % FN: this is done by computing variance explained after projecting pc_i onto pc_j divided by variance explained before the projection.
     end
 end
 figure;
@@ -50,6 +55,7 @@ caxis([0 1])
 axis square
 xlabel('time (ms)')
 ylabel('time (ms)')
+
 %% TDR analysis
 stim = stimrate(:);
 decision = Y;

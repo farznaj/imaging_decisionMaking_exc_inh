@@ -6,8 +6,8 @@
 % s: trials x PCs --> 200   135
 % l: PCs x 1 --> 135 x 1
    
-% PCs: coeff of neurons in the PC space.
-% s: projection of X onto the PC space.
-% l: principal component variances, ie eigenvalues of the covariance matrix of X.
+% PCs: (neurons x PCs) coeff of neurons in the PC space.
+% s: (trials x PCs) projection of X onto the PC space. (s = bsxfun(@minus, X, mean(X))*PCs;)
+% l: (PCs x 1) principal component variances, ie eigenvalues of the covariance matrix of X.
 
 a = bsxfun(@minus, X, mean(X))*PCs; % this is same as s: projection of X onto the PC space.
