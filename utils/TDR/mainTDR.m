@@ -5,6 +5,7 @@ load('SVM_151029_003_ch2-PnevPanResults-160426-191859.mat')
 % Y: trials x 1; animal's choice on the current trial (0: LR, 1:HR)
 % non_filtered: frames x units x trials; stimulus aligned traces. Only for active neurons and valid (non-nan) trials.
 % time_aligned: 1 x frames; time points for non-filtered trace.
+% stimrate: trials x 1; stimulus rate of each trial.
 
 dataTensor = non_filtered; % stimulus aligned traces. Only for active neurons and valid (non-nan) trials.
 all_times = time_aligned;
@@ -12,7 +13,7 @@ all_times = time_aligned;
 % all_times = time_aligned_1stSideTry;
 [T, N, R] = size(dataTensor);
 
-%% average across multiple times (downsampling; not a moving average. we only average every regressBins points.)
+%% average across multiple times (downsample dataTensor; not a moving average. we only average every regressBins points.)
 regressBins = 2;
 dataTensor = dataTensor(1:regressBins*floor(T/regressBins), : , :);
 dataTensor = squeeze(mean(reshape(dataTensor, regressBins, floor(T/regressBins), N, R), 1)); % not a moving average. we only average every regressBins points. 
@@ -56,34 +57,58 @@ axis square
 xlabel('time (ms)')
 ylabel('time (ms)')
 
-%% TDR analysis
+%% TDR analysis: FN: 1st we do denoising. Then for each neuron and at each timepoint, we fit a regression model that predicts neural response given stimulus and choice.
 stim = stimrate(:);
 decision = Y;
 cb = 16;
 kfold = 10;
-codedParams = [[stim(:)-cb]/range(stim(:)) [decision(:)-mean(decision(:))]/range(decision(:)) ones(R, 1)];
-[~, codedParams] = normVects(codedParams); % each parameter is unit vector
+codedParams = [[stim(:)-cb]/range(stim(:)) [decision(:)-mean(decision(:))]/range(decision(:)) ones(R, 1)]; % trials x 1: stimulusRate_choice_ones; stimulusRate and choice are mean subtracted.
+[~, codedParams] = normVects(codedParams); % each parameter is unit vector % normalize each column to have length 1.
 % cb = 16; stimrate_norm = ((stimrate - cb)/max(abs(stimrate(:) - cb)));
 numPCs = 10;
-[dRAs, normdRAs, Summary] = runTDR(dataTensor, numPCs, codedParams, [], kfold);
-angle = real(acos(abs(dRAs(:,:,1)*dRAs(:,:,1)')))*180/pi;
+[dRAs, normdRAs, Summary] = runTDR(dataTensor, numPCs, codedParams, [], kfold); 
+% dRAs: times(frames) x neurons x predictors; normalized beta coefficients (ie coefficients of stimulus, choice, and offset for each neuron at each timepoint)
+
+
+% Now we compute the angle (times x times) between 2 subspaces of neurons
+% that represent particular features (stimulus,choice,offset) at all timepoints.
+%
+% angle(t1,t2,4) = Angle between 2 vectors of size 1 x neurons. 1 vector
+% represents stimulus beta at time t1 (dRAs(t1,:,1)) and the other
+% represents choice beta at time t2 dRAs(t2,:,1).
+angle = real(acos(abs(dRAs(:,:,1)*dRAs(:,:,1)')))*180/pi; % times x times
 angle(:,:,2) = real(acos(abs(dRAs(:,:,2)*dRAs(:,:,2)')))*180/pi;
 angle(:,:,3) = real(acos(abs(dRAs(:,:,3)*dRAs(:,:,3)')))*180/pi;
 angle(:,:,4) = real(acos(abs(dRAs(:,:,1)*dRAs(:,:,2)')))*180/pi;
 
 %%
 figure;
-subplot(211)
+subplot(221)
 plot(all_times, Summary.R2_t, 'k')
 xlabel('time (ms)')
 ylabel('R^2')
-subplot(212);
+
+subplot(222);
 hold on
 plot(all_times, Summary.R2_tk(:,1), 'g')
 plot(all_times, Summary.R2_tk(:,2), 'b')
+plot(all_times, Summary.R2_tk(:,3), 'c')
 xlabel('time (ms)')
-ylabel('signal contribution to firing rate')
-legend('stimulus', 'decision')
+ylabel('R2 of each predictor') % signal contribution to firing rate
+legend('stimulus', 'decision', 'offset')
+
+subplot(223); hold on; 
+a = mean(dRAs(:,:,1),2);
+plot(all_times, a, 'g')
+a = mean(dRAs(:,:,2),2);
+plot(all_times, a, 'b')
+a = mean(dRAs(:,:,3),2);
+plot(all_times, a, 'c')
+ylabel({'Normalized beta', '(average across neurons)'})
+legend('stimulus', 'decision', 'offset')
+
+
+
 figure;
 subplot(221)
 imagesc(all_times, all_times, angle(:,:,1));
@@ -94,6 +119,7 @@ caxis([0 90])
 xlabel('time (ms)')
 ylabel('time (ms)')
 axis square
+
 subplot(222)
 imagesc(all_times, all_times, angle(:,:,2));
 colormap(flipud(colormap('jet')))
