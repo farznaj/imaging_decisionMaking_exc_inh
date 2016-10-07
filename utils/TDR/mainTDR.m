@@ -152,6 +152,7 @@ axis square
 
 %%
 Q = optimize_oTDR(dataTensor, codedParams, [], []);
+
 %%
 dataTensor_proj(:, 1, :) = projectTensor(dataTensor, squeeze(Q(:, 1)));
 dataTensor_proj(:, 2, :) = projectTensor(dataTensor, squeeze(Q(:, 2)));
@@ -163,27 +164,28 @@ D = length(uniqueDecision);
 projStim = [];
 for s = 1:S
     for d = 1:D
-        msk = (stim ==uniqueStim(s)) & (decision ==uniqueDecision(d));
+        msk = (stim == uniqueStim(s)) & (decision == uniqueDecision(d));
         proj1(:, s, d) = mean(squeeze(dataTensor_proj(: ,1, msk)), 2);
-        proj2(:, s, d) = mean(squeeze(dataTensor_proj(: ,2, msk)), 2);
-        
+        proj2(:, s, d) = mean(squeeze(dataTensor_proj(: ,2, msk)), 2);        
     end
 end
 
 clr = redgreencmap(S, 'interpolation', 'linear');
+
 figure;
 subplot(121)
 hold on
 for s = 1:S
-plot(all_times, proj1(:, s, 1), '--', 'color', clr(s, :))
-plot(all_times, proj1(:, s, 2), '-', 'color', clr(s, :))
+    plot(all_times, proj1(:, s, 1), '--', 'color', clr(s, :))
+    plot(all_times, proj1(:, s, 2), '-', 'color', clr(s, :))
 end
 title('stimulus projection')
+
 subplot(122)
 hold on
 for s = 1:S
-plot(all_times, proj2(:, s, 1), '--', 'color', clr(s, :))
-plot(all_times, proj2(:, s, 2), '-', 'color', clr(s, :))
+    plot(all_times, proj2(:, s, 1), '--', 'color', clr(s, :))
+    plot(all_times, proj2(:, s, 2), '-', 'color', clr(s, :))
 end
 title('choice projection')
 
