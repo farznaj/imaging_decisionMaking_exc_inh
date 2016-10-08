@@ -31,11 +31,11 @@ for i = 1:maxIter
         %         Betas(:,j) = Betas(:,j)-stp*gradf(:,j); % update gradient with respect to data R{j}
         Betas(:,1:numSignals-1) = Betas(:,1:numSignals-1)-stp*gradf(:,1:numSignals-1); % update gradient with respect to all data
         Betas(:,numSignals) = Betas(:,numSignals)-stp*gradf(:,numSignals);
-        Q = Betas(:, 1:numSignals-1);
+        Q = Betas(:, 1:numSignals-1); % neurons x numTunedFeatures
         Beta0(:,t) = Betas(:, numSignals);
-        [u,~,v] = svd(projSpc*Q, 0);
-        a(t,:) = diag((Q')*(u*v'));
-        Q = (u*v');
+        [u,~,v] = svd(projSpc*Q, 0); %u: neurons x numTunedFeatures ; v: numTunedFeatures x numTunedFeatures
+        a(t,:) = diag((Q')*(u*v')); % diag((Q')*(u*v')) is of size numTunedFeatures x numTunedFeatures
+        Q = (u*v'); % u*v’ is the nearest orthonormal matrix.... the closest projection to the space of orthonormal matrices
     end
     %%
     
