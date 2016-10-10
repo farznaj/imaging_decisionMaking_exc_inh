@@ -1,7 +1,7 @@
 function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, good_inhibit, outcomes, allResp, allResp_HR_LR, ...
         trs2rmv, stimdur, stimrate, stimtype, cb, timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, ...
         timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename, pnevFileName] = ....
-   imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, frameLength);
+   imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength);
 %
 % Right after you are done with preproc on the cluster, run the following scripts:
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
@@ -35,19 +35,21 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % Example input variales:
 %{
 mouse = 'fni17';
-imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2];  % 3; %1; % or tif major
+imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1];  % 3; %1; % or tif major
 
 % best is to set the 2 vars below to 0 so u get times of events for all trials; later decide which ones to set to nan.
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
 rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
 
 normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
+setInhibitExcit = 1; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 
+% set the following vars to 1 when first evaluating a session.
+evaluateEftyOuts = 0; 
+compareManual = false; % compare results with manual ROI extraction
+plotEftyAC1by1 = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
 plot_ave_noTrGroup = 0; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
-evaluateEftyOuts = 0; % set to 1 when first evaluating a session.
-
-setInhibitExcit = 0; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 
 frameLength = 1000/30.9; % sec.
 
@@ -84,10 +86,8 @@ allowCorrectResp = 'change'; % 'change'; 'remove'; 'nothing'; % if 'change': on 
 uncommittedResp = 'nothing'; % 'change'; 'remove'; 'nothing'; % what to do on trials that mouse made a response (licked the side port) but did not lick again to commit it.
 
 plot_ave_trGroup = 0; % Plot average traces across all neurons for different trial groups aligned on particular trial events.
-plotEftyAC1by1 = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
 plotTrialTraces1by1 = 0; % plot traces per neuron and per trial showing all trial events
 furtherAnalyses = 0; % analyses related to choicePref and SVM will be performed.
-compareManual = false; % compare results with manual ROI extraction
 
 
 setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan provided that rmv_timeGoTone_if_stimOffset_aft_goTone = 1
@@ -171,13 +171,13 @@ figure; plot([alldata.stimDur_diff]+[alldata.stimDur_aftRew]+[alldata.extraStimD
 fhand = figure;
 subplot(221), hold on
 title(sprintf('thbeg = %d', thbeg))
-plot([all_data.waitDuration]+[all_data.postStimDelay])
-plot([all_data.stimDuration])
 plot([all_data.extraStimDuration])
 plot([all_data.stimDur_aftRew])
 plot([all_data.stimDur_diff])
+plot([all_data.waitDuration]+[all_data.postStimDelay])
+plot([all_data.stimDuration])
 % plot([thbeg thbeg],[-1 12], 'k')
-legend('waitDur', 'stimDuration', 'extraStimDur', 'stimDur\_aftRew', 'stimDur\_diff')
+legend('extraStimDur', 'stimDur\_aftRew', 'stimDur\_diff', 'waitDur', 'stimDuration')
 set(gcf, 'name', 'stimDuration= stimDur_diff (or if it is 0, waitDur) + extrastim_dur + stimdur_aftrew .')
 m = max([all_data.stimDuration]);
 ylim([-1 m+1])
@@ -297,31 +297,8 @@ for i = 1:length(tau)
 end
 
 
-%% Evaluate A and C of Efty's algorithm
-
-if plotEftyAC1by1
-    
-    load(moreName, 'CC')
-    
-    load(imfilename, 'imHeight', 'imWidth', 'medImage')
-    im = medImage{2};
-    im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt
-    
-%     C_df0 = konnerthDeltaFOverF(C', pmtOffFrames{gcampCh}, smoothPts, minPts);
-%     C_df = C_df0';
-    
-    inds2plot = randperm(size(C,1)); % 1:size(C,1); % randperm(size(C,1)) % excl(randperm(length(excl)))'; % size(C,1):-1:1;  
-    if ~exist('dFOF_man','var') % use this if you don't have manual activity
-        plotEftManTracesROIs(C_df, S, [], A, [], CC, [], [], im, C, inds2plot, 0, 0, medImage{1});
-    else % use this if you wan to compare with manual activity:
-        plotEftManTracesROIs(C_df, S, dFOF_man', A, [], CC, [], 1:size(C_df,1), im, C, inds2plot, 0, 0, medImage{1});
-        % traceQualManual = plotEftManTracesROIs(C_df, S_df, dFOF, A2, mask_eft, CC, CC_rois, eftMatchIdx_mask, im, C, inds2plot, manualTraceQual, plothists, im2)
-    end
-    
-end
-
-
 %% Set number of frames per session
+
 if length(mdfFileNumber)>1
     set_nFrsSess
 end
@@ -344,7 +321,7 @@ if evaluateEftyOuts
     [CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(A, imHeight, imWidth, contour_threshold, im, plotCOMs);
 
 
-    % plot C, f, manual activity
+    %% plot C, f, manual activity
     figure; h = [];
     subplot(413), plot(nanmean(S)); title('S'), h = [h, gca];
     subplot(412), plot(nanmean(C)); title('C'), h = [h, gca];
@@ -356,13 +333,14 @@ if evaluateEftyOuts
     end
     linkaxes(h, 'x')
     
-    % shift and scale C, man, etc to compare them... this is a much more
+    
+    %% shift and scale C, man, etc to compare them... this is a much more
     % useful plot than the one above.
     load(imfilename, 'cs_frtrs')
     figure; subplot(211), hold on
     h = plot([cs_frtrs; cs_frtrs], [-.3; .5], 'g'); % mark trial beginings
-    if exist('nFrsSess', 'var'), h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); end % mark session beginings
-    set([h; h0], 'handlevisibility', 'off')
+    if exist('nFrsSess', 'var'), h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); set([h0], 'handlevisibility', 'off'); end % mark session beginings
+    set([h], 'handlevisibility', 'off')
     plot(shiftScaleY(f), 'y')
     plot(shiftScaleY(mean(activity_man_eftMask_ch2,2)), 'b')
     plot(shiftScaleY(mean(C)), 'k')
@@ -370,12 +348,20 @@ if evaluateEftyOuts
     xlim([1 size(C,2)]) % xlim([1 1500])
     legend('f','manAct', 'C', 'S')
     title('Average of all neurons')
+    a1 = gca;
     
-    subplot(212),
+    subplot(212), hold on
+    h = plot([cs_frtrs; cs_frtrs], [min(mean(C_df)); max(mean(C_df))], 'g'); % mark trial beginings
+    if exist('nFrsSess', 'var'), h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); set([h0], 'handlevisibility', 'off'); end % mark session beginings
+    set([h], 'handlevisibility', 'off')
     plot(mean(C_df), 'k')
-    legend('C_df')
+    xlim([1 size(C,2)]) % xlim([1 1500])
+    legend('C\_df')
+    a2 = gca;
+    linkaxes([a1, a2], 'x')    
     
-    % Assess tau and noise for each neuron
+    
+    %% Assess tau and noise for each neuron
     % load(pnevFileName, 'P')
     figure;
     subplot(321), plot(tau(:,2)), xlabel('Neuron'), ylabel('Tau (ms)'), legend('decay'), xlim([0 size(A,2)+1]) %, legend('rise','decay')
@@ -390,6 +376,32 @@ if evaluateEftyOuts
     subplot(324), plot(nanmean(A,1)), ylabel('Mean A'), xlim([0 size(A,2)+1])
     subplot(326), plot(max(A,[],1)), ylabel('Max A'), xlim([0 size(A,2)+1])
     xlabel('Neuron')
+    
+end
+
+
+%% Evaluate A and C of Efty's algorithm
+
+if plotEftyAC1by1
+    
+    load(moreName, 'CC')
+    
+    load(imfilename, 'imHeight', 'imWidth', 'medImage', 'cs_frtrs')
+    im = medImage{2};
+    im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt
+    
+%     C_df0 = konnerthDeltaFOverF(C', pmtOffFrames{gcampCh}, smoothPts, minPts);
+%     C_df = C_df0';
+    
+    inds2plot = randperm(size(C,1)); % 1:size(C,1); % randperm(size(C,1)) % excl(randperm(length(excl)))'; % size(C,1):-1:1;  
+    if ~exist('dFOF_man','var') % use this if you don't have manual activity
+        plotEftManTracesROIs(C_df, S, [], A, [], CC, [], [], im, C, inds2plot, 0, 0, medImage{1}, cs_frtrs);
+    else % use this if you wan to compare with manual activity:
+        plotEftManTracesROIs(C_df, S, dFOF_man', A, [], CC, [], 1:size(C_df,1), im, C, inds2plot, 0, 0, medImage{1}, cs_frtrs);
+%         plotEftManTracesROIs(C_df, S, activity_man_eftMask_ch2', A, [], CC, [], 1:size(C_df,1), im, C, inds2plot, 0, 0, medImage{1}, cs_frtrs);  % use this if for the superimposed image you want to compare C with manActiv (instead of their df versions)
+        % traceQualManual = plotEftManTracesROIs(C_df, S_df, dFOF, A2, mask_eft, CC, CC_rois, eftMatchIdx_mask, im, C, inds2plot, manualTraceQual, plothists, im2)
+    end
+    
 end
 
 
@@ -420,7 +432,7 @@ if length(mdfFileNumber)==1
     framesPerTrial(isnan(framesPerTrial)) = [];    
     
     
-    fprintf('Total number of imaged trials: %d\n', length(trialNumbers))
+    cprintf('blue', 'Total number of imaged trials: %d\n', length(trialNumbers))
     if ~any(trialCodeMissing)
         cprintf('blue', 'All trials are triggered in MScan :)\n')
     else
@@ -706,9 +718,6 @@ if setInhibitExcit
     good_inhibit = inhibitRois(goodinds) == 1; % an array of length of good neurons, with 1s for inhibit. and 0s for excit. neurons and nans for unsure neurons.
     good_excit = inhibitRois(goodinds) == 0; % an array of length of good neurons, with 1s for excit. and 0s for inhibit neurons and nans for unsure neurons.
     
-    fprintf('Fract inhibit %.3f, excit %.3f in good quality neurons\n', [...
-        nanmean(good_inhibit), nanmean(good_excit)])
-    
     % you can use the codes below if you want to be safe:
     %     good_inhibit = inhibitRois(goodinds & roi2surr_sig >= 1.3) == 1;
     %     good_excit = inhibitRois(goodinds & roi2surr_sig <= 1.1) == 0;
@@ -723,6 +732,9 @@ if setInhibitExcit
         % green channel.
     end
     %}
+    
+    cprintf('blue', 'Fract inhibit %.3f, excit %.3f in good quality neurons\n', [nanmean(good_inhibit), nanmean(good_excit)])
+    
     
     %% Set traces for good inhibit and excit neurons.
     
@@ -785,6 +797,8 @@ end
 
 if plot_ave_noTrGroup
 
+    mkdir(fullfile(pd, 'figs')) % save the following 3 figures in a folder named "figs"
+
     outcome2ana = 'all'; % 'all'; 1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
     stimrate2ana = 'all'; % 'all'; 'HR'; 'LR';
     strength2ana = 'all'; % 'all'; 'easy'; 'medium'; 'hard';    
@@ -796,7 +810,8 @@ if plot_ave_noTrGroup
     excludeLicksPrePost = 'none'; % 'none'; 'pre'; 'post'; 'both';
     
     avetrialAlign_plotAve_noTrGroup_licks(evT, outcome2ana, stimrate2ana, strength2ana, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, nPreFrames, nPostFrames, centerLicks, leftLicks, rightLicks, excludeLicksPrePost)
-
+    savefig(fullfile(pd, 'figs','caTraces_lickAl'))
+    
     
     %%%%%% plot average imaging traces aligned on trial events
     evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
@@ -804,12 +819,14 @@ if plot_ave_noTrGroup
         'timeReward', 'timeCommitIncorrResp', 'timeStop'};
     
     avetrialAlign_plotAve_noTrGroup(evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, timeInitTone, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, timeStop)
+    savefig(fullfile(pd, 'figs','caTraces_trEventAl'))    
     
     
     %%%%%% plot average lick traces aligned on trial events.
     lickInds = [1, 2,3]; % Licks to analyze % 1: center lick, 2: left lick; 3: right lick
     
-    lickAlign(lickInds, evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, frameLength)
+    lickAlign(lickInds, evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, frameLength)    
+    savefig(fullfile(pd, 'figs','lickTraces_trEventAl'))
     
 end
 
@@ -827,6 +844,9 @@ end
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%% Start some analyses: alignement, choice preference, SVM %%%%%%%%%%%%%%%%%%%%%%%
+
+set_aligned_traces.m
+
 
 if furtherAnalyses
     %% Align traces on particular trial events
@@ -881,9 +901,8 @@ if furtherAnalyses
     % choicePref_all = choicePref_ROC(traces_al_sm_aveFr, ipsiTrs, contraTrs, makeplots, eventI_stimOn, useEqualNumTrs);
     
     
-    %% SVM
+    %% SVM    
     
-    set_aligned_traces.m
     popClassifier
     
     

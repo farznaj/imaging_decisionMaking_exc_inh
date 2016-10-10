@@ -6,8 +6,8 @@ function [badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight] = findBadROIs(mouse, i
 % example inputs:
 
 mouse = 'fni17';
-imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2];  % 3; %1; % or tif major
+imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1];  % 3; %1; % or tif major
 
 
 fixed_th_srt_val = 1; % if fixed 4150 will be used as the threshold on srt_val, if not, we will find the srt_val threshold by employing Andrea's measure

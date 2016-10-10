@@ -61,7 +61,7 @@ disp(['Analyzing ', top])
 
 %% Set the traces for licks (in time and frame resolution)
 
-[traces_lick_time, traces_lick_frame] = setLickTraces(alldata);
+[traces_lick_time, traces_lick_frame] = setLickTraces(alldata, outcomes);
 % Remember you have not applied trs2rmv to the output traces.
 
 
@@ -77,7 +77,7 @@ trs2rmvnow = find(ismember(find(trs2ana), trs2rmv));
 scopeTTLOrigTime = 0;
 [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
-    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime);
+    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, [], outcomes);
 
 
 f = figure('name', top);
@@ -199,7 +199,7 @@ end
 scopeTTLOrigTime = 1;
 [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
-    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime);
+    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, [], outcomes);
 
 
 % alldatanow = alldata(trs2ana);

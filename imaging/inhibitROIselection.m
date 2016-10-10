@@ -172,7 +172,7 @@ end
 
 %% Set inhibitory neurons
 
-if ~keyEval & ~manThSet % fully automatic
+% if ~keyEval & ~manThSet % fully automatic
     
     % Alternative approach that will not require assessing:
     % count ROIs with sig_surr > .9th quantile as inhibit.
@@ -189,12 +189,11 @@ if ~keyEval & ~manThSet % fully automatic
     
     sigTh_IE = [sigThI, sigThE];
     
-    cprintf('red', 'Not performing manual evaulation!\n')
+%     cprintf('red', 'Not performing manual evaulation!\n')
     cprintf('red', 'inhibit: > .9th quantile (%.2f)\nexcit: < .8th quantile (%.2f) of roi2surr_sig\n', sigThI, sigThE)    
-    
+%{    
 else
-    % Above .8 quantile is defined as inhibitory and below as excitatory. Evaluate it
-    % manually though!
+    % Above .8 quantile is defined as inhibitory and below as excitatory. Evaluate it manually though!
     cprintf('black', 'sigTh defined as %.2f quantile of roi2surr_sig, = %.2f\n', quantTh, sigTh)
     fprintf('Using %.2f as the threshold for finding inhibitory ROIs, = %.2f\n', sigTh, sigTh)
     
@@ -204,6 +203,7 @@ else
     sigTh_IE = [sigTh, sigTh];
     
 end
+%}
 
 fract = mean(inhibitRois==1); % fraction of ch2 neurons also present in ch1.
 cprintf('blue', '%d inhibitory neurons (%.2f%%) in gcamp channel.\n', sum(inhibitRois==1), fract*100)
@@ -344,7 +344,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
     %% Plot and evaluate unsure neurons
     
     if assessClass_unsure_inh_excit(1)
-        disp('------- Evaluating unsure neurons -------')
+        cprintf('-blue', '------- Evaluating unsure neurons -------\n')
         if keyEval
             %     disp('Red contours are inhibitory. Yellow: excitatory')
             disp('Esc: quit evaluation.')
@@ -352,7 +352,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             disp('When contour is shown :')
             disp('... press Enter if happy with classification and want to see next ROI.')
             disp('... press 0 if neuron must be excit.')
-            disp('... press 1 if neuron muyst be inhibit.')
+            disp('... press 1 if neuron must be inhibit.')
             cprintf('red', 'DO NOT CLICK OR THE COMPUTER WILL HANG!! only use keyboard keys!!\n')
         else
             disp('Press any key to go through neurons one by one.')
@@ -477,7 +477,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
     %% Plot and evaluate inhibitory neurons
     
     if assessClass_unsure_inh_excit(2)
-        disp('------- Evaluating inhibitory neurons -------')
+        cprintf('-blue', '------- Evaluating inhibitory neurons -------\n')
         if keyEval
             %     disp('Red contours are inhibitory. Yellow: excitatory')
             disp('Esc: quit evaluation.')
@@ -610,7 +610,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
     %% Plot and evaluate excitatory neurons
     
     if assessClass_unsure_inh_excit(3)
-        disp('------- Evaluating excitatory neurons -------')
+        cprintf('-blue', '------- Evaluating excitatory neurons -------\n')
         if keyEval
             %     disp('Red contours are inhibitory. Yellow: excitatory')
             disp('Esc: quit evaluation.')
@@ -739,7 +739,9 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
     
     inhibitRois = inhibitRois_new;
     
-    
+    fract = mean(inhibitRois==1); % fraction of ch2 neurons also present in ch1.
+    cprintf('blue', '%d inhibitory neurons (%.2f%%) in gcamp channel.\n', sum(inhibitRois==1), fract*100)
+
 end
 
 

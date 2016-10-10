@@ -1,4 +1,4 @@
-function [traces_lick_time, traces_lick_frame] = setLickTraces(alldata)
+function [traces_lick_time, traces_lick_frame] = setLickTraces(alldata, outcomes)
 %
 % OUTPUT: Cell array of size numTrials x 1. Each cell is a vector of licks
 % (0:no lick, 1:center, 2:left, 3:right licks) for a given trial.
@@ -72,7 +72,7 @@ end
 % you are not applying trs2rmv here... later in the traces set those trials to nan.
 scopeTTLOrigTime = 1;
 [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, centerLicks, leftLicks, rightLicks] = ...
-    setEventTimesRelBcontrolScopeTTL(alldata, [], scopeTTLOrigTime);
+    setEventTimesRelBcontrolScopeTTL(alldata, [], scopeTTLOrigTime, [], outcomes);
 % [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
 %     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
 %     setEventTimesRelBcontrolScopeTTL(alldata, [], scopeTTLOrigTime);

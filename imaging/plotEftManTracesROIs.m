@@ -1,4 +1,4 @@
-function traceQualManual = plotEftManTracesROIs(C_df, S_df, dFOF, A2, mask_eft, CC, CC_rois, eftMatchIdx_mask, im, C, inds2plot, manualTraceQual, plothists, im2)
+function traceQualManual = plotEftManTracesROIs(C_df, S_df, dFOF, A2, mask_eft, CC, CC_rois, eftMatchIdx_mask, im, C, inds2plot, manualTraceQual, plothists, im2, cs_frtrs)
 % use the following to evaluate A and C of Efty's algorithm without
 % comparing with the manual method:
 % inds2plot = 1:size(C,1);
@@ -15,9 +15,9 @@ function traceQualManual = plotEftManTracesROIs(C_df, S_df, dFOF, A2, mask_eft, 
 %%
 traceQualManual = NaN(1, length(CC));
 
-% refTrace = C2;
 % matchedTrace = activity;
 refTrace_df = C_df;
+% refTrace_df = C; % use this if for the superimposed image you want to compare C with manActiv (instead of their df versions)
 if ~isempty(dFOF)
     matchedTrace_df = dFOF;
     toMatchTrace = true;
@@ -48,12 +48,14 @@ if ~isempty(im)
     for rr = 1:length(CC)
         plot(CC{rr}(2,:), CC{rr}(1,:), 'color', [255 215 0]/255)
     end
+    title('Ch2 medImage')
     
     
     subplot(h1_1)
     imagesc(im)
     freezeColors
     set(gca, 'yticklabel', '')
+    title('Ch2 medImage')
     
 end
 
@@ -63,6 +65,7 @@ if exist('im2', 'var')
     imagesc(im2)
     freezeColors
     set(gca, 'yticklabel', '')
+    title('Ch1 medImage')
 end
 
 
@@ -76,7 +79,7 @@ cnt = 0;
 for rr = inds2plot
     
     cnt = cnt+1;
-    set(gcf, 'name', sprintf('ROI  %d / %d', cnt, length(inds2plot)))
+    set(gcf, 'name', sprintf('ROI  %d. Total %d', rr, length(inds2plot)))
     clear hp
     
     sn = S_df(rr,:);
@@ -164,6 +167,7 @@ for rr = inds2plot
         freezeColors
         xlim(xl+[-5 5])
         ylim(yl+[-5 5])
+        title('Spatial comp')
         
         hold on;
         hpn = plot(CC{rr}(2,:), CC{rr}(1,:), 'r');
@@ -195,6 +199,10 @@ for rr = inds2plot
     
     subplot(htr_1);
     hold on
+    
+    hpn = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g');
+    hp = [hp hpn'];
+    
     hpn = plot(top, 'k');
     hp = [hp hpn];
     xlim([0 size(top,2)+1])
@@ -203,10 +211,16 @@ for rr = inds2plot
     
     title(sprintf('pks %.2f   prom %.2f   prod %.2f   meas %.2f', mean(pks)/std(sn), mean(prom)/std(sn), ...
         mean(pks)/std(sn)*mean(prom)/std(sn), measQual))
-    
+    a1 = gca;
+
     
     %% plot normalized S_df
     subplot(htr_2);
+    
+    hold on
+    hpn = plot([cs_frtrs; cs_frtrs], [min(sn); max(sn)], 'g');
+    hp = [hp hpn'];
+    
     hpn = plot(sn, 'r');
     hp = [hp hpn];
     xlim([0 size(refTrace_df,2)+1])
@@ -214,7 +228,8 @@ for rr = inds2plot
         ylim([min(sn)-.05  max(sn)+.05])
     end
     ylabel('Normalized S')
-    
+    a2 = gca;
+
     
     %% compare Eft trace with manually computed trace
     %%% scaled and shifted version so the 2 plots overlap.
@@ -243,6 +258,10 @@ for rr = inds2plot
     %%% matched df/f
     subplot(htr_3)
     hold on;
+    
+    hpn = plot([cs_frtrs; cs_frtrs], [min(tr); max(tr)], 'g');
+    hp = [hp hpn'];
+    
     if ~isempty(dFOF) && ~isnan(imatched)
         
         y1 = shiftScaleY(matchedTrace_df(imatched,:));
@@ -272,7 +291,10 @@ for rr = inds2plot
         set(handle,'Position',[v(2)*.5 v(4)-v(4)*.05 0]);
         %     xlabel(sprintf('corr: %.2f', c));
     end
-    
+    a3 = gca;
+
+    linkaxes([a1,a2,a3], 'x')
+
     
     %% plot some hists.
     if plothists
