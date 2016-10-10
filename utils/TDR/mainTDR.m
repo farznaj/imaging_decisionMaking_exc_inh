@@ -1,14 +1,63 @@
-load('SVM_151029_003_ch2-PnevPanResults-160426-191859.mat')
+mouse = 'fni17';
+imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
+
+% the following are needed for setting stim-aligned traces.
+ep_ms = [700 900]; % make sure no trial includes go tone before the end of ep % ep_ms will be used for setting X (trials x neurons, average of neural activity in window ep relative to stimulus onset).
+th_stim_dur = 800; % min stim duration to include a trial in timeStimOnset
+% the following are needed for setting X, Y, TrsExcluded, NsExcluded
+trialHistAnalysis = 0;
+outcome2ana = 'corr'; % only used if trialHistAnalysis is 0; % '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials)
+strength2ana = 'all'; % only used if trialHistAnalysis is 0; % 'all', easy', 'medium', 'hard' % What stim strength to use for training?
 
 
+%% Load stimrate and set the following variables
+
+% traces_al_stim: frames x units x trials; stimulus aligned traces. Only for active neurons and valid (non-nan) trials.
+% time_aligned_stim: 1 x frames; time points for non-filtered trace.
 % X: trials x neurons; includes average of window ep (defined in SVM codes) for each neuron at each trial. 
 % Y: trials x 1; animal's choice on the current trial (0: LR, 1:HR)
-% non_filtered: frames x units x trials; stimulus aligned traces. Only for active neurons and valid (non-nan) trials.
-% time_aligned: 1 x frames; time points for non-filtered trace.
+
 % stimrate: trials x 1; stimulus rate of each trial.
 
-dataTensor = non_filtered; % stimulus aligned traces. Only for active neurons and valid (non-nan) trials.
-all_times = time_aligned;
+
+signalCh = 2;
+pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the latest pnev vile). Set [] to load the latest one.
+[imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
+[pd, pnev_n] = fileparts(pnevFileName);
+postName = fullfile(pd, sprintf('post_%s.mat', pnev_n));
+
+load(postName, 'stimAl_allTrs', 'stimrate', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'outcomes', 'allResp_HR_LR', 'cb')
+% load('SVM_151029_003_ch2-PnevPanResults-160426-191859.mat')
+
+
+% Set traces_al_stim: same as traces_al_stimAll except that some trials are
+% set to nan: bc their stim duration is < th_stim_dur ms or bc their go
+% tone happens before ep(end) ms. (In traces_al_stimAll, all trials are
+% included).
+traces_al_stimAll = stimAl_allTrs.traces;
+time_aligned_stim = stimAl_allTrs.time;
+eventI = stimAl_allTrs.eventI;
+
+popClassifier_setToRmv % set toRmv, ie trials in which go tone happened before ep_ms(end) and trials that have <th_stim_dur duration. 
+
+traces_al_stim = traces_al_stimAll;
+traces_al_stim(:,:,toRmv) = nan;
+
+
+% Set X, Y, TrsExcluded, NsExcluded
+popClassifier_setXY % set X, Y, TrsExcluded, NsExcluded
+
+% Exclude nan trials and non-active neurons from traces_al_stim
+traces_al_stim = traces_al_stim(:, ~NsExcluded, ~trsExcluded);
+
+% Exclude nan trials from stimrate
+stimrate = stimrate(~trsExcluded);
+
+
+%%
+dataTensor = traces_al_stim; % non_filtered; % stimulus aligned traces. Only for active neurons and valid (non-nan) trials.
+all_times = time_aligned_stim; % time_aligned;
 % dataTensor = traces_al_1stSideTry;
 % all_times = time_aligned_1stSideTry;
 [T, N, R] = size(dataTensor);

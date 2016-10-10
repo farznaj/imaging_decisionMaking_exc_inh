@@ -1,6 +1,6 @@
 function popClassifier(alldata, alldataSpikesGood, outcomes, allResp_HR_LR, frameLength, ...
     timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, ...
-    neuronType, trialHistAnalysis, numShuffs, nPreFrames, nPostFrames, alignedEvent, onlyCorrect, smoothedTraces, iTiFlg, prevSuccessFlg, vec_iti, trs2rmv, stimrate, cb, good_excit, good_inhibit);
+    neuronType, trialHistAnalysis, numShuffs, nPreFrames, nPostFrames, alignedEvent, outcome2ana, smoothedTraces, iTiFlg, prevSuccessFlg, vec_iti, trs2rmv, stimrate, cb, good_excit, good_inhibit, strength2ana);
 %
 % This is the main function for doing SVM analysis on calcium imaging data.
 % Run imaging_prep_analysis to get the required input vars.
@@ -23,7 +23,9 @@ trialHistAnalysis = 0; % more parameters are specified in popClassifier_trialHis
     vec_iti = [0 9 30]; % [0 10 30]; %[0 6 9 12 30]; % [0 7 30]; % [0 10 30]; % [0 6 9 12 30]; % use [0 40]; if you want to have a single iti bin and in conventioinal analysis look at the effect of current rate on outcome.
     
 numShuffs = 10; % 100 % number of iterations for getting CV models and shuffled data.
-onlyCorrect = 1; % If 1, analyze only correct trials.
+outcome2ana = 'corr'; % only used if trialHistAnalysis is 0; % '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials)
+strength2ana = 'all'; % only used if trialHistAnalysis is 0; % 'all', easy', 'medium', 'hard' % What stim strength to use for training?
+
 
 % Set nPre and nPost to nan to make sure frames before and after
 % alignedEvent don't have any other events.
@@ -158,6 +160,22 @@ outcomes(allTrs2rmv) = NaN;
 allResp_HR_LR(allTrs2rmv) = NaN;
 
 
+%%
+s = (stimrate-cb)'; 
+allStrn = unique(abs(s));
+switch strength2ana
+    case 'easy'
+        str2ana = (abs(s) >= (max(allStrn) - thStimStrength));
+    case 'hard'
+        str2ana = (abs(s) <= thStimStrength);
+    case 'medium'
+        str2ana = ((abs(s) > thStimStrength) & (abs(s) < (max(allStrn) - thStimStrength))); % intermediate strength
+    otherwise
+        str2ana = true(1, length(outcomes));
+end
+fprintf('Number of trials with stim strength of interest = %i', sum(str2ana))
+
+
 %% Start setting Y: the response vector
 
 if trialHistAnalysis
@@ -165,13 +183,20 @@ if trialHistAnalysis
 else
     choiceVec0 = allResp_HR_LR';  % trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.
     
-    if onlyCorrect
+    if strcmp(outcome2ana, 'corr')
         cprintf('blue', 'Analyzing only correct trials.\n')
         choiceVec0(outcomes~=1) = NaN; % analyze only correct trials.
-%         choiceVec0(outcomes~=0) = NaN; % analyze only incorrect trials.
+        
+    elseif strcmp(outcome2ana, 'incorr')
+        choiceVec0(outcomes~=0) = NaN; % analyze only incorrect trials.
+        cprintf('blue', 'Analyzing only incorrect trials.\n')
+        
     else
         cprintf('blue', 'Analyzing both correct and incorrect trials.\n')
     end
+    
+    choiceVec0(~str2ana) = np.nan; 
+    
 end
 
 fprintf('#trials for LR and HR choices = %d  %d\n', [sum(choiceVec0==0), sum(choiceVec0==1)])
