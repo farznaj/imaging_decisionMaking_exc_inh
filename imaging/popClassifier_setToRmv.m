@@ -39,8 +39,8 @@ end
 % th_stim_dur = 800; % min stim duration to include a trial in timeStimOnset
 
 figure; hold on
-plot(timeCommitCL_CR_Gotone - timeStimOnset)
 plot(timeStimOffset - timeStimOnset)
+plot(timeCommitCL_CR_Gotone - timeStimOnset)
 plot([1 length(timeCommitCL_CR_Gotone)],[th_stim_dur th_stim_dur],'g')
 ylabel('Time relative to stim onset (ms)')
 legend('stimOffset','goTone', 'th\_stim\_dur')
