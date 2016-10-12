@@ -35,8 +35,8 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % Example input variales:
 %{
 mouse = 'fni17';
-imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1];  % 3; %1; % or tif major
+imagingFolder = '151029'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [2,3];  % 3; %1; % or tif major
 
 % best is to set the 2 vars below to 0 so u get times of events for all trials; later decide which ones to set to nan.
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
@@ -46,10 +46,10 @@ normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by i
 setInhibitExcit = 1; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 
 % set the following vars to 1 when first evaluating a session.
-evaluateEftyOuts = 0; 
-compareManual = false; % compare results with manual ROI extraction
+evaluateEftyOuts = 1; 
+compareManual = 1; % compare results with manual ROI extraction
+plot_ave_noTrGroup = 1; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
 plotEftyAC1by1 = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
-plot_ave_noTrGroup = 0; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
 
 frameLength = 1000/30.9; % sec.
 
@@ -845,7 +845,7 @@ end
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%% Start some analyses: alignement, choice preference, SVM %%%%%%%%%%%%%%%%%%%%%%%
 
-set_aligned_traces.m
+set_aligned_traces
 
 
 if furtherAnalyses

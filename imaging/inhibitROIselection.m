@@ -154,7 +154,7 @@ quantTh = .8; % .5; % .1; % threshold for finding inhibit neurons will be sigTh 
 sigTh = quantile(roi2surr_sig, quantTh);
 % sigTh = quantile(roi2surr_sig(roi2surr_sig~=0), quantTh);
 
-figure('position', [1188         622         453         354]); hold on
+figure('position', [1443         622         453         354]); hold on
 h = plot(sort(roi2surr_sig)); set(h, 'handlevisibility', 'off')
 plot([0 length(roi2surr_sig)], [sigTh sigTh], 'r')
 plot([0 length(roi2surr_sig)], [quantile(roi2surr_sig, .9)  quantile(roi2surr_sig, .9)], 'g')
@@ -264,11 +264,12 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
     
     figh = figure;
     set(figh, 'position', [1   676   415   300])
-    imagesc(ch2Image);
+    subplot(211), imagesc(ch2Image); hold on
+    subplot(212), imagesc(inhibitImage); hold on
     %     imagesc(normImage(ch2Image));
-    hold on;
     %     colormap gray
     
+    subplot(211)
     for rr = 1:length(CCgcamp)
         %         if plotCOMs
         %             plot(COMs(rr,2), COMs(rr,1), 'r.')
@@ -283,6 +284,18 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
         %         end
     end
     title('ROIs shown on the sdImage of channel 2')
+    
+    
+    subplot(212)
+    for rr = 1:length(CCgcamp)
+        if ~isempty(CCgcamp{rr})
+            plot(CCgcamp{rr}(2,:), CCgcamp{rr}(1,:), 'color', colors(rr, :))
+        else
+            fprintf('Contour of ROI %i is empty!\n', rr)
+        end
+    end
+    title('ch1 image')
+    
     %     if ~isvalid(figh), figh = figure; imagesc(inhibitImage); end
     
     
@@ -375,6 +388,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             %         if plotInhFirst
             %             rr2 = inds_inh_exc(rr); % first plot all inhibit neurons, then all excit neurons.
             rr2 = unsure_inds_hi2lo(rr); % rr2 is the index in the array including all neurons
+            nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 5); nearbyROIs(nearbyROIs==rr2) = [];
             %         else
             %             rr2 = rr; % plot ROIs in the original order
             %         end
@@ -383,10 +397,21 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             
             % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
             figure(figh)
+            subplot(211)
+            plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5)
             comd = 20;
             xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
             ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
-            plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5)
+            
+            subplot(212) % plot on inhibitImage, the current ROI and its too nearby ROIs
+            plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5);
+            xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
+            ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
+            if ~isempty(nearbyROIs)
+                for nnb = nearbyROIs'
+                    plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1.5)
+                end
+            end
             % axis image
             
             %         ch = 0;
@@ -400,6 +425,17 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 %                 crr = corr(t1, t2);
                 figure(ftrace), cla
                 plot(C(rr2,:))
+                
+                % If there are any too close ROIs (which most likely are
+                % all the same ROI) plot them.                
+                if ~isempty(nearbyROIs)
+                    hold on
+                    for nnb = nearbyROIs'
+                        plot(C(nnb,:))
+                    end
+                    hold off
+                end
+                
                 %             ht = plot(t1); hold on
                 %             ht2 = plot(t2);
                 xlim([0  size(C, 2)])
@@ -410,6 +446,13 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 figure(fimag)
                 h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r');
                 title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
+                
+%                 if ~isempty(nearbyROIs)
+%                     hold on
+%                     hn = plot(COMs(nearbyROIs,2), COMs(nearbyROIs,1), 'r.');
+%                     h = [h, hn];
+%                 end
+                    
                 %             title(sprintf('sig/surr = %.2f   corr = %.3f', roi2surr_sig(rr2), crr(rr2)), 'color', 'r')
                 
             else
@@ -418,9 +461,10 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'k')
             end
             
+            
             if keyEval
                 ch = getkey;
-                delete(h)
+                pause(.1); delete(h)
                 
                 % if enter, then go to next roi
                 if ch==13

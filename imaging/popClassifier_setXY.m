@@ -1,6 +1,9 @@
 % set X, Y, TrsExcluded, NsExcluded
 
 frameLength = 1000/30.9; % sec.
+% thAct = 1e-4; %quantile(spikeAveEpAveTrs, .1);
+% thTrsWithSpike = 1; % 3; % 1; % ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
+
 
 %%
 s = (stimrate-cb)'; 
@@ -90,7 +93,7 @@ fprintf('%d high-rate trials, and %d low-rate trials\n', sum(Y==1), sum(Y==0))
 
 % Set nonActiveNs, ie neurons whose average activity during ep is less than thAct.
 spikeAveEpAveTrs = nanmean(spikeAveEp0); % 1 x units % response of each neuron averaged across epoch ep and trials.
-thAct = 1e-4; %quantile(spikeAveEpAveTrs, .1);
+% thAct = 1e-4; %quantile(spikeAveEpAveTrs, .1);
 % cprintf('m','You are using .1 quantile of average activity during ep across all neurons as threshold for identifying non-active neurons. This is arbitrary and needs evaluation!\n')
 % thAct = 1e-3; % could be a good th for excluding neurons w too little activity.
 nonActiveNs = spikeAveEpAveTrs < thAct;
@@ -99,7 +102,7 @@ fprintf('%d= # neurons with ave activity in ep < %.4f\n', sum(nonActiveNs), thAc
 
 % Set NsFewTrActiv, ie neurons that are active in very few trials (by active I mean average activity during epoch ep)
 % thMinFractTrs = .05; %.01; % a neuron must be active in >= .1 fraction of trials to be used in the population analysis.
-thTrsWithSpike = 1; % 3; % 1; % ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
+% thTrsWithSpike = 1; % 3; % 1; % ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
 
 % nTrsWithSpike = sum(spikeAveEp0 > 0); % in how many trials each neuron
 % had activity (remember this is average spike during ep).

@@ -1,6 +1,6 @@
 mouse = 'fni17';
-imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2];  % 3; %1; % or tif major
+imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1];  % 3; %1; % or tif major
 
 % the following are needed for setting stim-aligned traces.
 ep_ms = [700 900]; % make sure no trial includes go tone before the end of ep % ep_ms will be used for setting X (trials x neurons, average of neural activity in window ep relative to stimulus onset).
@@ -9,6 +9,8 @@ th_stim_dur = 800; % min stim duration to include a trial in timeStimOnset
 trialHistAnalysis = 0;
 outcome2ana = 'corr'; % only used if trialHistAnalysis is 0; % '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials)
 strength2ana = 'all'; % only used if trialHistAnalysis is 0; % 'all', easy', 'medium', 'hard' % What stim strength to use for training?
+thAct = 5e-4; % 1e-4; % quantile(spikeAveEpAveTrs, .1);
+thTrsWithSpike = 1; % 3; % 1; % ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
 
 
 %% Load stimrate and set the following variables

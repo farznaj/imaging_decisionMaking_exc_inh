@@ -10,8 +10,8 @@
 %% Change these vars:
 
 mouse = 'fni17';
-imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1];  % 3; %1; % or tif major
+imagingFolder = '151029'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [2,3];  % 3; %1; % or tif major
 
 
 %% Set imfilename, pnevFileName, fname

@@ -78,7 +78,7 @@ timeCommitIncorrResp0 = timeCommitIncorrResp;
 set_change_of_mind_trs % set change-of-mind trials. output will be trs_com.
 
 if save_aligned_traces
-    save(postName, '-append', 'cb', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset')
+    save(postName, '-append', 'cb', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp')
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

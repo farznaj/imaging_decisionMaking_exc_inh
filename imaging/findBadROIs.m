@@ -6,14 +6,14 @@ function [badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight] = findBadROIs(mouse, i
 % example inputs:
 
 mouse = 'fni17';
-imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1];  % 3; %1; % or tif major
+imagingFolder = '151029'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [2,3];  % 3; %1; % or tif major
 
+savebadROIs01 = 1; % if 1, badROIs01 will be appended to more_pnevFile
+evalBadRes = 1; % plot figures to evaluate the results
 
 fixed_th_srt_val = 1; % if fixed 4150 will be used as the threshold on srt_val, if not, we will find the srt_val threshold by employing Andrea's measure
-savebadROIs01 = 0; % if 1, badROIs01 will be appended to more_pnevFile
 exclude_badHighlightCorr = 1;
-evalBadRes = 1; % plot figures to evaluate the results
 
 th_AG = -20; % you can change it to -30 to exclude more of the poor quality ROIs.
 th_srt_val = 4150;
@@ -62,7 +62,7 @@ fitnessNow(idx_components) = fitness;
 %}
 
 % highlightCorrROI = highlightCorrROI';
-highlightCorrROI = rval_space; 
+% highlightCorrROI = rval_space; 
 srt_val = full(srt_val);
 
 
@@ -97,7 +97,9 @@ xlabel('Tau\_decay (ms)')
 
 %% Highlight-reel vs spatial component correaltion
 
-figure(fht), subplot(323), histogram(highlightCorrROI)
+figure(fht), subplot(323), hold on
+histogram(highlightCorrROI')
+histogram(rval_space)
 hold on, plot([th_badHighlightCorr th_badHighlightCorr],[0 100],'r')
 xlabel('highlight-raw vs spatial-comp corr')
 
@@ -155,7 +157,7 @@ figure;
 subplot(611), plot(srt_val), title('sort value')
 subplot(612), plot(fitnessNow), title('fitness')
 subplot(613), plot(temp_corr), title('temp corr')
-subplot(614), plot(highlightCorrROI), title('spac corr')
+subplot(614), hold on; plot(highlightCorrROI'), plot(rval_space), title('spac corr')
 subplot(615), plot(tau(:,2)), title('decay tau')
 subplot(616), plot(mask_numpix), title('mask # pixels')
 % subplot(616), plot(meansdsig), title('meanSdImage')
@@ -176,7 +178,7 @@ badEP = srt_val < th_srt_val;
 smallROI = mask_numpix < th_smallROI; 
 shortDecayTau = tau(:,2) < th_shortDecayTau; 
 badTempCorr = temp_corr < th_badTempCorr; 
-badHighlightCorr = highlightCorrROI < th_badHighlightCorr; 
+badHighlightCorr = rval_space < th_badHighlightCorr; 
 
 fprintf('sum(badAG): %d\n', sum(badAG))
 fprintf('sum(badEP & ~badAll): %d\n', sum(badEP & ~(badAG | smallROI | shortDecayTau | badTempCorr | badHighlightCorr))) %
@@ -184,7 +186,7 @@ fprintf('sum(smallROI & ~badAll): %d\n', sum(smallROI & ~(badEP | badAG | shortD
 fprintf('sum(shortDecayTau & ~badAll): %d\n', sum(shortDecayTau & ~(badEP | badAG | smallROI | badTempCorr | badHighlightCorr)))
 fprintf('sum(badTempCorr & ~badAll)): %d\n', sum(badTempCorr & ~(badEP | badAG | smallROI | shortDecayTau | badHighlightCorr))) %
 fprintf('sum(badHighlightCorr& ~badAll): %d\n', sum(badHighlightCorr& ~(badEP | badAG | smallROI | shortDecayTau | badTempCorr)))
-% goodSrtvalButbadHighlightCorr = (highlightCorrROI < .5 & srt_val >= 1e4); % these have good trace quality but are mostly neuropils. so you can later decide to add them or not.
+% goodSrtvalButbadHighlightCorr = (rval_space < .5 & srt_val >= 1e4); % these have good trace quality but are mostly neuropils. so you can later decide to add them or not.
 
 
 %% Define final bad ROIs using a combination of measures
@@ -236,7 +238,7 @@ im = sdImage{2}; % medImage{2};
 
 
 % bad components
-figure
+fh2 = figure;
 subplot(211);
 imagesc(im)
 hold on
@@ -246,7 +248,7 @@ end
 title('bad components')
 
 % good components
-subplot(212)
+figure(fh2); subplot(212)
 imagesc(im)
 hold on
 for rr = find(~badROIs01')
@@ -305,7 +307,7 @@ if evalBadRes
     badROIs = find(badROIs01);
     % goodinds = ~badROIs01;
 
-    figure('position', [-249         248        2365         609]);
+    fh3 = figure('position', [-249         248        2365         609]);
     subplot(3,6,13);
     imagesc(log(sdImage{2}))
     
@@ -318,8 +320,7 @@ if evalBadRes
             col = 'k';
         end
         %     i
-        set(gcf,'name', sprintf('ROI: %i', i))
-        hold on
+        figure(fh3); set(gcf,'name', sprintf('ROI: %i', i));  hold on
         a1 = subplot(3,6,[1:6]);
 %         h1 = plot(C(i,:));
         % superimpose C and raw (shift and scale for comparison)
@@ -327,16 +328,18 @@ if evalBadRes
         %     title(sprintf('tau = %.2f ms', tau(i,2))),  % title(sprintf('%.2f, %.2f', [temp_corr(i), tau(i,2)])),
         title(sprintf('fitness = %.2f,  srtval = %.2f', fitnessNow(i), full(srt_val(i))), 'color', col)
         xlim([1 size(C,2)])
-        ylabel('C')% (denoised-demixed trace)')
+        ylabel('Raw and C')% (denoised-demixed trace)')
         %
+        figure(fh3);
         a2 = subplot(3,6,[7:12]);
         h0 = plot(C(i,:)); % plot(activity_man_eftMask_ch2(:,i));
         %     h2 = plot(yrac(i,:));
         title(sprintf('tau = %.2f ms, temp corr = %.2f', tau(i,2), temp_corr(i)), 'color', col)
         xlim([1 size(C,2)])
-        ylabel('Raw') % (averaged pixel intensities)')
+        ylabel('C') % (averaged pixel intensities)')
         linkaxes([a1,a2], 'x')
         %}
+        figure(fh3);
         subplot(3,6,13); hold on
         h3 = plot(CC{i}(2,:), CC{i}(1,:), 'r');
         xlim([COMs(i,2)-50  COMs(i,2)+50])
@@ -346,7 +349,8 @@ if evalBadRes
         %     title(sprintf('#pix = %i, fitness = %.2f srtval = %.2f', mask_numpix(i), fitness(i), full(srt_val(i))))
         %     title(sprintf('#pix = %i,  meansdsig = %.2f', mask_numpix(i), meansdsig(i)))
         
-        plotCorr_FN(roiPatch, highlightPatchAvg, highlightCorrROI, A, CC, COMs, [imHeight, imWidth], i, [3,6,14], [3,6,15])
+        figure(fh3);
+        plotCorr_FN(roiPatch, highlightPatchAvg, rval_space, A, CC, COMs, [imHeight, imWidth], i, [3,6,14], [3,6,15])
         h4 = subplot(3,6,14);
         h5 = subplot(3,6,15);
         
