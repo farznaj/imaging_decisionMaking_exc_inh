@@ -299,9 +299,31 @@ end
 
 %% Set number of frames per session
 
-if length(mdfFileNumber)>1
-    set_nFrsSess
-end
+% if length(mdfFileNumber)>1
+[nFrsSess, nFrsMov] = set_nFrsSess(mouse, imagingFolder, mdfFileNumber); % nFrsMov: for each session shows the number of frames in each tif file.
+cs_frmovs = [0, cumsum(cell2mat(nFrsMov))]; % cumsum of nFrsMov: shows number of frames per tif movie (includes all tif movies of mdfFileNumber). 
+% frs = cs_frmovs(itif)+1 : cs_frmovs(itif+1); % frames that belong to movie itif (indeces corresponds to the entire movie) 
+save(imfilename, '-append', 'cs_frmovs')  
+% end
+
+%{
+% Find the tif movie that contains a frame:
+% (going from a frame on the entire movie to that same frame on the tif movie that contains the frame)
+
+% find the index of a frame on the tif movie that the frame belongs to
+% (by using the frame index on the entire movie) ... ie match frame
+% indeces between entire movie (iall) and the tif movie that contains the
+% frame (imov):
+iall = 31428; % frame index on the entire movie (eg on S)
+itif = find((cs_frmovs - iall)>0, 1)-1 % tif movie containing frame iall
+imov = iall - cs_frmovs(itif) % frame index on the movie itif 
+
+% Find the trial that contains frame iall
+itr = find((cs_frtrs - iall)>0, 1)-1; % trial that contains frame iall 
+% Find the frame index of a trial (its onset) on movie itif
+cs_frtrs(itr) - cs_frmovs(itif) % frame of trial itr on movie itif (ie frame index of trial itr relative to
+% the beginning of movie itif)
+%}
 
     
 %% Evaluate C,f,manual activity, also tau, sn as well as some params related to A
@@ -338,8 +360,12 @@ if evaluateEftyOuts
     % useful plot than the one above.
     load(imfilename, 'cs_frtrs')
     figure; subplot(211), hold on
-    h = plot([cs_frtrs; cs_frtrs], [-.3; .5], 'g'); % mark trial beginings
-    if exist('nFrsSess', 'var'), h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); set([h0], 'handlevisibility', 'off'); end % mark session beginings
+    h = plot([cs_frtrs; cs_frtrs], [-.3; .5], 'g'); % mark trial beginnings
+    if exist('nFrsSess', 'var'), 
+        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
+        h00 = plot([cs_frmovs; cs_frmovs], [-.5; 1], 'k:'); % mark tif movie beginnings
+        set([h0; h00], 'handlevisibility', 'off'); 
+    end 
     set([h], 'handlevisibility', 'off')
     plot(shiftScaleY(f), 'y')
     plot(shiftScaleY(mean(activity_man_eftMask_ch2,2)), 'b')
