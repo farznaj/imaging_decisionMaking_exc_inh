@@ -35,8 +35,8 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % Example input variales:
 %{
 mouse = 'fni17';
-imagingFolder = '151029'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [2,3];  % 3; %1; % or tif major
+imagingFolder = '151020'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
 % best is to set the 2 vars below to 0 so u get times of events for all trials; later decide which ones to set to nan.
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)

@@ -6,8 +6,8 @@ function [badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight] = findBadROIs(mouse, i
 % example inputs:
 
 mouse = 'fni17';
-imagingFolder = '151029'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [2,3];  % 3; %1; % or tif major
+imagingFolder = '151020'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
 savebadROIs01 = 1; % if 1, badROIs01 will be appended to more_pnevFile
 evalBadRes = 1; % plot figures to evaluate the results

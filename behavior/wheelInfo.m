@@ -36,17 +36,18 @@ traces_wheel_new = traces_wheel;
 for ii = 1:length(alldata)
     a = alldata(ii).wheelRev;
     
-    % figure; hold on
-    % plot(a)
     % xlabel('Rotary samples')
     % ylabel('Rotary position')
     
     % Rotary position seems to reset (to +16) once it reaches -16. We need to
     % take care of this! You do this by subtracting out the amount of jump from
     % point ~-16 to ~16:
-    f = find(round(diff(a)) > 16);
+%     f = find(round(diff(a)) > 16);
+    f = find(round(abs(diff(a))) > 16); % using abs, bc sometimes it goees to -16 from 16 soon after a reset!
     
-    if ~isempty(f)
+    if ~isempty(f)    
+%         figure('name', num2str(ii)); hold on
+%         plot(a)
         fprintf('Rotary seems to be reset during trial %i\n', ii)
         for i = 1:length(f)-1
             r = f(i)+1 : f(i+1);
@@ -57,8 +58,9 @@ for ii = 1:length(alldata)
         i = length(f);
         d = a(f(i)+1) - a(f(i));
         a(f(i)+1 : end) = a(f(i)+1 : end) - d;
-        % plot(a)
-        % legend('raw','after controling for the reset')
+        
+%         plot(a)
+%         legend('raw','after controling for the reset')
         
         traces_wheel_new{ii} = a;        
     end    

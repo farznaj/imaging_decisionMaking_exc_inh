@@ -4,14 +4,14 @@
 % - find_badROIs
 % - inhibit_excit_prep
 % - imaging_prep_analysis
-% - set_aligned_traces
+% - set_aligned_traces (gets called in imaging_prep_analysis)
 
 
 %% Change these vars:
 
 mouse = 'fni17';
-imagingFolder = '151029'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [2,3];  % 3; %1; % or tif major
+imagingFolder = '151020'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
 
 %% Set imfilename, pnevFileName, fname

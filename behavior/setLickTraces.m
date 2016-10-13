@@ -41,7 +41,7 @@ for tr = 1:length(alldata)
     rightLicksRel2TrSt = (alldata(tr).parsedEvents.pokes.R(:,1) * 1000) - (alldata(tr).parsedEvents.states.state_0(2) * 1000);
     rightLicksRel2TrSt = ceil(rightLicksRel2TrSt);
     rightLicksRel2TrSt(isnan(rightLicksRel2TrSt)) = []; % not sure why it is occasionally nan. (% why for tr 19 it was nan?!)
-    
+    rightLicksRel2TrSt(~rightLicksRel2TrSt) = []; % not sure why it will be 0, but it happened for fni17, 151102_1-2 tr 169
     % trial duration in ms
     trDur = round(1000 * diff([alldata(tr).parsedEvents.states.state_0(2), alldata(tr).parsedEvents.states.stop_rotary_scope(1)]));
 
@@ -52,7 +52,7 @@ for tr = 1:length(alldata)
     traces_lick_time{tr} = zeros(trDur, 1);
     traces_lick_time{tr}(centLicksRel2TrSt) = 1;
     traces_lick_time{tr}(leftLicksRel2TrSt) = 2;
-    traces_lick_time{tr}(rightLicksRel2TrSt) = 3;
+    traces_lick_time{tr}(rightLicksRel2TrSt) = 3;    
 end
 
 

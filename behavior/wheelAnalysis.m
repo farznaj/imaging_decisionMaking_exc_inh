@@ -29,6 +29,7 @@ figure; plot(diffRot_mscan)
 wheelTimeRes = alldata(1).wheelSampleInt;
 figure;
 for itr = 1:length(alldata) % 102
+    set(gcf, 'name', num2str(itr))
     wheelTimes = wheelTimeRes / 2 +  wheelTimeRes * (0:length(alldata(itr).wheelRev)-1);
     wheelRev = alldata(itr).wheelRev;
     wheelRev = wheelRev - wheelRev(1); % since the absolute values don't matter, I assume the position of the wheel at the start of a trial was 0. I think values are negative, bc when the mouse moves forward, rotary turns counter clock wise.
@@ -47,6 +48,7 @@ end
 % values seem to range from -16 to 16, not sure why, but what matters is
 % the change not the absolute values.
 a = cell2mat({alldata.wheelRev}');
+
 figure; hold on
 plot(a)
 xlabel('Rotary samples')
@@ -55,7 +57,8 @@ ylabel('Rotary position')
 % Rotary position seems to reset (to +16) once it reaches -16. We need to
 % take care of this! You do this by subtracting out the amount of jump from
 % point ~-16 to ~16: 
-f = find(round(diff(a)) > 16);
+% f = find(round(diff(a)) > 16);
+f = find(round(abs(diff(a))) > 16); % using abs, bc sometimes it goees to -16 from 16 soon after a reset!
 
 for i = 1:length(f)-1
     r = f(i)+1 : f(i+1);

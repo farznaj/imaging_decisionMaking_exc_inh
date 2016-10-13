@@ -388,7 +388,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             %         if plotInhFirst
             %             rr2 = inds_inh_exc(rr); % first plot all inhibit neurons, then all excit neurons.
             rr2 = unsure_inds_hi2lo(rr); % rr2 is the index in the array including all neurons
-            nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 5); nearbyROIs(nearbyROIs==rr2) = [];
+            nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 6); nearbyROIs(nearbyROIs==rr2) = [];
             %         else
             %             rr2 = rr; % plot ROIs in the original order
             %         end
@@ -432,7 +432,9 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     hold on
                     for nnb = nearbyROIs'
                         plot(C(nnb,:))
+                        ccf = corrcoef(C(rr2,:), C(nnb,:)); fprintf('corrcoef w %i = %.2f\n', nnb, ccf(2))
                     end
+                    fprintf('\n')
                     hold off
                 end
                 
@@ -551,19 +553,30 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             %         if plotInhFirst
             %             rr2 = inds_inh_exc(rr); % first plot all inhibit neurons, then all excit neurons.
             rr2 = inhibit_inds_lo2hi(rr); % rr2 is the index in the array including all neurons
+            nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 6); nearbyROIs(nearbyROIs==rr2) = [];
             %         else
             %             rr2 = rr; % plot ROIs in the original order
             %         end
             
             set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
             
-            % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
+            % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.            
             figure(figh)
+            subplot(211)
+            plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5)
             comd = 20;
             xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
             ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
-            plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5)
-            % axis image
+            
+            subplot(212) % plot on inhibitImage, the current ROI and its too nearby ROIs
+            plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5);
+            xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
+            ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
+            if ~isempty(nearbyROIs)
+                for nnb = nearbyROIs'
+                    plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1.5)
+                end
+            end            
             
             %         ch = 0;
             %         while ch~=13
@@ -684,18 +697,30 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             %         if plotInhFirst
             %             rr2 = inds_inh_exc(rr); % first plot all inhibit neurons, then all excit neurons.
             rr2 = excit_inds_hi2lo(rr);
+            nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 6); nearbyROIs(nearbyROIs==rr2) = [];
             %         else
             %             rr2 = rr; % plot ROIs in the original order
             %         end
             
             set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
             
-            % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
+            % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.            
             figure(figh)
+            subplot(211)
+            plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5)
             comd = 20;
             xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
             ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
-            % axis image
+            
+            subplot(212) % plot on inhibitImage, the current ROI and its too nearby ROIs
+            plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5);
+            xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
+            ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
+            if ~isempty(nearbyROIs)
+                for nnb = nearbyROIs'
+                    plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1.5)
+                end
+            end               
             
             %         ch = 0;
             %         while ch~=13
