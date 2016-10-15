@@ -1,5 +1,7 @@
-%% Set inhibit and excit traces.
+function inhibit_excit_prep(mouse, imagingFolder, mdfFileNumber, saveInhibitRois, assessClass_unsure_inh_excit, keyEval, manThSet, identifInh)
+% Identify inhibit and excit ROIs using the gcamp channel and the tdtomato channel.
 
+%{
 mouse = 'fni17';
 imagingFolder = '151020'; %'151029'; %  '150916'; % '151021';
 mdfFileNumber = [1,2];  % 3; %1; % or tif major
@@ -13,12 +15,16 @@ manThSet = 0; % if 1, you will set the threshold for identifying inhibit neurons
 
 identifInh = 1; % if 0, only bleedthrough-corrected ch1 image will be created, but no inhibitory neurons will be identified.
 
+
 % Above .8 quantile is defined as inhibitory and below as excitatory.
 %{
 % Not doing below:
 % If manThSet and keyEval are both 0, automatic identification occurs based on:
 % 'inhibit: > .9th quantile. excit: < .8th quantile of roi2surr_sig
 %}
+
+%}
+
 
 %%
 signalCh = 2; % because you get A from channel 2, I think this should be always 2.

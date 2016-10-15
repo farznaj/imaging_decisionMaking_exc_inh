@@ -1,17 +1,17 @@
+function set_A_CC(mouse, imagingFolder, mdfFileNumber)
 % Right after you are done with preproc on the cluster, run the following scripts:
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
 % - set_A_CC
 % - find_badROIs
 % - inhibit_excit_prep
-% - imaging_prep_analysis
-% - set_aligned_traces (gets called in imaging_prep_analysis)
-
-
-%% Change these vars:
-
+% - imaging_prep_analysis (which calls set_aligned_traces... you will need its outputs)
+%
+% Example inputs:
+%{
 mouse = 'fni17';
-imagingFolder = '151020'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2];  % 3; %1; % or tif major
+imagingFolder = '151021'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1];  % 3; %1; % or tif major
+%}
 
 
 %% Set imfilename, pnevFileName, fname

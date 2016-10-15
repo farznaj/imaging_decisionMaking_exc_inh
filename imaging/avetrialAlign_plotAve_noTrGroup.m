@@ -1,4 +1,4 @@
-function avetrialAlign_plotAve_noTrGroup(evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, timeInitTone, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, timeStop)
+function avetrialAlign_plotAve_noTrGroup(evT, outcome2ana, stimrate2ana, strength2ana, respSide2ana, trs2rmv, allResp_HR_LR, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, timeInitTone, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, timeStop)
 % This functions plots average traces across all neurons and all trials
 % aligned on particular trial events.
 % It calls avetrialAlign_noTrGroup which calls triggerAlignTraces for
@@ -63,7 +63,20 @@ switch stimrate2ana
         sr2ana = true(1, length(outcomes));
 end
 
-trs2ana = (ismember(outcomes, outcome2ana)) & str2ana & sr2ana;
+switch respSide2ana
+    case 'HR'
+        side2ana = 1;
+    case 'LR'
+        side2ana = 0;
+    otherwise
+        side2ana = 'all';
+end
+
+if strcmp(side2ana, 'all')
+    trs2ana = (ismember(outcomes, outcome2ana)) & str2ana & sr2ana;
+else
+    trs2ana = (ismember(outcomes, outcome2ana)) & str2ana & sr2ana & (allResp_HR_LR == side2ana);
+end
 % trs2ana = outcomes==0 & timeLastSideLickToStopT > 1000;
 % trs2ana(163:end) = false; % first trials 
 % trs2ana(1:162) = false; % last trials

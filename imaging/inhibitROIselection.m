@@ -483,12 +483,12 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     % if number 0 pressed, you want to assign this unsure ROI as excit.
                 elseif ch==48
                     unsureEval(rr2) = 0; % rr2 is index in the all neurons array (not the inhibit neurons array).
-                    
+                    fprintf('Reset as excit\n')
                     
                     % if number 1 pressed, you want to assign this unsure ROI as inhibit.
                 elseif ch==49
                     unsureEval(rr2) = 1;
-                    
+                    fprintf('Reset as inhibit\n')
                     
                     % if escape button, stop showing ROIs
                 elseif ch==27
@@ -623,15 +623,15 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     %                 break
                     
                     
-                    % if number 0 pressed, you want to exclude this ROI from inhibit neurons.
+                % if number 0 pressed, you want to reassign this ROI as excit.
                 elseif ch==48
                     inhibitEval(rr2) = 0; % rr2 is index in the all neurons array (not the inhibit neurons array).
-                    
+                    fprintf('Reset as excit\n')
                     
                     % if number 2 pressed, you are unsure if this neuron is an inhibit neuron.
                 elseif ch==50
                     inhibitEval(rr2) = 2;
-                    
+                    fprintf('Reset as unsure\n')
                     
                     % if escape button, stop showing ROIs
                 elseif ch==27
@@ -764,15 +764,15 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     %                 break
                     
                     
-                    % if number 0 pressed, you want to exclude this ROI from excit neurons.
+                % if number 0 pressed, you want to reassign this ROI as inhibit.
                 elseif ch==48
                     excitEval(rr2) = 0;
-                    
+                    fprintf('Reset as inhibit\n')
                     
                     % if number 2 pressed, you are unsure if this neuron is an excit neuron.
                 elseif ch==50
                     excitEval(rr2) = 2;
-                    
+                    fprintf('Reset as unsure\n')
                     
                     % if escape button, stop showing ROIs
                 elseif ch==27

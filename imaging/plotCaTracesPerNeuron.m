@@ -163,9 +163,7 @@ if showitiFrNums
     
     [iti_noscan, iti_gui_state] = itiSet(alldata); % ms
     frameLength = 1000/30.9; % msec.
-    nFrames_iti = round(iti_noscan/frameLength); % nFrames between trials (during iti) that was not imaged.
-
-    lab_iti = num2str(nFrames_iti);
+    nFrames_iti = round(iti_noscan/frameLength); % nFrames between trials (during iti) that was not imaged.    
 
     figure; plot(iti_gui_state/1000)
     hold on, plot(iti_noscan/1000)    
@@ -173,6 +171,7 @@ if showitiFrNums
     ylabel('ITI (s)')
     legend('set in GUI','computed from states','no scanning')
             
+    lab_iti = num2str(nFrames_iti);
 end
 
 

@@ -38,14 +38,15 @@ mouse = 'fni17';
 imagingFolder = '151020'; %'151029'; %  '150916'; % '151021';
 mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
+
 % best is to set the 2 vars below to 0 so u get times of events for all trials; later decide which ones to set to nan.
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
 rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
 
 normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
-setInhibitExcit = 1; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 
 % set the following vars to 1 when first evaluating a session.
+setInhibitExcit = 1; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 evaluateEftyOuts = 1; 
 compareManual = 1; % compare results with manual ROI extraction
 plot_ave_noTrGroup = 1; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
@@ -303,7 +304,10 @@ end
 [nFrsSess, nFrsMov] = set_nFrsSess(mouse, imagingFolder, mdfFileNumber); % nFrsMov: for each session shows the number of frames in each tif file.
 cs_frmovs = [0, cumsum(cell2mat(nFrsMov))]; % cumsum of nFrsMov: shows number of frames per tif movie (includes all tif movies of mdfFileNumber). 
 % frs = cs_frmovs(itif)+1 : cs_frmovs(itif+1); % frames that belong to movie itif (indeces corresponds to the entire movie) 
-save(imfilename, '-append', 'cs_frmovs')  
+a = matfile(imfilename);
+if ~isprop(a, 'cs_frmovs')
+    save(imfilename, '-append', 'cs_frmovs')  
+end
 % end
 
 %{
@@ -314,7 +318,7 @@ save(imfilename, '-append', 'cs_frmovs')
 % (by using the frame index on the entire movie) ... ie match frame
 % indeces between entire movie (iall) and the tif movie that contains the
 % frame (imov):
-iall = 31428; % frame index on the entire movie (eg on S)
+iall = 34998; % frame index on the entire movie (eg on S)
 itif = find((cs_frmovs - iall)>0, 1)-1 % tif movie containing frame iall
 imov = iall - cs_frmovs(itif) % frame index on the movie itif 
 
@@ -327,6 +331,8 @@ cs_frtrs(itr) - cs_frmovs(itif) % frame of trial itr on movie itif (ie frame ind
 
     
 %% Evaluate C,f,manual activity, also tau, sn as well as some params related to A
+
+mkdir(fullfile(pd, 'figs')) % save the following 3 figures in a folder named "figs"
 
 if evaluateEftyOuts
     
@@ -344,22 +350,75 @@ if evaluateEftyOuts
 
 
     %% plot C, f, manual activity
-    figure; h = [];
-    subplot(413), plot(nanmean(S)); title('S'), h = [h, gca];
-    subplot(412), plot(nanmean(C)); title('C'), h = [h, gca];
-    subplot(414), plot(f); title('f'), h = [h, gca];
-    if exist('activity_man_eftMask_ch2', 'var')
-        subplot(411), plot(mean(activity_man_eftMask_ch2, 2)), title('manual'), h = [h, gca];
-    else
-        warning('activity_man_eftMask does not exist!')
-    end
-    linkaxes(h, 'x')
+    figure; a = [];
     
+    subplot(413), hold on
+    top = nanmean(S);
+    hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
+    set([hh], 'handlevisibility', 'off')
+    if exist('nFrsSess', 'var'), 
+        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
+        h00 = plot([cs_frmovs; cs_frmovs], [-.5; 1], 'k:'); % mark tif movie beginnings
+        set([h0; h00], 'handlevisibility', 'off'); 
+    end    
+    
+    plot(top); title('S'), 
+    a = [a, gca];
+    
+    
+    subplot(411), hold on
+    top = nanmean(activity_man_eftMask_ch2');
+    hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
+    set([hh], 'handlevisibility', 'off')
+    if exist('nFrsSess', 'var'), 
+        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
+        h00 = plot([cs_frmovs; cs_frmovs], [-.5; 1], 'k:'); % mark tif movie beginnings
+        set([h0; h00], 'handlevisibility', 'off'); 
+    end    
+    
+    plot(top); title('manual'), 
+    a = [a, gca];    
+    
+    
+    
+    subplot(412), hold on
+    top = nanmean(C);
+    hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
+    set([hh], 'handlevisibility', 'off')
+    if exist('nFrsSess', 'var'), 
+        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
+        h00 = plot([cs_frmovs; cs_frmovs], [-.5; 1], 'k:'); % mark tif movie beginnings
+        set([h0; h00], 'handlevisibility', 'off'); 
+    end    
+    
+    plot(top); title('C'), 
+    a = [a, gca];
+    
+    
+    
+    subplot(414), hold on
+    top = f;
+    hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
+    set([hh], 'handlevisibility', 'off')
+    if exist('nFrsSess', 'var'), 
+        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
+        h00 = plot([cs_frmovs; cs_frmovs], [-.5; 1], 'k:'); % mark tif movie beginnings
+        set([h0; h00], 'handlevisibility', 'off'); 
+    end    
+    
+    plot(top); title('f'), 
+    a = [a, gca];
+    
+    
+    linkaxes(a, 'x')
+
     
     %% shift and scale C, man, etc to compare them... this is a much more
     % useful plot than the one above.
-    load(imfilename, 'cs_frtrs')
-    figure; subplot(211), hold on
+    load(imfilename, 'cs_frtrs')    
+    
+    figure('name', 'Green lines: trial beginnings. Solid black lines: session beginnings. Dashed black lines: tif movie beginnings.'); 
+    subplot(311), hold on
     h = plot([cs_frtrs; cs_frtrs], [-.3; .5], 'g'); % mark trial beginnings
     if exist('nFrsSess', 'var'), 
         h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
@@ -376,7 +435,8 @@ if evaluateEftyOuts
     title('Average of all neurons')
     a1 = gca;
     
-    subplot(212), hold on
+    
+    subplot(312), hold on
     h = plot([cs_frtrs; cs_frtrs], [min(mean(C_df)); max(mean(C_df))], 'g'); % mark trial beginings
     if exist('nFrsSess', 'var'), h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); set([h0], 'handlevisibility', 'off'); end % mark session beginings
     set([h], 'handlevisibility', 'off')
@@ -384,7 +444,17 @@ if evaluateEftyOuts
     xlim([1 size(C,2)]) % xlim([1 1500])
     legend('C\_df')
     a2 = gca;
-    linkaxes([a1, a2], 'x')    
+    
+    
+    load(pnevFileName, 'activity_man_eftMask_ch1')
+    subplot(313), hold on
+    plot(mean(activity_man_eftMask_ch1,2))
+    a3 = gca;
+    legend('Ch1')
+    
+    linkaxes([a1, a2, a3], 'x')    
+    
+    savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons'))  
     
     
     %% Assess tau and noise for each neuron
@@ -532,7 +602,7 @@ end
 allowCorrectResp = 'change'; % 'change'; 'remove'; 'nothing'; % if 'change': on trials that mouse corrected his choice, go with the original response.
 uncommittedResp = 'nothing'; % 'change'; 'remove'; 'nothing'; % what to do on trials that mouse made a response (licked the side port) but did not lick again to commit it.
 %}
-[outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp);
+[outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp); % 1 for HR choice, 0 for LR choice.
 
 % set trs2rmv to nan
 outcomes(trs2rmv) = NaN;
@@ -821,15 +891,14 @@ end
 
 %% Plot average traces across all neurons and all trials aligned on particular trial events.
 
-if plot_ave_noTrGroup
-
-    mkdir(fullfile(pd, 'figs')) % save the following 3 figures in a folder named "figs"
+if plot_ave_noTrGroup    
 
     outcome2ana = 'all'; % 'all'; 1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
     stimrate2ana = 'all'; % 'all'; 'HR'; 'LR';
     strength2ana = 'all'; % 'all'; 'easy'; 'medium'; 'hard';    
-
-    %%%%%% plot average imaging traces aligned on licks
+    respSide2ana = 'all'; % 'all'; 'HR'; 'LR';
+    
+    %%%%%% plot average imaging traces aligned on licks : THIS TAKES TIME!
     evT = {'centerLicks', 'leftLicks', 'rightLicks'}; % times are relative to scopeTTL onset, hence negative values are licks that happened before that (during iti states).
     nPreFrames = 5;
     nPostFrames = 20;    
@@ -844,7 +913,7 @@ if plot_ave_noTrGroup
         'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
         'timeReward', 'timeCommitIncorrResp', 'timeStop'};
     
-    avetrialAlign_plotAve_noTrGroup(evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, timeInitTone, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, timeStop)
+    avetrialAlign_plotAve_noTrGroup(evT, outcome2ana, stimrate2ana, strength2ana, respSide2ana, trs2rmv, allResp_HR_LR, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, timeInitTone, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, timeStop)
     savefig(fullfile(pd, 'figs','caTraces_trEventAl'))    
     
     
