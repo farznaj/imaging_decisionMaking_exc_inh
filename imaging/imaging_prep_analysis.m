@@ -46,12 +46,13 @@ rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset af
 normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
 
 % set the following vars to 1 when first evaluating a session.
-setInhibitExcit = 1; % if 1, inhibitory and excitatory neurons will be identified unless inhibitRois is already saved in imfilename (in which case it will be loaded).
-evaluateEftyOuts = 1; 
-compareManual = 1; % compare results with manual ROI extraction
-plot_ave_noTrGroup = 1; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
-plotEftyAC1by1 = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
+setInhibitExcit = 0; % if 1, inhibitory and excitatory neurons will be set unless inhibitRois is already saved in imfilename (in which case it will be loaded).
+evaluateEftyOuts = 0; 
+compareManual = 0; % compare results with manual ROI extraction
 
+plot_ave_noTrGroup = 0; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
+
+plotEftyAC1by1 = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
 frameLength = 1000/30.9; % sec.
 
 % Once done use set_aligned_traces to set aligned traces on different trial events with carefully chosen trials.
@@ -305,9 +306,17 @@ end
 cs_frmovs = [0, cumsum(cell2mat(nFrsMov))]; % cumsum of nFrsMov: shows number of frames per tif movie (includes all tif movies of mdfFileNumber). 
 % frs = cs_frmovs(itif)+1 : cs_frmovs(itif+1); % frames that belong to movie itif (indeces corresponds to the entire movie) 
 a = matfile(imfilename);
-if ~isprop(a, 'cs_frmovs')
-    save(imfilename, '-append', 'cs_frmovs')  
+if ~isprop(a, 'nFrsMov')
+    save(imfilename, '-append', 'nFrsMov', 'cs_frmovs')  
 end
+%{
+% num frames per session:
+cs_sess = 0; 
+for imdf = 1:length(mdfFileNumber)    
+    cs_sess = [cs_sess, sum(nFrsMov{imdf})];
+end
+cs_sess = cumsum(cs_sess);
+%}
 % end
 
 %{
@@ -350,6 +359,8 @@ if evaluateEftyOuts
 
 
     %% plot C, f, manual activity
+    
+    load(imfilename, 'cs_frtrs')
     figure; a = [];
     
     subplot(413), hold on
@@ -358,7 +369,7 @@ if evaluateEftyOuts
     set([hh], 'handlevisibility', 'off')
     if exist('nFrsSess', 'var'), 
         h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
-        h00 = plot([cs_frmovs; cs_frmovs], [-.5; 1], 'k:'); % mark tif movie beginnings
+        h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
         set([h0; h00], 'handlevisibility', 'off'); 
     end    
     
@@ -372,7 +383,7 @@ if evaluateEftyOuts
     set([hh], 'handlevisibility', 'off')
     if exist('nFrsSess', 'var'), 
         h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
-        h00 = plot([cs_frmovs; cs_frmovs], [-.5; 1], 'k:'); % mark tif movie beginnings
+        h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
         set([h0; h00], 'handlevisibility', 'off'); 
     end    
     
@@ -387,7 +398,7 @@ if evaluateEftyOuts
     set([hh], 'handlevisibility', 'off')
     if exist('nFrsSess', 'var'), 
         h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
-        h00 = plot([cs_frmovs; cs_frmovs], [-.5; 1], 'k:'); % mark tif movie beginnings
+        h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
         set([h0; h00], 'handlevisibility', 'off'); 
     end    
     
@@ -402,7 +413,7 @@ if evaluateEftyOuts
     set([hh], 'handlevisibility', 'off')
     if exist('nFrsSess', 'var'), 
         h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
-        h00 = plot([cs_frmovs; cs_frmovs], [-.5; 1], 'k:'); % mark tif movie beginnings
+        h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
         set([h0; h00], 'handlevisibility', 'off'); 
     end    
     
@@ -411,11 +422,20 @@ if evaluateEftyOuts
     
     
     linkaxes(a, 'x')
-
+    %{
+    x=get(gca,'xlim');len = x(end);
+    r2 = 0;
+    for rr = 1:floor(len/.5e4)+1
+        r1 = r2;
+        r2 = r1+.5e4;
+        xlim([r1 r2])
+        %     ginput
+        pause
+    end
+    %}
     
-    %% shift and scale C, man, etc to compare them... this is a much more
-    % useful plot than the one above.
-    load(imfilename, 'cs_frtrs')    
+    
+    %% shift and scale C, man, etc to compare them...        
     
     figure('name', 'Green lines: trial beginnings. Solid black lines: session beginnings. Dashed black lines: tif movie beginnings.'); 
     subplot(311), hold on
@@ -511,11 +531,15 @@ clear C C_df S
 
 
 %%
-%%%%%%%%%%%%%%%%%%%%%%%%% Take care of alldata %%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%% Merging imaging data to behavioral data %%%%%%%%%%%%%%%%%%%%%%%
 
 if length(mdfFileNumber)==1
     
-    load(imfilename, 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'trialCodeMissing')
+    load(imfilename, 'framesPerTrial', 'trialNumbers', 'frame1RelToStartOff', 'trialCodeMissing') %, 'cs_frtrs')
+   
+%     figure('position', [68   331   254   139]); hold on; plot(framesPerTrial - diff(cs_frtrs))
+%     xlabel('trial'), ylabel('framesPerTrial - diff(cs_frtrs)'), title('shows frame-dopped trials')
+
     
     if ~exist('trialCodeMissing', 'var'), trialCodeMissing = []; end  % for those days that you didn't save this var.
     
@@ -532,7 +556,7 @@ if length(mdfFileNumber)==1
     if ~any(trialCodeMissing)
         cprintf('blue', 'All trials are triggered in MScan :)\n')
     else
-        cprintf('blue', 'There are non-triggered trials in MScan! Trial %d\n', find(trialCodeMissing))
+        cprintf('blue', ['There are non-triggered trials in MScan! Trial(s):', repmat('%d ', 1, sum(trialCodeMissing)), '\n'], find(trialCodeMissing))
     end
     
     
@@ -542,7 +566,7 @@ if length(mdfFileNumber)==1
     
     a = length(all_data) - max_num_imaged_trs;
     if a~=0
-        fprintf('Removing %i trials at the end of alldata bc imaging was aborted.\n', a)
+        cprintf('blue', 'Removing %i trials at the end of alldata bc imaging was aborted.\n', a)
     else
         fprintf('Removing no trials at the end of alldata bc imaging was not aborted earlier.\n')
     end
@@ -584,9 +608,14 @@ if length(mdfFileNumber)==1
     %% Set trs2rmv, stimrate, outcome and response side. You will set certain variables to NaN for trs2rmv (but you will never remove them from any arrays).
     
     load(imfilename, 'badAlignTrStartCode', 'trialStartMissing'); %, 'trialCodeMissing') % they get set in framesPerTrialStopStart3An_fn
+    load(imfilename, 'trEndMissing', 'trEndMissingUnknown', 'trStartMissingUnknown') % Remember their indeces are on the imaged trials (not alldata). % do trialNumbers(trEndMissing) to find the corresponding indeces on alldata. 
+    
+    if ~exist('trEndMissing', 'var'), trEndMissing = []; end
+    if ~exist('trEndMissingUnknown', 'var'), trEndMissingUnknown = []; end
+    if ~exist('trStartMissingUnknown', 'var'), trStartMissingUnknown = []; end
     
     imagingFlg = 1;
-    [trs2rmv, stimdur, stimrate, stimtype, cb] = setTrs2rmv_final(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing);
+    [trs2rmv, stimdur, stimrate, stimtype, cb] = setTrs2rmv_final(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing, trStartMissingUnknown, trEndMissing, trEndMissingUnknown, trialNumbers);
     
     
 else

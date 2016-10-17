@@ -1,4 +1,4 @@
-function trs2rmv = setTrs2rmv(alldata, th, excludeExtraStim, excludeShortWaitDur, begTrs, badAlignTrStartCode, trialStartMissing, trialCodeMissing)
+function trs2rmv = setTrs2rmv(alldata, th, excludeExtraStim, excludeShortWaitDur, begTrs, badAlignTrStartCode, trialStartMissing, trialCodeMissing, trStartMissingUnknown, trEndMissing, trEndMissingUnknown, trialNumbers)
 %
 % set trs2rmv (bad trials that you want to be removed from analysis)
 
@@ -16,6 +16,10 @@ if ~exist('begTrs', 'var')
     begTrs = 1;
 end
 
+if ~exist('trEndMissing', 'var'), trEndMissing = []; end
+if ~exist('trEndMissingUnknown', 'var'), trEndMissingUnknown = []; end
+if ~exist('trStartMissingUnknown', 'var'), trStartMissingUnknown = []; end
+if ~exist('trialNumbers', 'var'), trialNumbers = []; end
 
 %%
 % th = 5; % 9; % this number of beginning trials will be excluded. also later in the code we want >th trials in each column of ratesDiffInput
@@ -63,24 +67,24 @@ end
 % but if it is all behavior, you don't need to run this section.
 
 if exist('badAlignTrStartCode', 'var')
-    % Ttrials that alignment of behavior and imaging cannot be performed, i.e. badAlignTrStartCode, and trialStartMissing trials
-    trs_problemAlign = unique([find(badAlignTrStartCode==1), find(trialStartMissing==1)]);
+    % Ttrials that alignment of behavior and imaging cannot be performed, i.e. badAlignTrStartCode, trialStartMissing and trStartMissingUnknown trials
+    trs_problemAlign = unique([find(badAlignTrStartCode==1), find(trialStartMissing==1), trialNumbers(trStartMissingUnknown)]);
     
     % Trials including pmtOffFrames and bigMotion (badFrames).
     trs_badMotion_pmtOff = unique([find([alldata.anyBadFrames]==1), find([alldata.anyPmtOffFrames]==1)]);
     
-    % trials that miss trialCode signal.
+    % Trials that miss frames at the end (they are find for alignments on earlier events)
+    trs_endMiss = unique([trialNumbers(trEndMissing), trialNumbers(trEndMissingUnknown)]);
+    
+    % Trials that miss trialCode signal.
     trs_noTrialCode = find(trialCodeMissing==1);
     
-    % trials that were not imaged. (I believe trs_noTrialCode is a subset
-    % of trs_notScanned).
-    trs_notScanned = find([alldata.hasActivity]==0);
+    % Trials that were not imaged. (I believe trs_noTrialCode is a subset of trs_notScanned).
+    trs_notScanned = find([alldata.hasActivity]==0);    
+    if ~isequal(trs_noTrialCode, trs_notScanned), error('I am curious why and how these two variables are different!'), end
     
-    if ~isequal(trs_noTrialCode, trs_notScanned)
-        error('I am curious why and how these two variables are different!')
-    end
     
-    trs2rmv = unique([trs2rmv; trs_problemAlign(:); trs_badMotion_pmtOff(:); trs_noTrialCode(:); trs_notScanned(:)]);
+    trs2rmv = unique([trs2rmv; trs_problemAlign(:); trs_badMotion_pmtOff(:); trs_noTrialCode(:); trs_notScanned(:); trs_endMiss(:)]);
 
 end
 

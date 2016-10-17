@@ -82,7 +82,7 @@ for ise = 1:length(mdfFileNumber)
     
     a = length(all_data_sess{ise}) - max_num_imaged_trs;
     if a~=0
-        fprintf('Removing %i trials at the end of alldata bc imaging was aborted.\n', a)
+        cprintf('blue', 'Removing %i trials at the end of alldata bc imaging was aborted.\n', a)
     else
         fprintf('Removing no trials at the end of alldata bc imaging was not aborted earlier.\n')
     end
@@ -130,8 +130,14 @@ trs2rmv = []; stimdur = []; stimrate = []; stimtype = [];
 
 for ise = 1:length(mdfFileNumber)
     load(imfilename_sess{ise}, 'badAlignTrStartCode', 'trialStartMissing'); %, 'trialCodeMissing') % they get set in framesPerTrialStopStart3An_fn
+
+    load(imfilename, 'trEndMissing', 'trEndMissingUnknown', 'trStartMissingUnknown')   
     
-    [trs2rmv_sess, stimdur_sess, stimrate_sess, stimtype_sess, cb] = setTrs2rmv_final(all_data_sess{ise}, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing_sess{ise});
+    if ~exist('trEndMissing', 'var'), trEndMissing = []; end
+    if ~exist('trEndMissingUnknown', 'var'), trEndMissingUnknown = []; end
+    if ~exist('trStartMissingUnknown', 'var'), trStartMissingUnknown = []; end
+    
+    [trs2rmv_sess, stimdur_sess, stimrate_sess, stimtype_sess, cb] = setTrs2rmv_final(all_data_sess{ise}, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing_sess{ise}, trStartMissingUnknown, trEndMissing, trEndMissingUnknown, trialNumbers);
     
     trs2rmv = [trs2rmv; trs2rmv_sess + cs_alldata(ise)];
     stimdur = [stimdur; stimdur_sess];

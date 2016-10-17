@@ -86,7 +86,7 @@ frameLength = 1000 / frameRate;
 
 
 csfrs = [0 cumsum(framesPerTrial)];
-f = find((csfrs-size(activity,1))>0, 1)-2;
+f = find((csfrs-nFrames)>0, 1)-2;
 if isempty(f)
     lastImTr = length(trialNumbers);
 else

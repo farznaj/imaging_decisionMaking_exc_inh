@@ -1,23 +1,31 @@
-function [trs2rmv, stimdur, stimrate, stimtype, cb] = setTrs2rmv_final(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing)
+function [trs2rmv, stimdur, stimrate, stimtype, cb] = setTrs2rmv_final(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing, trStartMissingUnknown, trEndMissing, trEndMissingUnknown, trialNumbers)
 % the complete function for setting trs2rmv, it calls setTrs2rmv
 
 if ~exist('imagingFlg', 'var')
     imagingFlg = 0; % when analysis only behavioral data.
 end
 
+if ~exist('trEndMissing', 'var'), trEndMissing = []; end
+if ~exist('trEndMissingUnknown', 'var'), trEndMissingUnknown = []; end
+if ~exist('trStartMissingUnknown', 'var'), trStartMissingUnknown = []; end
+if ~exist('trialNumbers', 'var'), trialNumbers = []; end
 
-%%
+    
+%% Set trs2rmv
+
 cb = unique([alldata.categoryBoundaryHz]); % category boundary in hz
 
 
 % set the following as trs2rmv: trs_begWarmUp(:); trs_helpedInit(:); trs_helpedChoice(:), trs_extraStim, trs_shortWaitdur, trs_problemAlign, trs_badMotion_pmtOff
 if imagingFlg
-    trs2rmv = setTrs2rmv(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, badAlignTrStartCode, trialStartMissing, trialCodeMissing);
+    trs2rmv = setTrs2rmv(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, badAlignTrStartCode, trialStartMissing, trialCodeMissing, trStartMissingUnknown, trEndMissing, trEndMissingUnknown, trialNumbers);
 else
     trs2rmv = setTrs2rmv(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs);
 end
 
-%%%%%%% Set stim rate: trials with stimrate=nan, must be added to trs2rmv as well
+
+%% Set stimdur, stimrate, and stimtype : trials with stimrate=nan, must be added to trs2rmv as well
+
 [~, stimdur, stimrate, stimtype] = setStimRateType(alldata); % stimtype = [multisens, onlyvis, onlyaud];
 if sum(isnan(stimrate)) > 0
     fprintf('# trials with NaN stimrate= %i\n', sum(isnan(stimrate)))
@@ -32,8 +40,8 @@ trs2rmv = unique([trs2rmv, trs_allowCorrectEntered, trs_errorlick_again_wait_ent
 %}
 
 
-%%%%%%% take care of cases that go tone happened earlier than stim offset
-%%%%%%% and resulted in a different stim type.
+%% Take care of cases that go tone happened earlier than stim offset and resulted in a different stim type.
+
 fractFlashBefGoTone = NaN(1, length(alldata));
 stimRateChanged = false(1, length(alldata));
 goToneRelStimOnset = NaN(1, length(alldata));
@@ -77,8 +85,8 @@ end
 
 if any(stimRateChanged)
     trsStimTypeScrewed = find(stimRateChanged)'; % in these trials when go tone came stim type (hr vs lr) was different from the entire stim... these are obviously problematic trials.
-    fprintf('%d = #trs with a different stim type at Go Tone than the actual stim type\n', length(trsStimTypeScrewed))
-    disp('... excluding them!')
+    cprintf('blue', '%d = #trs with a different stim type at Go Tone than the actual stim type\n', length(trsStimTypeScrewed))
+    cprintf('blue','... excluding them!\n')
     aveFractFlashBefGoTone_stimRateChanged = nanmean(fractFlashBefGoTone(stimRateChanged));
     fprintf('%.2f= mean fraction of flashes occurred before goTone in trials that stimType changed dur to goTone earier bein than stimOffset\n', aveFractFlashBefGoTone_stimRateChanged)
     

@@ -8,7 +8,7 @@ mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
 
 saveInhibitRois = 1;
-assessClass_unsure_inh_excit = [1 1 0]; %[1,1,0]; % whether to assess unsure, inhibit, excit neuron classes. % you will go through unsure, inhibit and excit ROIs one by one. (if keyEval is 1, you can change class, if 0, you will only look at the images)
+assessClass_unsure_inh_excit = [1 1 1]; %[1,1,0]; % whether to assess unsure, inhibit, excit neuron classes. % you will go through unsure, inhibit and excit ROIs one by one. (if keyEval is 1, you can change class, if 0, you will only look at the images)
 keyEval = 1; % if 1, you can change class of neurons using key presses.
 manThSet = 0; % if 1, you will set the threshold for identifying inhibit neurons by looking at the roi2surr_Sig values.
 % Be very carful if setting keyEval to 1: Linux hangs with getKey if you click anywhere, just use the keyboard keys! % if 0 you will simply go though ROIs one by one, otherwise it will go to getKey and you will be able to change neural classification.
