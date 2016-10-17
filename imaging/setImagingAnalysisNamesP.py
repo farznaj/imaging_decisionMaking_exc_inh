@@ -13,12 +13,13 @@ imagingFolder = '151102'
 mdfFileNumber = (1,2)
 
 # optional inputs:
+postNProvided = 0; # Default:0; If your directory does not contain pnevFile and instead it contains postFile, set this to 1 to get pnevFileName
 signalCh = [2] # since gcamp is channel 2, should be 2.
 pnev2load = [] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
 
 from setImagingAnalysisNamesP import *
 
-imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load)
+imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
 
 imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber)
 
@@ -36,6 +37,11 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         pnev2load = options.get('pnev2load');    
     else:
         pnev2load = []
+        
+    if options.get('postNProvided'):
+        pnev2load = options.get('postNProvided');    
+    else:
+        postNProvided = 0
         
     #%%
     import numpy as np
@@ -63,7 +69,11 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     
     #%%
     if len(signalCh)>0:
-        pnevFileName = date_major+'_ch'+str(signalCh)+'-Pnev*'
+        if postNProvided:
+            pnevFileName = 'post_'+date_major+'_ch'+str(signalCh)+'-Pnev*'
+        else:
+            pnevFileName = date_major+'_ch'+str(signalCh)+'-Pnev*'
+            
         pnevFileName = glob.glob(os.path.join(tifFold,pnevFileName))   
         # sort pnevFileNames by date (descending)
         pnevFileName = sorted(pnevFileName, key=os.path.getmtime)
@@ -80,8 +90,10 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         if len(pnevFileName)==0:
             c = ("No Pnev file was found"); print("%s\n" % c)
             pnevFileName = ''
-        else:                
+        else:
             pnevFileName = pnevFileName[pnev2load[0]]
+            if postNProvided:
+                pnevFileName = pnevFileName[5:]
     else:
         pnevFileName = ''
     
