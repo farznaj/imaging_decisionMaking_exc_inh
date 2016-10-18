@@ -1,5 +1,6 @@
 function set_A_CC(mouse, imagingFolder, mdfFileNumber)
 % Right after you are done with preproc on the cluster, run the following scripts:
+% - plotEftyVarsMean : for a quick evaluation of the traces and spotting any potential frame drops, etc
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
 % - set_A_CC
 % - find_badROIs
@@ -84,6 +85,7 @@ if exist('im', 'var') && ~isempty(im)
 end
 
 
+fprintf('Done!\n')
 
 %%
 % Use below for those days that you need to get srt_val, or to normalize

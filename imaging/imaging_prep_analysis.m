@@ -46,8 +46,8 @@ rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset af
 normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
 
 % set the following vars to 1 when first evaluating a session.
-evaluateEftyOuts = 0; 
-compareManual = 0; % compare results with manual ROI extraction
+evaluateEftyOuts = 1; 
+compareManual = 1; % compare results with manual ROI extraction
 
 plot_ave_noTrGroup = 1; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
 
@@ -282,15 +282,27 @@ end
 
 
 %% Load and clean Efty's vars
+%{
+signalCh = 2; % because you get A from channel 2, I think this should be always 2.
+pnev2load = [];
+[imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
+[pd, pnev_n] = fileparts(pnevFileName);
+disp(pnev_n)
+cd(fileparts(imfilename))
 
+normalizeSpikes = 1;
+load(pnevFileName, 'activity_man_eftMask_ch2')
+load(imfilename, 'cs_frtrs')
+load(pnevFileName, 'activity_man_eftMask_ch1')
+%}
 fprintf('Loading Eftys vars...')
-load(pnevFileName, 'C', 'C_df', 'S', 'A', 'P', 'f')
+% load(pnevFileName, 'C', 'C_df', 'S', 'A', 'P', 'f')
+load(pnevFileName, 'C', 'C_df', 'S', 'f')
+load(pnevFileName, 'A', 'P')
 fprintf('...done\n')
 
 load(imfilename, 'Nnan_nanBeg_nanEnd')
-
 % S(:, [32672       32333       32439       32547]) = nan; % sharp spikes due to frame missing (their trials will be excluded... you are just doing this so they dont affect the normalization.)
-% normalizeSpikes = 1;
 [C, S, C_df] = processEftyOuts(C, S, C_df, Nnan_nanBeg_nanEnd, normalizeSpikes);
 
 % set time constants (in ms) from P.gn
@@ -364,78 +376,9 @@ if evaluateEftyOuts
     %% plot C, f, manual activity
     
     load(imfilename, 'cs_frtrs')
-    figure; a = [];
+    load(pnevFileName, 'activity_man_eftMask_ch1')
     
-    subplot(413), hold on
-    top = nanmean(S);
-    hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
-    set([hh], 'handlevisibility', 'off')
-    if exist('nFrsSess', 'var'), 
-        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [min(top); max(top)], 'k'); % mark session beginnings
-        h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
-        set([h0; h00], 'handlevisibility', 'off'); 
-    end    
-    
-    plot(top); title('S'), 
-    a = [a, gca];
-    
-    
-    subplot(411), hold on
-    top = nanmean(activity_man_eftMask_ch2');
-    hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
-    set([hh], 'handlevisibility', 'off')
-    if exist('nFrsSess', 'var'), 
-        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [min(top); max(top)], 'k'); % mark session beginnings
-        h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
-        set([h0; h00], 'handlevisibility', 'off'); 
-    end    
-    
-    plot(top); title('manual'), 
-    a = [a, gca];    
-    
-    
-    
-    subplot(412), hold on
-    top = nanmean(C);
-    hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
-    set([hh], 'handlevisibility', 'off')
-    if exist('nFrsSess', 'var'), 
-        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [min(top); max(top)], 'k'); % mark session beginnings
-        h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
-        set([h0; h00], 'handlevisibility', 'off'); 
-    end    
-    
-    plot(top); title('C'), 
-    a = [a, gca];
-    
-    
-    
-    subplot(414), hold on
-    top = f;
-    hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
-    set([hh], 'handlevisibility', 'off')
-    if exist('nFrsSess', 'var'), 
-        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [min(top); max(top)], 'k'); % mark session beginnings
-        h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
-        set([h0; h00], 'handlevisibility', 'off'); 
-    end    
-    
-    plot(top); title('f'), 
-    a = [a, gca];
-    
-    
-    linkaxes(a, 'x')
-    %{
-    x=get(gca,'xlim');len = x(end);
-    r2 = 0;
-    for rr = 1:floor(len/.5e4)+1
-        r1 = r2;
-        r2 = r1+.5e4;
-        xlim([r1 r2])
-        %     ginput
-        pause
-    end
-    %}
+    plotEftyVarsMean
     
     
     %% shift and scale C, man, etc to compare them...        
@@ -469,7 +412,6 @@ if evaluateEftyOuts
     a2 = gca;
     
     
-    load(pnevFileName, 'activity_man_eftMask_ch1')
     subplot(313), hold on
     plot(mean(activity_man_eftMask_ch1,2))
     a3 = gca;
@@ -499,7 +441,7 @@ if evaluateEftyOuts
 end
 
 
-%% Evaluate A and C of Efty's algorithm
+%% Evaluate A and C of Efty's algorithm by plotting the traces 1 by 1.
 
 if plotEftyAC1by1
     
