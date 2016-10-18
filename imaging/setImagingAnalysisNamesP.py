@@ -9,11 +9,11 @@ This is Farzaneh's first Python code :-) She is very happy and pleased about it 
 example call:
 
 mousename = 'fni17'
-imagingFolder = '151102'
-mdfFileNumber = (1,2)
+imagingFolder = '151021'
+mdfFileNumber = [1] #(1,2)
 
 # optional inputs:
-postNProvided = 0; # Default:0; If your directory does not contain pnevFile and instead it contains postFile, set this to 1 to get pnevFileName
+postNProvided = 1; # Default:0; If your directory does not contain pnevFile and instead it contains postFile, set this to 1 to get pnevFileName
 signalCh = [2] # since gcamp is channel 2, should be 2.
 pnev2load = [] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
 
@@ -39,7 +39,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         pnev2load = []
         
     if options.get('postNProvided'):
-        pnev2load = options.get('postNProvided');    
+        postNProvided = options.get('postNProvided');    
     else:
         postNProvided = 0
         
@@ -57,7 +57,8 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     if platform.system()=='Linux':
         dataPath = '/home/farznaj/Shares/Churchland/data/'
     else:
-        dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data/'        
+        dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data/'
+        
     #%%        
     tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
     r = '%03d-'*len(mdfFileNumber)
@@ -93,7 +94,8 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         else:
             pnevFileName = pnevFileName[pnev2load[0]]
             if postNProvided:
-                pnevFileName = pnevFileName[5:]
+                p = os.path.basename(pnevFileName)[5:]
+                pnevFileName = os.path.join(tifFold,p)
     else:
         pnevFileName = ''
     

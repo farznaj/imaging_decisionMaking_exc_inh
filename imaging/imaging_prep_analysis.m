@@ -46,12 +46,12 @@ rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset af
 normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
 
 % set the following vars to 1 when first evaluating a session.
-setInhibitExcit = 0; % if 1, inhibitory and excitatory neurons will be set unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 evaluateEftyOuts = 0; 
 compareManual = 0; % compare results with manual ROI extraction
 
-plot_ave_noTrGroup = 0; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
+plot_ave_noTrGroup = 1; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
 
+setInhibitExcit = 0; % if 1, inhibitory and excitatory neurons will be set unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 plotEftyAC1by1 = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
 frameLength = 1000/30.9; % sec.
 
@@ -286,7 +286,10 @@ end
 fprintf('Loading Eftys vars...')
 load(pnevFileName, 'C', 'C_df', 'S', 'A', 'P', 'f')
 fprintf('...done\n')
+
 load(imfilename, 'Nnan_nanBeg_nanEnd')
+
+% S(:, [32672       32333       32439       32547]) = nan; % sharp spikes due to frame missing (their trials will be excluded... you are just doing this so they dont affect the normalization.)
 % normalizeSpikes = 1;
 [C, S, C_df] = processEftyOuts(C, S, C_df, Nnan_nanBeg_nanEnd, normalizeSpikes);
 
@@ -368,7 +371,7 @@ if evaluateEftyOuts
     hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
     set([hh], 'handlevisibility', 'off')
     if exist('nFrsSess', 'var'), 
-        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
+        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [min(top); max(top)], 'k'); % mark session beginnings
         h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
         set([h0; h00], 'handlevisibility', 'off'); 
     end    
@@ -382,7 +385,7 @@ if evaluateEftyOuts
     hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
     set([hh], 'handlevisibility', 'off')
     if exist('nFrsSess', 'var'), 
-        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
+        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [min(top); max(top)], 'k'); % mark session beginnings
         h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
         set([h0; h00], 'handlevisibility', 'off'); 
     end    
@@ -397,7 +400,7 @@ if evaluateEftyOuts
     hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
     set([hh], 'handlevisibility', 'off')
     if exist('nFrsSess', 'var'), 
-        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
+        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [min(top); max(top)], 'k'); % mark session beginnings
         h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
         set([h0; h00], 'handlevisibility', 'off'); 
     end    
@@ -412,7 +415,7 @@ if evaluateEftyOuts
     hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
     set([hh], 'handlevisibility', 'off')
     if exist('nFrsSess', 'var'), 
-        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [-.5; 1], 'k'); % mark session beginnings
+        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [min(top); max(top)], 'k'); % mark session beginnings
         h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
         set([h0; h00], 'handlevisibility', 'off'); 
     end    

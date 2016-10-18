@@ -131,7 +131,7 @@ trs2rmv = []; stimdur = []; stimrate = []; stimtype = [];
 for ise = 1:length(mdfFileNumber)
     load(imfilename_sess{ise}, 'badAlignTrStartCode', 'trialStartMissing'); %, 'trialCodeMissing') % they get set in framesPerTrialStopStart3An_fn
 
-    load(imfilename, 'trEndMissing', 'trEndMissingUnknown', 'trStartMissingUnknown')   
+    load(imfilename_sess{ise}, 'trEndMissing', 'trEndMissingUnknown', 'trStartMissingUnknown')   
     
     if ~exist('trEndMissing', 'var'), trEndMissing = []; end
     if ~exist('trEndMissingUnknown', 'var'), trEndMissingUnknown = []; end

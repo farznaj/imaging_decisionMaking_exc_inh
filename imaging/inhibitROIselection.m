@@ -530,7 +530,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             disp('Other keys: keep showing the same ROI.')
             disp('When contour is shown :')
             disp('... press Enter if happy with classification and want to see next ROI.')
-            disp('... press 0 if classification is wrong.')
+            disp('... press 0 if ROI must be excit.')
             disp('... press 2 if unsure about classification.')
             cprintf('red', 'DO NOT CLICK OR THE COMPUTER WILL HANG!! only use keyboard keys!!\n')
         else
@@ -674,7 +674,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             disp('Other keys: keep showing the same ROI.')
             disp('When contour is shown :')
             disp('... press Enter if happy with classification and want to see next ROI.')
-            disp('... press 0 if classification is wrong.')
+            disp('... press 1 if ROI must be inhibit.')
             disp('... press 2 if unsure about classification.')
             cprintf('red', 'DO NOT CLICK OR THE COMPUTER WILL HANG!! only use keyboard keys!!\n')
         else
@@ -764,8 +764,8 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     %                 break
                     
                     
-                % if number 0 pressed, you want to reassign this ROI as inhibit.
-                elseif ch==48
+                % if number 1 pressed, you want to reassign this ROI as inhibit.
+                elseif ch==49
                     excitEval(rr2) = 0;
                     fprintf('Reset as inhibit\n')
                     
@@ -799,7 +799,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
         %%%     inhibitRois_new = inhibitRois;
         fprintf('%i of excitatory ROIs are reset as inhibitory.\n', sum(excitEval==0))
         fprintf('%i of excitatory ROIs are reset as unknown.\n', sum(excitEval==2))
-        inhibitRois_new(excitEval==0) = 1; % these ROIs are misidentified as excit, and must be inhibit.
+        inhibitRois_new(excitEval==1) = 1; % these ROIs are misidentified as excit, and must be inhibit.
         inhibitRois_new(excitEval==2) = nan; % we don't know whether to classify these ROIs as excit or inhibit.
     end
     
