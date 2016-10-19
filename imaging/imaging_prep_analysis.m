@@ -343,11 +343,11 @@ cs_sess = cumsum(cs_sess);
 % indeces between entire movie (iall) and the tif movie that contains the
 % frame (imov):
 iall = 34998; % frame index on the entire movie (eg on S)
-itif = find((cs_frmovs - iall)>0, 1)-1 % tif movie containing frame iall
+itif = find((cs_frmovs - iall)>=0, 1)-1 % tif movie containing frame iall
 imov = iall - cs_frmovs(itif) % frame index on the movie itif 
 
 % Find the trial that contains frame iall
-itr = find((cs_frtrs - iall)>0, 1)-1; % trial that contains frame iall 
+itr = find((cs_frtrs - iall)>=0, 1)-1; % trial that contains frame iall 
 % Find the frame index of a trial (its onset) on movie itif
 cs_frtrs(itr) - cs_frmovs(itif) % frame of trial itr on movie itif (ie frame index of trial itr relative to
 % the beginning of movie itif)
@@ -375,13 +375,14 @@ if evaluateEftyOuts
 
     %% plot C, f, manual activity
     
-    load(imfilename, 'cs_frtrs')
-    load(pnevFileName, 'activity_man_eftMask_ch1')
+    load(imfilename, 'cs_frtrs')    
     
     plotEftyVarsMean
     
     
     %% shift and scale C, man, etc to compare them...        
+    
+    load(pnevFileName, 'activity_man_eftMask_ch1')
     
     figure('name', 'Green lines: trial beginnings. Solid black lines: session beginnings. Dashed black lines: tif movie beginnings.'); 
     subplot(311), hold on

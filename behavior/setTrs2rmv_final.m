@@ -9,6 +9,7 @@ if ~exist('trEndMissing', 'var'), trEndMissing = []; end
 if ~exist('trEndMissingUnknown', 'var'), trEndMissingUnknown = []; end
 if ~exist('trStartMissingUnknown', 'var'), trStartMissingUnknown = []; end
 if ~exist('trialNumbers', 'var'), trialNumbers = []; end
+% if ~exist('pmtOffTrials', 'var'), pmtOffTrials = []; end
 
     
 %% Set trs2rmv

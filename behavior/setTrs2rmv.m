@@ -20,6 +20,8 @@ if ~exist('trEndMissing', 'var'), trEndMissing = []; end
 if ~exist('trEndMissingUnknown', 'var'), trEndMissingUnknown = []; end
 if ~exist('trStartMissingUnknown', 'var'), trStartMissingUnknown = []; end
 if ~exist('trialNumbers', 'var'), trialNumbers = []; end
+% if ~exist('pmtOffTrials', 'var'), pmtOffTrials = []; end
+
 
 %%
 % th = 5; % 9; % this number of beginning trials will be excluded. also later in the code we want >th trials in each column of ratesDiffInput
@@ -77,7 +79,7 @@ if exist('badAlignTrStartCode', 'var')
     trs_endMiss = unique([trialNumbers(trEndMissing), trialNumbers(trEndMissingUnknown)]);
     
     % Trials that miss trialCode signal.
-    trs_noTrialCode = find(trialCodeMissing==1);
+    trs_noTrialCode = find(trialCodeMissing==1);    
     
     % Trials that were not imaged. (I believe trs_noTrialCode is a subset of trs_notScanned).
     trs_notScanned = find([alldata.hasActivity]==0);    

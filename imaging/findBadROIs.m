@@ -1,4 +1,4 @@
-function [badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight] = findBadROIs(mouse, imagingFolder, mdfFileNumber, fixed_th_srt_val, savebadROIs01, exclude_badHighlightCorr,evalBadRes, th_AG, th_srt_val, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr);
+function [badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB] = findBadROIs(mouse, imagingFolder, mdfFileNumber, fixed_th_srt_val, savebadROIs01, exclude_badHighlightCorr,evalBadRes, th_AG, th_srt_val, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr);
 % Find bad ROI outputs of the CNMF algorithm
 % You need to run this after preproc is done. Python eval_comp is run, and Set_A_CC is run.
 %
@@ -179,28 +179,30 @@ smallROI = mask_numpix < th_smallROI;
 shortDecayTau = tau(:,2) < th_shortDecayTau; 
 badTempCorr = temp_corr < th_badTempCorr; 
 badHighlightCorr = rval_space < th_badHighlightCorr; 
+badHighlightCorr_DB = highlightCorrROI < th_badHighlightCorr; 
 
 fprintf('sum(badAG): %d\n', sum(badAG))
 fprintf('sum(badEP & ~badAll): %d\n', sum(badEP & ~(badAG | smallROI | shortDecayTau | badTempCorr | badHighlightCorr))) %
 fprintf('sum(smallROI & ~badAll): %d\n', sum(smallROI & ~(badEP | badAG | shortDecayTau | badTempCorr | badHighlightCorr))) % increase this to 20 if you want to get rid of neuropils
 fprintf('sum(shortDecayTau & ~badAll): %d\n', sum(shortDecayTau & ~(badEP | badAG | smallROI | badTempCorr | badHighlightCorr)))
 fprintf('sum(badTempCorr & ~badAll)): %d\n', sum(badTempCorr & ~(badEP | badAG | smallROI | shortDecayTau | badHighlightCorr))) %
-fprintf('sum(badHighlightCorr& ~badAll): %d\n', sum(badHighlightCorr& ~(badEP | badAG | smallROI | shortDecayTau | badTempCorr)))
+fprintf('sum(badHighlightCorr & ~badAll): %d\n', sum(badHighlightCorr& ~(badEP | badAG | smallROI | shortDecayTau | badTempCorr)))
+fprintf('sum(badHighlightCorrDB & ~badAll): %d\n', sum(badHighlightCorr_DB& ~(badEP | badAG | smallROI | shortDecayTau | badTempCorr | badHighlightCorr)))
 % goodSrtvalButbadHighlightCorr = (rval_space < .5 & srt_val >= 1e4); % these have good trace quality but are mostly neuropils. so you can later decide to add them or not.
 
 
 %% Define final bad ROIs using a combination of measures
 
-bad_EP_AG_size_tau_tempCorr_hiLight = [badEP, badAG, smallROI, shortDecayTau, badTempCorr, badHighlightCorr];
+bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB = [badEP, badAG, smallROI, shortDecayTau, badTempCorr, badHighlightCorr, badHighlightCorr_DB];
 
 % If you don't exclude badHighlightCorr, still most of the neurons will
 % have good trace quality, but they are mostly fragmented parts of ROIs or
 % neuropils. Also remember in most cases of fragmented ROIs, a more
 % complete ROI already exists that is not a badHighlightCorr.
 if ~exclude_badHighlightCorr
-    badAll = sum(bad_EP_AG_size_tau_tempCorr_hiLight(:,[1:5]),2);
+    badAll = sum(bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB(:,[1:5]),2);
 else
-    badAll = sum(bad_EP_AG_size_tau_tempCorr_hiLight,2);
+    badAll = sum(bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB(:,[1:6]),2); % I am using Efty's measure and not ours.
 end
 
 badROIs01 = (badAll ~= 0); % any of the above measure is bad.

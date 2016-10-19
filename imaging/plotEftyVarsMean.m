@@ -1,5 +1,7 @@
 % Use this script to look at averages of ca traces (outputs of CNMF); It
 % allows you to identify frame drops during a trial.
+% Also it allows identifying pmtOffFrames, if there are any use the script
+% setPmtOffFrames to set them and save them to imfilename.
 %
 % Required inputs:
 %{
@@ -31,6 +33,8 @@ load(imfilename, 'Nnan_nanBeg_nanEnd')
 
 %}
 
+cprintf('red', 'Remember about pmtOffFrames!! \n')
+
 %%
 figure; a = [];
 
@@ -58,7 +62,7 @@ if exist('nFrsSess', 'var'),
     set([h0; h00], 'handlevisibility', 'off');
 end
 
-plot(top); title('manual'),
+plot(top); title('manual, Any pmtOffFrames?!'),
 a = [a, gca];
 
 
