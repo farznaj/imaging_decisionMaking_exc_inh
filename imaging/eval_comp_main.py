@@ -7,8 +7,8 @@ Created on Tue Aug 23 09:52:25 2016
 
 #%% Specify file you wish to analyze
 mousename = 'fni17'
-imagingFolder = '151029'
-mdfFileNumber = [2,3] 
+imagingFolder = '151026'
+mdfFileNumber = [1] 
 
 #%% Set pnevFileName 
 pnev2load = []; #[3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
@@ -39,6 +39,26 @@ YrA = a.pop('YrA')
 '''
 #a = scipy.io.loadmat(dirname, variable_names=['traces'])
 #a = traces.pop('traces').astype('float')
+
+#%% Take care of pmtOffFrames. [despite the following argument, it seems removing pmtOffFrames helps with having more good neurons: you don't seem to need this, bc pmtOffFrames have no spikes and their erfc will be high, so fitness (which is min of erfc) wont be affected by pmtOffFrames.)
+# Load pmtOffFrames
+a = scipy.io.loadmat(imfilename, variable_names=['pmtOffFrames']) #.pop('C').astype('float');  
+pmtOffFrames = a.pop('pmtOffFrames')
+p = np.array(pmtOffFrames[0,1]).flatten()
+
+if p.sum()>0:
+    print 'Removing pmtOffFrames from C and YrA'
+    # Remove pmtOffFrames from C and YrA
+    a = np.argwhere(p)
+    b1 = C[:, 0:int(a[0])] #+ 
+    b2 = C[:, int(a[-1]+1):]
+    C = np.concatenate((b1,b2), 1)
+    
+    b1 = YrA[:, 0:int(a[0])] #+ 
+    b2 = YrA[:, int(a[-1]+1):]
+    YrA = np.concatenate((b1,b2), 1)
+
+#%% Set traces 
 traces = C + YrA;
 np.shape(traces)
 
@@ -49,7 +69,7 @@ traces = np.diff(traces, axis=1)
 np.shape(traces)
 idx_components, fitness, erfc = evaluate_components(traces, 5, 0)
 '''
-
+#np.mean(fitness[fitness!=fitness[0]])
 # Plot
 from matplotlib import pyplot as plt
 plt.figure

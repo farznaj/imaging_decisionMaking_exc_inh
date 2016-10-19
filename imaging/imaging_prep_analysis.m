@@ -5,7 +5,7 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 %
 % Right after you are done with preproc on the cluster, run the following scripts:
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
-% - set_A_CC
+% - set_mask_CC
 % - find_badROIs
 % - inhibit_excit_prep
 % - imaging_prep_analysis
@@ -63,7 +63,7 @@ home
 
 % Rmemeber once preproc is done, you need to run eval_comp_main in Python
 % to save outputs of Andrea's evaluation of components in a mat file named
-% more_pnevFile... Then run set_A_CC to append to this mat file, A and CC.
+% more_pnevFile... Then run set_mask_CC to append to this mat file, A and CC.
 
 
 %% Good days

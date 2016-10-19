@@ -46,3 +46,7 @@ pmtOffTrials = itr1 : itr2;
 
 % save(imfilename, '-append', 'pmtOffFrames') % , 'pmtOffTrials')
 
+%%
+load(pnevFil
+
+

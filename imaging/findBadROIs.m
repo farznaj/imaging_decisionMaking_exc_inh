@@ -1,6 +1,6 @@
 function [badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB] = findBadROIs(mouse, imagingFolder, mdfFileNumber, fixed_th_srt_val, savebadROIs01, exclude_badHighlightCorr,evalBadRes, th_AG, th_srt_val, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr);
 % Find bad ROI outputs of the CNMF algorithm
-% You need to run this after preproc is done. Python eval_comp is run, and Set_A_CC is run.
+% You need to run this after preproc is done. Python eval_comp is run, and Set_mask_CC is run.
 %
 %{
 % example inputs:
@@ -9,7 +9,8 @@ mouse = 'fni17';
 imagingFolder = '151020'; %'151029'; %  '150916'; % '151021';
 mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
-savebadROIs01 = 1; % if 1, badROIs01 will be appended to more_pnevFile
+
+savebadROIs01 = 0; % if 1, badROIs01 will be appended to more_pnevFile
 evalBadRes = 1; % plot figures to evaluate the results
 
 fixed_th_srt_val = 1; % if fixed 4150 will be used as the threshold on srt_val, if not, we will find the srt_val threshold by employing Andrea's measure
@@ -179,7 +180,7 @@ smallROI = mask_numpix < th_smallROI;
 shortDecayTau = tau(:,2) < th_shortDecayTau; 
 badTempCorr = temp_corr < th_badTempCorr; 
 badHighlightCorr = rval_space < th_badHighlightCorr; 
-badHighlightCorr_DB = highlightCorrROI < th_badHighlightCorr; 
+badHighlightCorr_DB = highlightCorrROI' < th_badHighlightCorr; 
 
 fprintf('sum(badAG): %d\n', sum(badAG))
 fprintf('sum(badEP & ~badAll): %d\n', sum(badEP & ~(badAG | smallROI | shortDecayTau | badTempCorr | badHighlightCorr))) %
@@ -210,7 +211,7 @@ cprintf('blue', 'Total number of good, bad ROIs= %d %d, mean(bad)=%.2f\n', sum(~
 
 
 if savebadROIs01
-    save(fname, '-append', 'bad_EP_AG_size_tau_tempCorr_hiLight', 'badROIs01')
+    save(fname, '-append', 'bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB', 'badROIs01')
 end
 
 

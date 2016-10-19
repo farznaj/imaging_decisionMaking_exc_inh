@@ -1,7 +1,11 @@
+% If needed follow this script by codes setPmtOffFrames to set
+% pmtOffFrames and by findTrsWithMissingFrames to set frame-dropped trials.
+% In this latter case you will need to rerun CNMF! 
+% 
 % Use this script to look at averages of ca traces (outputs of CNMF); It
-% allows you to identify frame drops during a trial.
-% Also it allows identifying pmtOffFrames, if there are any use the script
-% setPmtOffFrames to set them and save them to imfilename.
+% allows you to identify frame drops during a trial. Also it allows
+% identifying pmtOffFrames, if there are any use the script setPmtOffFrames
+% to set them and save them to imfilename.
 %
 % Required inputs:
 %{
@@ -35,7 +39,7 @@ load(imfilename, 'Nnan_nanBeg_nanEnd')
 
 cprintf('red', 'Remember about pmtOffFrames!! \n')
 
-%%
+%
 figure; a = [];
 
 subplot(413), hold on
@@ -98,13 +102,13 @@ a = [a, gca];
 
 linkaxes(a, 'x')
 %{
-    x=get(gca,'xlim');len = x(end);
-    r2 = 0;
-    for rr = 1:floor(len/.5e4)+1
-        r1 = r2;
-        r2 = r1+.5e4;
-        xlim([r1 r2])
-        %     ginput
-        pause
-    end
+x=get(gca,'xlim');len = x(end);
+r2 = 0;
+for rr = 1:floor(len/.5e4)+1
+    r1 = r2;
+    r2 = r1+.5e4;
+    xlim([r1 r2])
+    %     ginput
+    pause
+end
 %}
