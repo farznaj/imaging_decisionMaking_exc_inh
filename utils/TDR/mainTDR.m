@@ -3,7 +3,7 @@ imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
 mdfFileNumber = [1];  % 3; %1; % or tif major
 
 % the following are needed for setting stim-aligned traces.
-ep_ms = [700 900]; % make sure no trial includes go tone before the end of ep % ep_ms will be used for setting X (trials x neurons, average of neural activity in window ep relative to stimulus onset).
+ep_ms = [1000 1300]; %[700 900]; % make sure no trial includes go tone before the end of ep % ep_ms will be used for setting X (trials x neurons, average of neural activity in window ep relative to stimulus onset).
 th_stim_dur = 800; % min stim duration to include a trial in timeStimOnset
 % the following are needed for setting X, Y, TrsExcluded, NsExcluded
 trialHistAnalysis = 0;
