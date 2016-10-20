@@ -7,6 +7,14 @@
 % identifying pmtOffFrames, if there are any use the script setPmtOffFrames
 % to set them and save them to imfilename.
 %
+% Right after you are done with preproc on the cluster, run the following scripts:
+% - plotEftyVarsMean (if needed follow by setPmtOffFrames to set pmtOffFrames and by findTrsWithMissingFrames to set frame-dropped trials. In this latter case you will need to rerun CNMF!): for a quick evaluation of the traces and spotting any potential frame drops, etc
+% - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
+% - set_mask_CC
+% - find_badROIs
+% - inhibit_excit_prep
+% - imaging_prep_analysis (calls set_aligned_traces... you will need its outputs)
+%
 % Required inputs:
 %{
 mouse = 'fni17';
@@ -37,6 +45,7 @@ load(imfilename, 'Nnan_nanBeg_nanEnd')
 
 %}
 
+%%
 cprintf('red', 'Remember about pmtOffFrames!! \n')
 
 %
@@ -101,8 +110,10 @@ a = [a, gca];
 
 
 linkaxes(a, 'x')
-%{
-x=get(gca,'xlim');len = x(end);
+
+
+%%
+x = get(gca,'xlim'); len = x(end);
 r2 = 0;
 for rr = 1:floor(len/.5e4)+1
     r1 = r2;
