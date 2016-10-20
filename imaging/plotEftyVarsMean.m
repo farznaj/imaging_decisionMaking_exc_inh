@@ -45,6 +45,7 @@ load(imfilename, 'Nnan_nanBeg_nanEnd')
 
 %}
 
+
 %%
 cprintf('red', 'Remember about pmtOffFrames!! \n')
 
@@ -110,9 +111,9 @@ a = [a, gca];
 
 
 linkaxes(a, 'x')
+xlim([0 size(C,2)])
 
-
-%%
+%{
 x = get(gca,'xlim'); len = x(end);
 r2 = 0;
 for rr = 1:floor(len/.5e4)+1

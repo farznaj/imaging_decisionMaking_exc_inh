@@ -1,7 +1,8 @@
 % Identify pmtOffFrames by using any of the traces, eg trace f, C, manual, etc.
 
+load(imfilename, 'pmtOffFrames')
 pmtOffFrames
-sum(pmtOffFrames{1})
+fprintf('sum of pmtOffFrames = %d\n', sum(pmtOffFrames{1}))
 
 %{
 figure; hold on
@@ -13,7 +14,7 @@ plot([0 length(f)],[th th],'m')
 %%
 th = mean(f)-3*std(f);
 flfrs = [find(f<th,1), find(f<th,1,'last')];
-fprintf('1st and last frame of pmt off: %d %d\n', flfrs)
+cprintf('blue', '1st and last frame of pmt off: %d %d\n', flfrs)
 
 % figure; plot(f<th)
 
@@ -21,7 +22,7 @@ for ch = 1:2
     pmtOffFrames{ch} = (f<th);
 end
 pmtOffFrames
-sum(pmtOffFrames{1})
+fprintf('sum of pmtOffFrames = %d\n', sum(pmtOffFrames{1}))
 
 
 %% Identify the trials during which pmt was off
@@ -46,7 +47,5 @@ pmtOffTrials = itr1 : itr2;
 
 % save(imfilename, '-append', 'pmtOffFrames') % , 'pmtOffTrials')
 
-%%
-load(pnevFil
 
 
