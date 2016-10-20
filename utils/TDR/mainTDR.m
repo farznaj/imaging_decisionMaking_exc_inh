@@ -25,7 +25,8 @@ thTrsWithSpike = 1; % 3; % 1; % ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30 
 
 signalCh = 2;
 pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the latest pnev vile). Set [] to load the latest one.
-[imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
+postNProvided = 1; % whether the directory cotains the postFile or not. if it does, then mat file names will be set using postFile, otherwise using pnevFile.
+[imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load, postNProvided);
 [pd, pnev_n] = fileparts(pnevFileName);
 postName = fullfile(pd, sprintf('post_%s.mat', pnev_n));
 

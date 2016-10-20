@@ -1,4 +1,4 @@
-function [imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh, pnev2load)
+function [imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh, pnev2load, postNProvided)
 % [imfilename, pnevFileName, tifFold, date_major] = setImagingAnalysisNames(mousename, imagingFolder, mdfFileNumber, signalCh)
 % E.g.
 % mousename = 'fni17';
@@ -10,6 +10,10 @@ if ~exist('pnev2load', 'var') || isempty(pnev2load)
     pnev2load = 1; % use the most recent file.
 end
 
+if ~exist('postNProvided', 'var')
+    postNProvided = 0;
+end
+
 
 %%
 if isempty(strfind(pwd, 'gamalamin')) % Farzaneh
@@ -19,7 +23,7 @@ if isempty(strfind(pwd, 'gamalamin')) % Farzaneh
         if isempty(strfind(pwd, 'sonas')) % Unix in the office
             dataPath = '~/Shares/Churchland/data';
         else % server
-            dataPath = '/sonas-hs/churchland/nlsas/data/data'; 
+            dataPath = '/sonas-hs/churchland/nlsas/data/data';
         end
     elseif ispc
         dataPath = '\\sonas-hs.cshl.edu\churchland\data'; % Office PC
@@ -38,18 +42,28 @@ date_major = sprintf(['%s_', r], imagingFolder, mdfFileNumber);
 imfilename = fullfile(tifFold, date_major);
 
 if exist('signalCh', 'var')
-    pnevFileName = [date_major, '_ch', num2str(signalCh),'-Pnev*'];
+    if postNProvided
+        pnevFileName = ['post_', date_major, '_ch', num2str(signalCh),'-Pnev*'];
+    else
+        pnevFileName = [date_major, '_ch', num2str(signalCh),'-Pnev*'];
+    end
+    
     pnevFileName = dir(fullfile(tifFold, pnevFileName));
     
     if isempty(pnevFileName)
         fprintf('No Pnev file was found!\n')
         pnevFileName = '';
     else
+        
         % in case there are a few pnev files, choose which one you want!
         [~,i] = sort([pnevFileName.datenum], 'descend');
         disp({pnevFileName(i).name}')
         pnevFileName = pnevFileName(i(pnev2load)).name;
+        if postNProvided
+            pnevFileName = pnevFileName(6:end);
+        end
         pnevFileName = fullfile(tifFold, pnevFileName);
+%         disp(pnevFileName)
     end
     
 else
