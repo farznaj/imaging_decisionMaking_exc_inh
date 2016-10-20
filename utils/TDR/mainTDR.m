@@ -222,22 +222,25 @@ for s = 1:S
 end
 
 clr = redgreencmap(S, 'interpolation', 'linear');
-
 figure;
+l = {};
 subplot(121)
 hold on
 for s = 1:S
-    plot(all_times, proj1(:, s, 1), '--', 'color', clr(s, :))
-    plot(all_times, proj1(:, s, 2), '-', 'color', clr(s, :))
+    plot(all_times, proj1(:, s, 1), '--', 'color', clr(s, :));
+    h(s) = plot(all_times, proj1(:, s, 2), '-', 'color', clr(s, :));
+    l{s} = [num2str(uniqueStim(s)) 'Hz']; 
 end
 title('stimulus projection')
-
+legend(h, l)
+ 
 subplot(122)
 hold on
 for s = 1:S
-    plot(all_times, proj2(:, s, 1), '--', 'color', clr(s, :))
-    plot(all_times, proj2(:, s, 2), '-', 'color', clr(s, :))
+    plot(all_times, proj2(:, s, 1), '--', 'color', clr(s, :));
+    h(s) = plot(all_times, proj2(:, s, 2), '-', 'color', clr(s, :));
 end
 title('choice projection')
+legend(h, l)
 
 %%
