@@ -874,6 +874,7 @@ if plot_ave_noTrGroup
     respSide2ana = 'all'; % 'all'; 'HR'; 'LR';
     
     %%%%%% plot average imaging traces aligned on licks : THIS TAKES TIME!
+    cprintf('blue', 'Plot average imaging traces aligned on licks\n')
     evT = {'centerLicks', 'leftLicks', 'rightLicks'}; % times are relative to scopeTTL onset, hence negative values are licks that happened before that (during iti states).
     nPreFrames = 5;
     nPostFrames = 20;    
@@ -884,6 +885,7 @@ if plot_ave_noTrGroup
     
     
     %%%%%% plot average imaging traces aligned on trial events
+    cprintf('blue', 'Plot average imaging traces aligned on trial events\n')
     evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
         'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
         'timeReward', 'timeCommitIncorrResp', 'timeStop'};
@@ -893,6 +895,7 @@ if plot_ave_noTrGroup
     
     
     %%%%%% plot average lick traces aligned on trial events.
+    cprintf('blue', 'Plot average lick traces aligned on trial events.\n')
     lickInds = [1, 2,3]; % Licks to analyze % 1: center lick, 2: left lick; 3: right lick
     
     lickAlign(lickInds, evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, frameLength)    

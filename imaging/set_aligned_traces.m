@@ -149,7 +149,7 @@ ep_ms = [500 700]; % rel2 stimOnset % we want to decode animal's upcoming choice
 % you can also try [600 800].... but for now lets go with [500 700].
 
 % now make sure in no trial go tone happened before the end of ep:
-i = timeCommitCL_CR_Gotone <= ep_ms(end);
+i = (timeCommitCL_CR_Gotone - timeStimOnset) <= ep_ms(end);
 if sum(i)>0
     fprintf('Excluding %i trials from timeStimOnset bc their goTone is earlier than ep end\n', sum(i))
     timeStimOnset(i) = NaN;  % by setting to nan, the aligned-traces of these trials will be computed as nan.

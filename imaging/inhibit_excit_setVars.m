@@ -181,7 +181,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     
     % plot inhibitory ROIs on the image of inhibit channel.
     figure('name', 'sdImage of inhibit channel', 'position', [288     1   560   972]);
-    subplot(211)
+    subplot(221)
     imagesc(im2p)
     colormap gray
     hold on
@@ -191,7 +191,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     title('gcamp ROIs idenetified as inhibitory');
     
     % plot excitatory ROIs on the image of inhibit channel.
-    subplot(212)
+    subplot(222)
     imagesc(im2p)
     colormap gray
     hold on
@@ -200,12 +200,24 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     end
     title('gcamp ROIs identified as excitatory');
     
+
+    % plot unsure ROIs on the image of inhibit channel.
+    subplot(223)
+    imagesc(im2p)
+    colormap gray
+    hold on
+    for rr = find(isnan(inhibitRois))
+        plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
+    end
+    title('gcamp ROIs identified as unsure');
+
     
     %% Compare average C of inhibit and excit neurons
     
     figure;
-    subplot(211), plot(mean(C(inhibitRois==1,:))), title('inhibit')
-    subplot(212),  plot(mean(C(inhibitRois==0,:))), title('excit')
+    subplot(311), plot(mean(C(inhibitRois==1,:))), title('inhibit')
+    subplot(312),  plot(mean(C(inhibitRois==0,:))), title('excit')
+    subplot(313),  plot(mean(C(isnan(inhibitRois),:))), title('unsure')
     
     %{
     subplot(221), plot(mean(activity_man_eftMask_ch2(:, inhibitRois==1), 2)), title('ch2, inhibit')

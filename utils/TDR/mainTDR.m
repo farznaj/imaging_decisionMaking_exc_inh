@@ -29,7 +29,7 @@ pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the lat
 [pd, pnev_n] = fileparts(pnevFileName);
 postName = fullfile(pd, sprintf('post_%s.mat', pnev_n));
 
-load(postName, 'stimAl_allTrs', 'stimrate', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'outcomes', 'allResp_HR_LR', 'cb')
+load(postName, 'stimAl_allTrs', 'stimrate', 'time1stSideTry', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'outcomes', 'allResp_HR_LR', 'cb')
 % load('SVM_151029_003_ch2-PnevPanResults-160426-191859.mat')
 
 

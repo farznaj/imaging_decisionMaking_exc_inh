@@ -19,14 +19,28 @@
 % you can also try [600 800].... but for now lets go with [500 700].
 
 %%
+% This criteria makes sense if you want to be conservative; otherwise if ep=[1000 1300]ms, go tone will definitely be before ep end, and you cannot have the following criteria.
 % now make sure in no trial go tone happened before the end of ep:
-i = timeCommitCL_CR_Gotone <= ep_ms(end);
+i = (timeCommitCL_CR_Gotone - timeStimOnset) <= ep_ms(end);
+%{
 if sum(i)>0
     fprintf('Excluding %i trials from timeStimOnset bc their goTone is earlier than ep end\n', sum(i))
 %     timeStimOnset(i) = NaN;  % by setting to nan, the aligned-traces of these trials will be computed as nan.
 else
     fprintf('No trials with go tone before the end of ep. Good :)\n')
 end
+%}
+
+
+% now make sure in no trial choice happened before the end of ep:
+ii = (time1stSideTry - timeStimOnset) <= ep_ms(end);
+if sum(ii)>0
+    fprintf('Excluding %i trials from timeStimOnset bc their choice is earlier than ep end\n', sum(ii))
+%     timeStimOnset(i) = NaN;  % by setting to nan, the aligned-traces of these trials will be computed as nan.
+else
+    fprintf('No trials with choice before the end of ep. Good :)\n')
+end
+
 
 % now make sure trials that you use for SVM (decoding upcoming choice from
 % neural responses during stimulus) have a certain stimulus duration. Of
@@ -41,20 +55,22 @@ end
 figure; hold on
 plot(timeStimOffset - timeStimOnset)
 plot(timeCommitCL_CR_Gotone - timeStimOnset)
-plot([1 length(timeCommitCL_CR_Gotone)],[th_stim_dur th_stim_dur],'g')
+plot(time1stSideTry - timeStimOnset)
+plot([1 length(timeCommitCL_CR_Gotone)],[th_stim_dur th_stim_dur],'g:')
+plot([1 length(timeCommitCL_CR_Gotone)],[ep_ms(end) ep_ms(end)],'k:')
 ylabel('Time relative to stim onset (ms)')
 legend('stimOffset','goTone', 'th\_stim\_dur')
-minStimDurNoGoTone = min(timeCommitCL_CR_Gotone - timeStimOnset); % this is the duration after stim onset during which no go tone occurred for any of the trials.
-cprintf('blue', 'minStimDurNoGoTone = %.2f ms\n', minStimDurNoGoTone)
+% minStimDurNoGoTone = min(timeCommitCL_CR_Gotone - timeStimOnset); % this is the duration after stim onset during which no go tone occurred for any of the trials.
+% cprintf('blue', 'minStimDurNoGoTone = %.2f ms\n', minStimDurNoGoTone)
 
 
 % exclude trials whose stim duration was < th_stim_dur
 j = (timeStimOffset - timeStimOnset) < th_stim_dur;
 if sum(j)>0
-    fprintf('Excluding %i trials from timeStimOnset bc their stimDur-without-goTone < 800ms\n', sum(j))
+    fprintf('Excluding %i trials from timeStimOnset bc their stimDur < %dms\n', sum(j), th_stim_dur) % stimDur-without-goTone
 %     timeStimOnset(j) = NaN;
 else
-    fprintf('No trials with stimDur-w/out-goTone < 800ms. Good :)\n')
+    fprintf('No trials with stimDur < %dms. Good :)\n', th_stim_dur)
 end
 
 
@@ -66,6 +82,9 @@ end
 % need to have in mind that go tone may exist before stim ends.
 % so we don't exclude them but lets just check what is the duration after
 % stim onset in which no go tone occurred for any of the trials.
-toRmv = (i+j)~=0;
+
+% toRmv = (i+j+ii)~=0;  % criteria i makes sense if you want to be conservative; otherwise if ep=[1000 1300]ms, go tone will definitely be before ep end, and you cannot have the following criteria.
+toRmv = (j+ii)~=0; fprintf('Not excluding %i trials whose goTone is earlier than ep end\n', sum(i))
+
 % final_minStimDurNoGoTone = min(timeCommitCL_CR_Gotone(~toRmv) - timeStimOnset(~toRmv)); % for trials that you are including in SVM, this is the duration after stim onset during which no go tone occurred for any of these trials.
 % fprintf('final_minStimDurNoGoTone = %.2f ms\n', final_minStimDurNoGoTone)
