@@ -205,7 +205,7 @@ axis square
 
 %%
 [sRA, g] = optimize_oTDR(dataTensor, codedParams, [], []);
-
+[~, sRA_star] = normVects([mean(dRAs(all_times>0,:,1)) mean(dRAs(all_times>0,:,2))]);
 
 figure
 plot(all_times, g(:,1), 'r')
