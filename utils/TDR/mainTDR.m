@@ -1,6 +1,6 @@
 mouse = 'fni17';
-imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1];  % 3; %1; % or tif major
+imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
 % the following are needed for setting stim-aligned traces.
 ep_ms = [1000 1300]; %[700 900]; % make sure no trial includes go tone before the end of ep % ep_ms will be used for setting X (trials x neurons, average of neural activity in window ep relative to stimulus onset).
@@ -63,6 +63,7 @@ dataTensor = traces_al_stim; % non_filtered; % stimulus aligned traces. Only for
 all_times = time_aligned_stim; % time_aligned;
 % dataTensor = traces_al_1stSideTry;
 % all_times = time_aligned_1stSideTry;
+
 [T, N, R] = size(dataTensor);
 
 %% average across multiple times (downsample dataTensor; not a moving average. we only average every regressBins points.)
@@ -203,11 +204,11 @@ ylabel('stimulus time (ms)')
 axis square
 
 %%
-Q = optimize_oTDR(dataTensor, codedParams, [], []);
+sRA = optimize_oTDR(dataTensor, codedParams, [], []);
 
 %%
-dataTensor_proj(:, 1, :) = projectTensor(dataTensor, squeeze(Q(:, 1)));
-dataTensor_proj(:, 2, :) = projectTensor(dataTensor, squeeze(Q(:, 2)));
+dataTensor_proj(:, 1, :) = projectTensor(dataTensor, squeeze(sRA(:, 1)));
+dataTensor_proj(:, 2, :) = projectTensor(dataTensor, squeeze(sRA(:, 2)));
 
 uniqueStim = unique(stim);
 uniqueDecision = unique(decision);
