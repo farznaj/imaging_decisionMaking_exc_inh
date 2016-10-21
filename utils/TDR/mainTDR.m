@@ -1,6 +1,27 @@
 mouse = 'fni17';
-imagingFolder = '151102'; %'151029'; %  '150916'; % '151021';
-mdfFileNumber = [1,2];  % 3; %1; % or tif major
+%%
+% imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
+% mdfFileNumber = [1];  % 3; %1; % or tif major
+% %%
+imagingFolder = '151102'; 
+mdfFileNumber = [1, 2]; 
+% %%
+% imagingFolder = '151029'; 
+% mdfFileNumber = [2, 3]; 
+% %%
+% imagingFolder = '151028'; 
+% mdfFileNumber = [1, 2, 3]; 
+% %%
+% imagingFolder = '151026'; 
+% mdfFileNumber = [1]; 
+% %%
+% imagingFolder = '151021'; 
+% mdfFileNumber = [1]; 
+% %%
+% imagingFolder = '151020'; 
+% mdfFileNumber = [1, 2]; 
+%
+%%
 
 % the following are needed for setting stim-aligned traces.
 ep_ms = [1000 1300]; %[700 900]; % make sure no trial includes go tone before the end of ep % ep_ms will be used for setting X (trials x neurons, average of neural activity in window ep relative to stimulus onset).
