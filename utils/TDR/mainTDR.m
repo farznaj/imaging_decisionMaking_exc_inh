@@ -89,7 +89,7 @@ hold on
 plot(all_times, mean(mean(dataTensor(:, :, Y==0), 3), 2), 'b')
 plot(all_times, mean(mean(dataTensor(:, :, Y==1), 3), 2), 'r')
 plot(all_times, mean(mean(dataTensor(:, :, :), 3), 2), 'k')
-legend('low rate', 'high rate', 'all')
+legend('average low rate', 'average high rate', 'average all')
 xlabel('time (ms)') % since stimulus onset.
 ylabel('normalized firing rates')
 
@@ -105,7 +105,7 @@ end
 figure;
 imagesc(all_times, all_times, aIx);
 colormap(colormap('jet'))
-title('alignment index')
+title(['alignment index (' num2str(numDim) ' PCs)'])
 colorbar
 caxis([0 1])
 axis square
@@ -206,7 +206,9 @@ ylabel('stimulus time (ms)')
 axis square
 
 %% non-orthogonal projections
-[~, sRA_star] = normVects([mean(dRAs(all_times>0,:,1)).' mean(dRAs(all_times>0,:,2)).']);
+stim_epoch = all_times>=100 & all_times<=1300;
+dec_epoch = all_times>=700 & all_times<=900;
+[~, sRA_star] = normVects([mean(dRAs(stim_epoch ,:,1)).' mean(dRAs(all_times>0,:,2)).']);
 
 dataTensor_proj(:, 1, :) = projectTensor(dataTensor, squeeze(sRA_star(:, 1)));
 dataTensor_proj(:, 2, :) = projectTensor(dataTensor, squeeze(sRA_star(:, 2)));
@@ -234,8 +236,10 @@ for s = 1:S
     h(s) = plot(all_times, proj1(:, s, 2), '-', 'color', clr(s, :));
     l{s} = [num2str(uniqueStim(s)) 'Hz']; 
 end
-title('stimulus projection')
+ylabel('stimulus projection')
 legend(h, l)
+xlabel('time (ms)') % since stimulus onset.
+
  
 subplot(122)
 hold on
@@ -243,8 +247,9 @@ for s = 1:S
     plot(all_times, proj2(:, s, 1), '--', 'color', clr(s, :));
     h(s) = plot(all_times, proj2(:, s, 2), '-', 'color', clr(s, :));
 end
-title('choice projection')
+ylabel('decsison projection')
 legend(h, l)
+xlabel('time (ms)') % since stimulus onset.
 
 %% orthogonal projections 
 [sRA, g] = optimize_oTDR(dataTensor, codedParams, [], []);
@@ -284,8 +289,10 @@ for s = 1:S
     h(s) = plot(all_times, proj1(:, s, 2), '-', 'color', clr(s, :));
     l{s} = [num2str(uniqueStim(s)) 'Hz']; 
 end
-title('stimulus projection')
+ylabel('stimulus projection')
 legend(h, l)
+xlabel('time (ms)') % since stimulus onset.
+
  
 subplot(122)
 hold on
@@ -293,7 +300,11 @@ for s = 1:S
     plot(all_times, proj2(:, s, 1), '--', 'color', clr(s, :));
     h(s) = plot(all_times, proj2(:, s, 2), '-', 'color', clr(s, :));
 end
-title('choice projection')
+ylabel('decsison projection')
 legend(h, l)
+xlabel('time (ms)') % since stimulus onset.
 
 %%
+saving_directory = ['/Users/gamalamin/git_local_repository/Farzaneh/results/' imagingFolder '/'];
+saveFig2Directory(saving_directory)
+save([saving_directory 'allresults.mat'])
