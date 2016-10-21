@@ -60,6 +60,8 @@ stimrate = stimrate(~trsExcluded);
 
 %%
 dataTensor = traces_al_stim; % non_filtered; % stimulus aligned traces. Only for active neurons and valid (non-nan) trials.
+nan_msk = ~squeeze(isnan(sum(sum(dataTensor,1),2)));
+dataTensor = dataTensor(:, :, nan_msk);
 all_times = time_aligned_stim; % time_aligned;
 % dataTensor = traces_al_1stSideTry;
 % all_times = time_aligned_1stSideTry;
@@ -203,18 +205,59 @@ xlabel('decision time (ms)')
 ylabel('stimulus time (ms)')
 axis square
 
-%%
-[sRA, g] = optimize_oTDR(dataTensor, codedParams, [], []);
-[~, sRA_star] = normVects([mean(dRAs(all_times>0,:,1)) mean(dRAs(all_times>0,:,2))]);
+%% non-orthogonal projections
+[~, sRA_star] = normVects([mean(dRAs(all_times>0,:,1)).' mean(dRAs(all_times>0,:,2)).']);
 
-figure
+dataTensor_proj(:, 1, :) = projectTensor(dataTensor, squeeze(sRA_star(:, 1)));
+dataTensor_proj(:, 2, :) = projectTensor(dataTensor, squeeze(sRA_star(:, 2)));
+
+uniqueStim = unique(stim);
+uniqueDecision = unique(decision);
+S = length(uniqueStim);
+D = length(uniqueDecision);
+projStim = [];
+for s = 1:S
+    for d = 1:D
+        msk = (stim == uniqueStim(s)) & (decision == uniqueDecision(d));
+        proj1(:, s, d) = mean(squeeze(dataTensor_proj(: ,1, msk)), 2);
+        proj2(:, s, d) = mean(squeeze(dataTensor_proj(: ,2, msk)), 2);        
+    end
+end
+
+clr = redgreencmap(S, 'interpolation', 'linear');
+figure;
+l = {};
+subplot(121)
+hold on
+for s = 1:S
+    plot(all_times, proj1(:, s, 1), '--', 'color', clr(s, :));
+    h(s) = plot(all_times, proj1(:, s, 2), '-', 'color', clr(s, :));
+    l{s} = [num2str(uniqueStim(s)) 'Hz']; 
+end
+title('stimulus projection')
+legend(h, l)
+ 
+subplot(122)
+hold on
+for s = 1:S
+    plot(all_times, proj2(:, s, 1), '--', 'color', clr(s, :));
+    h(s) = plot(all_times, proj2(:, s, 2), '-', 'color', clr(s, :));
+end
+title('choice projection')
+legend(h, l)
+
+%% orthogonal projections 
+[sRA, g] = optimize_oTDR(dataTensor, codedParams, [], []);
+
+figure;
+hold on
 plot(all_times, g(:,1), 'r')
 plot(all_times, g(:,2), 'b')
+hold off
 xlabel('time (ms)') 
 ylabel('magnitude')
 legend('stimulus', 'decision')
 
-%%
 dataTensor_proj(:, 1, :) = projectTensor(dataTensor, squeeze(sRA(:, 1)));
 dataTensor_proj(:, 2, :) = projectTensor(dataTensor, squeeze(sRA(:, 2)));
 
