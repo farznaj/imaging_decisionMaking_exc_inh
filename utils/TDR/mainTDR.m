@@ -204,7 +204,15 @@ ylabel('stimulus time (ms)')
 axis square
 
 %%
-sRA = optimize_oTDR(dataTensor, codedParams, [], []);
+[sRA, g] = optimize_oTDR(dataTensor, codedParams, [], []);
+
+
+figure
+plot(all_times, g(:,1), 'r')
+plot(all_times, g(:,2), 'b')
+xlabel('time (ms)') 
+ylabel('magnitude')
+legend('stimulus', 'decision')
 
 %%
 dataTensor_proj(:, 1, :) = projectTensor(dataTensor, squeeze(sRA(:, 1)));
