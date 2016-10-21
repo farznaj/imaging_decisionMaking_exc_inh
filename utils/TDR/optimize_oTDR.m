@@ -42,7 +42,8 @@ for i = 1:maxIter
 end
 figure;
 plot(mean(f,2))
-
+xlabel('iteration')
+ylabel('cost')
 end
 
 
