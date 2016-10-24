@@ -11,8 +11,6 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % - imaging_prep_analysis
 % - set_aligned_traces
 %
-%
-%
 % This is the main and starting function for the analysis of your imaging
 % data. It gives you the vars that you need for further analyses.
 % it used to be named aveTrialAlign_setVars
@@ -743,8 +741,8 @@ fprintf('N good-quality and all neurons: %d, %d. Ratio: %.2f\n', [sum(goodinds),
 
 %% In alldata, set good quality traces.
 
-% alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.activity}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
-alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.dFOF}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
+alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.activity}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
+% alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.dFOF}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
 alldataSpikesGood = cellfun(@(x)x(:, goodinds), {alldata.spikes}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
 
 activityGood = activity(:, goodinds); % frames x units % remember activity and dFOF may have more frames that alldataDfofGood_mat bc alldataDfofGood_mat does not include the frames of the trial during which mscan was stopped but activity includes those frames.

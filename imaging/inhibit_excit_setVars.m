@@ -1,4 +1,4 @@
-function [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh)
+function [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss)
 % identify inhibitory neurons (only on good neurons (not badROIs))
 
 % sigTh = 1.2;
@@ -76,8 +76,9 @@ else
     fprintf('Setting slope_common and offsets_ch1...\n')
     
     load(pnevFileName, 'activity_man_eftMask_ch1', 'activity_man_eftMask_ch2')
-    activity_man_eftMask_ch1 = activity_man_eftMask_ch1(:, ~badROIs01);
-    activity_man_eftMask_ch2 = activity_man_eftMask_ch2(:, ~badROIs01);
+    load(imfilename, 'pmtOffFrames')
+    activity_man_eftMask_ch1 = activity_man_eftMask_ch1(~pmtOffFrames{1}, ~badROIs01);
+    activity_man_eftMask_ch2 = activity_man_eftMask_ch2(~pmtOffFrames{2}, ~badROIs01);
     
     inhibit_remove_bleedthrough
     
@@ -167,7 +168,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     
     %%
     
-    [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibitROIselection(mask, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CC, ch2Image, COMs, C); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
+    [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibitROIselection(mask, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CC, ch2Image, COMs, C, do2dGauss); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
     
     
     %% Show the results

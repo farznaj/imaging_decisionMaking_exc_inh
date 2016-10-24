@@ -1,4 +1,4 @@
-function [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibitROIselection(maskGcamp, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CCgcamp, ch2Image, COMs, C)
+function [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibitROIselection(maskGcamp, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CCgcamp, ch2Image, COMs, C, do2dGauss)
 % inhibitRois = inhibitROIselection(maskGcamp, inhibitImage, sigTh, CCgcamp);
 %
 % Identifies inhibitory neurons on a gcamp channel (containing both
@@ -99,9 +99,9 @@ for rr = 1 : size(maskGcamp,3);
     maskn = maskSet({ccn}, imHeight, imWidth, 0);
     
     surrMask = maskn - roiMask0;
-%     figure; imagesc(surrMask)
-%     figure; imagesc(maskn)
-%     figure; imagesc(roiMask)
+    %     figure; imagesc(surrMask)
+    %     figure; imagesc(maskn)
+    %     figure; imagesc(roiMask)
     
     
     %% Compute surrSig: magnitude of ch1 image surrounding ch2 ROI.
@@ -115,8 +115,8 @@ for rr = 1 : size(maskGcamp,3);
     surrSig = nanmean(a(:));
     %     sa = sort(a(:));
     %     surrSig = nanmean(sa(floor(.3*length(sa)) : floor(.7*length(sa))));
-       
-    if roiSig~=0 && surrSig<=0        
+    
+    if roiSig~=0 && surrSig<=0
         surrSig = nanmean(a(a(:)>0));
     end
     surrSig_all(rr) = surrSig;
@@ -166,15 +166,15 @@ q_sig_nonzero = quantile(roi2surr_sig(roi2surr_sig~=0), 9)
 
 qinh = .9; %.9; % do a looser unsure so you assess more w 2d gauss
 qexc = .8; %.8;
-sigThI = quantile(roi2surr_sig, qinh); 
-sigThE = quantile(roi2surr_sig, qexc); 
+sigThI = quantile(roi2surr_sig, qinh);
+sigThE = quantile(roi2surr_sig, qexc);
 sigTh_IE = [sigThI, sigThE];
 
 %     cprintf('red', 'Not performing manual evaulation!\n')
-cprintf('red', 'inhibit: > %.2f quantile (%.2f)\nexcit: < %.2f quantile (%.2f) of roi2surr_sig\n', qinh, sigThI, qexc, sigThE)    
+cprintf('red', 'inhibit: > %.2f quantile (%.2f)\nexcit: < %.2f quantile (%.2f) of roi2surr_sig\n', qinh, sigThI, qexc, sigThE)
 
 
-%%%%%%%%%%%%%%%%%% the following not really needed 
+%%%%%%%%%%%%%%%%%% the following not really needed
 quantTh = .8; % .5; % .1; % threshold for finding inhibit neurons will be sigTh = quantile(roi2surr_sig, quantTh);
 sigTh = quantile(roi2surr_sig, quantTh);
 % sigTh = quantile(roi2surr_sig(roi2surr_sig~=0), quantTh);
@@ -193,22 +193,22 @@ if manThSet % if 1, you will change the default .8 quantile to whatever you wish
     sigTh = input('What threshold you like? ');
     
 end
-  
-    
+
+
 %% Set inhibitory neurons
 
 % if ~keyEval & ~manThSet % fully automatic
-    
-    % Alternative approach that will not require assessing:
-    % count ROIs with sig_surr > .9th quantile as inhibit.
-    % those with sig_surr < .8th quantile as excit.
-    % those with sig_surr between .8 and .9th quantile as unknown (nan).
-        
+
+% Alternative approach that will not require assessing:
+% count ROIs with sig_surr > .9th quantile as inhibit.
+% those with sig_surr < .8th quantile as excit.
+% those with sig_surr between .8 and .9th quantile as unknown (nan).
+
 inhibitRois = NaN(1, length(roi2surr_sig));
 inhibitRois(roi2surr_sig >= sigThI) = 1;
 inhibitRois(roi2surr_sig <= sigThE) = 0;
 
-%{    
+%{
 else
     % Above .8 quantile is defined as inhibitory and below as excitatory. Evaluate it manually though!
     cprintf('black', 'sigTh defined as %.2f quantile of roi2surr_sig, = %.2f\n', quantTh, sigTh)
@@ -242,66 +242,68 @@ cprintf('blue', '%d: num, %.3f: fraction of inhibitory neurons in gcamp channel.
 % x_all = []; % predicted paramteres of the gaussian : [Amplitude, x0, sigmax, y0, sigmay, angel(in rad)]
 % cost_all = []; % normalized cost (0: good, 1: max failure)
 
-%% Do 2D gaussian fitting on ch1 images of gcamp ROIs. 
+%% Do 2D gaussian fitting on ch1 images of gcamp ROIs.
 % Later based on the cost value and amplitude we decide if ROIs are tdtomato-positive or not.
-% Because it is slow we do it only for unsure ROIs that could not be classified as excit or inhibit. 
+% Because it is slow we do it only for unsure ROIs that could not be classified as excit or inhibit.
 
-uns = isnan(inhibitRois);
-f = find(uns); 
-
-fprintf('Performing 2D-gaussian fitting on %i unsure ROIs\n', length(f))
-
-cost_all = nan(1, size(maskGcamp,3));
-x_all = nan(size(maskGcamp,3), 6);
-exitflag_all = nan(1, size(maskGcamp,3));
-
-for rr = f %1 : size(maskGcamp,3);
+if do2dGauss
     
-    fprintf('ROI %i\n', rr)
+    uns = isnan(inhibitRois);
+    f = find(uns);
     
-    roiMask0 = maskGcamp(:,:,rr); % mask of ch2 ROI % figure; imagesc(roiMask)
-    % set pixels outside the ROI to nan. use this if you are doing roiSig = nanmean(roiIm(:)); below
-    roiMask = roiMask0;
-    roiMask = double(roiMask);
-%     roiMask(~roiMask) = NaN;
+    fprintf('Performing 2D-gaussian fitting on %i unsure ROIs\n', length(f))
     
-    roiIm = inhibitImage .* roiMask; % image of ch2 ROI on ch1. % figure; imagesc(roiIm)
+    cost_all = nan(1, size(maskGcamp,3));
+    x_all = nan(size(maskGcamp,3), 6);
+    exitflag_all = nan(1, size(maskGcamp,3));
     
-    %%    
-    x0 = [100, COMs(rr,2), 4, COMs(rr,1), 4, 0]; %[1,0,50,0,50,0]; %Inital guess parameters [Amplitude, x0, sigmax, y0, sigmay, angel(in rad)]
+    for rr = f %1 : size(maskGcamp,3);
+        
+        fprintf('ROI %i\n', rr)
+        
+        roiMask0 = maskGcamp(:,:,rr); % mask of ch2 ROI % figure; imagesc(roiMask)
+        % set pixels outside the ROI to nan. use this if you are doing roiSig = nanmean(roiIm(:)); below
+        roiMask = roiMask0;
+        roiMask = double(roiMask);
+        %     roiMask(~roiMask) = NaN;
+        
+        roiIm = inhibitImage .* roiMask; % image of ch2 ROI on ch1. % figure; imagesc(roiIm)
+        
+        %%
+        x0 = [100, COMs(rr,2), 4, COMs(rr,1), 4, 0]; %[1,0,50,0,50,0]; %Inital guess parameters [Amplitude, x0, sigmax, y0, sigmay, angel(in rad)]
+        
+        [X,Y] = meshgrid(1:imWidth, 1:imHeight);
+        xdata = zeros(size(X,1),size(Y,2),2);
+        xdata(:,:,1) = X;
+        xdata(:,:,2) = Y;
+        
+        lb = [0, -COMs(rr,2), 0, -COMs(rr,1), 0, -pi/4]; % [Amp,xo,wx,yo,wy,fi]
+        ub = [realmax('double'), COMs(rr,2), (COMs(rr,2))^2, COMs(rr,1), (COMs(rr,1))^2, pi/4];
+        
+        Z = roiIm;
+        %     tic
+        [x,resnorm,residual,exitflag] = lsqcurvefit(@D2GaussFunctionRot,x0,xdata,Z,lb,ub); % [Amplitude, x0, sigmax, y0, sigmay, angel(in rad)]
+        %     t(rr) = toc;
+        
+        x_all(rr,:) = x;
+        cost_all(rr) = resnorm / sum(Z(:).^2);
+        exitflag_all(rr) = exitflag;
+        % figure; imagesc(residual), colorbar
+    end
     
-    [X,Y] = meshgrid(1:imWidth, 1:imHeight);
-    xdata = zeros(size(X,1),size(Y,2),2);
-    xdata(:,:,1) = X;
-    xdata(:,:,2) = Y;
-
-    lb = [0, -COMs(rr,2), 0, -COMs(rr,1), 0, -pi/4]; % [Amp,xo,wx,yo,wy,fi]
-    ub = [realmax('double'), COMs(rr,2), (COMs(rr,2))^2, COMs(rr,1), (COMs(rr,1))^2, pi/4];
-
-    Z = roiIm;
-%     tic
-    [x,resnorm,residual,exitflag] = lsqcurvefit(@D2GaussFunctionRot,x0,xdata,Z,lb,ub); % [Amplitude, x0, sigmax, y0, sigmay, angel(in rad)]
-%     t(rr) = toc;
     
-    x_all(rr,:) = x;
-    cost_all(rr) = resnorm / sum(Z(:).^2);    
-    exitflag_all(rr) = exitflag;
-    % figure; imagesc(residual), colorbar
-end
-
-
-figure; 
-subplot(221), [n,v] = histcounts(cost_all, 100); bar(v(1:end-1)+mode(diff(v))/2, n)
-title('cost')
-subplot(222), [n,v] = histcounts(x_all(:,1), 100); bar(v(1:end-1)+mode(diff(v))/2, n)
-title('amplitude')
-subplot(223), [n,v] = histcounts(x_all(:,3), 300); bar(v(1:end-1)+mode(diff(v))/2, n)
-title('sigmaX')
-subplot(224), [n,v] = histcounts(x_all(:,5), 300); bar(v(1:end-1)+mode(diff(v))/2, n)
-title('sigmaY')
-
-
-%{
+    figure;
+    subplot(221), [n,v] = histcounts(cost_all, 100); bar(v(1:end-1)+mode(diff(v))/2, n)
+    title('cost')
+    subplot(222), [n,v] = histcounts(x_all(:,1), 100); bar(v(1:end-1)+mode(diff(v))/2, n)
+    title('amplitude')
+    subplot(223), [n,v] = histcounts(x_all(:,3), 300); bar(v(1:end-1)+mode(diff(v))/2, n)
+    title('sigmaX')
+    subplot(224), [n,v] = histcounts(x_all(:,5), 300); bar(v(1:end-1)+mode(diff(v))/2, n)
+    title('sigmaY')
+    
+    
+    %{
 costQ = quantile(cost_all, 9)
 ampQ = quantile(x_all(:,1), 9)
 sigmaxQ = quantile(x_all(:,3), 9)
@@ -316,12 +318,12 @@ figure;
 [n,v] = histcounts(roi2surr_sig, 100); bar(v(1:end-1)+mode(diff(v))/2, n)
 xlabel('roi2surr\_sig')
 ylabel('counts')
-%}
-
-%%%%%%%%%%%%%%%%%%%%%
-%{
+    %}
+    
+    %%%%%%%%%%%%%%%%%%%%%
+    %{
 th_cost = .25;
-th_amp = 1000; 
+th_amp = 1000;
 th_sigx = 3;
 th_sigy = 3;
 
@@ -340,89 +342,103 @@ sum(fin)
 inhibitRois = NaN(1, length(roi2surr_sig));
 inhibitRois(fin) = 1;
 inhibitRois(~fin) = 0;
-%}
-
-
-
-%% identify unsure neurons with good Gauss fitting 
-
-uns = isnan(inhibitRois);
-f = find(uns); 
-
-th_cost = .2; 
-uns1 = cost_all(uns)' < th_cost; % very low cost
-
-th_amp = 5000; 
-uns2 = x_all(uns,1) > th_amp; % very hi amp
-% uns3 = mean(x_all(uns,[3,5]),2)<th_sig;
-
-% meas = [uns1, uns2]; %, uns3]
-meas = [uns1];
-ff = f(sum(meas,2)>=1); % if either very low cost or very high amplitude then w will call them inhibitory.
-% roi2surr_sig(ff)
-
-
-%% Assess the high-fit unsure neurons (potential inhibit ROIs)
-
-fprintf('cost_amp_sigx_sigy\n')
-if any(assessClass_unsure_inh_excit)
-    h2d = figure; imagesc(inhibitImage); hold on
-    for rr = ff; %[250   283   295]
-        set(gcf, 'name', sprintf('ROI %d', rr))
-        h = plot(CCgcamp{rr}(2,:), CCgcamp{rr}(1,:), 'color', 'r');
-        fprintf('%.2f, %.2f, %.2f, %.2f\n', [cost_all(rr), x_all(rr,1), x_all(rr,3), x_all(rr,5)])
-        pause
-        delete(h)
+    %}
+    
+    
+    
+    %% Identify unsure neurons with good Gauss fitting
+    
+    th_cost = .2;
+    % th_amp = 5000;
+    
+    fprintf('Finding unsure neurons with good Gauss fitting.\n')
+    fprintf('th_cost = %.2f\n', th_cost)
+    
+    uns = isnan(inhibitRois);
+    f = find(uns);
+    
+    uns1 = cost_all(uns)' < th_cost; % very low cost
+    % uns2 = x_all(uns,1) > th_amp; % very hi amp
+    % uns3 = mean(x_all(uns,[3,5]),2)<th_sig;
+    
+    % meas = [uns1, uns2]; %, uns3]
+    meas = uns1;
+    ff = f(sum(meas,2)>=1); % if either very low cost or very high amplitude then w will call them inhibitory.
+    % roi2surr_sig(ff)
+    
+    
+    %% Assess the good-fit unsure neurons (potential inhibit ROIs)
+    
+    fprintf('Assess %d unsure neurons identified as good-fit (potential inhibit ROIs)\n', length(ff))
+    [cost_all(ff)', x_all(ff,[1,3,5])]
+    
+    if any(assessClass_unsure_inh_excit)
+        h2d = figure; imagesc(inhibitImage); hold on
+        for rr = ff; %[250   283   295]
+            set(gcf, 'name', sprintf('ROI %d - cost_amp_sigx_sigy', rr))
+            h = plot(CCgcamp{rr}(2,:), CCgcamp{rr}(1,:), 'color', 'r');
+            title(sprintf('%.2f, %.2f, %.2f, %.2f', [cost_all(rr), x_all(rr,1), x_all(rr,3), x_all(rr,5)]))
+            
+            pause
+            delete(h)
+        end
     end
-end
-
-
-%% Re-assign unsure as inhibit
-
-cprintf('magenta', '2D-Gauss reassigned %d ROIs as inhibit\n', length(ff))
-inhibitRois(ff) = 1;
-
-
-%% Identify unsure neurons with bad gauss fitting
-
-th_cost = .35; %.25;
-th_amp = 4000; 
-
-uns1 = cost_all(uns)' >= th_cost; % very hi cost
-uns2 = x_all(uns,1) <= th_amp; % very low amp
-% uns3 = mean(x_all(uns,[3,5]),2)<th_sig;
-
-meas = [uns1, uns2]; %, uns3]
-ff = f(sum(meas,2)==size(meas,2));
-% roi2surr_sig(ff)
-
-
-%% Assess the low-fit unsure neurons (potential excit ROIs)
-
-if any(assessClass_unsure_inh_excit)
-    figure(h2d); % imagesc(inhibitImage); hold on
-    for rr = ff; %[250   283   295]
-        set(gcf, 'name', sprintf('ROI %d', rr))
-        h = plot(CCgcamp{rr}(2,:), CCgcamp{rr}(1,:), 'color', 'r');
-        fprintf('%.2f, %.2f, %.2f, %.2f\n', [cost_all(rr), x_all(rr,1), x_all(rr,3), x_all(rr,5)])
-        pause
-        delete(h)
+    
+    
+    %% Re-assign unsure as inhibit
+    
+    cprintf('magenta', '2D-Gauss reassigned %d uncure ROIs as inhibit.\n', length(ff))
+    inhibitRois(ff) = 1;
+    
+    
+    %% Identify unsure neurons with bad gauss fitting
+    
+    th_cost = .35; %.25;
+    th_amp = 4000;
+    
+    fprintf('Finding unsure neurons with bad Gauss fitting.\n')
+    fprintf('th_cost = %.2f; th_amp = %.2f\n', th_cost, th_amp)
+    
+    uns1 = cost_all(uns)' >= th_cost; % very hi cost
+    uns2 = x_all(uns,1) <= th_amp; % very low amp
+    % uns3 = mean(x_all(uns,[3,5]),2)<th_sig;
+    
+    meas = [uns1, uns2]; %, uns3]
+    ff = f(sum(meas,2)==size(meas,2));
+    % roi2surr_sig(ff)
+    
+    
+    %% Assess the low-fit unsure neurons (potential excit ROIs)
+    
+    fprintf('Assess %d unsure neurons identified as bad-fit (potential excit ROIs)\n', length(ff))
+    
+    if any(assessClass_unsure_inh_excit)
+        figure(h2d); % imagesc(inhibitImage); hold on
+        for rr = ff;
+            set(gcf, 'name', sprintf('ROI %d - cost_amp_sigx_sigy', rr))
+            h = plot(CCgcamp{rr}(2,:), CCgcamp{rr}(1,:), 'color', 'r');
+            title(sprintf('%.2f, %.2f, %.2f, %.2f', [cost_all(rr), x_all(rr,1), x_all(rr,3), x_all(rr,5)]))
+            
+            pause
+            delete(h)
+        end
     end
+    
+    
+    %% Re-assign unsure as excit
+    
+    cprintf('magenta', '2DGauss reassigned %d unsure ROIs as excit.\n', length(ff))
+    inhibitRois(ff) = 0;
+    
+    
+    %%
+    cprintf('blue', '%d inhibitory; %d excitatory; %d unsure neurons in gcamp channel.\n', sum(inhibitRois==1), sum(inhibitRois==0), sum(isnan(inhibitRois)))
+    cprintf('blue', '%.1f%% inhibitory; %.1f%% excitatory; %.1f%% unsure neurons in gcamp channel.\n', mean(inhibitRois==1)*100, mean(inhibitRois==0)*100, mean(isnan(inhibitRois)*100))
+    
+    
+else
+    x_all = []; cost_all = [];
 end
-
-
-%% Re-assign unsure as excit
-
-cprintf('magenta', '2DGauss reassigned %d ROIs as excit\n', length(ff))
-inhibitRois(ff) = 0;
-
-
-%%
-cprintf('blue', '%d inhibitory; %d excitatory; %d unsure neurons in gcamp channel.\n', sum(inhibitRois==1), sum(inhibitRois==0), sum(isnan(inhibitRois)))
-cprintf('blue', '%.1f%% inhibitory; %.1f%% excitatory; %.1f%% unsure neurons in gcamp channel.\n', mean(inhibitRois==1)*100, mean(inhibitRois==0)*100, mean(isnan(inhibitRois)*100))
-
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -602,7 +618,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             %         end
             
             set(fimag, 'name', sprintf('ROI %d. medImage of inhibitory channel. Use Esc to quit! ', rr2))
-%             set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
+            %             set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
             
             % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
             figure(figh)
@@ -636,7 +652,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 plot(C(rr2,:))
                 
                 % If there are any too close ROIs (which most likely are
-                % all the same ROI) plot them.                
+                % all the same ROI) plot them.
                 if ~isempty(nearbyROIs)
                     hold on
                     for nnb = nearbyROIs'
@@ -658,12 +674,12 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r');
                 title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
                 
-%                 if ~isempty(nearbyROIs)
-%                     hold on
-%                     hn = plot(COMs(nearbyROIs,2), COMs(nearbyROIs,1), 'r.');
-%                     h = [h, hn];
-%                 end
-                    
+                %                 if ~isempty(nearbyROIs)
+                %                     hold on
+                %                     hn = plot(COMs(nearbyROIs,2), COMs(nearbyROIs,1), 'r.');
+                %                     h = [h, hn];
+                %                 end
+                
                 %             title(sprintf('sig/surr = %.2f   corr = %.3f', roi2surr_sig(rr2), crr(rr2)), 'color', 'r')
                 
             else
@@ -763,7 +779,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             %             rr2 = inds_inh_exc(rr); % first plot all inhibit neurons, then all excit neurons.
             rr2 = inhibit_inds_lo2hi(rr); % rr2 is the index in the array including all neurons
             
-%             fprintf('%.2f, %.2f, %.2f, %.2f\n', [cost_all(rr2), x_all(rr2,1), x_all(rr2,3), x_all(rr2,5)])
+            %             fprintf('%.2f, %.2f, %.2f, %.2f\n', [cost_all(rr2), x_all(rr2,1), x_all(rr2,3), x_all(rr2,5)])
             
             nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 6); nearbyROIs(nearbyROIs==rr2) = [];
             %         else
@@ -771,9 +787,9 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             %         end
             
             set(fimag, 'name', sprintf('ROI %d. medImage of inhibitory channel. Use Esc to quit! ', rr2))
-%             set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
+            %             set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
             
-            % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.            
+            % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
             figure(figh)
             subplot(211)
             plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5)
@@ -789,7 +805,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 for nnb = nearbyROIs'
                     plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1.5)
                 end
-            end            
+            end
             
             %         ch = 0;
             %         while ch~=13
@@ -804,6 +820,19 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 plot(C(rr2,:))
                 %             ht = plot(t1); hold on
                 %             ht2 = plot(t2);
+                
+                % If there are any too close ROIs (which most likely are
+                % all the same ROI) plot them.
+                if ~isempty(nearbyROIs)
+                    hold on
+                    for nnb = nearbyROIs'
+                        plot(C(nnb,:))
+                        ccf = corrcoef(C(rr2,:), C(nnb,:)); fprintf('corrcoef w %i = %.2f\n', nnb, ccf(2))
+                    end
+                    fprintf('\n')
+                    hold off
+                end
+                
                 xlim([0  size(C, 2)])
                 %             title(crr(rr2))
                 
@@ -836,7 +865,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     %                 break
                     
                     
-                % if number 0 pressed, you want to reassign this ROI as excit.
+                    % if number 0 pressed, you want to reassign this ROI as excit.
                 elseif ch==48
                     inhibitEval(rr2) = 0; % rr2 is index in the all neurons array (not the inhibit neurons array).
                     fprintf('Reset as excit\n')
@@ -911,7 +940,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             %             rr2 = inds_inh_exc(rr); % first plot all inhibit neurons, then all excit neurons.
             rr2 = excit_inds_hi2lo(rr);
             
-%             fprintf('%.2f, %.2f, %.2f, %.2f\n', [cost_all(rr2), x_all(rr2,1), x_all(rr2,3), x_all(rr2,5)])
+            %             fprintf('%.2f, %.2f, %.2f, %.2f\n', [cost_all(rr2), x_all(rr2,1), x_all(rr2,3), x_all(rr2,5)])
             
             nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 6); nearbyROIs(nearbyROIs==rr2) = [];
             %         else
@@ -919,9 +948,9 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             %         end
             
             set(fimag, 'name', sprintf('ROI %d. medImage of inhibitory channel. Use Esc to quit! ', rr2))
-%             set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
+            %             set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
             
-            % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.            
+            % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
             figure(figh)
             subplot(211)
             plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5)
@@ -937,7 +966,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 for nnb = nearbyROIs'
                     plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1.5)
                 end
-            end               
+            end
             
             %         ch = 0;
             %         while ch~=13
@@ -955,6 +984,19 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 plot(C(rr2,:))
                 %             ht = plot(t1); hold on
                 %             ht2 = plot(t2);
+                
+                % If there are any too close ROIs (which most likely are
+                % all the same ROI) plot them.
+                if ~isempty(nearbyROIs)
+                    hold on
+                    for nnb = nearbyROIs'
+                        plot(C(nnb,:))
+                        ccf = corrcoef(C(rr2,:), C(nnb,:)); fprintf('corrcoef w %i = %.2f\n', nnb, ccf(2))
+                    end
+                    fprintf('\n')
+                    hold off
+                end
+                
                 xlim([0  size(C, 2)])
                 %             title(crr(rr2))
                 
@@ -981,7 +1023,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     %                 break
                     
                     
-                % if number 1 pressed, you want to reassign this ROI as inhibit.
+                    % if number 1 pressed, you want to reassign this ROI as inhibit.
                 elseif ch==49
                     excitEval(rr2) = 0;
                     fprintf('Reset as inhibit\n')
@@ -1025,9 +1067,9 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
     
     inhibitRois = inhibitRois_new;
     
-%     fract = mean(inhibitRois==1); % fraction of ch2 neurons also present in ch1.
+    %     fract = mean(inhibitRois==1); % fraction of ch2 neurons also present in ch1.
     cprintf('blue', '%d inhibitory; %d excitatory; %d unsure neurons in gcamp channel.\n', sum(inhibitRois==1), sum(inhibitRois==0), sum(isnan(inhibitRois)))
-
+    
 end
 
 

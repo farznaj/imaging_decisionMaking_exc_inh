@@ -1,6 +1,7 @@
-% If needed follow this script by codes setPmtOffFrames to set
-% pmtOffFrames and by findTrsWithMissingFrames to set frame-dropped trials.
-% In this latter case you will need to rerun CNMF! 
+% If needed follow this script by codes setPmtOffFrames to set pmtOffFrames
+% and by findTrsWithMissingFrames to set frame-dropped trials. In this
+% latter case you will need to rerun CNMF (bc frames were dropped and
+% identification of trials was wrong)!
 % 
 % Use this script to look at averages of ca traces (outputs of CNMF); It
 % allows you to identify frame drops during a trial. Also it allows
@@ -42,6 +43,7 @@ load(imfilename, 'Nnan_nanBeg_nanEnd')
 
 % S(:, [32672       32333       32439       32547]) = nan; % sharp spikes due to frame missing (their trials will be excluded... you are just doing this so they dont affect the normalization.)
 [C, S, C_df] = processEftyOuts(C, S, C_df, Nnan_nanBeg_nanEnd, normalizeSpikes);
+
 
 %}
 
@@ -113,7 +115,11 @@ a = [a, gca];
 linkaxes(a, 'x')
 xlim([0 size(C,2)])
 
+
+%%
 %{
+xlim([0  size(C, 2)])
+
 x = get(gca,'xlim'); len = x(end);
 r2 = 0;
 for rr = 1:floor(len/.5e4)+1
@@ -123,4 +129,8 @@ for rr = 1:floor(len/.5e4)+1
     %     ginput
     pause
 end
+
+% clearvars -except mouse imagingFolder mdfFileNumber
+
 %}
+

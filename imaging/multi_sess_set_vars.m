@@ -42,6 +42,7 @@ for ise = 1:length(mdfFileNumber)
     
     
     %%
+    clear 'pmtOffFrames' 'badFrames'
     load(imfilename_sess{ise}, 'pmtOffFrames', 'badFrames')
     
     pmtOffFrames_sess{ise} = pmtOffFrames;
@@ -111,6 +112,7 @@ minPts = 7000; % 800;
 set2nan = 1; % if 1, in trials that were not imaged, set frameTimes, dFOF, spikes and activity traces to all nans (size: min(framesPerTrial) x #neurons).
 
 for ise = 1:length(mdfFileNumber)
+    fprintf('Merging session %i ... \n', ise)
     [all_data_sess{ise}, mscanLag] = mergeActivityIntoAlldata_fn(all_data_sess{ise}, activity_sess{ise}, framesPerTrial_sess{ise}, ...
         trialNumbers_sess{ise}, frame1RelToStartOff_sess{ise}, badFrames_sess{ise}{signalCh}, pmtOffFrames_sess{ise}{signalCh}, ...
         minPts, dFOF_sess{ise}, spikes_sess{ise}, set2nan);

@@ -312,7 +312,7 @@ trsGoToneEarlierThanStimOffset = find(timeCommitCL_CR_Gotone < timeStimOffset)';
 % rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
 
 if isempty(trsGoToneEarlierThanStimOffset)
-    fprintf('%d = No trials with goTone earlier than stimOffset :)\n')
+    fprintf('No trials with goTone earlier than stimOffset :)\n')
 
 elseif ~isempty(stimAftGoToneParams)
     
