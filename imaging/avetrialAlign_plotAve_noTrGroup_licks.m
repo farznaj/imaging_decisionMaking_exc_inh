@@ -61,7 +61,12 @@ fprintf('Analyzing %s outcomes, %s strengths, %s stimulus: %i trials.\n', os, st
 
 
 %%
-col = {'k', 'r', 'g'}; % center, left, right
+if length(evT)==3
+    col = {'k', 'r', 'g'}; % center, left, right
+else
+    col = {'r', 'g'}; % left, right
+end
+
 h = NaN(1, length(evT));
 
 alldatanow = alldata(trs2ana);
@@ -70,12 +75,12 @@ wheelTimeRes = alldata(1).wheelSampleInt;
 [traces_wheel, times_wheel] = wheelInfo(alldata);
 
 
-figure('name', sprintf('%s outcomes, %s strengths, %s stimulus', os, strength2ana, stimrate2ana));
+figure('name', sprintf('%s outcomes, %s strengths, %s stimulus', os, strength2ana, stimrate2ana), 'position', [66   550   235   420]);
 
 
 %%
 
-for i = 1:3 % loop over center, left and right licks.
+for i = 1:length(evT) % loop over center, left and right licks.
     
     disp(['------- ', evT{i}, ' -------'])
     
@@ -297,7 +302,7 @@ end
 
 %% wheel
 
-for i = 1:3 % loop over center, left and right licks.
+for i = 1:length(evT) % loop over center, left and right licks.
     
     disp(['------- ', evT{i}, ' -------'])
     

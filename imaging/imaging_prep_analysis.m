@@ -44,8 +44,8 @@ rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset af
 normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
 
 % set the following vars to 1 when first evaluating a session.
-evaluateEftyOuts = 1; 
-compareManual = 1; % compare results with manual ROI extraction
+evaluateEftyOuts = 0; 
+compareManual = 0; % compare results with manual ROI extraction
 
 plot_ave_noTrGroup = 1; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
 
@@ -473,7 +473,6 @@ dFOF = C_df'; % temporalDf'; temporalDf = C_df; % C_mcmc_df; % C_df; % obj.C_df;
 clear C C_df S
 
 
-
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%% Merging imaging data to behavioral data %%%%%%%%%%%%%%%%%%%%%%%
 
@@ -560,12 +559,14 @@ if length(mdfFileNumber)==1
     
     imagingFlg = 1;
     [trs2rmv, stimdur, stimrate, stimtype, cb] = setTrs2rmv_final(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing, trStartMissingUnknown, trEndMissing, trEndMissingUnknown, trialNumbers);
-    
+    trs2rmv(trs2rmv>length(alldata)) = [];
     
 else
     
     multi_sess_set_vars
 end
+
+clear spikes activity dFOF
 
 
 %% Set outcome and response side for each trial, taking into account allowcorrection and uncommitted responses.
@@ -745,6 +746,8 @@ alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.activity}, 'uniformoutput
 % alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.dFOF}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
 alldataSpikesGood = cellfun(@(x)x(:, goodinds), {alldata.spikes}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
 
+% The following is all good, but commented to save memory. uncomment if you need the vars.
+%{
 activityGood = activity(:, goodinds); % frames x units % remember activity and dFOF may have more frames that alldataDfofGood_mat bc alldataDfofGood_mat does not include the frames of the trial during which mscan was stopped but activity includes those frames.
 dfofGood = dFOF(:, goodinds); % frames x units
 spikesGood = spikes(:, goodinds); % frames x units
@@ -754,6 +757,7 @@ alldataDfofGood_mat = cell2mat(alldataDfofGood'); % frames x units;  % same as d
 if compareManual
     eftMatchIdx_mask_good = matchedROI_idx(goodinds);
 end
+%}
 
 % alldataDfof = {alldata.dFOF};
 % alldataDfof_mat = cell2mat(alldataDfof'); % frames x units
@@ -807,11 +811,14 @@ if setInhibitExcit
     
     %% Set traces for good inhibit and excit neurons.
     
+    % The following is all good, but commented to save memory. uncomment if you need the vars.
+    %{
     alldataDfofGoodInh = cellfun(@(x)x(:, good_inhibit==1), alldataDfofGood, 'uniformoutput', 0); % 1 x number of trials
     alldataSpikesGoodInh = cellfun(@(x)x(:, good_inhibit==1), alldataSpikesGood, 'uniformoutput', 0); % 1 x number of trials
     
     alldataDfofGoodExc = cellfun(@(x)x(:, good_excit==1), alldataDfofGood, 'uniformoutput', 0); % 1 x number of trials
     alldataSpikesGoodExc = cellfun(@(x)x(:, good_excit==1), alldataSpikesGood, 'uniformoutput', 0); % 1 x number of trials
+    %}
     
     % For the matrices below just do (:, good_inhibit) and (:, good_excit)
     % to get their corresponding traces for inhibit and excit neurons :
@@ -824,8 +831,6 @@ else
     good_excit = [];
     good_inhibit = [];
 end
-
-
 
 
 
@@ -869,18 +874,8 @@ if plot_ave_noTrGroup
     outcome2ana = 'all'; % 'all'; 1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
     stimrate2ana = 'all'; % 'all'; 'HR'; 'LR';
     strength2ana = 'all'; % 'all'; 'easy'; 'medium'; 'hard';    
-    respSide2ana = 'all'; % 'all'; 'HR'; 'LR';
-    
-    %%%%%% plot average imaging traces aligned on licks : THIS TAKES TIME!
-    cprintf('blue', 'Plot average imaging traces aligned on licks\n')
-    evT = {'centerLicks', 'leftLicks', 'rightLicks'}; % times are relative to scopeTTL onset, hence negative values are licks that happened before that (during iti states).
-    nPreFrames = 5;
-    nPostFrames = 20;    
-    excludeLicksPrePost = 'none'; % 'none'; 'pre'; 'post'; 'both';
-    
-    avetrialAlign_plotAve_noTrGroup_licks(evT, outcome2ana, stimrate2ana, strength2ana, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, nPreFrames, nPostFrames, centerLicks, leftLicks, rightLicks, excludeLicksPrePost)
-    savefig(fullfile(pd, 'figs','caTraces_lickAl'))
-    
+    respSide2ana = 'all'; % 'all'; 'HR'; 'LR';    
+  
     
     %%%%%% plot average imaging traces aligned on trial events
     cprintf('blue', 'Plot average imaging traces aligned on trial events\n')
@@ -899,6 +894,19 @@ if plot_ave_noTrGroup
     lickAlign(lickInds, evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, frameLength)    
     savefig(fullfile(pd, 'figs','lickTraces_trEventAl'))
     
+    
+    
+    %%%%%% plot average imaging traces aligned on licks. THIS TAKES A LOT OF TIME for center licks
+    cprintf('blue', 'Plot average imaging traces aligned on licks\n')
+%     evT = {'centerLicks', 'leftLicks', 'rightLicks'}; % times are relative to scopeTTL onset, hence negative values are licks that happened before that (during iti states).
+    evT = {'leftLicks', 'rightLicks'}; % remove center licks so it takes less time
+    nPreFrames = 5;
+    nPostFrames = 20;    
+    excludeLicksPrePost = 'none'; % 'none'; 'pre'; 'post'; 'both';
+    
+    avetrialAlign_plotAve_noTrGroup_licks(evT, outcome2ana, stimrate2ana, strength2ana, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, nPreFrames, nPostFrames, centerLicks, leftLicks, rightLicks, excludeLicksPrePost)
+    savefig(fullfile(pd, 'figs','caTraces_lickAl'))    
+    
 end
 
 
@@ -912,12 +920,13 @@ end
 
 
 
-
-%%
-%%%%%%%%%%%%%%%%%%%%%%%%% Start some analyses: alignement, choice preference, SVM %%%%%%%%%%%%%%%%%%%%%%%
+%% Set and save aligned traces (will be used for SVM, etc)
 
 set_aligned_traces
 
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%% Start some analyses: alignement, choice preference, SVM %%%%%%%%%%%%%%%%%%%%%%%
 
 if furtherAnalyses
     %% Align traces on particular trial events

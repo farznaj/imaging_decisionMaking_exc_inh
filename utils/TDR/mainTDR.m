@@ -55,7 +55,12 @@ load(postName, 'stimAl_allTrs', 'stimrate', 'time1stSideTry', 'timeCommitCL_CR_G
 % load('SVM_151029_003_ch2-PnevPanResults-160426-191859.mat')
 
 
-% Set traces_al_stim: same as traces_al_stimAll except that some trials are
+%%%%%%% Use stricter measures to exclude some neurons from stimAl traces
+newBadROIs = findBadROIs_strict(mouse, imagingFolder, mdfFileNumber);
+stimAl_allTrs.traces = stimAl_allTrs.traces(:,~newBadROIs, :);
+
+
+%%%%%%%% Set traces_al_stim: same as traces_al_stimAll except that some trials are
 % set to nan: bc their stim duration is < th_stim_dur ms or bc their go
 % tone happens before ep(end) ms. (In traces_al_stimAll, all trials are
 % included).
@@ -79,6 +84,12 @@ traces_al_stim = traces_al_stim(:, ~NsExcluded, ~trsExcluded);
 stimrate = stimrate(~trsExcluded);
 
 
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
 dataTensor = traces_al_stim; % non_filtered; % stimulus aligned traces. Only for active neurons and valid (non-nan) trials.
 nan_msk = ~squeeze(isnan(sum(sum(dataTensor,1),2)));

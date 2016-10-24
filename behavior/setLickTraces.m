@@ -36,6 +36,7 @@ for tr = 1:length(alldata)
     leftLicksRel2TrSt = (alldata(tr).parsedEvents.pokes.L(:,1) * 1000) - (alldata(tr).parsedEvents.states.state_0(2) * 1000);
     leftLicksRel2TrSt = ceil(leftLicksRel2TrSt);
     leftLicksRel2TrSt(isnan(leftLicksRel2TrSt)) = []; % not sure why it is occasionally nan. (% why for tr 19 it was nan?!)
+    leftLicksRel2TrSt(~leftLicksRel2TrSt) = []; % not sure why it will be 0
     
     % time of right licks relative to the start of the trial in bcontrol (ie state0)
     rightLicksRel2TrSt = (alldata(tr).parsedEvents.pokes.R(:,1) * 1000) - (alldata(tr).parsedEvents.states.state_0(2) * 1000);

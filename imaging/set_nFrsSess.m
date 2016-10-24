@@ -32,7 +32,11 @@ for ise = 1:length(sess)
 %             a = dir(fullfile(params.tifFold, [date_major_se{ise}, '_00', num2str(tifMinor(itm)), '.mat']));
             a = dir(fullfile(params.tifFold, [date_major_se{ise}, ['_', repmat('0', 1, 3-length(num2str(tifMinor(itm))))], num2str(tifMinor(itm)), '.mat']));
         elseif all(params.oldTifName)
-            a = dir(fullfile(params.tifFold, [date_major_se{ise}, '_0', num2str(tifMinor(itm)), '.mat']));
+            if tifMinor(itm)<10
+                a = dir(fullfile(params.tifFold, [date_major_se{ise}, '_0', num2str(tifMinor(itm)), '.mat']));
+            else
+                a = dir(fullfile(params.tifFold, [date_major_se{ise}, '_', num2str(tifMinor(itm)), '.mat']));
+            end
         else
             disp('some tif minors are named 00 and some are named 0... work on your codes.')
         end

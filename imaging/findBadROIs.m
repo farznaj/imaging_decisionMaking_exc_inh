@@ -356,6 +356,7 @@ if evalBadRes
         plotCorr_FN(roiPatch, highlightPatchAvg, rval_space, A, CC, COMs, [imHeight, imWidth], i, [3,6,14], [3,6,15])
         h4 = subplot(3,6,14);
         h5 = subplot(3,6,15);
+        subplot(3,6,15), title(sprintf('raw, our corr = %.2f', highlightCorrROI(i)))
         
         pause
         delete([h0,h1,h2,h3,h4,h5])

@@ -118,6 +118,10 @@ xlim([0 size(C,2)])
 
 %%
 %{
+% trace = mean(C_df); 
+% trace = f;
+% figure; hold on; plot(trace), plot([cs_frtrs ; cs_frtrs], [min(trace) max(trace)], 'g')
+
 xlim([0  size(C, 2)])
 
 x = get(gca,'xlim'); len = x(end);
