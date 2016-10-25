@@ -115,6 +115,11 @@ a = [a, gca];
 linkaxes(a, 'x')
 xlim([0 size(C,2)])
 
+%{
+mkdir(fullfile(pd, 'figs')) % save the following 3 figures in a folder named "figs"
+savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons'))  
+%}
+
 
 %%
 %{

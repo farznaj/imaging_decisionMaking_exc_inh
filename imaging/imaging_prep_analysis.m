@@ -377,6 +377,8 @@ if evaluateEftyOuts
     
     plotEftyVarsMean
     
+    savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons'))  
+    
     
     %% shift and scale C, man, etc to compare them...        
     
@@ -418,7 +420,7 @@ if evaluateEftyOuts
     
     linkaxes([a1, a2, a3], 'x')    
     
-    savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons'))  
+%     savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons'))  
     
     
     %% Assess tau and noise for each neuron
@@ -468,6 +470,7 @@ end
 %%
 spikes = S';
 activity = C'; %temporalComp'; % frames x units % temporalComp = C; % C_mcmc; % C2; % obj.C;
+% activity = activity_man_eftMask_ch2;
 dFOF = C_df'; % temporalDf'; temporalDf = C_df; % C_mcmc_df; % C_df; % obj.C_df;
 
 clear C C_df S

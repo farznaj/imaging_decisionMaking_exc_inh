@@ -55,8 +55,12 @@ else
     [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss);
     
     if saveInhibitRois
-        fprintf('Appending inhibitRois to more_pnevFile...\n')        
-        save(moreName, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh_IE', 'x_all', 'cost_all')
+        fprintf('Appending inhibitRois to more_pnevFile...\n')
+        if ~isempty(x_all)
+            save(moreName, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh_IE', 'x_all', 'cost_all')
+        else
+            save(moreName, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh_IE')
+        end
         %             save(imfilename, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
     end
 end

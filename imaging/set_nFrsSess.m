@@ -38,7 +38,7 @@ for ise = 1:length(sess)
                 a = dir(fullfile(params.tifFold, [date_major_se{ise}, '_', num2str(tifMinor(itm)), '.mat']));
             end
         else
-            disp('some tif minors are named 00 and some are named 0... work on your codes.')
+            error('Some tif minors are named 00 and some are named 0. Fix the names!')
         end
         
         a = matfile(fullfile(params.tifFold, a.name));
