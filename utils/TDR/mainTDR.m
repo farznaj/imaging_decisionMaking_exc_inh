@@ -99,7 +99,9 @@ all_times = time_aligned_stim; % time_aligned;
 % all_times = time_aligned_1stSideTry;
 
 [T, N, R] = size(dataTensor);
-
+if R<N
+   error(' number of trials < number of neurons: results may be inaccurate');
+end
 %% average across multiple times (downsample dataTensor; not a moving average. we only average every regressBins points.)
 regressBins = 2;
 dataTensor = dataTensor(1:regressBins*floor(T/regressBins), : , :);
