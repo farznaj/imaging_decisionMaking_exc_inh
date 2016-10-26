@@ -241,8 +241,8 @@ ylabel('stimulus time (ms)')
 axis square
 
 %% non-orthogonal projections
-stim_epoch = all_times>=100 & all_times<=1300;
-dec_epoch = all_times>=700 & all_times<=900;
+stim_epoch = all_times>=30 & all_times<=floor(min(timeStimOffset-timeStimOnset));
+dec_epoch = all_times>=(floor(min(time1stSideTry-timeStimOnset))-330) & all_times<=(floor(min(time1stSideTry-timeStimOnset))-30);
 [~, sRA_star] = normVects([mean(dRAs(stim_epoch ,:,1)).' mean(dRAs(all_times>0,:,2)).']);
 
 dataTensor_proj(:, 1, :) = projectTensor(dataTensor, squeeze(sRA_star(:, 1)));
