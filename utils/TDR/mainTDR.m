@@ -1,3 +1,4 @@
+tic 
 mouse = 'fni17';
 %%
 % imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
@@ -56,8 +57,8 @@ load(postName, 'stimAl_allTrs', 'stimrate', 'time1stSideTry', 'timeCommitCL_CR_G
 
 
 %%%%%%% Use stricter measures to exclude some neurons from stimAl traces
-newBadROIs = findBadROIs_strict(mouse, imagingFolder, mdfFileNumber);
-stimAl_allTrs.traces = stimAl_allTrs.traces(:,~newBadROIs, :);
+% newBadROIs = findBadROIs_strict(mouse, imagingFolder, mdfFileNumber);
+% stimAl_allTrs.traces = stimAl_allTrs.traces(:,~newBadROIs, :);
 
 
 %%%%%%%% Set traces_al_stim: same as traces_al_stimAll except that some trials are
@@ -367,3 +368,4 @@ axis square
 saving_directory = ['/Users/gamalamin/git_local_repository/Farzaneh/results/' imagingFolder '/'];
 saveFig2Directory(saving_directory)
 save([saving_directory 'allresults.mat'])
+toc
