@@ -285,6 +285,18 @@ ylabel('decsison projection')
 legend(h, l)
 xlabel('time (ms)') % since stimulus onset.
 
+figure
+subplot(121)
+plot(mean(squeeze(dataTensor_proj(:,1,:))), mean(squeeze(dataTensor_proj(:,2,:))))
+xlabel('mean activity (stim dim)')
+ylabel('mean activity (decision dim)')
+axis square
+
+subplot(122)
+plot(var(squeeze(dataTensor_proj(:,1,:))), var(squeeze(dataTensor_proj(:,2,:))))
+xlabel('mean activity (stim dim)')
+ylabel('mean activity (decision dim)')
+axis square
 %% orthogonal projections 
 [sRA, g] = optimize_oTDR(dataTensor, codedParams, [], []);
 
@@ -338,6 +350,19 @@ ylabel('decsison projection')
 legend(h, l)
 xlabel('time (ms)') % since stimulus onset.
 
+
+figure
+subplot(121)
+plot(mean(squeeze(dataTensor_proj(:,1,:))), mean(squeeze(dataTensor_proj(:,2,:))))
+xlabel('mean activity (stim dim)')
+ylabel('mean activity (decision dim)')
+axis square
+
+subplot(122)
+plot(var(squeeze(dataTensor_proj(:,1,:))), var(squeeze(dataTensor_proj(:,2,:))))
+xlabel('mean activity (stim dim)')
+ylabel('mean activity (decision dim)')
+axis square
 %%
 saving_directory = ['/Users/gamalamin/git_local_repository/Farzaneh/results/' imagingFolder '/'];
 saveFig2Directory(saving_directory)
