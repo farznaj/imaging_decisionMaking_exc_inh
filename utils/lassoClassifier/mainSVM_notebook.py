@@ -299,7 +299,7 @@ print(moreName)
 # ## Load matlab variables: event-aligned traces, inhibitRois, outcomes, and responses
 #     - traces are set in set_aligned_traces.m matlab script.
 
-# In[ ]:
+# In[46]:
 
 # Set traces_al_stim that is same as traces_al_stimAll except that in traces_al_stim some trials are set to nan, bc their stim duration is < 
 # th_stim_dur or bc their go tone happens before ep(end) or bc their choice happened before ep(end). 
@@ -420,8 +420,7 @@ else:
     epEndRel2Event = np.ceil(ep_ms[1]/frameLength); # the end point of the epoch relative to alignedEvent for training SVM. (700ms)
     ep = np.arange(eventI+epStartRel2Event, eventI+epEndRel2Event+1).astype(int); # frames on stimAl.traces that will be used for trainning SVM.
     
-    print 'Training epoch relative to stimOnset is {} ms'.format(np.round((ep-eventI)*frameLength))
-
+    print 'Training epoch relative to stimOnset is {} ms'.format(np.round((ep-eventI)*frameLength - frameLength/2)) # print center of frames in ms
 
 
 # In[ ]:
@@ -1466,7 +1465,7 @@ if doPlots and neuronType==2:
 
 # In[ ]:
 
-if doPlots:
+if doPlots and neuronType==2:
 
     # Set weights of excit neurons to 0 and project the traces onto this new decoder that cares only about inhibitory neurons.
 
@@ -1544,7 +1543,7 @@ if doPlots:
 # In[ ]:
 
 # Plot the excitatory vs inhibitory projections
-if doPlots:
+if doPlots and neuronType==2:
 
     # window of training (ep)
     # win = (ep-eventI)*frameLength
@@ -1917,17 +1916,17 @@ if neuronType==2 and np.sum(w)!=0:
 if neuronType==2 and np.sum(w)!=0:
     
     # p value of comparing exc and inh non-zero weights pooled across values of c :
-    a = np.array(perActive_exc).flatten()
-#     a = a[np.logical_and(a>0 , a<100)]
-    # np.shape(a)
+    aa = np.array(perActive_exc).flatten()
+#     aa = aa[np.logical_and(aa>0 , aa<100)]
+    # np.shape(aa)
 
-    b = np.array(perActive_inh).flatten()
-#     b = b[np.logical_and(b>0 , b<100)]
-    # np.shape(b)
+    bb = np.array(perActive_inh).flatten()
+#     bb = bb[np.logical_and(bb>0 , bb<100)]
+    # np.shape(bb)
 
-    h, p_two = stats.ttest_ind(a, b)
-    p_tl = ttest2(a, b, tail='left')
-    p_tr = ttest2(a, b, tail='right')
+    h, p_two = stats.ttest_ind(aa, bb)
+    p_tl = ttest2(aa, bb, tail='left')
+    p_tr = ttest2(aa, bb, tail='right')
     print '\np value (pooled for all values of c):\nexc ~= in : %.2f\nexc < inh : %.2f\nexc > inh : %.2f' %(p_two, p_tl, p_tr)
 
 

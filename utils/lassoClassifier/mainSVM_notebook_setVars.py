@@ -7,8 +7,9 @@ mousename = 'fni17'
 imagingFolder = '151013'
 mdfFileNumber = [1,2] 
 
+trialHistAnalysis = 0;
 roundi = 1; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
-trialHistAnalysis = 0;    
+    
 
 # Optional inputs:
 #iTiFlg = 2; # 0: short ITI, 1: long ITI, 2: all ITIs.
@@ -16,14 +17,14 @@ trialHistAnalysis = 0;
 #neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
 #saveResults = 1; # save results in mat file.
 
-mainSVM_notebook_setVars(mousename, imagingFolder, mdfFileNumber, roundi, trialHistAnalysis)
-#mainSVM_notebook_setVars(mousename, imagingFolder, mdfFileNumber, roundi, trialHistAnalysis, iTiFlg=2, numSamples=100, neuronType=2, saveResults=1)
+mainSVM_notebook_setVars(mousename, imagingFolder, mdfFileNumber, trialHistAnalysis, roundi)
+#mainSVM_notebook_setVars(mousename, imagingFolder, mdfFileNumber, trialHistAnalysis, roundi, iTiFlg=2, numSamples=100, neuronType=2, saveResults=1)
 
 Created on Fri Oct 28 12:48:43 2016
 @author: farznaj
 """
 
-def mainSVM_notebook_setVars(mousename, imagingFolder, mdfFileNumber, roundi, trialHistAnalysis, iTiFlg=2, numSamples=100, neuronType=2, saveResults=1):
+def mainSVM_notebook_setVars(mousename, imagingFolder, mdfFileNumber, trialHistAnalysis, roundi, iTiFlg=2, numSamples=100, neuronType=2, saveResults=1):
     
     setNsExcluded = 0; # if 1, NsExcluded will be set even if it is already saved.
     doPlots = 0; # Whether to make plots or not.
