@@ -352,17 +352,27 @@ ylabel('decsison projection')
 legend(h, l)
 xlabel('time (ms)') % since stimulus onset.
 
+
+mean_stim = mean(squeeze(dataTensor_proj(:,1,:)),2);
+mean_dec = mean(squeeze(dataTensor_proj(:,2,:)),2);
+
+var_stim = var(squeeze(dataTensor_proj(:,1,:)),[], 2);
+var_dec = var(squeeze(dataTensor_proj(:,2,:)),[], 2);
 figure
 subplot(121)
-plot(mean(squeeze(dataTensor_proj(:,1,:))), mean(squeeze(dataTensor_proj(:,2,:))))
+plot(mean_stim, mean_dec)
+hold on
+plot(mean_stim(find(all_times>=0, 1, 'first')), mean_dec(find(all_times>=0, 1, 'first')), 'ro')
 xlabel('mean activity (stim dim)')
 ylabel('mean activity (decision dim)')
 axis square
 
 subplot(122)
-plot(var(squeeze(dataTensor_proj(:,1,:))), var(squeeze(dataTensor_proj(:,2,:))))
-xlabel('mean activity (stim dim)')
-ylabel('mean activity (decision dim)')
+plot(var_stim, var_dec)
+hold on
+plot(var_stim(find(all_times>=0, 1, 'first')), var_dec(find(all_times>=0, 1, 'first')), 'ro')
+xlabel('var. activity (stim dim)')
+ylabel('var. activity (decision dim)')
 axis square
 %%
 % % % % % % %% orthogonal projections 
