@@ -180,16 +180,16 @@ dataTensor = bsxfun(@times, bsxfun(@minus, dataTensor, meanN), 1./(stdN+sqrt(0))
 smooth_dataTensor = nan(size(dataTensor));
 for i = 1: size(dataTensor,3)
     for j = 1:size(dataTensor,2)
-        smooth_dataTensor(:, j , i) = gaussFilter(3, dataTensor(:,j,i));
+        smooth_dataTensor(:, j , i) = gaussFilter(2, dataTensor(:,j,i));
     end
 end
 
 %% plot average of dataTensor per decision (average across trials and neurons)
 figure;
 hold on
-plot(all_times, mean(mean(smooth_dataTensor(:, :, Y==0), 3), 2), 'b')
-plot(all_times, mean(mean(smooth_dataTensor(:, :, Y==1), 3), 2), 'r')
-plot(all_times, mean(mean(smooth_dataTensor(:, :, :), 3), 2), 'k')
+plot(all_times, mean(mean(dataTensor(:, :, Y==0), 3), 2), 'b')
+plot(all_times, mean(mean(dataTensor(:, :, Y==1), 3), 2), 'r')
+plot(all_times, mean(mean(dataTensor(:, :, :), 3), 2), 'k')
 legend('average low rate', 'average high rate', 'average all')
 xlabel('time (ms)') % since stimulus onset.
 ylabel('normalized firing rates')
@@ -311,8 +311,8 @@ stim_epoch = all_times>=30 & all_times<=floor(min(timeStimOffset-timeStimOnset))
 dec_epoch = all_times>=(floor(min(time1stSideTry-timeStimOnset))-330) & all_times<=(floor(min(time1stSideTry-timeStimOnset))-30);
 [~, sRA_star] = normVects([mean(dRAs(stim_epoch ,:,1)).' mean(dRAs(all_times>0,:,2)).']);
 
-dataTensor_proj(:, 1, :) = projectTensor(dataTensor, squeeze(sRA_star(:, 1)));
-dataTensor_proj(:, 2, :) = projectTensor(dataTensor, squeeze(sRA_star(:, 2)));
+dataTensor_proj(:, 1, :) = projectTensor(smooth_dataTensor, squeeze(sRA_star(:, 1)));
+dataTensor_proj(:, 2, :) = projectTensor(smooth_dataTensor, squeeze(sRA_star(:, 2)));
 
 uniqueStim = unique(stim);
 uniqueDecision = unique(decision);
