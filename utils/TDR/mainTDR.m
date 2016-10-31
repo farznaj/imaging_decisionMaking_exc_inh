@@ -8,8 +8,8 @@ mouse = 'fni17';
 % imagingFolder = '151102'; 
 % mdfFileNumber = [1, 2]; 
 %%
-imagingFolder = '151101'; 
-mdfFileNumber = [1];
+% imagingFolder = '151101'; 
+% mdfFileNumber = [1];
 %%
 % imagingFolder = '151029'; 
 % mdfFileNumber = [2,3];
@@ -19,22 +19,22 @@ mdfFileNumber = [1];
 % 
 %%
 % imagingFolder = '151027'; 
-% mdfFileNumber = [];
+% mdfFileNumber = [2];
 %%
 % imagingFolder = '151026'; 
 % mdfFileNumber = [1];
 % 
 %%
 % imagingFolder = '151023'; 
-% mdfFileNumber = [];
+% mdfFileNumber = [1];
 %%
 % imagingFolder = '151022'; 
-% mdfFileNumber = [];
+% mdfFileNumber = [1, 2];
 % 
 %%
 % imagingFolder = '151021'; 
 % mdfFileNumber = [1];
-% 
+% % 
 %%
 % imagingFolder = '151020'; 
 % mdfFileNumber = [1,2];
