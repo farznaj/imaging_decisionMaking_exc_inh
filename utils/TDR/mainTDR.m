@@ -1,12 +1,15 @@
+clear all
+close all
+
 tic 
 mouse = 'fni17';
 
 %%
-imagingFolder = '151102'; 
-mdfFileNumber = [1, 2]; 
+% imagingFolder = '151102'; 
+% mdfFileNumber = [1, 2]; 
 %%
-% imagingFolder = '151101'; 
-% mdfFileNumber = [1];
+imagingFolder = '151101'; 
+mdfFileNumber = [1];
 %%
 % imagingFolder = '151029'; 
 % mdfFileNumber = [2,3];
@@ -181,7 +184,7 @@ NsRand = ismember(NsRand, neuronsNow);
     
 else % if number of neurons is already <= .95*numTrials, include all neurons.
     sprintf('Not doing random selection of neurons (nNeurons=%d already fewer than .95*nTrials=%d)', size(X,2), nTrs)
-    NsRand = true(size(X,2));
+    NsRand = true(size(X,2),1);
 end
     
 
