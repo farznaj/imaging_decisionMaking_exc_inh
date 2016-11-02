@@ -1,27 +1,74 @@
+clear all
+close all
+
 tic 
 mouse = 'fni17';
+
 %%
-% imagingFolder = '151101'; %'151029'; %  '150916'; % '151021';
-% mdfFileNumber = [1];  % 3; %1; % or tif major
-% %%
-imagingFolder = '151102'; 
-mdfFileNumber = [1, 2]; 
-% %%
-% imagingFolder = '151029'; 
-% mdfFileNumber = [2, 3]; 
-% %%
-% imagingFolder = '151028'; 
-% mdfFileNumber = [1, 2, 3]; 
-% %%
-% imagingFolder = '151026'; 
-% mdfFileNumber = [1]; 
-% %%
-% imagingFolder = '151021'; 
-% mdfFileNumber = [1]; 
-% %%
-% imagingFolder = '151020'; 
+% imagingFolder = '151102'; 
 % mdfFileNumber = [1, 2]; 
-%
+%%
+% imagingFolder = '151101'; 
+% mdfFileNumber = [1];
+%%
+% imagingFolder = '151029'; 
+% mdfFileNumber = [2,3];
+%%
+% imagingFolder = '151028'; 
+% mdfFileNumber = [1,2,3];
+% 
+%%
+% imagingFolder = '151027'; 
+% mdfFileNumber = [2];
+%%
+% imagingFolder = '151026'; 
+% mdfFileNumber = [1];
+% 
+%%
+% imagingFolder = '151023'; 
+% mdfFileNumber = [1];
+%%
+% imagingFolder = '151022'; 
+% mdfFileNumber = [1, 2];
+% 
+%%
+% imagingFolder = '151021'; 
+% mdfFileNumber = [1];
+% % 
+%%
+% imagingFolder = '151020'; 
+% mdfFileNumber = [1,2];
+%%
+% imagingFolder = '151019'; 
+% mdfFileNumber = [1,2];
+% 
+%%
+% imagingFolder = '151016'; 
+% mdfFileNumber = [1];
+% 
+%%
+% imagingFolder = '151015'; 
+% mdfFileNumber = [1];
+% 
+%%
+% imagingFolder = '151014'; 
+% mdfFileNumber = [1];
+%%
+% imagingFolder = '151013'; 
+% mdfFileNumber = [1,2];
+%%
+% imagingFolder = '151012'; 
+% mdfFileNumber = [1,2,3];
+%%
+% imagingFolder = '151010'; 
+% mdfFileNumber = [1];
+%%
+% imagingFolder = '151008'; 
+% mdfFileNumber = [1];
+%%
+% imagingFolder = '151007'; 
+% mdfFileNumber = [1];
+
 %%
 
 % the following are needed for setting stim-aligned traces.
@@ -137,7 +184,7 @@ NsRand = ismember(NsRand, neuronsNow);
     
 else % if number of neurons is already <= .95*numTrials, include all neurons.
     sprintf('Not doing random selection of neurons (nNeurons=%d already fewer than .95*nTrials=%d)', size(X,2), nTrs)
-    NsRand = true(size(X,2));
+    NsRand = true(size(X,2),1);
 end
     
 
