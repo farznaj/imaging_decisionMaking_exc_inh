@@ -81,7 +81,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         pnevFileName = glob.glob(os.path.join(tifFold,pnevFileName))   
         # sort pnevFileNames by date (descending)
         pnevFileName = sorted(pnevFileName, key=os.path.getmtime)
-        pnevFileName = pnevFileName[::-1]
+        pnevFileName = pnevFileName[::-1] # so the latest file is the 1st one.
         '''
         array = []
         for idx in range(0, len(pnevFileName)):

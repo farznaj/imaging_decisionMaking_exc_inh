@@ -11,7 +11,8 @@ mousename = 'fni17'
 
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
-
+ep_ms = [809, 1109]
+        
 # Define days that you want to analyze
 #days = ['151102_1-2', '151101_1', '151029_2-3', '151026_1', '151020_1-2', '151019_1-2', '151015_1', '151014_1', '151013_1-2', '151012_1-2-3', '151007_1'];
 days = ['151102_1-2', '151101_1', '151029_2-3', '151028_1-2-3', '151027_2', '151026_1', '151023_1', '151022_1-2', '151021_1', '151020_1-2', '151019_1-2', '151016_1', '151015_1', '151014_1', '151013_1-2', '151012_1-2-3', '151010_1', '151008_1', '151007_1'];
@@ -21,7 +22,7 @@ savefigs = True
 fmt = 'eps' #'png', 'pdf': preserve transparency # Format of figures for saving
 figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/' # Directory for saving figures.
 neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
-
+eps = 10**-10 # tiny number below which weight is considered 0
  
 #%%
 import os
@@ -32,6 +33,7 @@ import scipy.io as scio
 import scipy.stats as stats
 from matplotlib import pyplot as plt
 from setImagingAnalysisNamesP import *
+
 
 #%%
 frameLength = 1000/30.9; # sec.  # np.diff(time_aligned_stim)[0];
@@ -100,9 +102,20 @@ for iday in range(len(days)):
     postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
     moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
     
-#    print(imfilename)   
+    print(imfilename)   
 
 
+    #%% For current choice analysis, make sure choice happens after the training epoch 
+    if trialHistAnalysis==0:
+        Data = scio.loadmat(postName, variable_names=['timeStimOnset', 'time1stSideTry'])
+        timeStimOnset = np.array(Data.pop('timeStimOnset')).flatten().astype('float')
+        time1stSideTry = np.array(Data.pop('time1stSideTry')).flatten().astype('float')
+    
+        ii = (time1stSideTry - timeStimOnset) <= ep_ms[-1]; # trials in which choice happened earlier than the end of training epoch ... we don't want them!
+        
+        print '%.2f trials have choice before end of ep!' %(np.mean(ii))
+
+    
     #%% loop over the 10 rounds of analysis for each day
 
     for i in range(numRounds):
@@ -116,10 +129,12 @@ for iday in range(len(days)):
             svmn = 'svmCurrChoice_%sN_ep*ms_r%d_*' %(ntName, roundi)   
         
         svmn = svmn + pnevFileName[-32:]    
-        svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))[0]
+        svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
+        svmName = sorted(svmName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
+        svmName = svmName[0] # get the latest file
 
-        if roundi==1:
-            print os.path.basename(svmName)
+#        if roundi==1:
+        print '\t', os.path.basename(svmName)
             
         ##%% Load vars (w, etc)
         Data = scio.loadmat(svmName, variable_names=['w'])
@@ -141,7 +156,7 @@ print sum(all0d), 'days with all-0 weights: ', np.array(days)[np.array(all0d, dt
 all0days = np.argwhere(all0d).flatten() # index of days with all-0 weights
 
 # for each day find number of rounds without all-zero weights
-nRoundsNonZeroW = [np.sum([x!=0 for x in np.nansum(map(None, b[i,:]), axis=1)]) for i in range(numDays)]  # /float(numRounds)
+nRoundsNonZeroW = [np.sum([abs(x)>eps for x in np.nansum(map(None, b[i,:]), axis=1)]) for i in range(numDays)]  # /float(numRounds)
 print 'number of rounds with non-zero weights for each day = ',  nRoundsNonZeroW
 
 
@@ -151,6 +166,7 @@ print 'Excluding %d days from analysis because all SVM weights of all rounds are
 days = np.delete(days0, all0days)
 print 'days for analysis:', days
 numDays = len(days)
+
 
 
 
