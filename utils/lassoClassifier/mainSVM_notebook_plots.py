@@ -198,7 +198,7 @@ b = np.reshape(w_alln, (numDays,numRounds))
 #sumw = [np.nansum(i) for i in c]
 sumw = [np.nansum(map(None, b[i,:]), axis=0).sum() for i in range(numDays)] # sum across rounds and neurons for each day
 all0d = [not x for x in sumw]
-print sum(all0d), 'days with all-0 weights: ', np.array(days)[np.array(all0d, dtype=bool)]
+print sum(all0d), '\ndays with all-0 weights: ', np.array(days)[np.array(all0d, dtype=bool)]
 all0days = np.argwhere(all0d).flatten() # index of days with all-0 weights
 
 # for each day find number of rounds without all-zero weights
@@ -264,8 +264,8 @@ for iday in range(len(days)):
             
         Data = scio.loadmat(svmName, variable_names=['w'])
         w = Data.pop('w')[0,:]
-        if w.sum() < eps:
-            print 'In round %d all weights are 0 ... not analyzing' %(roundi)
+        if abs(w.sum()) < eps:
+            print '\tIn round %d all weights are 0 ... not analyzing' %(roundi)
             
         else:
         
@@ -279,7 +279,7 @@ for iday in range(len(days)):
             err_test_shfl_ave[i] = perClassErrorTest_shfl.mean()   
     
     # pool results of all rounds for days
-    err_test_data_ave_allDays[:, iday] = err_test_data_ave # it will be nan for rounds with all-0 weights
+    err_test_data_ave_allDays[:, iday] = err_test_data_ave # rounds x days. #it will be nan for rounds with all-0 weights
     err_test_shfl_ave_allDays[:, iday] = err_test_shfl_ave
     
     
@@ -402,12 +402,8 @@ for iday in range(len(days)):
     postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
     moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
     
-#    print(imfilename)        
+    print(os.path.basename(imfilename))
     
-    #%% Load outcomes
-    
-    Data = scio.loadmat(postName, variable_names=['outcomes', 'allResp_HR_LR'])
-    choiceVecAll = (Data.pop('allResp_HR_LR').astype('float'))[0,:]
 
     #%% Load vars (traces, etc)
 
@@ -577,8 +573,8 @@ for iday in range(len(days)):
             
         Data = scio.loadmat(svmName, variable_names=['w'])
         w = Data.pop('w')[0,:]
-        if w.sum() < eps:
-            print 'In round %d all weights are 0 ... not analyzing' %(roundi)
+        if abs(w.sum()) < eps:
+            print '\tIn round %d all weights are 0 ... not analyzing' %(roundi)
             
         else:
                     
@@ -593,7 +589,8 @@ for iday in range(len(days)):
             
             Y = choiceVec0[~trsExcluded];
             ep_ms_allDays[iday,:] = ep_ms[[0,-1]]
-        
+            
+            
             #%% Set the traces that will be used for projections    
         
             if trs4project=='all': 
@@ -946,7 +943,7 @@ for iday in range(len(days)):
 
         Data = scio.loadmat(svmName, variable_names=['w'])
         w = Data.pop('w')[0,:]
-        if w.sum() < eps:
+        if abs(w.sum()) < eps:
             print 'In round %d all weights are 0 ... not analyzing' %(roundi)
             
         else:        
@@ -1074,7 +1071,7 @@ for iday in range(len(days)):
             
         Data = scio.loadmat(svmName, variable_names=['w'])
         w = Data.pop('w')[0,:]
-        if w.sum() < eps:
+        if abs(w.sum()) < eps:
             print 'In round %d all weights are 0 ... not analyzing' %(roundi)
             
         else:             
@@ -1454,7 +1451,7 @@ for iday in range(len(days)):
             
         Data = scio.loadmat(svmName, variable_names=['w'])
         w = Data.pop('w')[0,:]
-        if w.sum() < eps:
+        if abs(w.sum()) < eps:
             print 'In round %d all weights are 0 ... not analyzing' %(roundi)
             
         else:         
@@ -1935,7 +1932,7 @@ for iday in range(len(days)):
             
         Data = scio.loadmat(svmName, variable_names=['w'])
         w = Data.pop('w')[0,:]
-        if w.sum() < eps:
+        if abs(w.sum()) < eps:
             print 'In round %d all weights are 0 ... not analyzing' %(roundi)
             
         else:        
