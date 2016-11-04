@@ -5,8 +5,14 @@ function [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, unco
 %
 % OUTPUTS:
 % outcomes: outcome of each trial:
-%    1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation,
-%   -4: no center commit, -5: no side commit
+% 1: success, 
+% 0: failure, 
+% -1: early decision, 
+% -2: no decision, 
+% -3: wrong initiation,
+% -4: no center commit, 
+% -5: no side commit
+%
 % allResp: response side of each trial: 1: left, 2: right.
 % allResp_HR_LR: response side based on the contingency --> 1 for HR choice, 0 for LR choice.
 %

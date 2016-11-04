@@ -179,8 +179,15 @@ if doiti
     itiPreced(begTrs) = NaN; % no previous trial exists for the 1st trial of a session.
     %     min_max_iti = [min(itiPreced)  max(itiPreced)]
     
-    
-    itiPreced(nan_y_s_f) = NaN; % you don't need to do this bc these trials wont be anyway fitted (they're nan in y or s or f), but u do it to make the iti bins fewer.
+    % On Nov3,2016 I commented the line below (itiPreced(nan_y_s_f) = NaN),
+    % because for SVM analysis you use itiSuccPrecedInput (defined using
+    % itiPreced), and in itiSuccPrecedInput you don't want to set to nan
+    % trials whose current outcome is other than correct or incorrect,
+    % since you don't care about their current outcome. On the other hand
+    % for the logistic regression analysis of behavior, as explained below,
+    % these trials wont be anyhow fitted because their y entry is nan. So
+    % no need to do itiPreced(nan_y_s_f) = NaN!
+%     itiPreced(nan_y_s_f) = NaN; % you don't need to do this bc these trials wont be anyway fitted (they're nan in y or s or f), but u do it to make the iti bins fewer.
     fprintf('ITI, min: %.2f, max: %.2f\n', min(itiPreced), max(itiPreced))
     
     if doplots
@@ -192,6 +199,9 @@ if doiti
     
     %     warning('define the outlier value for iti... using arbitrary values...')
     %     itiPreced(itiPreced > 50) = NaN; % 3*quantile(itiPreced, .9)
+    fprintf('%d trials have ITI > 30ms, excluding them .... \n', sum(itiPreced > 30))
+    successPrevInput(itiPreced > 30) = NaN; % added on Nov3,2016
+    failurePrevInput(itiPreced > 30) = NaN; % added on Nov3,2016    
     itiPreced(itiPreced > 30) = NaN; % 3*quantile(itiPreced, .75)
     %     itiPreced(itiPreced > 15) = NaN; % 3*nanstd(itiPreced)
     

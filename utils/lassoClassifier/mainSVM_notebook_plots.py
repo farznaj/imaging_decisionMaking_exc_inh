@@ -9,12 +9,12 @@ Created on Sun Oct 30 14:41:01 2016
 #%% 
 mousename = 'fni17'
 
-trialHistAnalysis = 1;
-iTiFlg = 1; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
+trialHistAnalysis = 0;
+iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
 
 # Define days that you want to analyze
-days = ['151102_1-2', '151101_1', '151029_2-3', '151026_1', '151022_1-2', '151021_1', '151020_1-2', '151019_1-2', '151016_1', '151015_1', '151014_1', '151013_1-2', '151012_1-2-3', '151010_1', '151008_1', '151007_1'];
-#days = ['151102_1-2', '151101_1', '151029_2-3', '151028_1-2-3', '151027_2', '151026_1', '151023_1', '151022_1-2', '151021_1', '151020_1-2', '151019_1-2', '151016_1', '151015_1', '151014_1', '151013_1-2', '151012_1-2-3', '151010_1', '151008_1', '151007_1'];
+#days = ['151102_1-2', '151101_1', '151029_2-3', '151026_1', '151020_1-2', '151019_1-2', '151015_1', '151014_1', '151013_1-2', '151012_1-2-3', '151007_1'];
+days = ['151102_1-2', '151101_1', '151029_2-3', '151028_1-2-3', '151027_2', '151026_1', '151023_1', '151022_1-2', '151021_1', '151020_1-2', '151019_1-2', '151016_1', '151015_1', '151014_1', '151013_1-2', '151012_1-2-3', '151010_1', '151008_1', '151007_1'];
 numRounds = 10; # number of times svm analysis was ran for the same dataset but sampling different sets of neurons.    
 savefigs = True
 
@@ -497,7 +497,7 @@ for iday in range(len(days)):
         choiceVec0[~str2ana] = np.nan   
         # Y = choiceVec0
         # print(choiceVec0.shape)
-
+        
     
     #%% loop over the 10 rounds of analysis for each day
     
@@ -997,7 +997,9 @@ if savefigs:
 w_inh = [];
 w_exc = [];
 w_uns = [];
-    
+w_inh_fractNonZero = []
+w_exc_fractNonZero = []    
+
 for iday in range(len(days)):
     
     imagingFolder = days[iday][0:6]; #'151013'
@@ -1065,16 +1067,33 @@ for iday in range(len(days)):
             w_exc.append(w[inhRois==0])
             w_uns.append(w[np.isnan(inhRois)])
 
+            w_inh_fractNonZero.append(np.mean([w[inhRois==1]!=0]))
+            w_exc_fractNonZero.append(np.mean([w[inhRois==0]!=0]))
+            
 
 #w_alln_all = np.concatenate(w_alln, axis=0)
 w_exc_all = np.concatenate(w_exc, axis=0)
 w_inh_all = np.concatenate(w_inh, axis=0)
 w_uns_all = np.concatenate(w_uns, axis=0)
 
+#w_inh_fractNonZero_all = np.concatenate(w_inh_fractNonZero, axis=0)
+#w_exc_fractNonZero_all = np.concatenate(w_exc_fractNonZero, axis=0)
+
 len_exc = np.shape(w_exc_all)[0]
 len_inh = np.shape(w_inh_all)[0]
 len_uns = np.shape(w_uns_all)[0]
 #print 'length of w for exc = %d, inh = %d, unsure = %d' %(len_exc, len_inh, len_uns)
+
+
+w_exc_all_o = w_exc_all+0;
+w_inh_all_o = w_inh_all+0;
+
+np.shape(w_exc_all_o), np.shape(w_inh_all_o)
+
+w_exc_all = w_exc_all_o[w_exc_all_o!=0]
+w_inh_all = w_exc_all_o[w_inh_all_o!=0]
+
+np.shape(w_exc_all), np.shape(w_inh_all)
 
 
 #%% Plot histogram of normalized weights for exc and inh neurons
@@ -1097,12 +1116,12 @@ print 'p-val_2tailed (inhibit vs excit weights) = %.2f' %p
 
 plt.figure()
 plt.subplot(211)
-hist, bin_edges = np.histogram(w_exc_all[~np.isnan(w_exc_all)])
+hist, bin_edges = np.histogram(w_exc_all[~np.isnan(w_exc_all)], bins=100)
 hist = hist/float(np.sum(hist))
 #hist = np.cumsum(hist)
 plt.plot(bin_edges[0:-1], hist, label='exc')
 
-hist, bin_edges = np.histogram(w_inh_all[~np.isnan(w_inh_all)])
+hist, bin_edges = np.histogram(w_inh_all[~np.isnan(w_inh_all)], bins=100)
 hist = hist/float(np.sum(hist))
 #hist = np.cumsum(hist)
 plt.plot(bin_edges[0:-1], hist, label='inh')
@@ -1110,20 +1129,20 @@ plt.plot(bin_edges[0:-1], hist, label='inh')
 plt.legend(loc=0)
 plt.xlabel('Normalized weight')
 plt.ylabel('Normalized count')
-plt.ylim([-.1, 1.1])
+#plt.ylim([-.1, 1.1])
 #plt.title('w')
 plt.title('mean(w): inhibit = %.3f  excit = %.3f\np-val_2tailed (inhibit vs excit weights) = %.2f ' %(np.mean((w_inh_all)), np.mean((w_exc_all)), p))
 
 
 plt.subplot(212)
 a = abs(w_exc_all)
-hist, bin_edges = np.histogram(a[~np.isnan(a)])
+hist, bin_edges = np.histogram(a[~np.isnan(a)], bins=100)
 hist = hist/float(np.sum(hist))
 #hist = np.cumsum(hist)
 plt.plot(bin_edges[0:-1], hist, label='exc')
 
 a = abs(w_inh_all)
-hist, bin_edges = np.histogram(a[~np.isnan(a)])
+hist, bin_edges = np.histogram(a[~np.isnan(a)], bins=100)
 hist = hist/float(np.sum(hist))
 #hist = np.cumsum(hist)
 plt.plot(bin_edges[0:-1], hist, label='inh')
@@ -1131,9 +1150,39 @@ plt.plot(bin_edges[0:-1], hist, label='inh')
 plt.legend(loc=0)
 plt.xlabel('Normalized weight')
 plt.ylabel('Normalized count')
-plt.ylim([-.1, 1.1])
+#plt.ylim([-.1, 1.1])
 plt.title('abs(w)')
 plt.tight_layout()
+
+
+#%% Fraction of non zero
+#print 'length of w for exc = %d, inh = %d, unsure = %d' %(len_exc, len_inh, len_uns)
+h, p = stats.ttest_ind(w_inh_fractNonZero, w_exc_fractNonZero)
+print '\nmean(w): inhibit = %.3f  excit = %.3f' %(np.nanmean(w_inh_fractNonZero), np.nanmean(w_exc_fractNonZero))
+#print '\nmean(abs(w)): inhibit = %.3f  excit = %.3f' %(np.nanmean(abs(w_inh_all)), np.nanmean(abs(w_exc_all)))
+print 'p-val_2tailed (inhibit vs excit weights) = %.2f' %p
+
+
+
+plt.figure()
+plt.subplot(211)
+hist, bin_edges = np.histogram(w_exc_fractNonZero, bins=100)
+hist = hist/float(np.sum(hist))
+#hist = np.cumsum(hist)
+plt.plot(bin_edges[0:-1], hist, label='exc')
+
+hist, bin_edges = np.histogram(w_inh_fractNonZero, bins=100)
+hist = hist/float(np.sum(hist))
+#hist = np.cumsum(hist)
+plt.plot(bin_edges[0:-1], hist, label='inh')
+
+plt.legend(loc=0)
+plt.xlabel('Normalized weight')
+plt.ylabel('Normalized count')
+#plt.ylim([-.1, 1.1])
+#plt.title('w')
+#plt.title('mean(w): inhibit = %.3f  excit = %.3f\np-val_2tailed (inhibit vs excit weights) = %.2f ' %(np.mean((w_inh_all)), np.mean((w_exc_all)), p))
+
 
 
 #%% Save the figure
@@ -1540,7 +1589,7 @@ for iday in range(len(days)):
             ww[inhRois==0] = 0
         
             # w = np.zeros(numNeurons)
-            w_normalized = ww/sci.linalg.norm(w);
+            w_normalized = ww/sci.linalg.norm(ww);
         
             # stim-aligned traces
             # XtN_w = np.dot(Xt_N, w_normalized);
@@ -1577,7 +1626,7 @@ for iday in range(len(days)):
             ww[inhRois==1] = 0
         
             # w = np.zeros(numNeurons)
-            w_normalized = ww/sci.linalg.norm(w);
+            w_normalized = ww/sci.linalg.norm(ww);
         
             # stim-aligned traces
             # XtN_w = np.dot(Xt_N, w_normalized);

@@ -45,8 +45,17 @@ for ise = 1:length(mdfFileNumber)
     clear 'pmtOffFrames' 'badFrames'
     load(imfilename_sess{ise}, 'pmtOffFrames', 'badFrames')
     
+    if ~exist('pmtOffFrames', 'var')
+        fprintf('pmtOffFrames does not exist. Setting it to all false and saving it!\n')
+        load(imfilename_sess{ise}, 'cs_frtrs')
+        pmtOffFrames = cell(1,2); 
+        pmtOffFrames{1} = false(cs_frtrs(end),1); 
+        pmtOffFrames{2} = pmtOffFrames{1}; 
+        badFrames = pmtOffFrames;
+        save(imfilename_sess{ise}, 'pmtOffFrames', 'badFrames', '-append')
+    end
     pmtOffFrames_sess{ise} = pmtOffFrames;
-    badFrames_sess{ise} = badFrames;
+    badFrames_sess{ise} = badFrames;    
     
     
     %%

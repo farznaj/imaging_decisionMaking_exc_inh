@@ -27,7 +27,7 @@ rng(0, 'twister'); % Set random number generation for reproducibility
 
 
 %%
-doplots = true;
+doplots = 0; %true;
 binRates = true;
 doiti = true;
 binITIs = true; % false; %true;
@@ -44,6 +44,8 @@ begTrs = 1; % 1st trial of each session
 
 if doplots
     figh = figure;
+else
+    figh = [];
 end
 
 
@@ -134,4 +136,9 @@ end
 choiceVec0 = allResp_HR_LR_prevTr(:);  % trials x 1;  1 for HR choice, 0 for LR prev choice.
 % fprintf('N trials for LR and HR = %d  %d\n', [sum(choiceVec0==0), sum(choiceVec0==1)])
 
-
+% Remember number of short ITI + long ITI trials can be fewer than all ITI
+% trials, because in all ITI you don't care about the outcome of previous
+% and current trial, but in short and long ITI since ITI is defined as time
+% between commiting a choice in  trial i and stimulus onset in trial i+1,
+% trials with outcomes like wrong init or no side commit will be exclluded.
+fprintf('Number of short, long, all ITI trials: %d, %d, %d\n', sum(~isnan(choiceVec0)))

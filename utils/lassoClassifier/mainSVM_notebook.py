@@ -31,7 +31,7 @@ if 'ipykernel' in sys.modules:
     <form action="javascript:code_toggle()"><input type="submit" value="Click here to toggle on/off the raw code."></form>''')
 
 
-# In[16]:
+# In[2]:
 
 # import sys
 import os
@@ -42,14 +42,14 @@ if ('ipykernel' in sys.modules and ~any('SPYDER' in name for name in os.environ)
     
     # Set these variables:
     mousename = 'fni17'
-    imagingFolder = '151013'
-    mdfFileNumber = [1,2] 
+    imagingFolder = '151014'
+    mdfFileNumber = [1] 
 
     roundi = 1; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
-    trialHistAnalysis = 0;    
+    trialHistAnalysis = 1;    
 
-    iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
-    numSamples = 100; # number of iterations for finding the best c (inverse of regularization parameter)
+    iTiFlg = 0; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
+    numSamples = 5 #100; # number of iterations for finding the best c (inverse of regularization parameter)
     neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
     saveResults = 1; # save results in mat file.
 
@@ -58,7 +58,7 @@ if ('ipykernel' in sys.modules and ~any('SPYDER' in name for name in os.environ)
 
     # The following vars don't usually need to be changed
     setNsExcluded = 0; # if 1, NsExcluded will be set even if it is already saved.
-    doPlots = 0; # Whether to make plots or not.
+    doPlots = 1; # Whether to make plots or not.
     saveHTML = 0; # whether to save the html file of notebook with all figures or not.
 
     if trialHistAnalysis==1: # more parameters are specified in popClassifier_trialHistory.m
@@ -66,7 +66,7 @@ if ('ipykernel' in sys.modules and ~any('SPYDER' in name for name in os.environ)
         epEnd_rel2stimon_fr = 0 # 3; # -2 # epEnd = eventI + epEnd_rel2stimon_fr
     else:
         # not needed to set ep_ms here, later you define it as [choiceTime-300 choiceTime]ms # we also go 30ms back to make sure we are not right on the choice time!
-        # ep_ms = [950, 1250] # [1000, 1300]; #[700, 900]; # [500, 700]; # training epoch relative to stimOnset % we want to decode animal's upcoming choice by traninig SVM for neural average responses during ep ms after stimulus onset.
+#         ep_ms = [425, 725] # optional, it will be set according to min choice time if not provided.# training epoch relative to stimOnset % we want to decode animal's upcoming choice by traninig SVM for neural average responses during ep ms after stimulus onset. [1000, 1300]; #[700, 900]; # [500, 700]; 
         # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.
         outcome2ana = 'corr' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials)
         strength2ana = 'all' # 'all', easy', 'medium', 'hard' % What stim strength to use for training?
@@ -82,7 +82,7 @@ if ('ipykernel' in sys.modules and ~any('SPYDER' in name for name in os.environ)
     pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
 
 
-# In[17]:
+# In[3]:
 
 if neuronType==0:
     ntName = 'excit'
@@ -106,15 +106,15 @@ print 'trialHistAnalysis = %i' %(trialHistAnalysis)
 print 'Analyzing %s neurons' %(ntName)
 if trialHistAnalysis==1:
     print 'Analyzing %s ITIs' %(itiName)
-# else:
-#     print 'training window: [%d %d] ms' %(ep_ms[0], ep_ms[1])
+elif 'ep_ms' in locals():
+    print 'training window: [%d %d] ms' %(ep_ms[0], ep_ms[1])
 print 'windowAvgFlg = %i' %(windowAvgFlg)
 print 'numSamples = %i' %(numSamples)
 
 
 # ## Import Libraries and Modules
 
-# In[18]:
+# In[4]:
 
 import scipy.io as scio
 import scipy as sci
@@ -141,7 +141,7 @@ sys.path.append('/home/farznaj/Documents/trial_history/imaging') # Gamal's dir n
 # print sys.path
 
 
-# In[19]:
+# In[5]:
 
 # Extend the built in two tailed ttest function to one-tailed
 def ttest2(a, b, **tailOption):
@@ -160,7 +160,7 @@ def ttest2(a, b, **tailOption):
     return p
 
 
-# In[28]:
+# In[6]:
 
 
 """
@@ -277,7 +277,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
 
 # ## Set mat-file names
 
-# In[30]:
+# In[7]:
 
 pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
 signalCh = [2] # since gcamp is channel 2, should be always 2.
@@ -299,7 +299,7 @@ print(moreName)
 # ## Load matlab variables: event-aligned traces, inhibitRois, outcomes, and responses
 #     - traces are set in set_aligned_traces.m matlab script.
 
-# In[46]:
+# In[8]:
 
 # Set traces_al_stim that is same as traces_al_stimAll except that in traces_al_stim some trials are set to nan, bc their stim duration is < 
 # th_stim_dur or bc their go tone happens before ep(end) or bc their choice happened before ep(end). 
@@ -325,18 +325,33 @@ time_aligned_stim = Data['stimAl_allTrs'].time.astype('float')
 
 # print(np.shape(traces_al_stimAll))
 DataS = Data
-    
-    
-# Set ep_ms : [choiceTime-300 choiceTime]ms # we also go 30ms back to make sure we are not right on the choice time!
-    # by doing this you wont need to set ii below.
-if trialHistAnalysis==0: 
-    ep_ms = [np.floor(np.nanmin(time1stSideTry-timeStimOnset))-30-300, np.floor(np.nanmin(time1stSideTry-timeStimOnset))-30]
-    print 'Training window: [%d %d] ms' %(ep_ms[0], ep_ms[1])
 
-    
+
+# ## Set the time window for training SVM (ep)
+
+# In[9]:
+
 if trialHistAnalysis==1:
     traces_al_stim = traces_al_stimAll    
+    
+    # either of the two below (stimulus-aligned and initTone-aligned) would be fine
+    # eventI = DataI['initToneAl'].eventI
+    eventI = DataS['stimAl_allTrs'].eventI    
+    epEnd = eventI + epEnd_rel2stimon_fr #- 2 # to be safe for decoder training for trial-history analysis we go upto the frame before the stim onset
+    # epEnd = DataI['initToneAl'].eventI - 2 # to be safe for decoder training for trial-history analysis we go upto the frame before the initTone onset
+    ep = np.arange(epEnd+1)
+    print 'training epoch is {} ms'.format(np.round((ep-eventI)*frameLength))
+    
+    ep_ms = list(np.round((ep[[0,-1]]-eventI)*frameLength).astype(int)) # so it is the same format as ep_ms when trialHistAnalysis is 0
+    
 else:
+    # Set ep_ms if it is not provided: [choiceTime-300 choiceTime]ms # we also go 30ms back to make sure we are not right on the choice time!
+    # by doing this you wont need to set ii below.
+    if not 'ep_ms' in locals(): 
+        ep_ms = [np.floor(np.nanmin(time1stSideTry-timeStimOnset))-30-300, np.floor(np.nanmin(time1stSideTry-timeStimOnset))-30]
+        print 'Training window: [%d %d] ms' %(ep_ms[0], ep_ms[1])
+    
+    
     # This criteria makes sense if you want to be conservative; otherwise if ep=[1000 1300]ms, go tone will definitely be before ep end, and you cannot have the following criteria.
     # Make sure in none of the trials Go-tone happened before the end of training window (ep)
     i = (timeCommitCL_CR_Gotone - timeStimOnset) <= ep_ms[-1];
@@ -421,9 +436,10 @@ else:
     ep = np.arange(eventI+epStartRel2Event, eventI+epEndRel2Event+1).astype(int); # frames on stimAl.traces that will be used for trainning SVM.
     
     print 'Training epoch relative to stimOnset is {} ms'.format(np.round((ep-eventI)*frameLength - frameLength/2)) # print center of frames in ms
+    
 
 
-# In[ ]:
+# In[10]:
 
 # Load 1stSideTry-aligned traces, frames, frame of event of interest
 # use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
@@ -461,7 +477,7 @@ traces_al_init = Data['initToneAl'].traces.astype('float')
 time_aligned_init = Data['initToneAl'].time.astype('float')
 # print(np.shape(traces_al_init))
 # DataI = Data
-
+'''
 if trialHistAnalysis:
     # either of the two below (stimulus-aligned and initTone-aligned) would be fine
     # eventI = DataI['initToneAl'].eventI
@@ -470,7 +486,7 @@ if trialHistAnalysis:
     # epEnd = DataI['initToneAl'].eventI - 2 # to be safe for decoder training for trial-history analysis we go upto the frame before the initTone onset
     ep = np.arange(epEnd+1)
     print 'training epoch is {} ms'.format(np.round((ep-eventI)*frameLength))
-    
+'''
     
 
 # Load inhibitRois
@@ -503,7 +519,7 @@ Data = scio.loadmat(postName, variable_names=['outcomes', 'allResp_HR_LR'])
 outcomes = (Data.pop('outcomes').astype('float'))[0,:]
 # allResp_HR_LR = (Data.pop('allResp_HR_LR').astype('float'))[0,:]
 allResp_HR_LR = np.array(Data.pop('allResp_HR_LR')).flatten().astype('float')
-# choiceVecAll = allResp_HR_LR;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
+choiceVecAll = allResp_HR_LR+0;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
 # choiceVecAll = np.transpose(allResp_HR_LR);  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
 print '%d correct choices; %d incorrect choices' %(sum(outcomes==1), sum(outcomes==0))
 
@@ -543,7 +559,7 @@ if trialHistAnalysis==0:
 #     X matrix (size trials x neurons) that contains neural responses at different trials.
 #     Y choice of high rate (modeled as 1) and low rate (modeled as 0)
 
-# In[ ]:
+# In[11]:
 
 # Set choiceVec0  (Y: the response vector)
 
@@ -578,7 +594,7 @@ else:
 print 'Size of spikeAveEp0 (trs x neurons): ', spikeAveEp0.shape
 
 
-# In[ ]:
+# In[12]:
 
 # Exclude nan trials to set X and Y
 '''
@@ -604,7 +620,7 @@ Y = choiceVec0[~trsExcluded];
 print '%d high-rate trials, and %d low-rate trials\n' %(np.sum(Y==1), np.sum(Y==0))
 
 
-# In[ ]:
+# In[13]:
 
 # Set NsExcluded
 # Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
@@ -663,7 +679,7 @@ if neuronType==2:
 
 
 
-# In[ ]:
+# In[14]:
 
 # Exclude non-active neurons from X and set inhRois (ie neurons that don't fire in any of the trials during ep)
 
@@ -678,7 +694,7 @@ if neuronType==2:
     
 
 
-# In[ ]:
+# In[15]:
 
 ##  If number of neurons is more than 95% of trial numbers, identify n random neurons, where n= 0.95 * number of trials. This is to make sure we have more observations (trials) than features (neurons)
 
@@ -739,12 +755,13 @@ else: # if number of neurons is already <= .95*numTrials, include all neurons.
     
 
 
-# In[ ]:
+# In[16]:
 
 # Set X and inhRois only for the randomly selected set of neurons
 
 X = X[:,NsRand]
-inhRois = inhRois[NsRand]
+if neuronType==2:
+    inhRois = inhRois[NsRand]
 
 if windowAvgFlg==0:
     a = np.transpose(traces_al_stim[ep,:,:][:,~NsExcluded,:][:,:,~trsExcluded], (0,2,1))  # ep_frames x trials x units
@@ -768,7 +785,7 @@ print '%d trials; %d neurons' %(numTrials, numNeurons)
 # print ' The data has %d frames recorded from %d neurons at %d trials' %Xt.shape    
 
 
-# In[ ]:
+# In[17]:
 
 # Center and normalize X: feature normalization and scaling: to remove effects related to scaling and bias of each neuron, we need to zscore data (i.e., make data mean 0 and variance 1 for each neuron) 
 
@@ -778,7 +795,7 @@ stdX = np.std(X, axis = 0);
 X = (X-meanX)/stdX;
 
 
-# In[ ]:
+# In[18]:
 
 if doPlots:
     plt.figure
@@ -803,12 +820,12 @@ if doPlots:
 #     Remove non-active neurons
 #     Do feature normalization and scaling for the traces (using mean and sd of X)
 
-# In[ ]:
+# In[19]:
 
 # trs4project = 'incorr' # 'trained', 'all', 'corr', 'incorr'
 
-Data = scio.loadmat(postName, variable_names=['outcomes', 'allResp_HR_LR'])
-choiceVecAll = (Data.pop('allResp_HR_LR').astype('float'))[0,:]
+# Data = scio.loadmat(postName, variable_names=['outcomes', 'allResp_HR_LR'])
+# choiceVecAll = (Data.pop('allResp_HR_LR').astype('float'))[0,:]
 
 # Set trials that will be used for projection traces
 
@@ -838,7 +855,8 @@ elif trs4project=='corr':
     Xt_incorrRespAl = traces_al_incorrResp[:, :, outcomes==1];
     Xt_initAl = traces_al_init[:, :, outcomes==1];
     Xt_stimAl_all = traces_al_stimAll[:, :, outcomes==1];
-    choiceVecNow = choiceVecAll[outcomes==1]    
+    choiceVecNow = choiceVecAll[outcomes==1]
+    
 elif trs4project=='incorr':
     Xt = traces_al_stim[:, :, outcomes==0];
     Xt_choiceAl = traces_al_1stSide[:, :, outcomes==0];
@@ -963,7 +981,7 @@ if doPlots:
 #     An average across all 100 samples is computed to find the minimum test class loss.
 #     Best regularization parameter is defined as the smallest regularization parameter whose test-dataset class loss is within mean+sem of minimum test class loss.
 
-# In[ ]:
+# In[20]:
 
 # numSamples = 10; # number of iterations for finding the best c (inverse of regularization parameter)
 
@@ -1003,7 +1021,7 @@ cbest = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErr
 cbest = cbest[0]; # best regularization term based on minError+SE criteria
 
 
-# In[ ]:
+# In[21]:
 
 ##%%%%%% plot coss-validation results
 if doPlots:
@@ -1027,7 +1045,7 @@ if doPlots:
 #     All data in X are used for training.
 #     linear_svm is the trained SVM model that includes weights (w) and intercept (b).
 
-# In[ ]:
+# In[22]:
 
 if regType == 'l1':
     linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
@@ -1041,8 +1059,12 @@ b = linear_svm.intercept_;
 
 trainE = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100;
 
+# keep a copy of linear_svm
+import copy
+linear_svm_0 = copy.deepcopy(linear_svm) 
 
-# In[ ]:
+
+# In[23]:
 
 # Plot weights
 if doPlots:
@@ -1070,7 +1092,7 @@ if doPlots:
 #     Do this for both actual data and shuffled data (ie data in which Y is shuffled but X is not to serve as null distribution.)
 # 
 
-# In[ ]:
+# In[24]:
 
 numShuffles = 100
 summary_data = [];
@@ -1106,7 +1128,7 @@ for i in range(numShuffles):
     b_shfl.append(summary_shfl[i].model.intercept_);
 
 
-# In[ ]:
+# In[25]:
 
 pvalueTrain = ttest2(perClassErrorTrain_data, perClassErrorTrain_shfl, tail = 'left');
 pvalueTest = ttest2(perClassErrorTest_data, perClassErrorTest_shfl, tail = 'left');
@@ -1142,7 +1164,7 @@ if doPlots:
 #     Stimulus-aligned, choice-aligned, etc traces projected onto SVM fitted weights.
 #     More specifically, project traces of all trials onto normalized w (ie SVM weights computed from fitting model using X and Y of all trials).
 
-# In[ ]:
+# In[26]:
 
 if doPlots:
     # w = np.zeros(numNeurons)
@@ -1179,7 +1201,7 @@ if doPlots:
 
 # ## Plot projections and raw averages of neural population responses
 
-# In[ ]:
+# In[27]:
 
 if doPlots:
     # window of training (ep)
@@ -1240,7 +1262,7 @@ if doPlots:
     plt.title('Projections onto classifier weights')
     # plt.legend()
 
-    plt.subplot(1,2,2)
+    plt.subplot(1,2,2) # I think you should use Xtsa here to make it compatible with the plot above.
     a1 = np.nanmean(Xt[:, :, hr_trs],  axis=1) # frames x trials (average across neurons)
     tr1 = np.nanmean(a1,  axis = 1)
     tr1_se = np.nanstd(a1,  axis = 1) / np.sqrt(numTrials);
@@ -1400,13 +1422,13 @@ if doPlots:
 # ## Classification accuracy at each time point
 #     Same trials that went into projection traces will be used here.
 
-# In[ ]:
+# In[28]:
 
 # perClassCorr_t = [];
 # corrClass = np.ones((T, numTrials)) + np.nan # frames x trials
 
 # temp = Xti # for trial-history you may want to use this:
-temp = Xt
+temp = Xt # stimulus-aligned traces (I think you should use Xtsa for consistency... u get projections from Xtsa)
 nnf, nnu, nnt = temp.shape
 corrClass = np.ones((T, nnt)) + np.nan # frames x trials
 
@@ -1420,7 +1442,7 @@ for t in range(T):
     # perClassCorr_t.append(corrFract.mean()*100) # average correct classification across trials for time point t. Same as np.mean(corrClass, axis=1)    
 
 
-# In[ ]:
+# In[29]:
 
 # Plot class accuracy
 if doPlots:
@@ -1433,37 +1455,41 @@ if doPlots:
     plt.plot(time_aligned_stim, a, 'r')
     plt.xlabel('time since stimulus onset (ms)')
     plt.ylabel('classification accuracy (%)')
+    plt.xlim([time_aligned_stim[0], time_aligned_stim[-1]])
 
 
 # # Comparison of Excitatory and Inhibitory Neurons 
 
 # ## Compare weights of inhibitory and excitatory neurons
 
-# In[ ]:
+# In[30]:
 
 if doPlots and neuronType==2:
-    plt.figure(1)
+    w_inh = w[inhRois==1]
+    w_exc = w[inhRois==0]
+    
+    plt.figure()
     plt.subplot(2,1,2)
-    plt.plot(w[inhRois==1], label = 'inhibit')
-    plt.plot(w[inhRois==0], label = 'excit')
+    plt.plot(w_inh, label = 'inhibit')
+    plt.plot(w_exc, label = 'excit')
     plt.ylabel('Weights')
     plt.legend(loc='center left', bbox_to_anchor=(1, .7))    
 
-    h, p = stats.ttest_ind(w[inhRois==1], w[inhRois==0])
+    h, p = stats.ttest_ind(w_inh, w_exc)
     
-    plt.title('mean(abs(w)): inhibit = %.3f  excit = %.3f\np-val_2tailed (inhibit vs excit weights) = %.2f ' %(np.mean(abs(w[inhRois==1])), np.mean(abs(w[inhRois==0])), p))
+    plt.title('mean(abs(w)): inhibit = %.3f  excit = %.3f\np-val_2tailed (inhibit vs excit weights) = %.2f ' %(np.mean(abs(w_inh)), np.mean(abs(w_exc)), p))
     plt.tight_layout()
     
     
-    print '\nmean(abs(w)): inhibit = %.3f  excit = %.3f' %(np.mean(abs(w[inhRois==1])), np.mean(abs(w[inhRois==0])))
+    print '\nmean(abs(w)): inhibit = %.3f  excit = %.3f' %(np.mean(abs(w_inh)), np.mean(abs(w_exc)))
     print 'p-val_2tailed (inhibit vs excit weights) = %.2f' %p
-    # p_tl = ttest2(w[inhRois==1], w[inhRois==0], tail='left')
+    # p_tl = ttest2(w_inh, w_exc, tail='left')
     # print 'p-val_left_tailed (inhibit vs excit weights) = %.2f' %p_tl
 
 
 # ## Compare projections for when only excitatory vs. only inhibitory neurons are contributing to the decoder
 
-# In[ ]:
+# In[31]:
 
 if doPlots and neuronType==2:
 
@@ -1540,7 +1566,7 @@ if doPlots and neuronType==2:
     Xti_w_e = np.reshape(XtiN_w, (Ti,Ci), order='F');
 
 
-# In[ ]:
+# In[32]:
 
 # Plot the excitatory vs inhibitory projections
 if doPlots and neuronType==2:
@@ -1721,7 +1747,7 @@ if doPlots and neuronType==2:
     plt.plot(time_aligned_rew, tr1, 'b', label = 'high rate')
     plt.plot(time_aligned_rew, tr0, 'r', label = 'low rate')
     plt.xlabel('time aligned to reward (ms)')
-    plt.title('Excitatory projections')
+    plt.title('Inhibitory projections')
     # plt.legend()
 
 
@@ -1758,20 +1784,465 @@ if doPlots and neuronType==2:
     # plt.tight_layout()
 
 
-# ## Compare prediction error when setting weights of excitatory neurons to 0 with when setting weights of inhibitory neurons to 0
-#     When setting weights of excit neurons to 0, we only do it for n excit neurons, where n = number of inhibitory neurons. This is to  control for the difference in the number of excit and inhibit neurons.
+# ## Compute classification error of training and testing dataset for the following cases:
+#     1) All inhibitory neurons contribute to the decoder
+#     2) N excitatory neurons contribute, where n = number of inhibitory neurons. 
+#     3) All excitatory neurons contribute
 #     
 
-# In[ ]:
+# In[33]:
 
 if neuronType==2:
     
-    # compute prediction error when setting weights of n excitatory neurons to 0, where n = number of inhibitory neurons
-    numShuffles = 100
-    train_err = []
+    Xinh = X[:, inhRois==1]
+    XallExc = X[:, inhRois==0]
     lenInh = (inhRois==1).sum()
-    excI = np.argwhere(inhRois==0)
+    excI = np.argwhere(inhRois==0)  
+    
+    numShuffles = 100 
+    numShufflesExc = 10 # we choose n random excitator neurons, how many times to do this?
 
+    summary_data_inh = [];
+    summary_shfl_inh = [];
+    summary_data_allExc = [];
+    summary_shfl_allExc = [];
+    summary_data_exc = [];
+    summary_shfl_exc = [];
+    perClassErrorTrain_data_inh = [];
+    perClassErrorTest_data_inh = []
+    perClassErrorTrain_shfl_inh = [];
+    perClassErrorTest_shfl_inh = [];
+    w_data_inh = []
+    b_data_inh = []
+    w_shfl_inh = []
+    b_shfl_inh = []
+    perClassErrorTrain_data_allExc = [];
+    perClassErrorTest_data_allExc = []
+    perClassErrorTrain_shfl_allExc = [];
+    perClassErrorTest_shfl_allExc = [];
+    w_data_allExc = []
+    b_data_allExc = []
+    w_shfl_allExc = []
+    b_shfl_allExc = []
+    perClassErrorTrain_data_exc = [];
+    perClassErrorTest_data_exc = []
+    perClassErrorTrain_shfl_exc = [];
+    perClassErrorTest_shfl_exc = [];
+    w_data_exc = []
+    b_data_exc = []
+    w_shfl_exc = []
+    b_shfl_exc = []
+
+    permIxsList = [];
+    counter = 0    
+    
+    for i in range(numShuffles):
+        # permIxs = rng.permutation(numTrials);
+        permIxs = rng.permutation(numDataPoints);
+        permIxsList.append(permIxs);    
+
+        if regType == 'l1':
+            # all inh            
+            summary_data_inh.append(crossValidateModel(Xinh, Y, linearSVM, kfold = kfold, l1 = cbest))
+            summary_shfl_inh.append(crossValidateModel(Xinh, Y[permIxs], linearSVM, kfold = kfold, l1 = cbest))
+
+
+            # all exc            
+            summary_data_allExc.append(crossValidateModel(XallExc, Y, linearSVM, kfold = kfold, l1 = cbest))
+            summary_shfl_allExc.append(crossValidateModel(XallExc, Y[permIxs], linearSVM, kfold = kfold, l1 = cbest))
+
+
+            # n exc (n = number of inh)        
+            # select n random exc (n = number of inh)
+            for ii in range(numShufflesExc):            
+                en = rng.permutation(excI)[0:lenInh].squeeze() # n randomly selected exc neurons.
+                Xexc = X[:, en]
+                summary_data_exc.append(crossValidateModel(Xexc, Y, linearSVM, kfold = kfold, l1 = cbest)) # summary_data_exc is of size numShuffles x numShufflesExc
+                summary_shfl_exc.append(crossValidateModel(Xexc, Y[permIxs], linearSVM, kfold = kfold, l1 = cbest))
+
+                counter = counter+1
+    #             print en
+#             print counter
+            inds = np.arange(counter-numShufflesExc,counter)
+#             print inds
+
+
+        elif regType == 'l2':
+            # all inh
+            summary_data_inh.append(crossValidateModel(Xinh, Y, linearSVM, kfold = kfold, l2 = cbest))
+            summary_shfl_inh.append(crossValidateModel(Xinh, Y[permIxs], linearSVM, kfold = kfold, l2 = cbest))
+
+
+            # all exc
+            summary_data_allExc.append(crossValidateModel(XallExc, Y, linearSVM, kfold = kfold, l2 = cbest))
+            summary_shfl_allExc.append(crossValidateModel(XallExc, Y[permIxs], linearSVM, kfold = kfold, l2 = cbest))
+
+
+            # n exc (n = number of inh)     
+            for ii in range(numShufflesExc):
+                Xexc = X[:, en]
+                summary_data_exc.append(crossValidateModel(Xexc, Y, linearSVM, kfold = kfold, l2 = cbest))
+                summary_shfl_exc.append(crossValidateModel(Xexc, Y[permIxs], linearSVM, kfold = kfold, l2 = cbest))
+
+                counter = counter+1
+#             print counter
+            inds = np.arange(counter-numShufflesExc,counter)
+#             print inds
+
+
+
+        # inh        
+        perClassErrorTrain_data_inh.append(summary_data_inh[i].perClassErrorTrain);
+        perClassErrorTest_data_inh.append(summary_data_inh[i].perClassErrorTest);
+        w_data_inh.append(np.squeeze(summary_data_inh[i].model.coef_));
+        b_data_inh.append(summary_data_inh[i].model.intercept_);
+
+        perClassErrorTrain_shfl_inh.append(summary_shfl_inh[i].perClassErrorTrain);
+        perClassErrorTest_shfl_inh.append(summary_shfl_inh[i].perClassErrorTest);
+        w_shfl_inh.append(np.squeeze(summary_shfl_inh[i].model.coef_));
+        b_shfl_inh.append(summary_shfl_inh[i].model.intercept_);
+
+        # all exc
+        perClassErrorTrain_data_allExc.append(summary_data_allExc[i].perClassErrorTrain);
+        perClassErrorTest_data_allExc.append(summary_data_allExc[i].perClassErrorTest);
+        w_data_allExc.append(np.squeeze(summary_data_allExc[i].model.coef_));
+        b_data_allExc.append(summary_data_allExc[i].model.intercept_);
+
+        perClassErrorTrain_shfl_allExc.append(summary_shfl_allExc[i].perClassErrorTrain);
+        perClassErrorTest_shfl_allExc.append(summary_shfl_allExc[i].perClassErrorTest);
+        w_shfl_allExc.append(np.squeeze(summary_shfl_allExc[i].model.coef_));
+        b_shfl_allExc.append(summary_shfl_allExc[i].model.intercept_);
+
+        # n exc
+        perClassErrorTrain_data_exc.append(np.mean([summary_data_exc[inds[j]].perClassErrorTrain for j in range(len(inds))], axis=0)); # append the average of shuffles for selecting n exc neurons);
+        perClassErrorTest_data_exc.append(np.mean([summary_data_exc[inds[j]].perClassErrorTest for j in range(len(inds))], axis=0));
+        w_data_exc.append(np.mean([(summary_data_exc[inds[j]].model.coef_).squeeze() for j in range(len(inds))], axis=0));
+        b_data_exc.append(np.mean([(summary_data_exc[inds[j]].model.intercept_).squeeze() for j in range(len(inds))], axis=0));
+
+        perClassErrorTrain_shfl_exc.append(np.mean([summary_shfl_exc[inds[j]].perClassErrorTrain for j in range(len(inds))], axis=0)) # average across shuffles for selecting n exc neurons);
+        perClassErrorTest_shfl_exc.append(np.mean([summary_shfl_exc[inds[j]].perClassErrorTest for j in range(len(inds))], axis=0));
+        w_shfl_exc.append(np.mean([(summary_shfl_exc[inds[j]].model.coef_).squeeze() for j in range(len(inds))], axis=0));
+        b_shfl_exc.append(np.mean([(summary_shfl_exc[inds[j]].model.intercept_).squeeze() for j in range(len(inds))], axis=0));
+
+
+    #     # n exc
+    #     perClassErrorTrain_data_exc.append(summary_data_exc[i].perClassErrorTrain);
+    #     perClassErrorTest_data_exc.append(summary_data_exc[i].perClassErrorTest);
+    #     w_data_exc.append(np.squeeze(summary_data_exc[i].model.coef_));
+    #     b_data_exc.append(summary_data_exc[i].model.intercept_);
+
+    #     perClassErrorTrain_shfl_exc.append(summary_shfl_exc[i].perClassErrorTrain);
+    #     perClassErrorTest_shfl_exc.append(summary_shfl_exc[i].perClassErrorTest);
+    #     w_shfl_exc.append(np.squeeze(summary_shfl_exc[i].model.coef_));
+    #     b_shfl_exc.append(summary_shfl_exc[i].model.intercept_);
+
+
+    # Simply get all values of all shuffles instead of appending like above    
+    # perClassErrorTrain_data_exc = [summary_data_exc[i].perClassErrorTrain for i in range(np.shape(summary_data_exc)[0])]
+    # perClassErrorTest_data_exc = [summary_data_exc[i].perClassErrorTest for i in range(np.shape(summary_data_exc)[0])]
+
+
+# In[34]:
+
+# Plot histograms of class error for training and testing datasets
+
+if neuronType==2:
+    
+    # inh
+    print 'All inhibitory neurons'
+    pd = perClassErrorTrain_data_inh
+    ps = perClassErrorTrain_shfl_inh
+    pd0 = perClassErrorTest_data_inh
+    ps0 = perClassErrorTest_shfl_inh
+    pvalueTrain = ttest2(pd, ps, tail = 'left');
+    pvalueTest = ttest2(pd0, ps0, tail = 'left');
+
+    print '\tTraining error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(pd), np.mean(ps), pvalueTrain)
+    print '\tTesting error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(pd0), np.mean(ps0), pvalueTest)
+
+
+    # Plot the histograms
+    if doPlots:
+        binEvery = 3; # bin width
+
+        plt.figure()
+        plt.subplot(1,2,1)
+        plt.hist(pd, np.arange(0,100,binEvery), color = 'k', label = 'data');
+        plt.hist(ps, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
+        plt.xlabel('Training classification error (%)')
+        plt.ylabel('count')
+        plt.title('Inhibitory neurons\nMean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(pd), np.mean(ps), pvalueTrain), fontsize = 10)
+        plt.legend()
+
+        plt.subplot(1,2,2)
+        plt.hist(pd0, np.arange(0,100,binEvery), color = 'k', label = 'data');
+        plt.hist(ps0, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
+        plt.legend()
+        plt.xlabel('Testing classification error (%)')
+        plt.title('Mean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(pd0), np.mean(ps0), pvalueTest), fontsize = 10)
+        plt.ylabel('count')
+        plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
+
+
+
+
+
+    # n exc    
+    print 'Only n of the excitory neurons'
+    pd = perClassErrorTrain_data_exc
+    ps = perClassErrorTrain_shfl_exc
+    pd0 = perClassErrorTest_data_exc
+    ps0 = perClassErrorTest_shfl_exc
+    pvalueTrain = ttest2(pd, ps, tail = 'left');
+    pvalueTest = ttest2(pd0, ps0, tail = 'left');
+
+    print '\tTraining error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(pd), np.mean(ps), pvalueTrain)
+    print '\tTesting error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(pd0), np.mean(ps0), pvalueTest)
+
+
+    # Plot the histograms
+    if doPlots:
+        binEvery = 3; # bin width
+
+        plt.figure()
+        plt.subplot(1,2,1)
+        plt.hist(pd, np.arange(0,100,binEvery), color = 'k', label = 'data');
+        plt.hist(ps, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
+        plt.xlabel('Training classification error (%)')
+        plt.ylabel('count')
+        plt.title('n excitatory neurons\nMean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(pd), np.mean(ps), pvalueTrain), fontsize = 10)
+        plt.legend()
+
+        plt.subplot(1,2,2)
+        plt.hist(pd0, np.arange(0,100,binEvery), color = 'k', label = 'data');
+        plt.hist(ps0, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
+        plt.legend()
+        plt.xlabel('Testing classification error (%)')
+        plt.title('Mean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(pd0), np.mean(ps0), pvalueTest), fontsize = 10)
+        plt.ylabel('count')
+        plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
+
+
+
+
+
+    # all exc    
+    print 'All excitatory neurons'
+    pd = perClassErrorTrain_data_allExc
+    ps = perClassErrorTrain_shfl_allExc
+    pd0 = perClassErrorTest_data_allExc
+    ps0 = perClassErrorTest_shfl_allExc
+    pvalueTrain = ttest2(pd, ps, tail = 'left');
+    pvalueTest = ttest2(pd0, ps0, tail = 'left');
+
+    print '\tTraining error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(pd), np.mean(ps), pvalueTrain)
+    print '\tTesting error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(pd0), np.mean(ps0), pvalueTest)
+
+
+    # Plot the histograms
+    if doPlots:
+        binEvery = 3; # bin width
+
+        plt.figure()
+        plt.subplot(1,2,1)
+        plt.hist(pd, np.arange(0,100,binEvery), color = 'k', label = 'data');
+        plt.hist(ps, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
+        plt.xlabel('Training classification error (%)')
+        plt.ylabel('count')
+        plt.title('All excitatory neurons\nMean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(pd), np.mean(ps), pvalueTrain), fontsize = 10)
+        plt.legend()
+
+        plt.subplot(1,2,2)
+        plt.hist(pd0, np.arange(0,100,binEvery), color = 'k', label = 'data');
+        plt.hist(ps0, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
+        plt.legend()
+        plt.xlabel('Testing classification error (%)')
+        plt.title('Mean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(pd0), np.mean(ps0), pvalueTest), fontsize = 10)
+        plt.ylabel('count')
+        plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)    
+
+
+# ## Set correct classification traces for the following cases:
+#     1) All inhibitory neurons contribute to the decoder
+#     2) N excitatory neurons contribute, where n = number of inhibitory neurons. 
+#     3) All excitatory neurons contribute
+
+# In[35]:
+
+if neuronType==2:
+    
+    Xinh = X[:, inhRois==1]
+    XallExc = X[:, inhRois==0]
+    lenInh = (inhRois==1).sum()
+    excI = np.argwhere(inhRois==0)  
+
+    
+    #%% Set correct classification traces for inh
+    linear_svm_inh = copy.deepcopy(linear_svm_0)
+    linear_svm_inh.fit(Xinh, Y)
+    # w = np.squeeze(linear_svm.coef_);
+    # b = linear_svm.intercept_;
+    # trainE_inh = abs(linear_svm_inh.predict(Xinh)-Y.astype('float')).sum()/len(Y)*100;
+    # trainE_inh
+
+    tempInh = Xt[:,inhRois==1,:] # stimulus-aligned traces (I think you should use Xtsa for consistency... u get projections from Xtsa)
+    temp = tempInh
+    linear_svm_now = linear_svm_inh
+
+    nnf, nnu, nnt = temp.shape
+    corrClass_inh = np.ones((T, nnt)) + np.nan # frames x trials
+
+    for t in range(T):
+        trac = np.squeeze(temp[t, :, :]).T # trials x neurons  # stimulus-aligned trace at time t
+        corrFract = 1 - abs(linear_svm_now.predict(trac)-choiceVecNow); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+        # corrFract = 1 - abs(linear_svm.predict(trac)-Y); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+        corrClass_inh[t,:] = corrFract # frames x trials % fraction correct classification for all trials
+        # perClassCorr_t.append(corrFract.mean()*100) # average correct classification across trials for time point t. Same as np.mean(corrClass, axis=1)    
+
+#     corrClass_inh = np.mean(corrClass2, axis = 1) # frames x 1. Average correct class across trials for each shuffle.
+
+
+
+
+
+    #%% Set correct classification traces for all exc
+    linear_svm_allExc = copy.deepcopy(linear_svm_0)
+    linear_svm_allExc.fit(XallExc, Y)
+    # w = np.squeeze(linear_svm.coef_);
+    # b = linear_svm.intercept_;
+    # trainE_allExc = abs(linear_svm_allExc.predict(XallExc)-Y.astype('float')).sum()/len(Y)*100;
+    # trainE_allExc
+
+    tempAllExc = Xt[:,inhRois==0,:] # stimulus-aligned traces (I think you should use Xtsa for consistency... u get projections from Xtsa)
+    temp = tempAllExc
+    linear_svm_now = linear_svm_allExc
+
+    nnf, nnu, nnt = temp.shape
+    corrClass_allExc = np.ones((T, nnt)) + np.nan # frames x trials
+
+    for t in range(T):
+        trac = np.squeeze(temp[t, :, :]).T # trials x neurons  # stimulus-aligned trace at time t
+        corrFract = 1 - abs(linear_svm_now.predict(trac)-choiceVecNow); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+        # corrFract = 1 - abs(linear_svm.predict(trac)-Y); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+        corrClass_allExc[t,:] = corrFract # frames x trials % fraction correct classification for all trials
+        # perClassCorr_t.append(corrFract.mean()*100) # average correct classification across trials for time point t. Same as np.mean(corrClass, axis=1)    
+
+#     corrClass_allExc = np.mean(corrClass2, axis = 1) # frames x 1. Average correct class across trials for each shuffle.
+
+
+
+
+    #%% Set correct classification traces for n exc
+    numShufflesExc = 10 # we choose n random excitator neurons, how many times to do this?
+    corrClass_exc = []
+    for ii in range(numShufflesExc):            
+        en = rng.permutation(excI)[0:lenInh].squeeze() # n randomly selected exc neurons.
+        Xexc = X[:, en]
+
+        linear_svm_exc = copy.deepcopy(linear_svm_0)
+        linear_svm_exc.fit(Xexc, Y)
+        # w = np.squeeze(linear_svm.coef_);
+        # b = linear_svm.intercept_;
+        # trainE_exc = abs(linear_svm_exc.predict(Xexc)-Y.astype('float')).sum()/len(Y)*100;
+        # trainE_exc
+
+        tempExc = Xt[:,en,:] # stimulus-aligned traces (I think you should use Xtsa for consistency... u get projections from Xtsa)
+        temp = tempExc
+        linear_svm_now = linear_svm_exc
+
+        nnf, nnu, nnt = temp.shape
+        corrClass2 = np.ones((T, nnt)) + np.nan # frames x trials
+
+        for t in range(T):
+            trac = np.squeeze(temp[t, :, :]).T # trials x neurons  # stimulus-aligned trace at time t
+            corrFract = 1 - abs(linear_svm_now.predict(trac)-choiceVecNow); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+            # corrFract = 1 - abs(linear_svm.predict(trac)-Y); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+            corrClass2[t,:] = corrFract # frames x trials % fraction correct classification for all trials
+            # perClassCorr_t.append(corrFract.mean()*100) # average correct classification across trials for time point t. Same as np.mean(corrClass, axis=1)    
+
+        corrClass_exc.append(corrClass2) # numShuffExc x frames x trials. Average correct class across trials for each shuffle.           
+    s1, s2, s3 = np.shape(corrClass_exc)
+    a = np.reshape(np.transpose(corrClass_exc, (1,0,2)), (s2,s1*s3), order = 'F') # frames x (numShuffExc x trials)
+    corrClass_exc = a
+    
+#         corrClass_exc.append(np.mean(corrClass2, axis = 1)) # numShuffExc x frames. Average correct class across trials for each shuffle.    
+#     corrClass_exc = np.transpose(corrClass_exc) # frames x numShuffExc
+
+
+# In[36]:
+
+# Plot correct classification traces for the following cases:
+#     1) All inhibitory neurons contribute to the decoder
+#     2) N excitatory neurons contribute, where n = number of inhibitory neurons. 
+#     3) All excitatory neurons contribute
+    
+if doPlots and neuronType==2:
+    
+    plt.figure()   
+#     plt.subplot(1,2,1)
+    
+    # Plot corrClass for all excitatory neurons
+    a1 = np.mean(corrClass_allExc, axis=1)*100
+    s1 = np.std(corrClass_allExc, axis=1)*100 /np.sqrt(corrClass_allExc.shape[1])    
+    
+    plt.fill_between(time_aligned_stim, a1-s1, a1+s1, alpha=0.3, edgecolor='m', facecolor='m')
+    plt.plot(time_aligned_stim, a1, 'm', label = 'all exc')
+    plt.xlabel('Time since stimulus onset (ms)')
+#     plt.ylabel('Classification accuracy (%)')    
+    plt.ylabel('Classification accuracy (%)')    
+    plt.xlim([time_aligned_stim[0], time_aligned_stim[-1]])
+    
+    
+    
+    # Plot corrClass for n excitatory neurons
+    a1 = np.mean(corrClass_exc, axis=1)*100
+    s1 = np.std(corrClass_exc, axis=1)*100 /np.sqrt(corrClass_exc.shape[1])    
+    
+    plt.fill_between(time_aligned_stim, a1-s1, a1+s1, alpha=0.3, edgecolor='r', facecolor='r')
+    plt.plot(time_aligned_stim, a1, 'r', label = 'n exc')
+    plt.xlabel('Time since stimulus onset (ms)')
+#     plt.ylabel('Classification accuracy (%)')    
+    plt.ylabel('Classification accuracy (%)')    
+    plt.xlim([time_aligned_stim[0], time_aligned_stim[-1]])
+    
+    
+    
+    # Plot corrClass for all inhibitory neurons
+    a1 = np.mean(corrClass_inh, axis=1)*100
+    s1 = np.std(corrClass_inh, axis=1)*100 /np.sqrt(corrClass_inh.shape[1])    
+    
+    plt.fill_between(time_aligned_stim, a1-s1, a1+s1, alpha=0.3, edgecolor='b', facecolor='b')
+    plt.plot(time_aligned_stim, a1, 'b', label = 'all inh')
+    plt.xlabel('Time since stimulus onset (ms)')
+#     plt.ylabel('Classification accuracy (%)')    
+    plt.ylabel('Classification accuracy (%)')    
+    plt.xlim([time_aligned_stim[0], time_aligned_stim[-1]])
+    
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7))
+
+
+# ### Alternative way of doing the analysis above: compare prediction error when setting weights of excitatory neurons to 0 with when setting weights of inhibitory neurons to 0
+#     When setting weights of excit neurons to 0, we only do it for n excit neurons, where n = number of inhibitory neurons. This is to  control for the difference in the number of excit and inhibit neurons.
+#     
+
+# In[37]:
+
+if neuronType==2:
+    
+    # compute prediction error when all neurons are included.
+    linear_svm = copy.deepcopy(linear_svm_0)
+    trainE = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100;
+    
+    
+    # compute prediction error when setting weights of n excitatory neurons to 0, where n = number of inhibitory neurons
+    
+    numShuffles = 100
+    lenInh = (inhRois==1).sum()
+    train_err_exc0 = []    
+    excI = np.argwhere(inhRois==0)    
+
+    corrClass_exc0 = np.full([Xt.shape[0], numShuffles], np.nan) # frames x numShuffles. Average correct class across trials for each shuffle when exc weights are set to 0.
+    
     for i in range(numShuffles):
         # linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
         # linear_svm.fit(X, Y)  
@@ -1779,46 +2250,282 @@ if neuronType==2:
         ww = w+0; # adding 0 is important, otherwise, ww=w will change the value of w as well.
         
         # set weights of random sets of excit neurons (of size equal to length of inhibit neurons) to 0.
-        en = rng.permutation(excI)[1:lenInh]
+        en = rng.permutation(excI)[0:lenInh].squeeze()
         ww[en] = 0
 
-        linear_svm.coef_ = ww.reshape(1,-1)
+        linear_svm = copy.deepcopy(linear_svm_0)
+        linear_svm.coef_ = ww.reshape(1,-1) # here weights of random sets of excit neurons are set to 0 (of size equal to length of inhibit neurons)
 
         # print 'Training error: %.2f %%' %(abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100)
-        train_err.append(abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100)
+        train_err_exc0.append(abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100)
 
 
-    # set weights of all excit Ns to 0
-    '''
+        # Set correct classification traces
+        temp = Xt # stimulus aligned traces (I think you should use Xtsa for consistency... u get projections from Xtsa)
+        nnf, nnu, nnt = temp.shape
+        corrClass2 = np.ones((T, nnt)) + np.nan # frames x trials
+        # if trs4project!='trained':  # onlyTrainedTrs==0: 
+        #     temp = temp[:,:,~trsExcluded] # make sure it has same size as Y, you need this for svm.predict below. 
+        for t in range(T):
+            trac = np.squeeze(temp[t, :, :]).T # trials x neurons  # stimulus-aligned trace at time t
+            corrFract = 1 - abs(linear_svm.predict(trac)-choiceVecNow); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+            # corrFract = 1 - abs(linear_svm.predict(trac)-Y); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+            corrClass2[t,:] = corrFract # frames x trials % fraction correct classification for all trials
+            # perClassCorr_t.append(corrFract.mean()*100) # average correct classification across trials for time point t. Same as np.mean(corrClass, axis=1)    
+        
+        corrClass_exc0[:,i] = np.mean(corrClass2, axis = 1) # frames x numShuffles. Average correct class across trials for each shuffle.
+        
+
+    # Fraction of change in training error after setting weights of n exc neurons to 0 (n = num inh neurons)   
+    train_err_exc0_rel2all = (train_err_exc0 - trainE) / trainE    
+        
+
+        
+        
+    #%% set weights of all excit Ns to 0
     ww = w+0;    
     ww[inhRois==0] = 0 
+    linear_svm = copy.deepcopy(linear_svm_0)
     linear_svm.coef_ = ww.reshape(1,-1)
-    train_err = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100
-    '''
+    train_err_allExc0 = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100
     
-    # compute prediction error when setting weights of inhibitory neurons to 0
+
+    # Set correct classification traces
+    temp = Xt # stimulus aligned traces (I think you should use Xtsa for consistency... u get projections from Xtsa)
+    nnf, nnu, nnt = temp.shape
+    corrClass2 = np.ones((T, nnt)) + np.nan # frames x trials
+    # if trs4project!='trained':  # onlyTrainedTrs==0: 
+    #     temp = temp[:,:,~trsExcluded] # make sure it has same size as Y, you need this for svm.predict below. 
+    for t in range(T):
+        trac = np.squeeze(temp[t, :, :]).T # trials x neurons  # stimulus-aligned trace at time t
+        corrFract = 1 - abs(linear_svm.predict(trac)-choiceVecNow); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+        # corrFract = 1 - abs(linear_svm.predict(trac)-Y); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+        corrClass2[t,:] = corrFract # frames x trials % fraction correct classification for all trials
+        # perClassCorr_t.append(corrFract.mean()*100) # average correct classification across trials for time point t. Same as np.mean(corrClass, axis=1)    
+
+    corrClass_allExc0 = np.mean(corrClass2, axis = 1) # frames x 1. Average correct class across trials for each shuffle.
+    corrClass_allExc0 = corrClass_allExc0[:,np.newaxis] # so it has size (frames x 1)
+    
+    
+    
+    
+    
+    #%% compute prediction error when setting weights of inhibitory neurons to 0
+    numShufflesI = 1; # bc we use all inh neurons (ie no random selection), we don't need to run it multiple times.
+    train_err_inh0 = []    
+    inhI = np.argwhere(inhRois==1)    
+
+    corrClass_inh0 = np.full([Xt.shape[0], numShufflesI], np.nan) # frames x numShuffles. Average correct class across trials for each shuffle when exc weights are set to 0.
+    
+    for i in range(numShufflesI):
+        # linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
+        # linear_svm.fit(X, Y)  
+        # ww = np.squeeze(linear_svm.coef_);
+        ww = w+0; # adding 0 is important, otherwise, ww=w will change the value of w as well.
+        
+        # set weights of random sets of excit neurons (of size equal to length of inhibit neurons) to 0.
+        en = rng.permutation(inhI).squeeze()
+        ww[en] = 0
+
+        linear_svm = copy.deepcopy(linear_svm_0) # we need to do this bc we changes its coef_ above
+        linear_svm.coef_ = ww.reshape(1,-1) # here weights of random sets of excit neurons are set to 0 (of size equal to length of inhibit neurons)
+
+        # print 'Training error: %.2f %%' %(abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100)
+        train_err_inh0.append(abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100)
+
+
+        # Set correct classification traces
+        temp = Xt # stimulus aligned traces (I think you should use Xtsa for consistency... u get projections from Xtsa)
+        nnf, nnu, nnt = temp.shape
+        corrClass2 = np.ones((T, nnt)) + np.nan # frames x trials
+        # if trs4project!='trained':  # onlyTrainedTrs==0: 
+        #     temp = temp[:,:,~trsExcluded] # make sure it has same size as Y, you need this for svm.predict below. 
+        for t in range(T):
+            trac = np.squeeze(temp[t, :, :]).T # trials x neurons  # stimulus-aligned trace at time t
+            corrFract = 1 - abs(linear_svm.predict(trac)-choiceVecNow); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+            # corrFract = 1 - abs(linear_svm.predict(trac)-Y); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+            corrClass2[t,:] = corrFract # frames x trials % fraction correct classification for all trials
+            # perClassCorr_t.append(corrFract.mean()*100) # average correct classification across trials for time point t. Same as np.mean(corrClass, axis=1)    
+        
+        corrClass_inh0[:,i] = np.mean(corrClass2, axis = 1) # frames x numShuffles. Average correct class across trials for each shuffle.
+        
+        
+        # Fraction of change in training error after setting weights of n exc neurons to 0 (n = num inh neurons)   
+        train_err_inh0_rel2all = (train_err_inh0 - trainE) / trainE
+        
+
+    linear_svm = copy.deepcopy(linear_svm_0) # go back to the original value
+        
+    '''
     # linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
     # linear_svm.fit(X, Y)  
     # ww = np.squeeze(linear_svm.coef_);
     ww = w+0;    
     ww[inhRois==1] = 0 # set weights of inhibit Ns to 0
-    linear_svm.coef_ = ww.reshape(1,-1)
+    
+    linear_svm = copy.deepcopy(linear_svm_0) # we need to do this bc we changes its coef_ above
+    linear_svm.coef_ = ww.reshape(1,-1) # here weights of inh neurons are set to 0.
+    
     train_err_inh0 = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100
-
-    h, p = stats.ttest_1samp(train_err, train_err_inh0)
+        
+    # Fraction of change in training error after setting weights of inh neurons to 0
+    train_err_inh0_rel2all = (train_err_inh0 - trainE) / trainE   
     
-    print '\nTraining error: \ninh set to 0 = %.2f%%\nexcit set to 0 (mean of 100 rounds)) = %.2f%%\np_val(train_err: excit vs inhibit set to 0) = %.2f' %(train_err_inh0, np.mean(train_err), p)
 
     
-    # plot the distribution of training error for when random sets of excit weights are set to 0.
+    # Set correct classification traces
+    temp = Xt # stimulus aligned traces (I think you should use Xtsa for consistency... u get projections from Xtsa)
+    nnf, nnu, nnt = temp.shape
+    corrClass = np.ones((T, nnt)) + np.nan # frames x trials
+
+    # if trs4project!='trained':  # onlyTrainedTrs==0: 
+    #     temp = temp[:,:,~trsExcluded] # make sure it has same size as Y, you need this for svm.predict below. 
+    for t in range(T):
+        trac = np.squeeze(temp[t, :, :]).T # trials x neurons  # stimulus-aligned trace at time t
+        corrFract = 1 - abs(linear_svm.predict(trac)-choiceVecNow); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+        # corrFract = 1 - abs(linear_svm.predict(trac)-Y); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
+        corrClass[t,:] = corrFract # frames x trials % fraction correct classification for all trials
+        # perClassCorr_t.append(corrFract.mean()*100) # average correct classification across trials for time point t. Same as np.mean(corrClass, axis=1)    
+
+    corrClass_inh0 = np.mean(corrClass, axis = 1) # frames x 1. Average correct class across trials for each shuffle when inh weights are set to 0.
+    corrClass_inh0_std = np.std(corrClass, axis = 1)
+    '''
+    
+    
+    
+    #%% P value of fraction changes in training error for exc vs inh weights set to 0. (not sure if better to do it on fraction changes or on the actual training errors?!)
+#     h, p = stats.ttest_1samp(train_err_exc0_rel2all, train_err_inh0_rel2all)        
+    h, p = stats.ttest_ind(train_err_exc0, train_err_inh0)        
+    print '\nTraining error: \ninh set to 0 = %.2f%%\nexcit set to 0 (mean of 100 rounds)) = %.2f%%\nall exc set to 0 = %.2f%%\np_val(train_err_exc0: excit vs inhibit set to 0) = %.2f' %(np.mean(train_err_inh0), np.mean(train_err_exc0), np.mean(train_err_allExc0), p)
+    print '\nTraining error, change relative to original: \ninh set to 0 = %.2f\nexcit set to 0 (mean of 100 rounds)) = %.2f\np_val(train_err_exc0: excit vs inhibit set to 0) = %.2f' %(np.mean(train_err_inh0_rel2all), np.mean(train_err_exc0_rel2all), p)
+
+    
+    #%% plot the distribution of training error for when random sets of excit weights are set to 0.
     if doPlots:
         plt.figure()
         plt.subplot(2,2,1)
-        plt.hist(train_err, np.arange(0,100,3), color = 'k', label = 'data');
-        plt.xlabel('training error when setting n excit weights to 0, n=#inhibit neurons')
+        plt.hist(train_err_exc0, np.arange(0,100,3), color = 'k', label = 'data');
+        plt.xlabel('Train error when setting n excit weights to 0, n=#inhibit neurons')
         plt.ylabel('count')
-        plt.title('train error:\ninh_zero = %.2f; excit_zero = %.2f\np_val = %.2f' %(train_err_inh0, np.mean(train_err), p))
-        plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
+        plt.title('Train error:\nall = %.2f%%\ninh_zero = %.2f%%; excit_zero = %.2f%%; allExcit_zero = %.2f%%\np_val = %.2f' %(trainE, np.mean(train_err_inh0), np.mean(train_err_exc0), np.mean(train_err_allExc0), p))
+        plt.tight_layout#(pad=0.4, w_pad=1.5, h_pad=1.0)
+    
+
+
+# In[59]:
+
+# Plot changes in class accuracy after setting exc w or inh w to 0 (relative to the original class accuracy).
+
+if doPlots and neuronType==2:
+    plt.figure(figsize=(7,3))
+    
+    # Compare correct classification traces for when inhibitory weights are set to 0 to when excitatory weights are set to 0.
+    plt.subplot(1,2,1)    
+
+
+    # Plot corrClass for when all excitatory neurons are set to 0
+    #     a1 = np.mean(corrClass_exc0, axis=1)*100 - a0
+    #     s1 = np.std(corrClass_exc0, axis=1)*100 #/np.sqrt(corrClass_exc0.shape[1])    
+    a1 = np.mean(corrClass_allExc0, axis=1)*100
+    s1 = np.std(corrClass_allExc0, axis=1)*100 #/np.sqrt(corrClass_exc0.shape[1])    
+
+    plt.fill_between(time_aligned_stim, a1-s1, a1+s1, alpha=0.3, edgecolor='m', facecolor='m')
+    plt.plot(time_aligned_stim, a1, 'm', label = 'all exc w set to 0')
+    plt.xlabel('Time since stimulus onset (ms)')
+
+
+
+    # Plot corrClass for when excitatory neurons are set to 0
+    a = np.mean(corrClass_exc0, axis=1)*100 
+    s = np.std(corrClass_exc0, axis=1)*100 #/np.sqrt(corrClass_exc0.shape[1])    
+
+    plt.fill_between(time_aligned_stim, a-s, a+s, alpha=0.5, edgecolor='r', facecolor='r')
+    plt.plot(time_aligned_stim, a, 'r', label = 'exc w set to 0')
+    plt.xlabel('Time since stimulus onset (ms)')
+    plt.ylabel('Classification accuracy (%)')    
+    plt.xlim([time_aligned_stim[0], time_aligned_stim[-1]])
+
+
+    # Plot corrClass for when inhibitory neurons are set to 0
+    #     a = corrClass_inh0*100 
+    #     s = corrClass_inh0_std*100 /np.sqrt(corrClass.shape[1])
+    a = np.mean(corrClass_inh0, axis=1)*100 
+    s = np.std(corrClass_inh0, axis=1)*100 #/np.sqrt(corrClass_exc0.shape[1])  
+    plt.fill_between(time_aligned_stim, a-s, a+s, alpha=0.5, edgecolor='b', facecolor='b')
+    plt.plot(time_aligned_stim, a, 'b', label = 'inh w set to 0')
+
+#     plt.legend(loc='center left', bbox_to_anchor=(1, .7))
+
+
+    # Plot original corrClass
+    a = np.mean(corrClass, axis=1)*100 
+    s = np.std(corrClass, axis=1)*100 /np.sqrt(numTrials);
+    #     plt.figure()
+    #     plt.subplot(1,2,1)
+    #     plt.fill_between(time_aligned_stim, a-s, a+s, alpha=0.5, edgecolor='g', facecolor='g')
+    plt.plot(time_aligned_stim, a, 'g', label='original')
+    plt.xlabel('time since stimulus onset (ms)')
+    plt.ylabel('classification accuracy (%)')
+
+    plt.xlim([time_aligned_stim[0], time_aligned_stim[-1]])
+
+
+
+    
+    plt.subplot(1,2,2)        
+    
+    # Plot corrClass for all weights    
+    a0 = np.mean(corrClass, axis=1)*100 
+    '''
+    s0 = np.std(corrClass, axis=1)*100 /np.sqrt(numTrials);
+#     plt.figure()
+#     plt.subplot(1,2,1)
+    plt.fill_between(time_aligned_stim, a0-s0, a0+s0, alpha=0.3, edgecolor='g', facecolor='g')
+    plt.plot(time_aligned_stim, a0, 'g', label = 'original')
+    plt.xlabel('time since stimulus onset (ms)')
+    plt.ylabel('classification accuracy (%)')
+    plt.xlim([time_aligned_stim[0], time_aligned_stim[-1]])
+    '''        
+    plt.plot(time_aligned_stim, np.zeros((np.shape(time_aligned_stim))), 'g') 
+    
+    
+    # Plot corrClass for when all excitatory neurons are set to 0
+#     a1 = np.mean(corrClass_exc0, axis=1)*100 - a0
+#     s1 = np.std(corrClass_exc0, axis=1)*100 #/np.sqrt(corrClass_exc0.shape[1])    
+    a1 = np.mean(corrClass_allExc0, axis=1)*100 - a0
+    s1 = np.std(corrClass_allExc0, axis=1)*100 #/np.sqrt(corrClass_exc0.shape[1])    
+    
+    plt.fill_between(time_aligned_stim, a1-s1, a1+s1, alpha=0.3, edgecolor='m', facecolor='m')
+    plt.plot(time_aligned_stim, a1, 'm', label = 'all exc w set to 0')
+    plt.xlabel('Time since stimulus onset (ms)')
+#     plt.ylabel('Classification accuracy (%)')    
+#     plt.ylabel('Change in classification accuracy (%)')    
+#     plt.xlim([time_aligned_stim[0], time_aligned_stim[-1]])
+    
+    
+    # Plot corrClass for when n excitatory neurons are set to 0
+    a1 = np.mean(corrClass_exc0, axis=1)*100 - a0
+    s1 = np.std(corrClass_exc0, axis=1)*100 #/np.sqrt(corrClass_exc0.shape[1])    
+    
+    plt.fill_between(time_aligned_stim, a1-s1, a1+s1, alpha=0.3, edgecolor='r', facecolor='r')
+    plt.plot(time_aligned_stim, a1, 'r', label = 'n exc w set to 0')
+    plt.xlabel('Time since stimulus onset (ms)')
+#     plt.ylabel('Classification accuracy (%)')    
+    plt.ylabel('Change in classification accuracy (%)')    
+    plt.xlim([time_aligned_stim[0], time_aligned_stim[-1]])
+    
+    
+    # Plot corrClass for when inhibitory neurons are set to 0
+#     a = corrClass_inh0*100 
+#     s = corrClass_inh0_std*100 /np.sqrt(corrClass.shape[1])
+    a2 = np.mean(corrClass_inh0, axis=1)*100 - a0
+    s2 = np.std(corrClass_inh0, axis=1)*100 #/np.sqrt(corrClass_exc0.shape[1])  
+    plt.fill_between(time_aligned_stim, a2-s2, a2+s2, alpha=0.3, edgecolor='b', facecolor='b')
+    plt.plot(time_aligned_stim, a2, 'b', label = 'inh w set to 0')
+    
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7))
+#     plt.tight_layout()
+    plt.subplots_adjust(wspace=.5)
     
 
 
@@ -1826,9 +2533,15 @@ if neuronType==2:
 # 
 # We quantify the contribution of excitatory and inhibitory neurons to the encoding of the choice by measuring participation percentage, defined as the percentatge of a given population of neurons that has non-zero weights. We produce paraticipation curves, participation ratio at different values of svm regularizer (c), for each data
 
-# In[ ]:
+# In[60]:
 
-def inh_exc_classContribution(X, Y, isinh):
+# This function finds the SVM decoder that predicts choices given responses in X by 
+# using different values for c. At each value of c, it computes fraction of non-zero weights
+# for exc and inh neurons, separately (perActive_inh, perActive_exc). Also it computes the 
+# classification error (perClassEr) at each value of c. 
+# Outputs: perActive_inh, perActive_exc, perClassEr, cvect_
+
+def inh_exc_classContribution(X, Y, isinh): 
     import numpy as np
     from sklearn import svm
     
@@ -1861,13 +2574,13 @@ def inh_exc_classContribution(X, Y, isinh):
     return perActive_inh, perActive_exc, perClassEr, cvect_
 
 
-# In[ ]:
+# In[61]:
 
 if neuronType==2:
     perActive_inh, perActive_exc, perClassEr, cvect_ = inh_exc_classContribution(X[:, ~np.isnan(inhRois)], Y, inhRois[~np.isnan(inhRois)])
 
 
-# In[ ]:
+# In[62]:
 
 if doPlots and neuronType==2:    
     plt.figure
@@ -1882,9 +2595,9 @@ if doPlots and neuronType==2:
 
 
 #  ### Another version of the analysis:
-#  we control for the different numbers of excitatory and inhibitory neurons by subsampling n excitatory neurons, where n is equal to the number of inhibitory neurons.
+#  We control for the different numbers of excitatory and inhibitory neurons by subsampling n excitatory neurons, where n is equal to the number of inhibitory neurons. More specifically, instead of sending the entire X to the function inh_exc_classContribution, we use a subset of X that includes equal number of exc and inh neurons (Exc neurons are randomly selected).
 
-# In[ ]:
+# In[63]:
 
 # equal number of exc and inh neurons
 if neuronType==2 and np.sum(w)!=0:
@@ -1911,7 +2624,7 @@ if neuronType==2 and np.sum(w)!=0:
         perClassEr.append(ce);
 
 
-# In[ ]:
+# In[64]:
 
 if neuronType==2 and np.sum(w)!=0:
     
@@ -1927,7 +2640,7 @@ if neuronType==2 and np.sum(w)!=0:
     h, p_two = stats.ttest_ind(aa, bb)
     p_tl = ttest2(aa, bb, tail='left')
     p_tr = ttest2(aa, bb, tail='right')
-    print '\np value (pooled for all values of c):\nexc ~= in : %.2f\nexc < inh : %.2f\nexc > inh : %.2f' %(p_two, p_tl, p_tr)
+    print '\np value (pooled for all values of c):\nexc ~= inh : %.2f\nexc < inh : %.2f\nexc > inh : %.2f' %(p_two, p_tl, p_tr)
 
 
     # two-tailed p-value
@@ -1995,10 +2708,10 @@ if neuronType==2 and np.sum(w)!=0:
 
 # ## Save results as .mat files in a folder named svm
 
-# In[ ]:
+# In[66]:
 
 if trialHistAnalysis:
-    ep_ms = np.round((ep-eventI)*frameLength)
+#     ep_ms = np.round((ep-eventI)*frameLength)
     th_stim_dur = []
     svmn = 'svmPrevChoice_%sN_%sITIs_ep%d-%dms_r%d_' %(ntName, itiName, ep_ms[0], ep_ms[-1], roundi)
 else:
@@ -2011,15 +2724,15 @@ if saveResults:
     if not os.path.exists(d):
         print 'creating svm folder'
         os.makedirs(d)
-    
+
     svmName = os.path.join(d, svmn+os.path.basename(pnevFileName))
     print(svmName)
     # scio.savemat(svmName, {'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'meanX':meanX, 'stdX':stdX, 'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 'th_stim_dur':th_stim_dur})
     if neuronType==2:
-        scio.savemat(svmName, {'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 'th_stim_dur':th_stim_dur, 'numSamples':numSamples, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 'w':w, 'b':b, 'cbest':cbest, 'corrClass':corrClass, 'perClassErrorTrain_data':perClassErrorTrain_data, 'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 'perClassErrorTest_data':perClassErrorTest_data, 'perClassErrorTest_shfl':perClassErrorTest_shfl, 'perClassErrorTest':perClassErrorTest, 'perClassErrorTrain':perClassErrorTrain, 'cvect':cvect, 'perActive_inh':perActive_inh, 'perActive_exc':perActive_exc, 'perClassEr':perClassEr, 'cvect_':cvect_})
+#         scio.savemat(svmName, {'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 'th_stim_dur':th_stim_dur, 'numSamples':numSamples, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 'w':w, 'b':b, 'cbest':cbest, 'corrClass':corrClass, 'perClassErrorTrain_data':perClassErrorTrain_data, 'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 'perClassErrorTest_data':perClassErrorTest_data, 'perClassErrorTest_shfl':perClassErrorTest_shfl, 'perClassErrorTest':perClassErrorTest, 'perClassErrorTrain':perClassErrorTrain, 'cvect':cvect, 'perActive_inh':perActive_inh, 'perActive_exc':perActive_exc, 'perClassEr':perClassEr, 'cvect_':cvect_, 'trainE':trainE, 'train_err_exc0':train_err_exc0, 'train_err_inh0':train_err_inh0, 'corrClass_exc0':corrClass_exc0, 'corrClass_inh0':corrClass_inh0, 'train_err_allExc0':train_err_allExc0, 'corrClass_allExc0':corrClass_allExc0})
+        scio.savemat(svmName, {'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 'th_stim_dur':th_stim_dur, 'numSamples':numSamples, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 'w':w, 'b':b, 'cbest':cbest, 'corrClass':corrClass, 'perClassErrorTrain_data':perClassErrorTrain_data, 'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 'perClassErrorTest_data':perClassErrorTest_data, 'perClassErrorTest_shfl':perClassErrorTest_shfl, 'perClassErrorTest':perClassErrorTest, 'perClassErrorTrain':perClassErrorTrain, 'cvect':cvect, 'perActive_inh':perActive_inh, 'perActive_exc':perActive_exc, 'perClassEr':perClassEr, 'cvect_':cvect_, 'trainE':trainE, 'train_err_exc0':train_err_exc0, 'train_err_inh0':train_err_inh0, 'corrClass_exc0':corrClass_exc0, 'corrClass_inh0':corrClass_inh0, 'train_err_allExc0':train_err_allExc0, 'corrClass_allExc0':corrClass_allExc0, 'perClassErrorTrain_data_inh':perClassErrorTrain_data_inh, 'perClassErrorTest_data_inh':perClassErrorTest_data_inh, 'perClassErrorTrain_shfl_inh':perClassErrorTrain_shfl_inh, 'perClassErrorTest_shfl_inh':perClassErrorTest_shfl_inh, 'perClassErrorTrain_data_allExc':perClassErrorTrain_data_allExc, 'perClassErrorTest_data_allExc':perClassErrorTest_data_allExc, 'perClassErrorTrain_shfl_allExc':perClassErrorTrain_shfl_allExc, 'perClassErrorTest_shfl_allExc':perClassErrorTest_shfl_allExc, 'perClassErrorTrain_data_exc':perClassErrorTrain_data_exc, 'perClassErrorTest_data_exc':perClassErrorTest_data_exc, 'perClassErrorTrain_shfl_exc':perClassErrorTrain_shfl_exc, 'perClassErrorTest_shfl_exc':perClassErrorTest_shfl_exc, 'corrClass_allExc':corrClass_allExc, 'corrClass_exc':corrClass_exc, 'corrClass_inh':corrClass_inh}) 
     else:
         scio.savemat(svmName, {'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 'th_stim_dur':th_stim_dur, 'numSamples':numSamples, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 'w':w, 'b':b, 'cbest':cbest, 'corrClass':corrClass, 'perClassErrorTrain_data':perClassErrorTrain_data, 'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 'perClassErrorTest_data':perClassErrorTest_data, 'perClassErrorTest_shfl':perClassErrorTest_shfl, 'perClassErrorTest':perClassErrorTest, 'perClassErrorTrain':perClassErrorTrain, 'cvect':cvect})
-
 
     # save normalized traces as well                       
     # scio.savemat(svmName, {w':w, 'b':b, 'cbest':cbest, 'corrClass':corrClass, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'meanX':meanX, 'stdX':stdX, 'X':X, 'Y':Y, 'Xt':Xt, 'Xtg':Xtg, 'Xtc':Xtc, 'Xtr':Xtr, 'Xtp':Xtp})
@@ -2032,6 +2745,26 @@ if saveResults:
     # else:
 else:
     print 'Not saving .mat file'
+    
+    
+# If you want to save the linear_svm objects as mat file, you need to take care of 
+# None values and set to them []:
+
+# import inspect
+# inspect.getmembers(summary_shfl_exc[0])
+
+# for i in range(np.shape(summary_shfl_exc)[0]):
+#     summary_shfl_exc[i].model.random_state = []
+#     summary_shfl_exc[i].model.class_weight = []
+# [summary_shfl_exc[i].model.random_state for i in range(np.shape(summary_shfl_exc)[0])]
+# [summary_shfl_exc[i].model.class_weight for i in range(np.shape(summary_shfl_exc)[0])]
+
+# scio.savemat(svmName, {'summary_shfl_exc':summary_shfl_exc})
+
+# Data = scio.loadmat(svmName, variable_names=['summary_shfl_exc'] ,squeeze_me=True,struct_as_record=False)
+# summary_shfl_exc = Data.pop('summary_shfl_exc')
+# summary_shfl_exc[0].model.intercept_
+    
 
 
 # ## Move the autosaved .html file to a folder named "figs"

@@ -1,5 +1,5 @@
 function [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
-    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
+    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, timeStimOnsetAll] = ...
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams, outcomes)
 % Set the time of events that happen during each trial.
 %
@@ -44,7 +44,7 @@ timeNoCentLickOnset = NaN(size(alldata));
 timeNoCentLickOffset = NaN(size(alldata));
 timeInitTone = cell(size(alldata)); timeInitTone(:) = {NaN};
 time1stCenterLick = NaN(size(alldata));
-timeStimOnset = NaN(size(alldata));
+timeStimOnsetAll = NaN(size(alldata));
 timeStimOffset = NaN(size(alldata));
 timeCommitCL_CR_Gotone = NaN(size(alldata));
 time1stSideTry = NaN(size(alldata));
@@ -119,8 +119,8 @@ for tr = 1:length(alldata)
         %% stimulus onset. (it happens after stim_delay since the initi time).
         
         %         if ~ismember(outcomes(tr), -3) % dont analyze wrong start (change -3 to invalid if you don't want to analyze early decision or no center commit for the stimOnset event)
-        if ~isempty(alldata(tr).parsedEvents.states.wait_stim) && ~ismember(outcomes(tr), -1) % -1 added so early decisions are not analyzed for stim, bc the stim ends at the middle for them. % you commented the line above bc if the mouse licks during stim pre delay it will be counted as early decision (-1) hence outcome is not -3 but still no stimulus was played.
-            timeStimOnset(tr) = alldata(tr).parsedEvents.states.wait_stim(1) * 1000 - t0;
+        if ~isempty(alldata(tr).parsedEvents.states.wait_stim) %&& ~ismember(outcomes(tr), -1) % -1 added so early decisions are not analyzed for stim, bc the stim ends at the middle for them. % you commented the line above bc if the mouse licks during stim pre delay it will be counted as early decision (-1) hence outcome is not -3 but still no stimulus was played.
+            timeStimOnsetAll(tr) = alldata(tr).parsedEvents.states.wait_stim(1) * 1000 - t0; % includes outcome=-1 trials.
         end
         
         
@@ -287,6 +287,8 @@ for tr = 1:length(alldata)
     
 end
 
+timeStimOnset = timeStimOnsetAll; % like timeStimOnsetAll except it does not include outcome=-1 trials
+timeStimOnset(ismember(outcomes, -1)) = NaN; % exclude outcome=-1 trials
 
 
 %%

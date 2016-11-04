@@ -12,7 +12,9 @@
 % reward: all trials 
 % incorrResp: all trials (incorr resp followed by reward due to allowCorr can be excluded if desired). 
 
-save_aligned_traces = 1; % if 1, the following structures will be appended to postName: 'stimAl', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl'
+% NOTE: Because you are using timeStimOnsetAll instad of timeStimOnset, stimAl_allTrs that you compute here will include early-decision trials (outcomes=-1). So you may need to remove them later.
+
+save_aligned_traces = 1; %1; % if 1, the following structures will be appended to postName: 'stimAl', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl'
 
 
 %%
@@ -65,20 +67,20 @@ stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_
 % stimAftGoToneParams = []; % {0,0,0};
 
 [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
-    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
+    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, timeStimOnsetAll] = ...
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams, outcomes);
 
 
 % keep a copy of original time events before changing them.
 timeCommitCL_CR_Gotone0 = timeCommitCL_CR_Gotone;
-timeStimOnset0 = timeStimOnset;
+timeStimOnset0 = timeStimOnsetAll; % timeStimOnset; % Because you are using timeStimOnsetAll instad of timeStimOnset, stimAl_allTrs that you compute here will include early-decision trials (outcomes=-1). So you may need to remove them later.
 time1stSideTry0 = time1stSideTry;
 timeCommitIncorrResp0 = timeCommitIncorrResp;
 
 set_change_of_mind_trs % set change-of-mind trials. output will be trs_com.
 
 if save_aligned_traces
-    save(postName, '-append', 'cb', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp')
+    save(postName, '-append', 'cb', 'timeCommitCL_CR_Gotone', 'timeStimOnsetAll', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp')
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -93,7 +95,7 @@ alignedEvent = 'initTone'; % align the traces on stim onset. % 'initTone', 'stim
     (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
     timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
 
-clear stimAl
+clear initToneAl
 initToneAl.traces = traces_al_sm;
 initToneAl.time = time_aligned;
 initToneAl.eventI = eventI;
@@ -104,7 +106,8 @@ initToneAl
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Align traces on stimulus, including all timeStimOnset trials.
+%% Align traces on stimulus, including all timeStimOnset trials, including the ones with early-decision outcome.
+% NOTE: Because you are using timeStimOnsetAll instad of timeStimOnset, stimAl_allTrs that you compute here will include early-decision trials (outcomes=-1). So you may need to remove them later.
 
 % remember traces_al_sm has nan for trs2rmv as well as trs in alignedEvent that are nan.
 alignedEvent = 'stimOn'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
@@ -119,6 +122,26 @@ stimAl_allTrs.time = time_aligned;
 stimAl_allTrs.eventI = eventI;
 
 stimAl_allTrs
+
+
+%% Align traces on stimulus, excluding trials with early-decision outcome
+% NOTE: Because you are using timeStimOnsetAll instad of timeStimOnset, stimAl_allTrs that you compute here will include early-decision trials (outcomes=-1). So you may need to remove them later.
+
+% remember traces_al_sm has nan for trs2rmv as well as trs in alignedEvent that are nan.
+alignedEvent = 'stimOn'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
+
+[traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
+    (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
+    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
+
+clear stimAl_noEarlyDec
+stimAl_noEarlyDec.traces = traces_al_sm;
+stimAl_noEarlyDec.time = time_aligned;
+stimAl_noEarlyDec.eventI = eventI;
+
+stimAl_noEarlyDec
+
+
 
 % # difference with traces_al_stim: in traces_al_stim, some of the trials are set to nan bc their stim duration is 
 % # <800ms or bc their go tone happens before ep(end)=700ms. But in traces_al_stimAll, all trials are included. 
@@ -466,7 +489,7 @@ commitIncorrAl
 %%
 
 if save_aligned_traces
-    save(postName, '-append', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs')
+    save(postName, '-append', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs', 'stimAl_noEarlyDec')
 end
 
 
@@ -485,8 +508,14 @@ vec_iti = trialHistory.vec_iti;
 
 for iTiFlg = 0:2; % 0: short ITI, 1: long ITI, 2: all ITIs.
     popClassifier_trialHistory % computes choiceVec0; % trials x 1;  1 for HR choice, 0 for LR prev choice.
-    trialHistory.choiceVec0(:, iTiFlg+1) = choiceVec0;
+    trialHistory.choiceVec0(:, iTiFlg+1) = choiceVec0; 
 end
+% Remember number of short ITI + long ITI trials can be fewer than all ITI
+% trials, because in all ITI you don't care about the outcome of previous
+% and current trial, but in short and long ITI since ITI is defined as time
+% between commiting a choice in  trial i and stimulus onset in trial i+1,
+% trials with outcomes like wrong init or no side commit will be exclluded.
+
 
 % Remember ep for trial-history analysis will be 1:eventI 
 % epStart = 1;
@@ -499,5 +528,9 @@ end
 
 
    
+% Do this for now (choiceVec0 for prev trials does not anymore include nans
+% where current trial's outcome is other than corr or incorr. stimAl_alltrs
+% is set based on timeStimOnsetAll which includes early decision trials, so
+% it has fewer nans and is more suitable for previous choice SVM.)
+% save(postName, '-append', 'timeStimOnsetAll', 'stimAl_allTrs', 'trialHistory', 'stimAl_noEarlyDec')
 
-    
