@@ -51,7 +51,9 @@ if trialHistAnalysis==1:
     elif iTiFlg==1:
         itiName = 'long'
     elif iTiFlg==2:
-        itiName = 'all'        
+        itiName = 'all'
+else: # wont be used, only not to get error when running setSVMname
+        itiName = 'all'
 
 
 if trialHistAnalysis==1: # more parameters are specified in popClassifier_trialHistory.m
@@ -68,11 +70,20 @@ else:
 
 trs4project = 'trained' # 'trained', 'all', 'corr', 'incorr' # trials that will be used for projections and the class accuracy trace; if 'trained', same trials that were used for SVM training will be used. "corr" and "incorr" refer to current trial's outcome, so they don't mean much if trialHistAnalysis=1. 
 
+# Set fig names
 if trialHistAnalysis:
-    suffn = 'prev_'+itiName+'ITIs_'
+#     ep_ms = np.round((ep-eventI)*frameLength)
+    th_stim_dur = []
+    suffn = 'prev_%sN_%sITIs_ep%d-%dms_' %(ntName, itiName, ep_ms[0], ep_ms[-1])
 else:
-    suffn = 'curr_'   
-    
+    suffn = 'curr_%sN_ep%d-%dms_' %(ntName, ep_ms[0], ep_ms[-1])   
+print '\n', suffn[:-1]
+
+# Make folder named SVM to save figures inside it
+svmdir = os.path.join(figsDir, 'SVM')
+if not os.path.exists(svmdir):
+    os.makedirs(svmdir)    
+
 
 days0 = days
 numDays = len(days);
@@ -92,6 +103,25 @@ def makeNicePlots(ax):
     #plt.subplots_adjust(hspace=0.5)
 
 
+#%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
+def setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName='all'):
+    import glob
+    
+    if trialHistAnalysis:
+    #    ep_ms = np.round((ep-eventI)*frameLength)
+    #    th_stim_dur = []
+        svmn = 'svmPrevChoice_%sN_%sITIs_ep*ms_r%d_*' %(ntName, itiName, roundi)
+    else:
+        svmn = 'svmCurrChoice_%sN_ep*ms_r%d_*' %(ntName, roundi)   
+    
+    svmn = svmn + pnevFileName[-32:]    
+    svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
+    svmName = sorted(svmName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
+    svmName = svmName[0] # get the latest file
+    
+    return svmName
+    
+    
 #%%
 ############################################################################    
 ########### Find days with all-0 weights for all rounds and exclude them ##############
@@ -147,20 +177,8 @@ for iday in range(len(days)):
     #%% loop over the 10 rounds of analysis for each day
 
     for i in range(numRounds):
-        roundi = i+1
-        
-        if trialHistAnalysis:
-#            ep_ms = np.round((ep-eventI)*frameLength)
-#            th_stim_dur = []
-            svmn = 'svmPrevChoice_%sN_%sITIs_ep*ms_r%d_*' %(ntName, itiName, roundi)
-        else:
-            svmn = 'svmCurrChoice_%sN_ep*ms_r%d_*' %(ntName, roundi)   
-        
-        svmn = svmn + pnevFileName[-32:]    
-        svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
-        svmName = sorted(svmName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
-        svmName = svmName[0] # get the latest file
-
+        roundi = i+1        
+        svmName = setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName)
 #        if roundi==1:
         print '\t', os.path.basename(svmName)
             
@@ -203,11 +221,11 @@ numDays = len(days)
 
 
 
-#%%
-############################################################################    
-############################ Classification Error ##########################     
-############################################################################
-
+'''
+#####################################################################################################################################################   
+############################ Classification Error ###################################################################################################     
+#####################################################################################################################################################
+'''
 #%% Loop over days
 
 err_test_data_ave_allDays = (np.ones((numRounds, numDays))+np.nan)
@@ -239,24 +257,14 @@ for iday in range(len(days)):
     
     for i in range(numRounds):
         roundi = i+1
-        
-        if trialHistAnalysis:
-#            ep_ms = np.round((ep-eventI)*frameLength)
-#            th_stim_dur = []
-            svmn = 'svmPrevChoice_%sN_%sITIs_ep*ms_r%d_*' %(ntName, itiName, roundi)
-        else:
-            svmn = 'svmCurrChoice_%sN_ep*ms_r%d_*' %(ntName, roundi)   
-        
-        svmn = svmn + pnevFileName[-32:]    
-        svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))[0]
-        #print '\n', svmName
-        #np.shape(svmNowName)[0]==0    
+        svmName = setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName)
+
         if roundi==1:
             print os.path.basename(svmName)
             
         Data = scio.loadmat(svmName, variable_names=['w'])
         w = Data.pop('w')[0,:]
-        if w.sum()==0:
+        if w.sum() < eps:
             print 'In round %d all weights are 0 ... not analyzing' %(roundi)
             
         else:
@@ -286,11 +294,13 @@ sd_test_s = np.nanstd(err_test_shfl_ave_allDays, axis=0) # std across rounds
 #%% Average across rounds for each day
 plt.figure()
 ax1 = plt.subplot(211)
-plt.errorbar(range(numDays), ave_test_d, yerr = sd_test_d)
-plt.errorbar(range(numDays), ave_test_s, yerr = sd_test_s)
+plt.errorbar(range(numDays), ave_test_d, yerr = sd_test_d, color='g', label='data')
+plt.errorbar(range(numDays), ave_test_s, yerr = sd_test_s, color='k', label='shuffled')
 plt.xlabel('Days')
 plt.ylabel('Classification error (%) - testing data')
 plt.xlim([-1, len(days)])
+lgd = plt.legend(loc=0, bbox_to_anchor=(1,1), frameon=False)
+#leg.get_frame().set_linewidth(0.0)
 makeNicePlots(ax1)
 
 ##%% Average across days
@@ -304,27 +314,22 @@ plt.xlim([x[0]-1, x[1]+1])
 plt.xticks(x, labels)    
 plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
 makeNicePlots(ax2)
-    
-    
+
+        
 #%% Save the figure
 if savefigs:
-    for i in range(np.shape(fmt)[0])
-    d = os.path.join(figsDir, 'SVM')
-    if not os.path.exists(d):
-        os.makedirs(d)
-     
-    fign_ = suffn+'classError'
-    fign = os.path.join(d, fign_+'.'+fmt[i])
+    for i in range(np.shape(fmt)[0]): # save in all format of fmt         
+        fign_ = suffn+'classError'
+        fign = os.path.join(svmdir, fign_+'.'+fmt[i])
+        
+        plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
     
-    plt.savefig(fign)
-    
-
 
 #%%
-'''
 #########################################################################    
 ########################### Get eventI for all days ###########################     
 #########################################################################
+"""
 #%% Loop over days
 
 eventI_allDays = np.full([numDays,1], np.nan).flatten().astype('int')
@@ -354,14 +359,14 @@ for iday in range(len(days)):
     Data = scio.loadmat(postName, variable_names=['stimAl_allTrs'],squeeze_me=True,struct_as_record=False)
     eventI = Data['stimAl_allTrs'].eventI - 1 # remember difference indexing in matlab and python!
     
-    eventI_allDays[iday] = eventI
+    eventI_allDays[iday] = eventI  
+"""
     
-'''    
-    
-#%%
-#########################################################################    
-########################### Projection Traces ###########################     
-#########################################################################
+'''#%%
+##################################################################################################################################################
+########################### Projection Traces ####################################################################################################     
+##################################################################################################################################################
+'''
 #%% Loop over days
 
 #trs4project = 'trained' # 'trained', 'all', 'corr', 'incorr' # trials that will be used for projections and the class accuracy trace; if 'trained', same trials that were used for SVM training will be used. "corr" and "incorr" refer to current trial's outcome, so they don't mean much if trialHistAnalysis=1. 
@@ -406,11 +411,21 @@ for iday in range(len(days)):
 
     #%% Load vars (traces, etc)
 
-    # Load stim-aligned_allTrials traces, frames, frame of event of interest
-    Data = scio.loadmat(postName, variable_names=['stimAl_allTrs'],squeeze_me=True,struct_as_record=False)
-    eventI = Data['stimAl_allTrs'].eventI - 1 # remember difference indexing in matlab and python!
-    traces_al_stimAll = Data['stimAl_allTrs'].traces.astype('float')
-    time_aligned_stim = Data['stimAl_allTrs'].time.astype('float')
+    # Load aligned traces, times, frame of event of interest
+    if trialHistAnalysis==0:
+        Data = scio.loadmat(postName, variable_names=['stimAl_noEarlyDec'],squeeze_me=True,struct_as_record=False)
+        eventI = Data['stimAl_noEarlyDec'].eventI - 1 # remember difference indexing in matlab and python!
+        traces_al_stimAll = Data['stimAl_noEarlyDec'].traces.astype('float')
+        time_aligned_stim = Data['stimAl_noEarlyDec'].time.astype('float')
+    
+    else:
+        Data = scio.loadmat(postName, variable_names=['stimAl_allTrs'],squeeze_me=True,struct_as_record=False)
+        eventI = Data['stimAl_allTrs'].eventI - 1 # remember difference indexing in matlab and python!
+        traces_al_stimAll = Data['stimAl_allTrs'].traces.astype('float')
+        time_aligned_stim = Data['stimAl_allTrs'].time.astype('float')
+        # time_aligned_stimAll = Data['stimAl_allTrs'].time.astype('float') # same as time_aligned_stim
+    
+#    print 'size of stimulus-aligned traces:', np.shape(traces_al_stimAll), '(frames x units x trials)'
     DataS = Data
     
     eventI_allDays[iday] = eventI
@@ -452,8 +467,49 @@ for iday in range(len(days)):
     time_aligned_init = Data['initToneAl'].time.astype('float')
     # print(np.shape(traces_al_init))
     # DataI = Data
-    '''
+    '''        
+        
+        
+
+    # Load outcomes and choice (allResp_HR_LR) for the current trial
+    # if trialHistAnalysis==0:
+    Data = scio.loadmat(postName, variable_names=['outcomes', 'allResp_HR_LR'])
+    outcomes = (Data.pop('outcomes').astype('float'))[0,:]
+    # allResp_HR_LR = (Data.pop('allResp_HR_LR').astype('float'))[0,:]
+    allResp_HR_LR = np.array(Data.pop('allResp_HR_LR')).flatten().astype('float')
+    choiceVecAll = allResp_HR_LR+0;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
+    # choiceVecAll = np.transpose(allResp_HR_LR);  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
+    print 'Current outcome: %d correct choices; %d incorrect choices' %(sum(outcomes==1), sum(outcomes==0))    
     
+    if trialHistAnalysis:
+        # Load trialHistory structure to get choice vector of the previous trial
+        Data = scio.loadmat(postName, variable_names=['trialHistory'],squeeze_me=True,struct_as_record=False)
+        choiceVec0All = Data['trialHistory'].choiceVec0.astype('float')
+    
+    
+        
+    # Set trials strength and identify trials with stim strength of interest
+    if trialHistAnalysis==0:
+        Data = scio.loadmat(postName, variable_names=['stimrate', 'cb'])
+        stimrate = np.array(Data.pop('stimrate')).flatten().astype('float')
+        cb = np.array(Data.pop('cb')).flatten().astype('float')
+    
+        s = stimrate-cb; # how far is the stimulus rate from the category boundary?
+        if strength2ana == 'easy':
+            str2ana = (abs(s) >= (max(abs(s)) - thStimStrength));
+        elif strength2ana == 'hard':
+            str2ana = (abs(s) <= thStimStrength);
+        elif strength2ana == 'medium':
+            str2ana = ((abs(s) > thStimStrength) & (abs(s) < (max(abs(s)) - thStimStrength))); 
+        else:
+            str2ana = np.full((1, np.shape(outcomes)[0]), True, dtype=bool).flatten();    
+#        print 'Number of trials with stim strength of interest = %i' %(str2ana.sum())
+#        print 'Stim rates for training = {}'.format(np.unique(stimrate[str2ana]))
+
+        
+        
+        
+    # Set ep for trialHist case
     if trialHistAnalysis:
         # either of the two below (stimulus-aligned and initTone-aligned) would be fine
         # eventI = DataI['initToneAl'].eventI
@@ -486,56 +542,11 @@ for iday in range(len(days)):
         traces_al_stimAll = traces_al_stimAll[:, nt, :];
     else:
         nt = np.arange(np.shape(traces_al_stimAll)[1])    
-        
-        
-        
-    # Load outcomes and allResp_HR_LR
-    # if trialHistAnalysis==0:
-    Data = scio.loadmat(postName, variable_names=['outcomes', 'allResp_HR_LR'])
-    outcomes = (Data.pop('outcomes').astype('float'))[0,:]
-    # allResp_HR_LR = (Data.pop('allResp_HR_LR').astype('float'))[0,:]
-    allResp_HR_LR = np.array(Data.pop('allResp_HR_LR')).flatten().astype('float')
-    choiceVecAll = allResp_HR_LR+0;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
-    # choiceVecAll = np.transpose(allResp_HR_LR);  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
-    print '%d correct choices; %d incorrect choices' %(sum(outcomes==1), sum(outcomes==0))
 
-
-
-    # Set trials strength and identify trials with stim strength of interest
-    if trialHistAnalysis==0:
-        Data = scio.loadmat(postName, variable_names=['stimrate', 'cb'])
-        stimrate = np.array(Data.pop('stimrate')).flatten().astype('float')
-        cb = np.array(Data.pop('cb')).flatten().astype('float')
-    
-        s = stimrate-cb; # how far is the stimulus rate from the category boundary?
-        if strength2ana == 'easy':
-            str2ana = (abs(s) >= (max(abs(s)) - thStimStrength));
-        elif strength2ana == 'hard':
-            str2ana = (abs(s) <= thStimStrength);
-        elif strength2ana == 'medium':
-            str2ana = ((abs(s) > thStimStrength) & (abs(s) < (max(abs(s)) - thStimStrength))); 
-        else:
-            str2ana = np.full((1, np.shape(outcomes)[0]), True, dtype=bool).flatten();
-    
-#        print 'Number of trials with stim strength of interest = %i' %(str2ana.sum())
-#        print 'Stim rates for training = {}'.format(np.unique(stimrate[str2ana]))
-    
-        '''
-        # Set to nan those trials in outcomes and allRes that are nan in traces_al_stim
-        I = (np.argwhere((~np.isnan(traces_al_stim).sum(axis=0)).sum(axis=1)))[0][0] # first non-nan neuron
-        allTrs2rmv = np.argwhere(sum(np.isnan(traces_al_stim[:,I,:])))
-        print(np.shape(allTrs2rmv))
-    
-        outcomes[allTrs2rmv] = np.nan
-        allResp_HR_LR[allTrs2rmv] = np.nan
-        '''
         
     #%% Set choiceVec0 (Y)
     
     if trialHistAnalysis:
-        # Load trialHistory structure
-        Data = scio.loadmat(postName, variable_names=['trialHistory'],squeeze_me=True,struct_as_record=False)
-        choiceVec0All = Data['trialHistory'].choiceVec0.astype('float')
         choiceVec0 = choiceVec0All[:,iTiFlg] # choice on the previous trial for short (or long or all) ITIs
     else: # set choice for the current trial
         choiceVec0 = allResp_HR_LR;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
@@ -559,23 +570,14 @@ for iday in range(len(days)):
     
     for i in range(numRounds):
         roundi = i+1
-        
-        if trialHistAnalysis:
-            ep_ms = np.round((ep-eventI)*frameLength)
-            th_stim_dur = []
-            svmn = 'svmPrevChoice_%sN_%sITIs_ep*ms_r%d_*' %(ntName, itiName, roundi)
-        else:
-            svmn = 'svmCurrChoice_%sN_ep*ms_r%d_*' %(ntName, roundi)   
-        
-        svmn = svmn + pnevFileName[-32:]    
-        svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))[0]
+        svmName = setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName)
         
         if roundi==1:
             print os.path.basename(svmName)
             
         Data = scio.loadmat(svmName, variable_names=['w'])
         w = Data.pop('w')[0,:]
-        if w.sum()==0:
+        if w.sum() < eps:
             print 'In round %d all weights are 0 ... not analyzing' %(roundi)
             
         else:
@@ -881,13 +883,9 @@ print 'ep_ms_allDays: \n', ep_ms_allDays
 
 #%% Save the figure
 if savefigs:
-    fmt = 'png'
-    d = os.path.join(figsDir, 'SVM')
-    if not os.path.exists(d):
-        os.makedirs(d)
     
     fign_ = suffn+'projTraces_svm_raw'
-    fign = os.path.join(d, fign_+'.'+fmt)
+    fign = os.path.join(svmdir, fign_+'.'+fmt)
     
     #ax.set_rasterized(True)
     plt.savefig(fign)
@@ -940,16 +938,7 @@ for iday in range(len(days)):
     
     for i in range(numRounds):
         roundi = i+1
-        
-        if trialHistAnalysis:
-            ep_ms = np.round((ep-eventI)*frameLength)
-            th_stim_dur = []
-            svmn = 'svmPrevChoice_%sN_%sITIs_ep*ms_r%d_*' %(ntName, itiName, roundi)
-        else:
-            svmn = 'svmCurrChoice_%sN_ep*ms_r%d_*' %(ntName, roundi)   
-        
-        svmn = svmn + pnevFileName[-32:]    
-        svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))[0]
+        svmName = setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName)
         
         if roundi==1:
             print os.path.basename(svmName)        
@@ -957,7 +946,7 @@ for iday in range(len(days)):
 
         Data = scio.loadmat(svmName, variable_names=['w'])
         w = Data.pop('w')[0,:]
-        if w.sum()==0:
+        if w.sum() < eps:
             print 'In round %d all weights are 0 ... not analyzing' %(roundi)
             
         else:        
@@ -1024,13 +1013,9 @@ plt.legend()
 
 #%% Save the figure
 if savefigs:
-    #fmt = 'png'
-    d = os.path.join(figsDir, 'SVM')
-    if not os.path.exists(d):
-        os.makedirs(d)
     
     fign_ = suffn+'corrClassTrace'
-    fign = os.path.join(d, fign_+'.'+fmt)
+    fign = os.path.join(svmdir, fign_+'.'+fmt)
     
     #ax.set_rasterized(True)
     plt.savefig(fign)
@@ -1040,10 +1025,11 @@ if savefigs:
 
     
 #%%
-############################################################################    
-############### Excitatory vs inhibitory neurons:  weights #################
-############################################################################   
-
+'''
+#####################################################################################################################################################    
+############### Excitatory vs inhibitory neurons:  weights ##########################################################################################
+#####################################################################################################################################################   
+'''
 #w_alln = [];
 w_inh = [];
 w_exc = [];
@@ -1081,23 +1067,14 @@ for iday in range(len(days)):
 
     for i in range(numRounds):
         roundi = i+1
-        
-        if trialHistAnalysis:
-#            ep_ms = np.round((ep-eventI)*frameLength)
-#            th_stim_dur = []
-            svmn = 'svmPrevChoice_%sN_%sITIs_ep*ms_r%d_*' %(ntName, itiName, roundi)
-        else:
-            svmn = 'svmCurrChoice_%sN_ep*ms_r%d_*' %(ntName, roundi)   
-        
-        svmn = svmn + pnevFileName[-32:]    
-        svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))[0]        
+        svmName = setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName)
 
         if roundi==1:
             print os.path.basename(svmName)
             
         Data = scio.loadmat(svmName, variable_names=['w'])
         w = Data.pop('w')[0,:]
-        if w.sum()==0:
+        if w.sum() < eps:
             print 'In round %d all weights are 0 ... not analyzing' %(roundi)
             
         else:             
@@ -1237,14 +1214,9 @@ plt.ylabel('Normalized count')
 
 
 #%% Save the figure
-if savefigs:
-    fmt = 'eps'
-    d = os.path.join(figsDir, 'SVM')
-    if not os.path.exists(d):
-        os.makedirs(d)
-    
+if savefigs:    
     fign_ = suffn+'weights_inh_exc'
-    fign = os.path.join(d, fign_+'.'+fmt)
+    fign = os.path.join(svmdir, fign_+'.'+fmt)
     
     #ax.set_rasterized(True)
     plt.savefig(fign)
@@ -1255,10 +1227,11 @@ if savefigs:
 
             
 #%%
-############################################################################    
-################ Excitatory vs inhibitory neurons:  projections ##############
-############################################################################   
-    
+'''
+#####################################################################################################################################################    
+################ Excitatory vs inhibitory neurons:  projections #######################################################################################
+#####################################################################################################################################################   
+'''    
 #%% Loop over days
 
 trs4project = 'trained' # 'trained', 'all', 'corr', 'incorr' # trials that will be used for projections and the class accuracy trace; if 'trained', same trials that were used for SVM training will be used. "corr" and "incorr" refer to current trial's outcome, so they don't mean much if trialHistAnalysis=1. 
@@ -1312,11 +1285,20 @@ for iday in range(len(days)):
 
     #%% Load vars (traces, etc)
 
-    # Load stim-aligned_allTrials traces, frames, frame of event of interest
-    Data = scio.loadmat(postName, variable_names=['stimAl_allTrs'],squeeze_me=True,struct_as_record=False)
-    eventI = Data['stimAl_allTrs'].eventI - 1 # remember difference indexing in matlab and python!
-    traces_al_stimAll = Data['stimAl_allTrs'].traces.astype('float')
-    time_aligned_stim = Data['stimAl_allTrs'].time.astype('float')
+    if trialHistAnalysis==0:
+        Data = scio.loadmat(postName, variable_names=['stimAl_noEarlyDec'],squeeze_me=True,struct_as_record=False)
+        eventI = Data['stimAl_noEarlyDec'].eventI - 1 # remember difference indexing in matlab and python!
+        traces_al_stimAll = Data['stimAl_noEarlyDec'].traces.astype('float')
+        time_aligned_stim = Data['stimAl_noEarlyDec'].time.astype('float')
+    
+    else:
+        Data = scio.loadmat(postName, variable_names=['stimAl_allTrs'],squeeze_me=True,struct_as_record=False)
+        eventI = Data['stimAl_allTrs'].eventI - 1 # remember difference indexing in matlab and python!
+        traces_al_stimAll = Data['stimAl_allTrs'].traces.astype('float')
+        time_aligned_stim = Data['stimAl_allTrs'].time.astype('float')
+        # time_aligned_stimAll = Data['stimAl_allTrs'].time.astype('float') # same as time_aligned_stim
+    
+#    print 'size of stimulus-aligned traces:', np.shape(traces_al_stimAll), '(frames x units x trials)'
     
     eventI_allDays[iday] = eventI
 
@@ -1359,6 +1341,48 @@ for iday in range(len(days)):
     # DataI = Data
     '''
     
+        
+
+    # Load outcomes and choice (allResp_HR_LR) for the current trial
+    # if trialHistAnalysis==0:
+    Data = scio.loadmat(postName, variable_names=['outcomes', 'allResp_HR_LR'])
+    outcomes = (Data.pop('outcomes').astype('float'))[0,:]
+    # allResp_HR_LR = (Data.pop('allResp_HR_LR').astype('float'))[0,:]
+    allResp_HR_LR = np.array(Data.pop('allResp_HR_LR')).flatten().astype('float')
+    choiceVecAll = allResp_HR_LR+0;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
+    # choiceVecAll = np.transpose(allResp_HR_LR);  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
+    print 'Current outcome: %d correct choices; %d incorrect choices' %(sum(outcomes==1), sum(outcomes==0))    
+    
+    if trialHistAnalysis:
+        # Load trialHistory structure to get choice vector of the previous trial
+        Data = scio.loadmat(postName, variable_names=['trialHistory'],squeeze_me=True,struct_as_record=False)
+        choiceVec0All = Data['trialHistory'].choiceVec0.astype('float')
+    
+    
+        
+    # Set trials strength and identify trials with stim strength of interest
+    if trialHistAnalysis==0:
+        Data = scio.loadmat(postName, variable_names=['stimrate', 'cb'])
+        stimrate = np.array(Data.pop('stimrate')).flatten().astype('float')
+        cb = np.array(Data.pop('cb')).flatten().astype('float')
+    
+        s = stimrate-cb; # how far is the stimulus rate from the category boundary?
+        if strength2ana == 'easy':
+            str2ana = (abs(s) >= (max(abs(s)) - thStimStrength));
+        elif strength2ana == 'hard':
+            str2ana = (abs(s) <= thStimStrength);
+        elif strength2ana == 'medium':
+            str2ana = ((abs(s) > thStimStrength) & (abs(s) < (max(abs(s)) - thStimStrength))); 
+        else:
+            str2ana = np.full((1, np.shape(outcomes)[0]), True, dtype=bool).flatten();
+    
+        print 'Number of trials with stim strength of interest = %i' %(str2ana.sum())
+        print 'Stim rates for training = {}'.format(np.unique(stimrate[str2ana]))
+
+        
+        
+        
+    # Set ep for trialHist case
     if trialHistAnalysis:
         # either of the two below (stimulus-aligned and initTone-aligned) would be fine
         # eventI = DataI['initToneAl'].eventI
@@ -1391,56 +1415,11 @@ for iday in range(len(days)):
         traces_al_stimAll = traces_al_stimAll[:, nt, :];
     else:
         nt = np.arange(np.shape(traces_al_stimAll)[1])    
-        
-        
-        
-    # Load outcomes and allResp_HR_LR
-    # if trialHistAnalysis==0:
-    Data = scio.loadmat(postName, variable_names=['outcomes', 'allResp_HR_LR'])
-    outcomes = (Data.pop('outcomes').astype('float'))[0,:]
-    # allResp_HR_LR = (Data.pop('allResp_HR_LR').astype('float'))[0,:]
-    allResp_HR_LR = np.array(Data.pop('allResp_HR_LR')).flatten().astype('float')
-    choiceVecAll = allResp_HR_LR+0;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
-    # choiceVecAll = np.transpose(allResp_HR_LR);  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
-    print '%d correct choices; %d incorrect choices' %(sum(outcomes==1), sum(outcomes==0))
 
-
-
-    # Set trials strength and identify trials with stim strength of interest
-    if trialHistAnalysis==0:
-        Data = scio.loadmat(postName, variable_names=['stimrate', 'cb'])
-        stimrate = np.array(Data.pop('stimrate')).flatten().astype('float')
-        cb = np.array(Data.pop('cb')).flatten().astype('float')
-    
-        s = stimrate-cb; # how far is the stimulus rate from the category boundary?
-        if strength2ana == 'easy':
-            str2ana = (abs(s) >= (max(abs(s)) - thStimStrength));
-        elif strength2ana == 'hard':
-            str2ana = (abs(s) <= thStimStrength);
-        elif strength2ana == 'medium':
-            str2ana = ((abs(s) > thStimStrength) & (abs(s) < (max(abs(s)) - thStimStrength))); 
-        else:
-            str2ana = np.full((1, np.shape(outcomes)[0]), True, dtype=bool).flatten();
-    
-#        print 'Number of trials with stim strength of interest = %i' %(str2ana.sum())
-#        print 'Stim rates for training = {}'.format(np.unique(stimrate[str2ana]))
-    
-        '''
-        # Set to nan those trials in outcomes and allRes that are nan in traces_al_stim
-        I = (np.argwhere((~np.isnan(traces_al_stim).sum(axis=0)).sum(axis=1)))[0][0] # first non-nan neuron
-        allTrs2rmv = np.argwhere(sum(np.isnan(traces_al_stim[:,I,:])))
-        print(np.shape(allTrs2rmv))
-    
-        outcomes[allTrs2rmv] = np.nan
-        allResp_HR_LR[allTrs2rmv] = np.nan
-        '''
-        
+       
     #%% Set choiceVec0 (Y)
     
     if trialHistAnalysis:
-        # Load trialHistory structure
-        Data = scio.loadmat(postName, variable_names=['trialHistory'],squeeze_me=True,struct_as_record=False)
-        choiceVec0All = Data['trialHistory'].choiceVec0.astype('float')
         choiceVec0 = choiceVec0All[:,iTiFlg] # choice on the previous trial for short (or long or all) ITIs
     else: # set choice for the current trial
         choiceVec0 = allResp_HR_LR;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
@@ -1468,23 +1447,14 @@ for iday in range(len(days)):
 
     for i in range(numRounds):
         roundi = i+1
-        
-        if trialHistAnalysis:
-            ep_ms = np.round((ep-eventI)*frameLength)
-            th_stim_dur = []
-            svmn = 'svmPrevChoice_%sN_%sITIs_ep*ms_r%d_*' %(ntName, itiName, roundi)
-        else:
-            svmn = 'svmCurrChoice_%sN_ep*ms_r%d_*' %(ntName, roundi)   
-        
-        svmn = svmn + pnevFileName[-32:]    
-        svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))[0]
+        svmName = setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName)
         
         if roundi==1:
             print os.path.basename(svmName)
             
         Data = scio.loadmat(svmName, variable_names=['w'])
         w = Data.pop('w')[0,:]
-        if w.sum()==0:
+        if w.sum() < eps:
             print 'In round %d all weights are 0 ... not analyzing' %(roundi)
             
         else:         
@@ -1907,13 +1877,9 @@ plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
 
 #%% Save the figure
 if savefigs:
-    fmt = 'png'
-    d = os.path.join(figsDir, 'SVM')
-    if not os.path.exists(d):
-        os.makedirs(d)
     
     fign_ = suffn+'projTraces_excInh_svm_raw'
-    fign = os.path.join(d, fign_+'.'+fmt)
+    fign = os.path.join(svmdir, fign_+'.'+fmt)
     
     #ax.set_rasterized(True)
     plt.savefig(fign)
@@ -1924,11 +1890,12 @@ if savefigs:
 
 
 #%%
-############################################################################    
-################# Excitatory vs inhibitory neurons:  c path ################
-######## Fraction of non-zero weights vs. different values of c ############
-############################################################################   
-    
+'''
+#####################################################################################################################################################    
+################# Excitatory vs inhibitory neurons:  c path #########################################################################################
+######## Fraction of non-zero weights vs. different values of c #####################################################################################
+#####################################################################################################################################################   
+'''    
     
 perActive_exc_ave_allDays = []
 perActive_inh_ave_allDays = []
@@ -1961,23 +1928,14 @@ for iday in range(len(days)):
     
     for i in range(numRounds):
         roundi = i+1
+        svmName = setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName)
         
-        if trialHistAnalysis:
-            ep_ms = np.round((ep-eventI)*frameLength)
-            th_stim_dur = []
-            svmn = 'svmPrevChoice_%sN_%sITIs_ep*ms_r%d_*' %(ntName, itiName, roundi)
-        else:
-            svmn = 'svmCurrChoice_%sN_ep*ms_r%d_*' %(ntName, roundi)   
-        
-        svmn = svmn + pnevFileName[-32:]    
-        svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))[0]
-     
         if roundi==1:
             print os.path.basename(svmName)
             
         Data = scio.loadmat(svmName, variable_names=['w'])
         w = Data.pop('w')[0,:]
-        if w.sum()==0:
+        if w.sum() < eps:
             print 'In round %d all weights are 0 ... not analyzing' %(roundi)
             
         else:        
@@ -2073,14 +2031,9 @@ plt.title('p value (pooled for all values of c):\nexc ~= inh : %.2f; exc < inh :
 
 
 #%% Save the figure
-if savefigs:
-    fmt = 'png'
-    d = os.path.join(figsDir, 'SVM')
-    if not os.path.exists(d):
-        os.makedirs(d)
-    
+if savefigs:    
     fign_ = suffn+'cPath_excInh'
-    fign = os.path.join(d, fign_+'.'+fmt)
+    fign = os.path.join(svmdir, fign_+'.'+fmt)
     
     #ax.set_rasterized(True)
     plt.savefig(fign)
