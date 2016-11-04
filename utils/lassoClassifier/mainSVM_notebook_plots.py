@@ -19,7 +19,7 @@ days = ['151102_1-2', '151101_1', '151029_2-3', '151028_1-2-3', '151027_2', '151
 numRounds = 10; # number of times svm analysis was ran for the same dataset but sampling different sets of neurons.    
 savefigs = True
 
-fmt = 'eps' #'png', 'pdf': preserve transparency # Format of figures for saving
+fmt = ['pdf', 'svg', 'eps'] #'png', 'pdf': preserve transparency # Format of figures for saving
 figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/' # Directory for saving figures.
 neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
 eps = 10**-10 # tiny number below which weight is considered 0
@@ -78,12 +78,27 @@ days0 = days
 numDays = len(days);
 
 
+#%% Function to only show left and bottom axes of plots, make tick directions outward, ...
+def makeNicePlots(ax):
+    # Hide the right and top spines
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    # Only show ticks on the left and bottom spines
+    ax.yaxis.set_ticks_position('left')
+    ax.xaxis.set_ticks_position('bottom')
+    # Make tick directions outward    
+    ax.tick_params(direction='out')    
+    # Tweak spacing between subplots to prevent labels from overlapping
+    #plt.subplots_adjust(hspace=0.5)
+
+
 #%%
 ############################################################################    
 ########### Find days with all-0 weights for all rounds and exclude them ##############
 ############################################################################   
 
 w_alln = [];
+choiceBefEpEndFract = np.full((1, len(days)), 0).flatten()
     
 for iday in range(len(days)):
     
@@ -105,16 +120,29 @@ for iday in range(len(days)):
     print(imfilename)   
 
 
-    #%% For current choice analysis, make sure choice happens after the training epoch 
+    #%% For current choice analysis, identify days with trials in which choice happened after the training epoch 
+
     if trialHistAnalysis==0:
-        Data = scio.loadmat(postName, variable_names=['timeStimOnset', 'time1stSideTry'])
+        
+        Data = scio.loadmat(postName, variable_names=['timeStimOnset', 'time1stSideTry', 'outcomes'])
         timeStimOnset = np.array(Data.pop('timeStimOnset')).flatten().astype('float')
         time1stSideTry = np.array(Data.pop('time1stSideTry')).flatten().astype('float')
-    
-        ii = (time1stSideTry - timeStimOnset) <= ep_ms[-1]; # trials in which choice happened earlier than the end of training epoch ... we don't want them!
+        outcomes = (Data.pop('outcomes').astype('float'))[0,:]
         
-        print '%.2f trials have choice before end of ep!' %(np.mean(ii))
-
+        # We first set to nan timeStimOnset of trials that anyway wont matter bc their outcome is  not of interest. we do this to make sure these trials dont affect our estimate of ep_ms
+        if outcome2ana == 'corr':
+            timeStimOnset[outcomes!=1] = np.nan; # analyze only correct trials.
+        elif outcome2ana == 'incorr':
+            timeStimOnset[outcomes!=0] = np.nan; # analyze only incorrect trials.  
+        
+        a = (time1stSideTry - timeStimOnset)
+        ii = a <= ep_ms[-1]; # trials in which choice happened earlier than the end of training epoch ... we don't want them!
+        
+        print '%.2f%% trials have choice before the end of ep (%dms)!' %(np.mean(ii)*100, ep_ms[-1])
+        if sum(ii)>0:
+            print '\t, Choice times: ', a[ii]            
+            choiceBefEpEndFract[iday] = np.mean(ii);
+    
     
     #%% loop over the 10 rounds of analysis for each day
 
@@ -158,6 +186,10 @@ all0days = np.argwhere(all0d).flatten() # index of days with all-0 weights
 # for each day find number of rounds without all-zero weights
 nRoundsNonZeroW = [np.sum([abs(x)>eps for x in np.nansum(map(None, b[i,:]), axis=1)]) for i in range(numDays)]  # /float(numRounds)
 print 'number of rounds with non-zero weights for each day = ',  nRoundsNonZeroW
+
+
+#%% Find days that have more than 10% (?) of the trials with choice earlier than ep end and exclude them! Add this later.
+#choiceBefEpEndFract
 
 
 #%% Exclude days with all-0 weights (in all rounds) from analysis
@@ -250,36 +282,39 @@ ave_test_s = np.nanmean(err_test_shfl_ave_allDays, axis=0) # average across roun
 sd_test_d = np.nanstd(err_test_data_ave_allDays, axis=0) # std across roundss
 sd_test_s = np.nanstd(err_test_shfl_ave_allDays, axis=0) # std across rounds
 
-   
+    
 #%% Average across rounds for each day
 plt.figure()
-plt.subplot(211)
+ax1 = plt.subplot(211)
 plt.errorbar(range(numDays), ave_test_d, yerr = sd_test_d)
 plt.errorbar(range(numDays), ave_test_s, yerr = sd_test_s)
 plt.xlabel('Days')
 plt.ylabel('Classification error (%) - testing data')
-#plt.savefig('hi.eps')
+plt.xlim([-1, len(days)])
+makeNicePlots(ax1)
 
 ##%% Average across days
 x =[0,1]
 labels = ['data', 'shuffled']
 #plt.figure()
-plt.subplot(212)
+ax2 = plt.subplot(212)
 plt.errorbar(x, [np.mean(ave_test_d), np.mean(ave_test_s)], yerr = [np.std(ave_test_d), np.std(ave_test_s)], marker='o', fmt=' ', color='k')
 plt.xlim([x[0]-1, x[1]+1])
 #plt.ylabel('Classification error (%) - testing data')
 plt.xticks(x, labels)    
 plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
-
+makeNicePlots(ax2)
+    
     
 #%% Save the figure
 if savefigs:
+    for i in range(np.shape(fmt)[0])
     d = os.path.join(figsDir, 'SVM')
     if not os.path.exists(d):
         os.makedirs(d)
      
     fign_ = suffn+'classError'
-    fign = os.path.join(d, fign_+'.'+fmt)
+    fign = os.path.join(d, fign_+'.'+fmt[i])
     
     plt.savefig(fign)
     
