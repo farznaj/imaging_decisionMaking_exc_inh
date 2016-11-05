@@ -10,13 +10,13 @@ Created on Sun Oct 30 14:41:01 2016
 mousename = 'fni17'
 
 trialHistAnalysis = 1;
-iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
+iTiFlg = 1; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
 ep_ms = [809, 1109] # only for trialHistAnalysis=0
         
 # Define days that you want to analyze
 days = ['151102_1-2', '151101_1', '151029_2-3', '151028_1-2-3', '151027_2', '151026_1', '151023_1', '151022_1-2', '151021_1', '151020_1-2', '151019_1-2', '151016_1', '151015_1', '151014_1', '151013_1-2', '151012_1-2-3', '151010_1', '151008_1', '151007_1'];
 numRounds = 10; # number of times svm analysis was ran for the same dataset but sampling different sets of neurons.    
-savefigs = True
+savefigs = False
 
 fmt = ['pdf', 'svg', 'eps'] #'png', 'pdf': preserve transparency # Format of figures for saving
 figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/' # Directory for saving figures.
@@ -76,7 +76,7 @@ trs4project = 'trained' # 'trained', 'all', 'corr', 'incorr' # trials that will 
 # Set fig names
 if trialHistAnalysis:
 #     ep_ms = np.round((ep-eventI)*frameLength)
-    th_stim_dur = []
+#    th_stim_dur = []
     suffn = 'prev_%sN_%sITIs_' %(ntName, itiName)
     suffnei = 'prev_%s_%sITIs_' %('excInh', itiName)
 else:
@@ -92,7 +92,7 @@ if not os.path.exists(svmdir):
     os.makedirs(svmdir)    
 
 
-days0 = days
+daysOrig = days
 numDays = len(days);
 
 
@@ -259,22 +259,31 @@ print sum(r0w), 'days with <=', thR, 'rounds of non-zero weights: ', np.array(da
 if trialHistAnalysis==0:
     np.set_printoptions(precision=3)
     print '%d days have choice before the end of ep (%dms)\n\t%% of trials with early choice: ' %(sum(choiceBefEpEndFract>0), ep_ms[-1]), choiceBefEpEndFract[choiceBefEpEndFract!=0]*100
-
-
-
+        
+        
 #%% Exclude days with all-0 weights (in all rounds) from analysis
 '''
 print 'Excluding %d days from analysis because all SVM weights of all rounds are 0' %(sum(all0d))
-days = np.delete(days0, all0days)
+days = np.delete(daysOrig, all0days)
 '''
 ##%% Exclude days with only few (<=thR) rounds with non-0 weights from analysis
 print 'Excluding %d days from analysis: they have <%d rounds with non-zero weights' %(len(fewRdays), thR)
-days = np.delete(days0, fewRdays)
+days = np.delete(daysOrig, fewRdays)
 
 numDays = len(days)
 print 'Using', numDays, 'days for analysis:', days
 
 
+#%% keep short and long ITI results to plot them against each other later.
+if trialHistAnalysis:
+    if iTiFlg==0:
+        fewRdays0 = fewRdays
+        days0 = days
+        nRoundsNonZeroW0 = nRoundsNonZeroW
+    elif iTiFlg==1:
+        fewRdays1 = fewRdays
+        days1 = days
+        nRoundsNonZeroW1 = nRoundsNonZeroW
 
 
 
@@ -284,6 +293,7 @@ print 'Using', numDays, 'days for analysis:', days
 ############################ Classification Error (testing data) ###################################################################################################     
 #####################################################################################################################################################
 '''
+
 #%% Loop over days
 
 err_test_data_ave_allDays = (np.ones((numRounds, numDays))+np.nan)
@@ -342,6 +352,16 @@ for iday in range(len(days)):
     err_test_shfl_ave_allDays[:, iday] = err_test_shfl_ave
     
     
+#%% keep short and long ITI results to plot them against each other later.
+if trialHistAnalysis:
+    if iTiFlg==0:
+        err_test_data_ave_allDays0 = err_test_data_ave_allDays
+        err_test_shfl_ave_allDays0 = err_test_shfl_ave_allDays
+
+    elif iTiFlg==1:
+        err_test_data_ave_allDays1 = err_test_data_ave_allDays
+        err_test_shfl_ave_allDays1 = err_test_shfl_ave_allDays
+        
     
 #%% Average and std across rounds
 ave_test_d = np.nanmean(err_test_data_ave_allDays, axis=0) # numDays
@@ -349,14 +369,14 @@ ave_test_s = np.nanmean(err_test_shfl_ave_allDays, axis=0)
 sd_test_d = np.nanstd(err_test_data_ave_allDays, axis=0) 
 sd_test_s = np.nanstd(err_test_shfl_ave_allDays, axis=0) 
 
-    
-#%% Average across rounds for each day
+        
+#%% Plot average across rounds for each day
 plt.figure(figsize=(6,2.5))
 gs = gridspec.GridSpec(1, 5)#, width_ratios=[2, 1]) 
 
 ax = plt.subplot(gs[0:-2])
-plt.errorbar(range(numDays), ave_test_d, yerr = sd_test_d, color='g', label='data')
-plt.errorbar(range(numDays), ave_test_s, yerr = sd_test_s, color='k', label='shuffled')
+plt.errorbar(range(numDays), ave_test_d, yerr = sd_test_d, color='g', label='Data')
+plt.errorbar(range(numDays), ave_test_s, yerr = sd_test_s, color='k', label='Shuffled')
 plt.xlabel('Days')
 plt.ylabel('Classification error (%) - testing data')
 plt.xlim([-1, len(days)])
@@ -892,6 +912,23 @@ for iday in range(numDays):
 #np.isnan(a).sum()
 
 
+#%% keep short and long ITI results to plot them against each other later.
+if trialHistAnalysis:
+    if iTiFlg==0:
+        time_aligned0 = time_aligned
+        tr1_aligned0 = tr1_aligned
+        tr0_aligned0 = tr0_aligned
+        tr1_raw_aligned0 = tr1_raw_aligned
+        tr0_raw_aligned0 = tr0_raw_aligned
+
+    elif iTiFlg==1:
+        time_aligned1 = time_aligned
+        tr1_aligned1 = tr1_aligned
+        tr0_aligned1 = tr0_aligned
+        tr1_raw_aligned1 = tr1_raw_aligned
+        tr0_raw_aligned1 = tr0_raw_aligned
+        
+        
 #%% Average across days
 
 tr1_aligned_ave = np.nanmean(tr1_aligned, axis=1)
@@ -904,7 +941,7 @@ tr0_raw_aligned_ave = np.nanmean(tr0_raw_aligned, axis=1)
 tr1_raw_aligned_std = np.nanstd(tr1_raw_aligned, axis=1)
 tr0_raw_aligned_std = np.nanstd(tr0_raw_aligned, axis=1)
 
-_,p = stats.ttest_ind(tr1_aligned.transpose(), tr0_aligned.transpose()) # p value of projections being different for hr vs lr at each time point
+_,pproj = stats.ttest_ind(tr1_aligned.transpose(), tr0_aligned.transpose()) # p value of projections being different for hr vs lr at each time point
 
 
 #%% Plot the average projections across all days
@@ -924,7 +961,7 @@ makeNicePlots(ax)
 
 # Plot a dot for time points with significantly different hr and lr projections
 ymin, ymax = ax.get_ylim()
-pp = p+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax
+pp = pproj+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax
 plt.plot(time_aligned, pp, color='k')
 
 
@@ -945,8 +982,6 @@ makeNicePlots(ax)
 print 'ep_ms_allDays: \n', ep_ms_allDays
 
 
-
-
 #%% Save the figure
 if savefigs:
     for i in range(np.shape(fmt)[0]): # save in all format of fmt         
@@ -958,14 +993,13 @@ if savefigs:
 
 
 
-
-
 #%%
 '''
 ########################################################################################################################################################       
 #################### Classification accuracy at all times ##############################################################################################    
 ########################################################################################################################################################    
 '''
+
 #%% Loop over days
 
 corrClass_ave_allDays = []
@@ -1069,14 +1103,24 @@ for iday in range(numDays):
     corrClass_aligned[:, iday] = corrClass_ave_allDays[iday][eventI_allDays[iday] - nPreMin  :  eventI_allDays[iday] + nPostMin + 1]
 
 
+#%% keep short and long ITI results to plot them against each other later.
+if trialHistAnalysis:
+    if iTiFlg==0:
+        corrClass_aligned0 = corrClass_aligned
+
+    elif iTiFlg==1:
+        corrClass_aligned1 = corrClass_aligned
+        
+        
 #%% Average across days
 
 corrClass_aligned_ave = np.mean(corrClass_aligned, axis=1) * 100
 corrClass_aligned_std = np.std(corrClass_aligned, axis=1) * 100
 
-_,p = stats.ttest_1samp(corrClass_aligned.transpose(), 50) # p value of class accuracy being different from 50
+_,pcorrtrace = stats.ttest_1samp(corrClass_aligned.transpose(), 50) # p value of class accuracy being different from 50
 
-
+        
+       
 #%% Plot the average traces across all days
 #ep_ms_allDays
 plt.figure()
@@ -1093,7 +1137,7 @@ makeNicePlots(ax)
 
 # Plot a dot for significant time points
 ymin, ymax = ax.get_ylim()
-pp = p+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax
+pp = pcorrtrace+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax
 plt.plot(time_aligned, pp, color='k')
 
 # Plot lines for the training epoch
@@ -1236,6 +1280,21 @@ print '\nmean fraction of non-zero weights: inhibit = %.3f  excit = %.3f' %(np.n
 print 'p-val_2tailed (inhibit vs excit fract non-0 weights) = %.2f' %pfrac
 
 
+#%% keep short and long ITI results to plot them against each other later.
+if trialHistAnalysis:
+    if iTiFlg==0:
+        w_exc_all0 = w_exc_all
+        w_inh_all0 = w_inh_all
+        w_exc_fractNonZero0 = w_exc_fractNonZero
+        w_inh_fractNonZero0 = w_inh_fractNonZero
+
+    elif iTiFlg==1:
+        w_exc_all1 = w_exc_all
+        w_inh_all1 = w_inh_all
+        w_exc_fractNonZero1 = w_exc_fractNonZero
+        w_inh_fractNonZero1 = w_inh_fractNonZero
+        
+        
 #%% Plot histograms of weights
 
 
@@ -1341,6 +1400,7 @@ if savefigs:
 ################ Excitatory vs inhibitory neurons:  projections #######################################################################################
 #####################################################################################################################################################   
 '''    
+
 #%% Loop over days
 
 trs4project = 'trained' # 'trained', 'all', 'corr', 'incorr' # trials that will be used for projections and the class accuracy trace; if 'trained', same trials that were used for SVM training will be used. "corr" and "incorr" refer to current trial's outcome, so they don't mean much if trialHistAnalysis=1. 
@@ -1902,6 +1962,29 @@ for iday in range(numDays):
 #a = np.sum(tr1_i_aligned, axis=0)
 #np.isnan(a).sum()
 
+
+#%% keep short and long ITI results to plot them against each other later.
+if trialHistAnalysis:
+    if iTiFlg==0:
+        tr1_i_aligned0 = tr1_i_aligned
+        tr0_i_aligned0 = tr0_i_aligned
+        tr1_i_raw_aligned0 = tr1_raw_i_aligned
+        tr0_i_raw_aligned0 = tr0_raw_i_aligned
+        tr1_e_aligned0 = tr1_e_aligned
+        tr0_e_aligned0 = tr0_e_aligned
+        tr1_e_raw_aligned0 = tr1_raw_e_aligned
+        tr0_e_raw_aligned0 = tr0_raw_e_aligned
+        
+    elif iTiFlg==1:
+        tr1_i_aligned1 = tr1_i_aligned
+        tr0_i_aligned1 = tr0_i_aligned
+        tr1_i_raw_aligned1 = tr1_raw_i_aligned
+        tr0_i_raw_aligned1 = tr0_raw_i_aligned
+        tr1_e_aligned1 = tr1_e_aligned
+        tr0_e_aligned1 = tr0_e_aligned
+        tr1_e_raw_aligned1 = tr1_raw_e_aligned
+        tr0_e_raw_aligned1 = tr0_raw_e_aligned
+        
     
 #%% Average across days
 
@@ -2101,6 +2184,15 @@ for iday in range(len(days)):
 excInhDiffAllC = np.reshape(perActive_excInhDiff_rounds,(-1,)) 
 
 
+#%% keep short and long ITI results to plot them against each other later.
+if trialHistAnalysis:
+    if iTiFlg==0:
+        excInhDiffAllC0 = excInhDiffAllC        
+
+    elif iTiFlg==1:
+        excInhDiffAllC1 = excInhDiffAllC
+        
+        
 #%% Is exc - inh c-path significantly different from 0?
 
 _, pdiff = stats.ttest_1samp(excInhDiffAllC, 0)
@@ -2381,7 +2473,26 @@ sd_test_allExc_s = np.nanstd(perClassErrorTest_shfl_allExc_ave_allDays, axis=0)
 #[sum(~np.isnan(perClassErrorTest_data_inh_ave_allDays[:,i])) for i in range(numDays)]
 #[sum(~np.isnan(perClassErrorTest_data_exc_ave_allDays[:,i])) for i in range(numDays)]
 
-    
+
+#%% keep short and long ITI results to plot them against each other later
+if trialHistAnalysis:
+    if iTiFlg==0:
+        perClassErrorTest_data_inh_ave_allDays0 = perClassErrorTest_data_inh_ave_allDays
+        perClassErrorTest_shfl_inh_ave_allDays0 = perClassErrorTest_shfl_inh_ave_allDays
+        perClassErrorTest_data_exc_ave_allDays0 = perClassErrorTest_data_exc_ave_allDays
+        perClassErrorTest_shfl_exc_ave_allDays0 = perClassErrorTest_shfl_exc_ave_allDays
+        perClassErrorTest_data_allExc_ave_allDays0 = perClassErrorTest_data_allExc_ave_allDays
+        perClassErrorTest_shfl_allExc_ave_allDays0 = perClassErrorTest_shfl_allExc_ave_allDays
+        
+    elif iTiFlg==1:
+        perClassErrorTest_data_inh_ave_allDays1 = perClassErrorTest_data_inh_ave_allDays
+        perClassErrorTest_shfl_inh_ave_allDays1 = perClassErrorTest_shfl_inh_ave_allDays
+        perClassErrorTest_data_exc_ave_allDays1 = perClassErrorTest_data_exc_ave_allDays
+        perClassErrorTest_shfl_exc_ave_allDays1 = perClassErrorTest_shfl_exc_ave_allDays
+        perClassErrorTest_data_allExc_ave_allDays1 = perClassErrorTest_data_allExc_ave_allDays
+        perClassErrorTest_shfl_allExc_ave_allDays1 = perClassErrorTest_shfl_allExc_ave_allDays
+        
+        
 #%% ttest comparing exc vs inh
     
 _, pinh = stats.ttest_ind(ave_test_inh_d, ave_test_inh_s)    
@@ -2554,6 +2665,7 @@ if savefigs:
 #################### Classification accuracy at all times ##############################################################################################    
 ########################################################################################################################################################    
 '''
+
 #%% Loop over days
 
 corrClass_exc_ave_allDays = []
@@ -2675,6 +2787,19 @@ for iday in range(numDays):
     corrClass_allExc_aligned[:, iday] = corrClass_allExc_ave_allDays[iday][eventI_allDays[iday] - nPreMin  :  eventI_allDays[iday] + nPostMin + 1]
 
 
+#%% keep short and long ITI results to plot them against each other later
+if trialHistAnalysis:
+    if iTiFlg==0:
+        corrClass_exc_aligned0 = corrClass_exc_aligned
+        corrClass_inh_aligned0 = corrClass_inh_aligned
+        corrClass_allExc_aligned0 = corrClass_allExc_aligned
+        
+    elif iTiFlg==1:
+        corrClass_exc_aligned1 = corrClass_exc_aligned
+        corrClass_inh_aligned1 = corrClass_inh_aligned
+        corrClass_allExc_aligned1 = corrClass_allExc_aligned
+        
+        
 #%% Average across days
 
 corrClass_exc_aligned_ave = np.mean(corrClass_exc_aligned, axis=1) * 100
@@ -2731,6 +2856,7 @@ if savefigs:
         fign = os.path.join(svmdir, fign_+'.'+fmt[i])
         
         plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
+
 
 
 
