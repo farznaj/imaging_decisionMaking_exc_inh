@@ -10,7 +10,7 @@ Created on Sun Oct 30 14:41:01 2016
 mousename = 'fni17'
 
 trialHistAnalysis = 1;
-iTiFlg = 1; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
+iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
 ep_ms = [809, 1109] # only for trialHistAnalysis=0
         
 # Define days that you want to analyze
@@ -37,6 +37,7 @@ from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 from setImagingAnalysisNamesP import *
 
+plt.rc('font', family='helvetica')        
 
 #%%
 frameLength = 1000/30.9; # sec.  # np.diff(time_aligned_stim)[0];
@@ -77,8 +78,8 @@ trs4project = 'trained' # 'trained', 'all', 'corr', 'incorr' # trials that will 
 if trialHistAnalysis:
 #     ep_ms = np.round((ep-eventI)*frameLength)
 #    th_stim_dur = []
-    suffn = 'prev_%sN_%sITIs_' %(ntName, itiName)
-    suffnei = 'prev_%s_%sITIs_' %('excInh', itiName)
+    suffn = 'prev_%sITIs_%sN_' %(ntName, itiName)
+    suffnei = 'prev_%sITIs_excInh_' %(itiName)
 else:
     suffn = 'curr_%sN_ep%d-%dms_' %(ntName, ep_ms[0], ep_ms[-1])   
     suffnei = 'curr_%s_ep%d-%dms_' %('excInh', ep_ms[0], ep_ms[-1])   
@@ -121,7 +122,9 @@ def makeNicePlots(ax, rmv2ndXtickLabel=0, rmv2ndYtickLabel=0):
         
     if rmv2ndYtickLabel:
         [label.set_visible(False) for label in ax.yaxis.get_ticklabels()[::2]]
-        
+    
+    # gap between tick labeles and axis
+#    ax.tick_params(axis='x', pad=30)
         
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
 def setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName='all'):
@@ -290,7 +293,7 @@ if trialHistAnalysis:
 #%%
 '''
 #####################################################################################################################################################   
-############################ Classification Error (testing data) ###################################################################################################     
+############################ Classification accuracy (testing data) ###################################################################################################     
 #####################################################################################################################################################
 '''
 
@@ -364,12 +367,12 @@ if trialHistAnalysis:
         
     
 #%% Average and std across rounds
-ave_test_d = np.nanmean(err_test_data_ave_allDays, axis=0) # numDays
-ave_test_s = np.nanmean(err_test_shfl_ave_allDays, axis=0) 
+ave_test_d = 100-np.nanmean(err_test_data_ave_allDays, axis=0) # numDays
+ave_test_s = 100-np.nanmean(err_test_shfl_ave_allDays, axis=0) 
 sd_test_d = np.nanstd(err_test_data_ave_allDays, axis=0) 
 sd_test_s = np.nanstd(err_test_shfl_ave_allDays, axis=0) 
 
-        
+
 #%% Plot average across rounds for each day
 plt.figure(figsize=(6,2.5))
 gs = gridspec.GridSpec(1, 5)#, width_ratios=[2, 1]) 
@@ -377,12 +380,14 @@ gs = gridspec.GridSpec(1, 5)#, width_ratios=[2, 1])
 ax = plt.subplot(gs[0:-2])
 plt.errorbar(range(numDays), ave_test_d, yerr = sd_test_d, color='g', label='Data')
 plt.errorbar(range(numDays), ave_test_s, yerr = sd_test_s, color='k', label='Shuffled')
-plt.xlabel('Days')
-plt.ylabel('Classification error (%) - testing data')
+plt.xlabel('Days', fontsize=13, labelpad=10)
+plt.ylabel('Classification accuracy (%)\n(cross-validated)', fontsize=13, labelpad=10)
 plt.xlim([-1, len(days)])
-lgd = plt.legend(loc='upper center', bbox_to_anchor=(.8,1.3), frameon=False)
+lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.25), frameon=False)
 #leg.get_frame().set_linewidth(0.0)
 makeNicePlots(ax)
+ymin, ymax = ax.get_ylim()
+
 
 ##%% Average across days
 x =[0,1]
@@ -390,8 +395,9 @@ labels = ['Data', 'Shfl']
 ax = plt.subplot(gs[-2:-1])
 plt.errorbar(x, [np.mean(ave_test_d), np.mean(ave_test_s)], yerr = [np.std(ave_test_d), np.std(ave_test_s)], marker='o', fmt=' ', color='k')
 plt.xlim([x[0]-1, x[1]+1])
+plt.ylim([ymin, ymax])
 #plt.ylabel('Classification error (%) - testing data')
-plt.xticks(x, labels, rotation='vertical')    
+plt.xticks(x, labels, rotation='vertical', fontsize=13)    
 #plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
 plt.subplots_adjust(wspace=1)
 makeNicePlots(ax)
@@ -404,6 +410,8 @@ if savefigs:
         fign = os.path.join(svmdir, fign_+'.'+fmt[i])
         
         plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
+    
+    
     
 '''
 #%%
@@ -450,6 +458,8 @@ for iday in range(len(days)):
 
 print 'eventI of all days:', eventI_allDays
 
+   
+   
    
 #%%   
 '''
@@ -974,7 +984,7 @@ plt.plot(time_aligned, tr0_raw_aligned_ave, 'r', label = 'Low-rate choice')
 
 plt.xlabel('Time since stimulus onset')
 plt.ylabel('Raw averages')
-plt.legend(loc=0, frameon=False)
+lgd = plt.legend(loc=0, frameon=False)
 plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
 makeNicePlots(ax)
 
@@ -1123,27 +1133,34 @@ _,pcorrtrace = stats.ttest_1samp(corrClass_aligned.transpose(), 50) # p value of
        
 #%% Plot the average traces across all days
 #ep_ms_allDays
-plt.figure()
+plt.figure(figsize=(4.5,3))
 
 plt.fill_between(time_aligned, corrClass_aligned_ave - corrClass_aligned_std, corrClass_aligned_ave + corrClass_aligned_std, alpha=0.5, edgecolor='k', facecolor='k')
 plt.plot(time_aligned, corrClass_aligned_ave, 'k')
 
-plt.xlabel('Time since stimulus onset (ms)')
-plt.ylabel('Classification accuracy (%)')
+plt.xlabel('Time since stim onset (ms)', fontsize=13)
+plt.ylabel('Classification accuracy (%)', fontsize=13)
 plt.legend()
-
 ax = plt.gca()
+plt.xticks(np.arange(0,1400,400))
 makeNicePlots(ax)
 
 # Plot a dot for significant time points
 ymin, ymax = ax.get_ylim()
+'''
 pp = pcorrtrace+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax
 plt.plot(time_aligned, pp, color='k')
-
+'''
+#plt.xticks(np.arange(-400,1400,200))
+#win=[time_aligned[0], 0]
+#plt.plot([win[0], win[0]], [ymin, ymax], '-.', color=[.7, .7, .7])
+#plt.plot([win[1], win[1]], [ymin, ymax], '-.', color=[.7, .7, .7])
+    
 # Plot lines for the training epoch
-win = np.mean(ep_ms_allDays, axis=0)
-plt.plot([win[0], win[0]], [ymin, ymax], '-.', color=[.7, .7, .7])
-plt.plot([win[1], win[1]], [ymin, ymax], '-.', color=[.7, .7, .7])
+if 'ep_ms_allDays' in locals():
+    win = np.mean(ep_ms_allDays, axis=0)
+    plt.plot([win[0], win[0]], [ymin, ymax], '-.', color=[.7, .7, .7])
+    plt.plot([win[1], win[1]], [ymin, ymax], '-.', color=[.7, .7, .7])
 
 
 #%% Save the figure    
@@ -1152,7 +1169,7 @@ if savefigs:
         fign_ = suffn+'corrClassTrace'
         fign = os.path.join(svmdir, fign_+'.'+fmt[i])
         
-        plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
+        plt.savefig(fign, bbox_inches='tight')#, bbox_extra_artists=(lgd,))
 
 
 
@@ -1339,7 +1356,7 @@ hist = hist/float(np.sum(hist))
 plt.plot(bin_edges[0:-1], hist, label='inh')
 plt.title('mean: inhibit = %.2f  excit = %.2f\np-val_2tailed = %.2f ' %(np.mean(abs(w_inh_all)), np.mean(abs(w_exc_all)), pabs), y=1.08)
 
-plt.legend(loc=0, frameon=False)
+lgd = plt.legend(loc=0, frameon=False)
 plt.xlabel('Norm abs weight (non-zero)')
 plt.ylabel('Normalized count')
 #plt.ylim([-.1, 1.1])
@@ -2014,7 +2031,7 @@ _,pe = stats.ttest_ind(tr1_e_aligned.transpose(), tr0_e_aligned.transpose())
 
 # SVM projections
 
-plt.figure()
+plt.figure(figsize=(9,6)) #
 
 plt.subplot(221)
 plt.fill_between(time_aligned, tr1_e_aligned_ave - tr1_e_aligned_std, tr1_e_aligned_ave + tr1_e_aligned_std, alpha=0.5, edgecolor='b', facecolor='b')
@@ -2023,42 +2040,52 @@ plt.plot(time_aligned, tr1_e_aligned_ave, 'b', label = 'high rate')
 plt.fill_between(time_aligned, tr0_e_aligned_ave - tr0_e_aligned_std, tr0_e_aligned_ave + tr0_e_aligned_std, alpha=0.5, edgecolor='r', facecolor='r')
 plt.plot(time_aligned, tr0_e_aligned_ave, 'r', label = 'low rate')
 
-plt.xlabel('Time since stimulus onset')
-plt.ylabel('SVM projections')
+plt.xlabel('Time since stim onset', fontsize=13) #, labelpad=10)
+plt.ylabel('SVM projections', fontsize=13)
 plt.title('Excitatory')
-
-# Plot a dot for time points with significantly different hr and lr projections
 ax = plt.gca()
+xmin, xmax = ax.get_xlim()
 ymin, ymax = ax.get_ylim()
+plt.xticks(np.arange(0,xmax,400))    
+ax.text(xmax, ymin-.4, 'ms') #, style='italic') #,      bbox={'facecolor':'red', 'alpha':0.5, 'pad':10})
+# Plot a dot for time points with significantly different hr and lr projections
 pp = pe+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax
 plt.plot(time_aligned, pp, color='k')
 
-makeNicePlots(ax,1,2)
+makeNicePlots(ax,0,1)
+#f.set_figheight(6)
+#f.set_figwidth(2.5)
+#f.set_size_inches(2.5)
 
 
 plt.subplot(222)
 plt.fill_between(time_aligned, tr1_i_aligned_ave - tr1_i_aligned_std, tr1_i_aligned_ave + tr1_i_aligned_std, alpha=0.5, edgecolor='b', facecolor='b')
-plt.plot(time_aligned, tr1_i_aligned_ave, 'b', label = 'high rate')
+plt.plot(time_aligned, tr1_i_aligned_ave, 'b', label = 'high-rate choice')
 
 plt.fill_between(time_aligned, tr0_i_aligned_ave - tr0_i_aligned_std, tr0_i_aligned_ave + tr0_i_aligned_std, alpha=0.5, edgecolor='r', facecolor='r')
-plt.plot(time_aligned, tr0_i_aligned_ave, 'r', label = 'low rate')
+plt.plot(time_aligned, tr0_i_aligned_ave, 'r', label = 'low-rate choice')
 
-plt.xlabel('Time since stimulus onset')
+plt.xlabel('Time since stim onset', fontsize=13)
+plt.ylabel('SVM projections', fontsize=13)
 plt.title('Inhibitory')
-plt.legend(loc='best', bbox_to_anchor=(1, .7), frameon=False)
-
-# Plot a dot for time points with significantly different hr and lr projections
+plt.ylim([ymin, ymax])
 ax = plt.gca()
+xmin, xmax = ax.get_xlim()
 ymin, ymax = ax.get_ylim()
+plt.xticks(np.arange(0,xmax,400))    
+ax.text(xmax, ymin-.4, 'ms') #, style='italic') #,      bbox={'facecolor':'red', 'alpha':0.5, 'pad':10})
+#lgd = plt.legend(loc=0, bbox_to_anchor=(.46, 1.1), frameon=False)
+lgd = plt.legend(loc=0, bbox_to_anchor=(1, 1.1), frameon=False)
+# Plot a dot for time points with significantly different hr and lr projections
 pp = pi+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax
 plt.plot(time_aligned, pp, color='k')
 
-makeNicePlots(ax,1,2)
+makeNicePlots(ax,0,1)
 
-
+plt.subplots_adjust(hspace=.8, wspace=.3)
 
 # Raw averages (normalized)
-
+'''
 plt.subplot(223)
 plt.fill_between(time_aligned, tr1_raw_e_aligned_ave - tr1_raw_e_aligned_std, tr1_raw_e_aligned_ave + tr1_raw_e_aligned_std, alpha=0.5, edgecolor='b', facecolor='b')
 plt.plot(time_aligned, tr1_raw_e_aligned_ave, 'b', label = 'high rate')
@@ -2070,7 +2097,7 @@ plt.xlabel('Time since stimulus onset')
 plt.ylabel('Normed raw averages')
 plt.title('Excitatory')
 ax = plt.gca()
-makeNicePlots(ax,1,2)
+makeNicePlots(ax,1,1)
 
 
 
@@ -2085,10 +2112,10 @@ plt.xlabel('Time since stimulus onset')
 plt.title('Inhibitory')
 plt.legend(loc='best', bbox_to_anchor=(1, .7), frameon=False)
 #plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.2)
-plt.subplots_adjust(hspace=.8)
 
 ax = plt.gca()
-makeNicePlots(ax,1,2)
+makeNicePlots(ax,1,1)
+'''
 
 
 #%% Save the figure
@@ -2209,8 +2236,8 @@ fig = plt.figure(figsize=(4,2))
 #ax = plt.subplot(gs[1,:])
 plt.bar(bin_edges[0:-1], hist, .7, color='k')
 plt.title('p value: = %.3f\nmean = %.2f' %(pdiff, np.mean(excInhDiffAllC)), y=.8)
-plt.xlabel('% Non-zero weights (exc - inh), all c values')
-plt.ylabel('Normalized count')
+plt.xlabel('% Non-zero weights (exc - inh), all c values', fontsize=13)
+plt.ylabel('Normalized count', fontsize=13)
 plt.ylim([-.03, 1])
 
 ax = plt.gca()
@@ -2252,13 +2279,13 @@ if savefigs:
         fign_ = suffnei+'cPath_hist'
         fign = os.path.join(svmdir, fign_+'.'+fmt[i])
         
-        plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
+        plt.savefig(fign)#, bbox_extra_artists=(lgd,), bbox_inches='tight')
  
  
 
  
 #%% Not useful because of averaging across days: 
-'''
+
 # Average and std across days
 
 # average exc and inh c-path across days
@@ -2276,7 +2303,7 @@ perActive_excInhDiff_std = np.std(perActive_excInhDiff_rounds, axis=0)
        
 #%% Not useful due to averaging across days
 # Compute p value for exc vs inh c path (pooled across all c values) after averaging across days 
-       
+'''    
 aa = np.reshape(perActive_exc_ave_allDays,(-1,))
 bb = np.reshape(perActive_inh_ave_allDays,(-1,))
 #aa = np.array(perActive_exc).flatten()
@@ -2349,8 +2376,49 @@ ax = plt.gca()
 makeNicePlots(ax)
 
 plt.subplots_adjust(hspace=1.2)
+ 
+ '''
+ 
 
 
+#%% Toy example 
+
+plt.figure(figsize=(4,3))
+#plt.subplot(212)
+#plt.fill_between(cvect_, perActive_exc_ave_allDays_ave - perActive_exc_ave_allDays_std, perActive_exc_ave_allDays_ave + perActive_exc_ave_allDays_std, alpha=0.5, edgecolor='b', facecolor='b')
+plt.plot(cvect_, perActive_exc_ave_allDays_ave, 'k')
+
+#plt.fill_between(cvect_, perActive_inh_ave_allDays_ave - perActive_inh_ave_allDays_std, perActive_inh_ave_allDays_ave + perActive_inh_ave_allDays_std, alpha=0.5, edgecolor='r', facecolor='r')
+#plt.plot(cvect_, perActive_inh_ave_allDays_ave, 'r', label = 'inhibit')
+a=perActive_exc_ave_allDays_ave[5:-1]
+b=(np.ones((1,len(cvect_)-len(a)))*100).squeeze()
+c = np.concatenate((a,b))
+
+a2=perActive_exc_ave_allDays_ave[0:-5]
+b2=(np.zeros((1,len(cvect_)-len(a2)))).squeeze()
+c2 = np.concatenate((b2,a2))
+
+plt.plot(cvect_, c, 'r', label = 'A')
+plt.plot(cvect_, c2, 'g', label = 'B')
+
+plt.ylim([-10,110])
+plt.xscale('log')
+plt.xlabel('c (Inverse of regularization parameter)', fontsize=13)
+plt.ylabel('% Non-zero weights', fontsize=13)
+plt.legend()
+plt.legend(loc='best', frameon=False) #, bbox_to_anchor=(.4, .7))
+
+ax = plt.gca()
+makeNicePlots(ax)
+
+##%%
+for i in range(np.shape(fmt)[0]): # save in all format of fmt         
+    fign_ = suffnei+'cPath_toyEx'
+    fign = os.path.join(svmdir, fign_+'.'+fmt[i])
+    
+    plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
+        
+        
 #%% Save the figure
 
 if savefigs:
@@ -2359,11 +2427,6 @@ if savefigs:
         fign = os.path.join(svmdir, fign_+'.'+fmt[i])
         
         plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
- 
- '''
- 
-
-
 
 
 
@@ -2833,7 +2896,7 @@ plt.plot(time_aligned, corrClass_allExc_aligned_ave, 'm')
 
 plt.xlabel('Time since stimulus onset (ms)')
 plt.ylabel('Classification accuracy (%)')
-plt.legend(loc='best', frameon=False)
+lgd = plt.legend(loc='best', frameon=False)
 
 ax = plt.gca()
 makeNicePlots(ax)

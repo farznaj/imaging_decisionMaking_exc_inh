@@ -14,6 +14,7 @@
 
 % NOTE: Because you are using timeStimOnsetAll instad of timeStimOnset, stimAl_allTrs that you compute here will include early-decision trials (outcomes=-1). So you may need to remove them later.
 
+% postFile is created in imaging_prep_analysis, here you append vars to it.
 save_aligned_traces = 1; %1; % if 1, the following structures will be appended to postName: 'stimAl', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl'
 
 
@@ -80,7 +81,7 @@ timeCommitIncorrResp0 = timeCommitIncorrResp;
 set_change_of_mind_trs % set change-of-mind trials. output will be trs_com.
 
 if save_aligned_traces
-    save(postName, '-append', 'cb', 'timeCommitCL_CR_Gotone', 'timeStimOnsetAll', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp')
+    save(postName, '-append', 'cb', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOnsetAll', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp')
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -19,27 +19,32 @@ scaleTime = frameLength;
 %%
 alignedEvent = 'initTone';
 [traces_aligned_fut_initTone, time_aligned_initTone, eventI_initTone] = alignTraces_prePost_allCases...
-    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv);
+    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, ...
+timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, trs2rmv,1); % ,[],[]: show all frames before; %,nan,nan: default, only go to previous event;
 
+% [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = alignTraces_prePost_allCases...
+%     (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, ...
+%     timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, ...
+%     trs2rmv, flag_traces, nPreFrames, nPostFrames, onlySetNPrePost)
 %%
 alignedEvent = 'stimOn';
 [traces_aligned_fut_stimOn, time_aligned_stimOn, eventI_stimOn] = alignTraces_prePost_allCases...
-    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv);
+    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, trs2rmv);
 
 %%
 alignedEvent = 'goTone';
 [traces_aligned_fut_goTone, time_aligned_goTone, eventI_goTone] = alignTraces_prePost_allCases...
-    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv);
+    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, trs2rmv);
 
 %%
 alignedEvent = '1stSideTry';
 [traces_aligned_fut_1stSideTry, time_aligned_1stSideTry, eventI_1stSideTry] = alignTraces_prePost_allCases...
-    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv);
+    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, trs2rmv);
 
 %%
 alignedEvent = 'reward';
 [traces_aligned_fut_reward, time_aligned_reward, eventI_reward] = alignTraces_prePost_allCases...
-    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, trs2rmv);
+    (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, trs2rmv); %,1,2,nan); % do the following to only take 2 frames before reward so it doesn't overlap with after choice responses.
 
 
 %%
@@ -107,33 +112,45 @@ if dofilter
 end
 
 
+%% indicate which neurons are inh or exc
+%{
+load(moreName, 'inhibitRois') 
+finh = find(inhibitRois);
+%  [92,103,329,349] %[142,209,246,288]
+%}
 %% plot trigger aligned traces
 
+isecall = 2; %1:length(traces_aligned_all); % [1,2,4,5]; %  %  %  % what alignments we want to look at.
 nr = 7; nc = 7;
 figall = [0: nr*nc: nu , nu];
 
-for ifig = randi(length(figall)-1) % 1:length(figall)-1 % look at all neurons:   % randi(length(figall)-1) % look at a subset of neurons.
+
+for ifig =  1:length(figall)-1  %randi(length(figall)-1) % 1:length(figall)-1 % look at all neurons:   % randi(length(figall)-1) % look at a subset of neurons.
     
     figure('name', sprintf('Neurons %d-%d', figall(ifig)+1, figall(ifig+1)));
-    ha = tight_subplot(nr,nc,[.03 .02],[.03 .001],[.03 .001]);
+    ha = tight_subplot(nr,nc,[.03 .02],[.03 .02],[.03 .001]);
     set(ha, 'Yticklabelmode', 'auto')
+    
     cnt = 0;
     
     %%
-    for ineu = figall(ifig)+1 : figall(ifig+1) % 1:size(traceEventAlign,2) % randperm(size(traceEventAlign,2)) % i_ttestp; %  %
+    for ineu = figall(ifig)+1 : figall(ifig+1)%finh(figall(ifig)+1 : figall(ifig+1)) %  % % 1:size(traceEventAlign,2) % randperm(size(traceEventAlign,2)) % i_ttestp; %  %
+        %%
         cnt = cnt+1;
         axes(ha(cnt));
+
         %         title(ineu)
         hold on
         st = 1; gp = 2;
         ttot = []; eltot = [];
         mnx = [mn(ineu) mx(ineu)]; % [-.01 .015];
         
+        %%
         if isnan(mn(ineu))
             warning('either the neuron trace is all NaNs, or there is something wrong!')
         else
             %%
-            for isec = 1:length(traces_aligned_all) % loop over traces aligned on different events
+            for isec = isecall  % loop over traces aligned on different events
                 
                 tp = eval(traces_aligned_all{isec}); % traces_aligned_fut_initTone;
                 el = eval(eventI_all{isec}); % eventI_initTone;
@@ -178,8 +195,8 @@ for ifig = randi(length(figall)-1) % 1:length(figall)-1 % look at all neurons:  
                 %     plot(t, toplot+toplot_sd, ':', 'color', [114 189 255]/256)
                 %     plot(t, toplot-toplot_sd, ':', 'color', [114 189 255]/256)
                 
-                boundedline(xsec, toplot, toplot_b, 'alpha');
-                %         set(h, 'linewidth', 2)
+                h = boundedline(xsec, toplot, toplot_b, 'b', 'alpha'); % , 'linewidth', 1.5);
+                set(h, 'linewidth', 1)
                 
                 %% right choice (contra) : red
                 toplot = aveTrsPerNeuron_corrR; %(:, ineu);
@@ -194,15 +211,25 @@ for ifig = randi(length(figall)-1) % 1:length(figall)-1 % look at all neurons:  
                     %                 toplot_b = toplot_b(ceil(siz/2) : end-ceil(siz/2)+1);
                 end
                 
-                boundedline(xsec, toplot, toplot_b, 'r', 'alpha')
+                h2 = boundedline(xsec, toplot, toplot_b, 'r', 'alpha');
+                set(h, 'linewidth', 1)
+                
+                %%
+                if cnt==1
+                    legend([h, h2], 'ipsi', 'contra')
+                    legend boxoff
+                end
                 
                 %% plot a line and write text for the event
                 plot([el el], mnx, 'k:')
                 
                 tx = eventI_all{isec};
-                %         text(el-2, mnx(1)-.002, tx(strfind(tx, '_')+1:end))
-                %             text(el-2, mnx(2)-.002, tx(strfind(tx, '_')+1:end))
+                % uncomment below if you want text on top of each line
                 text(el-2, mnx(2), tx(strfind(tx, '_')+1:end))
+                
+                %%                
+                a = sprintf('N:%d-inh:%d', ineu, inhibitRois(ineu));
+                title(a)
                 
             end
             
@@ -215,20 +242,28 @@ for ifig = randi(length(figall)-1) % 1:length(figall)-1 % look at all neurons:  
             %     ylabel('DF/F')
             set(gca, 'tickdir', 'out')
             %     set(gcf, 'name', sprintf('Neuron %d', ineu))    %     set(gcf, 'name', sprintf('Neuron %d, P=%.2f', ineu, s_ttestp(cnt)))
-            %     set(gca, 'xtick', eltot) % marks events
+            %     set(gca, 'xtick', eltot) % marks events'
             %     set(gca, 'xtick', (1:7:length(ttot)))
             %     set(gca, 'xticklabel', round(ttot(1:7:end)))
             
-            %     round(200/frameLength)
-            e = [eltot(1)-6 eltot(1) eltot(2) eltot(2)+6 eltot(2)+12 eltot(2)+18 eltot(3) eltot(4) eltot(4)+6 eltot(5)-6 eltot(5) eltot(5)+6];
+            % plot a scale bars
+            %
+            sb = [.02];mn(ineu)+(mx(ineu)-mn(ineu))/2;
+            plot([eltot(1) eltot(1)+500/frameLength], [sb sb], 'k-')
+            plot([eltot(1) eltot(1)], [sb sb+.005], 'k-')            
+            %}
+%             e = [eltot(1)-6 eltot(1) eltot(2) eltot(2)+6 eltot(2)+12 eltot(2)+18 eltot(3) eltot(4) eltot(4)+6 eltot(5)-6 eltot(5) eltot(5)+6];
+            e = eltot;
             set(gca, 'xtick', e)
-            set(gca, 'xticklabel', round(ttot(e)))
+%             set(gca, 'xticklabel', round(ttot(e)))
+            %
             
             %%
             %         pause
             %         delete(gca)
         end
     end
+    
 end
 
 

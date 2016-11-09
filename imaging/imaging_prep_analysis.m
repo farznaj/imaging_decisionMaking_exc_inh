@@ -590,6 +590,7 @@ allResp_HR_LR(trs2rmv) = NaN;
 %%%%% Save outcomes and allResp to a file named post_pnev... 
 postName = fullfile(pd, sprintf('post_%s.mat', pnev_n));
 if ~exist(postName, 'file')
+    warning('creating postFile and saving vars in it')
     save(postName, 'outcomes', 'allResp_HR_LR', 'stimrate')
 end
 
