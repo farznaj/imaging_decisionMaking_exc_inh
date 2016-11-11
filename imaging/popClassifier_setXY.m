@@ -24,7 +24,9 @@ fprintf('Number of trials with stim strength of interest = %i\n', sum(str2ana))
 %% Start setting Y: the response vector
 
 if trialHistAnalysis
-    popClassifier_trialHistory % computes choiceVec0; % trials x 1;  1 for HR choice, 0 for LR prev choice.
+%     popClassifier_trialHistory % computes choiceVec0; % trials x 1;  1 for HR choice, 0 for LR prev choice.
+    load(postName, 'trialHistory')
+    choiceVec0 = trialHistory.choiceVec0(:,3);;
 else
     choiceVec0 = allResp_HR_LR';  % trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.
     

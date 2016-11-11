@@ -9,7 +9,7 @@ Created on Sun Oct 30 14:41:01 2016
 #%% 
 mousename = 'fni17'
 
-trialHistAnalysis = 1;
+trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
 ep_ms = [809, 1109] # only for trialHistAnalysis=0
         
@@ -164,9 +164,9 @@ def ttest2(a, b, **tailOption):
     
     
     
-    
-'''    
+       
 #%%
+''' 
 ##############################################################################################   
 ########### Find days with all-0 weights for all rounds and exclude them ##########################     
 ########### Also find days with few rounds with non-zero weights (these are outlier days) ##############
@@ -287,6 +287,8 @@ if trialHistAnalysis:
         fewRdays1 = fewRdays
         days1 = days
         nRoundsNonZeroW1 = nRoundsNonZeroW
+
+
 
 
 
@@ -2143,8 +2145,13 @@ perActive_exc_ave_allDays = []
 perActive_inh_ave_allDays = []
 perActive_excInhDiff_rounds = []
 
-for iday in range(len(days)):
+excInhDiffAllC_alld = np.array(np.full((1,numDays),np.nan).squeeze(), dtype=list)
+for iday in [6]:#range(len(days)):
     
+#    perActive_exc_ave_allDays = []
+#    perActive_inh_ave_allDays = []
+#    perActive_excInhDiff_rounds = []
+
     imagingFolder = days[iday][0:6]; #'151013'
     mdfFileNumber = map(int, (days[iday][7:]).split("-")); #[1,2] 
         
@@ -2205,10 +2212,58 @@ for iday in range(len(days)):
     
     perActive_exc_ave_allDays.append(perActive_exc_ave) # numDays x length(cvect_)
     perActive_inh_ave_allDays.append(perActive_inh_ave)
+    
+    
+    #%%
+    # pool exc-inh for all values of c of all rounds and all days # numDays x numValidRounds x length(cvect_)
+    excInhDiffAllC = np.reshape(perActive_excInhDiff_rounds,(-1,)) 
+    
+    excInhDiffAllC_alld[iday] = excInhDiffAllC
+        
+        
+        
+#%% show c path diff of each day 
+'''
+m = [np.mean(excInhDiffAllC_alld[i]) for i in range(numDays)]    
+pdiffall = np.full((1,numDays), np.nan).squeeze()
+for i in range(numDays):
+    _, pdiffall[i] = stats.ttest_1samp(excInhDiffAllC_alld[i], 0)
+    
+plt.figure()
+plt.plot([0,numDays], [0,0])
+for i in range(numDays):
+    plt.errorbar(i, np.mean(excInhDiffAllC_alld[i]), np.std(excInhDiffAllC_alld[i]), marker='o', fmt=' ', color='k')
+    if pdiffall[i]<=.05:
+        mmax = 6
+        plt.plot(i,mmax, marker='*', color='r')
+plt.xlabel('days')    
+plt.ylabel('mean,std of excInhDiffAllC')
 
+#fign_ = suffnei+'cPath_diff_alldays'
+#fign = os.path.join(svmdir, fign_+'.'+fmt[0])            
+#plt.savefig(fign)#, bbox_extra_artists=(lgd,), bbox_inches='tight')    
+    
+    
+# average of each day    
+mm=np.array(m)
+msig = mm[np.array(pdiffall<.05)]
+#mnow = m
+mnow = msig
+hist, bin_edges = np.histogram(mnow, bins=10)
+hist = hist/float(np.sum(hist))
 
-# pool exc-inh for all values of c of all rounds and all days # numDays x numValidRounds x length(cvect_)
-excInhDiffAllC = np.reshape(perActive_excInhDiff_rounds,(-1,)) 
+fig = plt.figure(figsize=(4,2))
+#ax = plt.subplot(gs[1,:])
+plt.bar(bin_edges[0:-1], hist, .7, color='k')
+#    plt.title('p value: = %.3f\nmean = %.3f' %(pdiff, np.mean(mnow)), y=.8)
+plt.xlabel('% Non-zero weights (exc - inh), all c values', fontsize=13)
+plt.ylabel('Normalized count', fontsize=13)
+plt.ylim([-.03, 1])
+
+ax = plt.gca()
+makeNicePlots(ax) 
+'''
+
 
 
 #%% keep short and long ITI results to plot them against each other later.
@@ -2276,7 +2331,7 @@ makeNicePlots(ax)
 
 if savefigs:
     for i in range(np.shape(fmt)[0]): # save in all format of fmt         
-        fign_ = suffnei+'cPath_hist'
+        fign_ = suffnei+'cPath_hist_d%d' %(iday)
         fign = os.path.join(svmdir, fign_+'.'+fmt[i])
         
         plt.savefig(fign)#, bbox_extra_artists=(lgd,), bbox_inches='tight')
@@ -2303,7 +2358,7 @@ perActive_excInhDiff_std = np.std(perActive_excInhDiff_rounds, axis=0)
        
 #%% Not useful due to averaging across days
 # Compute p value for exc vs inh c path (pooled across all c values) after averaging across days 
-'''    
+
 aa = np.reshape(perActive_exc_ave_allDays,(-1,))
 bb = np.reshape(perActive_inh_ave_allDays,(-1,))
 #aa = np.array(perActive_exc).flatten()
@@ -2357,61 +2412,75 @@ makeNicePlots(ax)
 
 
 ##%% Plot the average c path across all days for exc and inh
-plt.subplot(212)
-plt.fill_between(cvect_, perActive_exc_ave_allDays_ave - perActive_exc_ave_allDays_std, perActive_exc_ave_allDays_ave + perActive_exc_ave_allDays_std, alpha=0.5, edgecolor='b', facecolor='b')
-plt.plot(cvect_, perActive_exc_ave_allDays_ave, 'b', label = 'excit')
+#    plt.subplot(212)
+plt.figure(figsize=(4,3))
+plt.fill_between(1/cvect_, perActive_exc_ave_allDays_ave - perActive_exc_ave_allDays_std, perActive_exc_ave_allDays_ave + perActive_exc_ave_allDays_std, alpha=0.5, edgecolor='b', facecolor='b')
+plt.plot(1/cvect_, perActive_exc_ave_allDays_ave, 'b', label = 'Excitatory')
 
-plt.fill_between(cvect_, perActive_inh_ave_allDays_ave - perActive_inh_ave_allDays_std, perActive_inh_ave_allDays_ave + perActive_inh_ave_allDays_std, alpha=0.5, edgecolor='r', facecolor='r')
-plt.plot(cvect_, perActive_inh_ave_allDays_ave, 'r', label = 'inhibit')
+plt.fill_between(1/cvect_, perActive_inh_ave_allDays_ave - perActive_inh_ave_allDays_std, perActive_inh_ave_allDays_ave + perActive_inh_ave_allDays_std, alpha=0.5, edgecolor='r', facecolor='r')
+plt.plot(1/cvect_, perActive_inh_ave_allDays_ave, 'r', label = 'Inhibitory')
 
 plt.ylim([-10,110])
 plt.xscale('log')
-plt.xlabel('c (inverse of regularization parameter)')
-plt.ylabel('% non-zero weights')
-plt.legend()
+plt.xlabel('Regularization parameter', fontsize=18)
+plt.ylabel('% Neurons in the decoder', fontsize=18)
+lgd = plt.legend()
 plt.legend(loc='best', frameon=False) #, bbox_to_anchor=(.4, .7))
-plt.title('p value (pooled for all values of c):\nexc ~= inh : %.2f; exc < inh : %.2f; exc > inh : %.2f' %(p_two, p_tl, p_tr))
-
+#    plt.title('p value (pooled for all values of c):\nexc ~= inh : %.2f; exc < inh : %.2f; exc > inh : %.2f' %(p_two, p_tl, p_tr))
+plt.xlim([.5, 200])
 ax = plt.gca()
 makeNicePlots(ax)
 
 plt.subplots_adjust(hspace=1.2)
  
- '''
- 
 
+ 
+#%% Save the figure
+
+if savefigs:
+    for i in range(np.shape(fmt)[0]): # save in all format of fmt         
+        fign_ = suffnei+'cPath_d%d' %(iday)
+        fign = os.path.join(svmdir, fign_+'.'+fmt[i])
+        
+        plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
+            
+            
+            
+            
+            
 
 #%% Toy example 
 
 plt.figure(figsize=(4,3))
 #plt.subplot(212)
 #plt.fill_between(cvect_, perActive_exc_ave_allDays_ave - perActive_exc_ave_allDays_std, perActive_exc_ave_allDays_ave + perActive_exc_ave_allDays_std, alpha=0.5, edgecolor='b', facecolor='b')
-plt.plot(cvect_, perActive_exc_ave_allDays_ave, 'k')
+plt.plot(1/cvect_, perActive_exc_ave_allDays_ave, 'k', label = 'A')
 
 #plt.fill_between(cvect_, perActive_inh_ave_allDays_ave - perActive_inh_ave_allDays_std, perActive_inh_ave_allDays_ave + perActive_inh_ave_allDays_std, alpha=0.5, edgecolor='r', facecolor='r')
 #plt.plot(cvect_, perActive_inh_ave_allDays_ave, 'r', label = 'inhibit')
-a=perActive_exc_ave_allDays_ave[5:-1]
-b=(np.ones((1,len(cvect_)-len(a)))*100).squeeze()
-c = np.concatenate((a,b))
+#a=perActive_exc_ave_allDays_ave[1:-1]
+#b=(np.ones((1,len(cvect_)-len(a)))*100).squeeze()
+#c = np.concatenate((a,b))
 
 a2=perActive_exc_ave_allDays_ave[0:-5]
 b2=(np.zeros((1,len(cvect_)-len(a2)))).squeeze()
 c2 = np.concatenate((b2,a2))
 
-plt.plot(cvect_, c, 'r', label = 'A')
-plt.plot(cvect_, c2, 'g', label = 'B')
+#plt.plot(1/cvect_, c, 'k', label = 'A')
+plt.plot(1/cvect_, c2, 'k', label = 'B')
 
+plt.xlim([.1, 200])
 plt.ylim([-10,110])
 plt.xscale('log')
-plt.xlabel('c (Inverse of regularization parameter)', fontsize=13)
-plt.ylabel('% Non-zero weights', fontsize=13)
+plt.xlabel('Regularization parameter', fontsize=18)
+plt.ylabel('% Neurons in the decoder', fontsize=18)
 plt.legend()
 plt.legend(loc='best', frameon=False) #, bbox_to_anchor=(.4, .7))
 
 ax = plt.gca()
 makeNicePlots(ax)
 
-##%%
+#%%
 for i in range(np.shape(fmt)[0]): # save in all format of fmt         
     fign_ = suffnei+'cPath_toyEx'
     fign = os.path.join(svmdir, fign_+'.'+fmt[i])
@@ -2419,14 +2488,7 @@ for i in range(np.shape(fmt)[0]): # save in all format of fmt
     plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
         
         
-#%% Save the figure
 
-if savefigs:
-    for i in range(np.shape(fmt)[0]): # save in all format of fmt         
-        fign_ = suffnei+'cPath'
-        fign = os.path.join(svmdir, fign_+'.'+fmt[i])
-        
-        plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
 

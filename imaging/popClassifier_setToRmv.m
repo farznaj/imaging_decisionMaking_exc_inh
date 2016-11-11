@@ -52,14 +52,16 @@ end
 
 % th_stim_dur = 800; % min stim duration to include a trial in timeStimOnset
 
-figure; hold on
-plot(timeStimOffset - timeStimOnset)
-plot(timeCommitCL_CR_Gotone - timeStimOnset)
-plot(time1stSideTry - timeStimOnset)
-plot([1 length(timeCommitCL_CR_Gotone)],[th_stim_dur th_stim_dur],'g:')
-plot([1 length(timeCommitCL_CR_Gotone)],[ep_ms(end) ep_ms(end)],'k:')
-ylabel('Time relative to stim onset (ms)')
-legend('stimOffset','goTone', 'th\_stim\_dur')
+if doplots
+    figure; hold on
+    plot(timeStimOffset - timeStimOnset)
+    plot(timeCommitCL_CR_Gotone - timeStimOnset)
+    plot(time1stSideTry - timeStimOnset)
+    plot([1 length(timeCommitCL_CR_Gotone)],[th_stim_dur th_stim_dur],'g:')
+    plot([1 length(timeCommitCL_CR_Gotone)],[ep_ms(end) ep_ms(end)],'k:')
+    ylabel('Time relative to stim onset (ms)')
+    legend('stimOffset','goTone', 'th\_stim\_dur')
+end
 % minStimDurNoGoTone = min(timeCommitCL_CR_Gotone - timeStimOnset); % this is the duration after stim onset during which no go tone occurred for any of the trials.
 % cprintf('blue', 'minStimDurNoGoTone = %.2f ms\n', minStimDurNoGoTone)
 
