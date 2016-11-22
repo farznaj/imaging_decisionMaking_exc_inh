@@ -31,7 +31,7 @@ for iday = 1:length(days)
     
     
     if trialHistAnalysis==1
-        load(postName, stimAl_allTrs')
+        load(postName, 'stimAl_allTrs')
         stimAl = stimAl_allTrs;
     else
         load(postName, 'stimAl_noEarlyDec')

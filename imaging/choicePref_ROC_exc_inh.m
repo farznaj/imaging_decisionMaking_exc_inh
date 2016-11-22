@@ -1,11 +1,11 @@
 trialHistAnalysis = 0;
-nt = 0;
+nt = 0; % neuron type (0:exc ; 1:inh)
 thStimStrength = 0; % 2; % what stim strength you want to use for computing choice pref.
 
-frameLength = 1000/30.9; % sec.
 makeplots = 0;
 useEqualNumTrs = 0; % if true, equal number of trials for HR and LR will be used to compute ROC.
 
+frameLength = 1000/30.9; % sec.
 mouse = 'fni17';
 days = {'151102_1-2', '151101_1', '151029_2-3', '151028_1-2-3', '151027_2', '151026_1', ...
     '151023_1', '151022_1-2', '151021_1', '151020_1-2', '151019_1-2', '151016_1', ...
@@ -108,7 +108,8 @@ end
 % save roc_curr_stimstr2 eventI_stimOn_all choicePref_all_alld_exc choicePref_all_alld_inh
 
 
-%%
+%% Align all traces on stim onset
+
 nPost = nan(1,length(days));
 for iday = 1:length(days)
     nPost(iday) = size(choicePref_all_alld_exc{iday},1) - eventI_stimOn_all(iday);
@@ -191,5 +192,53 @@ plot(time_aligned, hh*(a(2)-.05*diff(a)), 'k')
 legend([h1,h2], 'Excitatory', 'Inhibitory')
 xlabel('Time since stim onset (ms)')
 ylabel('ROC performance')
+
+
+%% Average in the window [800 1100]ms for each neuron
+
+eventI = nPreMin+1;
+if trialHistAnalysis
+    ep = 1: nPreMin+1; % all frames before the eventI
+else
+    ep_ms = [800, 1100];
+
+    epStartRel2Event = ceil(ep_ms(1)/frameLength); % the start point of the epoch relative to alignedEvent for training SVM. (500ms)
+    epEndRel2Event = ceil(ep_ms(2)/frameLength); % the end point of the epoch relative to alignedEvent for training SVM. (700ms)
+    ep = eventI+epStartRel2Event : eventI+epEndRel2Event; % frames on stimAl.traces that will be used for trainning SVM.
+end
+
+fprintf('training epoch, rel2 stimOnset, is %.2f to %.2f ms\n', round((ep(1)-eventI)*frameLength), round((ep(end)-eventI)*frameLength))
+
+choicePref_exc_aligned_aveEP = cellfun(@(x)mean(x(ep,:),1), choicePref_exc_aligned, 'uniformoutput', 0); % average of ROC AUC during ep for each neuron
+choicePref_inh_aligned_aveEP = cellfun(@(x)mean(x(ep,:),1), choicePref_inh_aligned, 'uniformoutput', 0); % average of ROC AUC during ep for each neuron
+% a = mean(choicePref_exc_aligned{iday}(ep,:),1); % mean of each neuron during ep in day iday.
+
+
+%%%
+exc_ep = cell2mat(choicePref_exc_aligned_aveEP);
+inh_ep = cell2mat(choicePref_inh_aligned_aveEP);
+size(exc_ep), size(inh_ep)
+
+
+% fraction of neurons that carry >=10% info relative to chance (ie >=60% or <=40%)
+fract_exc_inh_above10PercInfo = [mean(abs(exc_ep-.5)>.1) , mean(abs(inh_ep-.5)>.1)]
+
+
+%% Histogram of ROC AUC for all neurons (averaged during ep)
+
+bins = 0:.1:1;
+[nexc, e] = histcounts(exc_ep, bins);
+[ninh, e] = histcounts(inh_ep, bins);
+
+x = mode(diff(bins))/2 + bins; x = x(1:end-1);
+figure; hold on
+plot(x, nexc/sum(nexc))
+plot(x, ninh/sum(ninh))
+xlabel('ROC AUC')
+ylabel('Fraction neurons')
+legend('exc','inh')
+plot([.5 .5],[0 .5], 'k:')
+
+
 
 
