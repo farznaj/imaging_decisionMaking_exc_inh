@@ -2146,7 +2146,7 @@ perActive_inh_ave_allDays = []
 perActive_excInhDiff_rounds = []
 
 excInhDiffAllC_alld = np.array(np.full((1,numDays),np.nan).squeeze(), dtype=list)
-for iday in [6]:#range(len(days)):
+for iday in range(len(days)):
     
 #    perActive_exc_ave_allDays = []
 #    perActive_inh_ave_allDays = []
