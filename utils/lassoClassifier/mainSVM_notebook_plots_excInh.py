@@ -15,6 +15,7 @@ ep_ms = [809, 1109] # only for trialHistAnalysis=0
         
 # Define days that you want to analyze
 days = ['151102_1-2', '151101_1', '151029_2-3', '151028_1-2-3', '151027_2', '151026_1', '151023_1', '151022_1-2', '151021_1', '151020_1-2', '151019_1-2', '151016_1', '151015_1', '151014_1', '151013_1-2', '151012_1-2-3', '151010_1', '151008_1', '151007_1'];
+#days = days[1:]
 numRounds = 10; # number of times svm analysis was ran for the same dataset but sampling different sets of neurons.    
 savefigs = False
 
@@ -134,7 +135,7 @@ def setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName='all'):
     #    ep_ms = np.round((ep-eventI)*frameLength)
     #    th_stim_dur = []
         if np.isnan(roundi): # set excInh name
-            svmn = 'excInhC_svmPrevChoice_%sN_%sITIs_ep%d-%dms_*' %(ntName, itiName, ep_ms[0], ep_ms[-1])
+            svmn = 'excInhC_svmPrevChoice_%sN_%sITIs_ep*-*ms_*' %(ntName, itiName)
         else:
             svmn = 'svmPrevChoice_%sN_%sITIs_ep*ms_r%d_*' %(ntName, itiName, roundi)
     else:
@@ -372,15 +373,15 @@ for iday in range(len(days)):
         inhRois_ei = np.zeros((2*n));
         inhRois_ei[n:2*n] = 1;
             
-        wall_exc.append(wei_all[:,:,inhRois_ei==0])        
+        wall_exc.append(wei_all[:,:,inhRois_ei==0]) # numDays (each day: numSamples x length(cvect_) x numNeurons(inh+exc equal numbers))     
         wall_inh.append(wei_all[:,:,inhRois_ei==1])        
         
         
-        perActiveAll_exc.append(perActive_exc)        
+        perActiveAll_exc.append(perActive_exc) # numDays x numSamples x length(cvect_)        
         perActiveAll_inh.append(perActive_inh)        
     
-        perClassErAll.append(perClassEr)
-        cvect_all.append(cvect_)
+        perClassErAll.append(perClassEr) # numDays x numSamples x length(cvect_) 
+        cvect_all.append(cvect_) # numDays x length(cvect_)
    
    
 #%%    
@@ -393,30 +394,557 @@ cvect_all = np.array(cvect_all) # days x length(cvect_)  # c values
 #%% For each day average weights across neurons
 wall_exc_aveN = []
 wall_inh_aveN = []
+wall_abs_exc_aveN = [] # average of abs values of weights
+wall_abs_inh_aveN = []
+wall_non0_abs_exc_aveN = [] # average of abs values of weights
+wall_non0_abs_inh_aveN = []
 for iday in range(len(days)):
     wall_exc_aveN.append(np.mean(wall_exc[iday], axis=2)) # days x numSamples x length(cvect_)  # ave w across neurons
     wall_inh_aveN.append(np.mean(wall_inh[iday], axis=2)) # days x numSamples x length(cvect_)  # ave w across neurons
-
+    wall_abs_exc_aveN.append(np.mean(abs(wall_exc[iday]), axis=2)) # days x numSamples x length(cvect_)  # ave w across neurons
+    wall_abs_inh_aveN.append(np.mean(abs(wall_inh[iday]), axis=2)) # days x numSamples x length(cvect_)  # ave w across neurons
+    a = wall_exc[iday] 
+    a[wall_exc[iday]==0] = np.nan    # only take non-0 weights
+    wall_non0_abs_exc_aveN.append(np.nanmean(abs(a), axis=2)) # days x numSamples x length(cvect_)  # ave w across neurons
+    a = wall_inh[iday] 
+    a[wall_inh[iday]==0] = np.nan
+    wall_non0_abs_inh_aveN.append(np.nanmean(abs(a), axis=2)) # days x numSamples x length(cvect_)  # ave w across neurons
+    
 wall_exc_aveN = np.array(wall_exc_aveN)
 wall_inh_aveN = np.array(wall_inh_aveN)
+wall_abs_exc_aveN = np.array(wall_abs_exc_aveN)
+wall_abs_inh_aveN = np.array(wall_abs_inh_aveN)
+wall_non0_abs_exc_aveN = np.array(wall_non0_abs_exc_aveN)
+wall_non0_abs_inh_aveN = np.array(wall_non0_abs_inh_aveN)
 
-
-#%% Average weights,etc across shuffles for each day
+#%% Average weights,etc across shuffles for each day : numDays x length(cvect_) 
 wall_exc_aveNS = np.array([np.mean(wall_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
 wall_inh_aveNS = np.array([np.mean(wall_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
+wall_abs_exc_aveNS = np.array([np.mean(wall_abs_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
+wall_abs_inh_aveNS = np.array([np.mean(wall_abs_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
+wall_non0_abs_exc_aveNS = np.array([np.nanmean(wall_non0_abs_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
+wall_non0_abs_inh_aveNS = np.array([np.nanmean(wall_non0_abs_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
 perClassErAll_aveS = np.array([np.mean(perClassErAll[iday,:,:], axis=0) for iday in range(len(days))])
+perActiveAll_exc_aveS = np.array([np.mean(perActiveAll_exc[iday,:,:], axis=0) for iday in range(len(days))])
+perActiveAll_inh_aveS = np.array([np.mean(perActiveAll_inh[iday,:,:], axis=0) for iday in range(len(days))])
+
+# std
+wall_exc_stdNS = np.array([np.std(wall_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # std of w across shuffles for each day
+wall_inh_stdNS = np.array([np.std(wall_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
+wall_abs_exc_stdNS = np.array([np.std(wall_abs_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # std of w across shuffles for each day
+wall_abs_inh_stdNS = np.array([np.std(wall_abs_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
+perClassErAll_stdS = np.array([np.std(perClassErAll[iday,:,:], axis=0) for iday in range(len(days))])
+perActiveAll_exc_stdS = np.array([np.std(perActiveAll_exc[iday,:,:], axis=0) for iday in range(len(days))])
+perActiveAll_inh_stdS = np.array([np.std(perActiveAll_inh[iday,:,:], axis=0) for iday in range(len(days))])
 
 
-#%% average across days
-ave = np.mean(wall_exc_aveNS, axis=0)
+#%% same analysis as before: for each day compute exc-inh for shuffle-averaged perc non-zero and weights
+perActiveEmI = np.full((perActiveAll_exc_aveS.shape), np.nan)
+wabsEmI = np.full((perActiveAll_exc_aveS.shape), np.nan)
+wabsEmI_non0 = np.full((perActiveAll_exc_aveS.shape), np.nan)
+perActiveEmI_b0100nan = np.full((perActiveAll_exc_aveS.shape), np.nan)
+wabsEmI_b0100nan = np.full((perActiveAll_exc_aveS.shape), np.nan)
+wabsEmI_non0_b0100nan = np.full((perActiveAll_exc_aveS.shape), np.nan)
+
+for iday in range(len(days)):
+    perActiveEmI[iday,:] = perActiveAll_exc_aveS[iday,:] - perActiveAll_inh_aveS[iday,:] # days x length(cvect_) # at each c value, divide %non-zero (averaged across shuffles) of exc and inh  
+    wabsEmI[iday,:] = wall_abs_exc_aveNS[iday,:] - wall_abs_inh_aveNS[iday,:]
+    wabsEmI_non0[iday,:] = wall_non0_abs_exc_aveNS[iday,:] - wall_non0_abs_inh_aveNS[iday,:]
+#    plt.plot(perActiveEmI[iday,:])
+
+    # exclude c values for which both exc and inh %non-0 are 0 or 100.
+    a = perActiveAll_exc_aveS[iday,:]
+    b = perActiveAll_inh_aveS[iday,:]    
+    i0 = np.logical_and(a==0, b==0)
+    i100 = np.logical_and(a==100, b==100)
+    a[i0] = np.nan
+    b[i0] = np.nan
+    a[i100] = np.nan
+    b[i100] = np.nan
+    perActiveEmI_b0100nan[iday,:] = a - b
+    
+    a = wall_abs_exc_aveNS[iday,:]
+    b = wall_abs_inh_aveNS[iday,:] 
+    a[i0] = np.nan
+    b[i0] = np.nan
+    a[i100] = np.nan
+    b[i100] = np.nan
+    wabsEmI_b0100nan[iday,:] = a - b
+    
+    a = wall_non0_abs_exc_aveNS[iday,:]
+    b = wall_non0_abs_inh_aveNS[iday,:] 
+    a[i0] = np.nan
+    b[i0] = np.nan
+    a[i100] = np.nan
+    b[i100] = np.nan
+    wabsEmI_non0_b0100nan[iday,:] = a - b
+    
+#%% Set the null distribution for exc-inh comparison: For each day subtract random shuffles of exc (same for inh) from each other.
+import numpy.random as rng
+l = perActiveAll_exc.shape[1] # numSamples
+randAll_perActiveAll_exc_aveS = np.full(perActiveAll_exc.shape, np.nan) # days x numSamples x length(cvect_) # exc - exc
+randAll_perActiveAll_inh_aveS = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
+randAll_perActiveAll_ei_aveS = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
+randAll_wabs_exc_aveS = np.full(perActiveAll_exc.shape, np.nan) # exc - exc
+randAll_wabs_inh_aveS = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
+randAll_wabs_ei_aveS = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
+randAll_non0_wabs_exc_aveS = np.full(perActiveAll_exc.shape, np.nan) # exc - exc
+randAll_non0_wabs_inh_aveS = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
+randAll_non0_wabs_ei_aveS = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
+
+randAll_perActiveAll_exc_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # days x numSamples x length(cvect_) # exc - exc
+randAll_perActiveAll_inh_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
+randAll_perActiveAll_ei_aveS_b0100nan = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
+randAll_wabs_exc_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # exc - exc
+randAll_wabs_inh_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
+randAll_wabs_ei_aveS_b0100nan = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
+randAll_non0_wabs_exc_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # exc - exc
+randAll_non0_wabs_inh_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
+randAll_non0_wabs_ei_aveS_b0100nan = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
+
+for iday in range(len(days)):
+    # perc non-zero
+    # exc-exc
+    inds = rng.permutation(l) # random indeces of shuffles
+    inds1 = rng.permutation(l)
+    a = perActiveAll_exc[iday,inds1,:] - perActiveAll_exc[iday,inds,:]
+    randAll_perActiveAll_exc_aveS[iday,:,:] = a # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
+    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
+    aa = perActiveAll_exc[iday,inds1,:]
+    bb = perActiveAll_exc[iday,inds,:]
+    i0 = np.logical_and(aa==0, bb==0)
+    i100 = np.logical_and(aa==100, bb==100)
+    aa[i0] = np.nan
+    bb[i0] = np.nan    
+    aa[i100] = np.nan
+    bb[i100] = np.nan    
+    a2 = aa-bb
+    randAll_perActiveAll_exc_aveS_b0100nan[iday,:,:] = a2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
+    
+    # inh-inh
+    indsi = rng.permutation(l) # random indeces of shuffles
+    inds1i = rng.permutation(l)
+    b = perActiveAll_inh[iday,inds1i,:] - perActiveAll_inh[iday,indsi,:]
+    randAll_perActiveAll_inh_aveS[iday,:,:] = b # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
+    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
+    aa = perActiveAll_inh[iday,inds1i,:]
+    bb = perActiveAll_inh[iday,indsi,:]
+    i0i = np.logical_and(aa==0, bb==0)
+    i100i = np.logical_and(aa==100, bb==100)
+    aa[i0i] = np.nan
+    bb[i0i] = np.nan    
+    aa[i100i] = np.nan
+    bb[i100i] = np.nan    
+    b2 = aa-bb
+    randAll_perActiveAll_inh_aveS_b0100nan[iday,:,:] = b2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
+    
+    # pool exc - exc; inh - inh
+    randAll_perActiveAll_ei_aveS[iday,:,:] = np.concatenate((a, b))  
+#    plt.plot(np.mean(randAll_perActiveAll_exc_aveS[iday,:,:],axis=0))
+    randAll_perActiveAll_ei_aveS_b0100nan[iday,:,:] = np.concatenate((a2, b2))  
+    
+    
+    
+    ### abs w
+    # exc-exc
+    # below uncommented, so %non-0 and ws are computed from the same set of shuffles.
+#    inds = rng.permutation(l) # random indeces of shuffles
+#    inds1 = rng.permutation(l)
+    a = wall_abs_exc_aveN[iday,inds1,:] - wall_abs_exc_aveN[iday,inds,:]
+    randAll_wabs_exc_aveS[iday,:,:] = a # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
+    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
+    aa = wall_abs_exc_aveN[iday,inds1,:]
+    bb = wall_abs_exc_aveN[iday,inds,:]
+    aa[i0] = np.nan
+    bb[i0] = np.nan    
+    aa[i100] = np.nan
+    bb[i100] = np.nan    
+    a2 = aa-bb
+    randAll_wabs_exc_aveS_b0100nan[iday,:,:] = a2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
+
+    
+    # inh-inh
+#    inds = rng.permutation(l) # random indeces of shuffles
+#    inds1 = rng.permutation(l)
+    b = wall_abs_inh_aveN[iday,inds1i,:] - wall_abs_inh_aveN[iday,indsi,:]
+    randAll_wabs_inh_aveS[iday,:,:] = b # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
+    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
+    aa = wall_abs_inh_aveN[iday,inds1i,:]
+    bb = wall_abs_inh_aveN[iday,indsi,:]
+    aa[i0i] = np.nan
+    bb[i0i] = np.nan    
+    aa[i100i] = np.nan
+    bb[i100i] = np.nan    
+    b2 = aa-bb
+    randAll_wabs_inh_aveS_b0100nan[iday,:,:] = b2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
+    
+    
+    # pool exc - exc; inh - inh
+    randAll_wabs_ei_aveS[iday,:,:] = np.concatenate((a, b))  
+#    plt.plot(np.mean(randAll_perActiveAll_exc_aveS[iday,:,:],axis=0))
+    randAll_wabs_ei_aveS_b0100nan[iday,:,:] = np.concatenate((a2, b2))  
+    
+    
+    
+    ### abs non-0 w
+    # exc-exc
+#    inds = rng.permutation(l) # random indeces of shuffles
+#    inds1 = rng.permutation(l)
+    a = wall_non0_abs_exc_aveN[iday,inds1,:] - wall_non0_abs_exc_aveN[iday,inds,:]
+    randAll_non0_wabs_exc_aveS[iday,:,:] = a # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
+    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
+    # you don't really need to do it for here, bc it is already non0 ws!
+    aa = wall_non0_abs_exc_aveN[iday,inds1,:]
+    bb = wall_non0_abs_exc_aveN[iday,inds,:]
+    aa[i0] = np.nan
+    bb[i0] = np.nan    
+    aa[i100] = np.nan
+    bb[i100] = np.nan    
+    a2 = aa-bb
+    randAll_non0_wabs_exc_aveS_b0100nan[iday,:,:] = a2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
+    
+
+    # inh-inh
+#    inds = rng.permutation(l) # random indeces of shuffles
+#    inds1 = rng.permutation(l)
+    b = wall_non0_abs_inh_aveN[iday,inds1i,:] - wall_non0_abs_inh_aveN[iday,indsi,:]
+    randAll_non0_wabs_inh_aveS[iday,:,:] = b # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
+    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
+    aa = wall_non0_abs_inh_aveN[iday,inds1i,:]
+    bb = wall_non0_abs_inh_aveN[iday,indsi,:]
+    aa[i0i] = np.nan
+    bb[i0i] = np.nan    
+    aa[i100i] = np.nan
+    bb[i100i] = np.nan    
+    b2 = aa-bb
+    randAll_non0_wabs_inh_aveS_b0100nan[iday,:,:] = b2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
+    
+    
+    # pool exc - exc; inh - inh
+    randAll_non0_wabs_ei_aveS[iday,:,:] = np.concatenate((a, b))  
+    randAll_non0_wabs_ei_aveS_b0100nan[iday,:,:] = np.concatenate((a2, b2))  
+    
+    
+#%% For each day compare p value for exc - inh vs 0 with p value for exc - inh vs random exc-exc (inh-inh)    
+"""
+for iday in range(len(days)):    
+    
+    print '____________________', days[iday], '____________________'
+    
+    aa = perActiveEmI[iday,:].flatten() # length(cvect_) # exc minus inh for shuffle averaged
+    aa = aa[~(np.isnan(aa) + np.isinf(aa))] # remove nan and inf values
+#    _, pdiff = stats.ttest_1samp(aa, 1, nan_policy='omit')
+    _, pdiff = stats.ttest_1samp(aa, 0, nan_policy='omit')
+    
+    bb = randAll_perActiveAll_ei_aveS[iday,:,:].flatten()
+    bb = bb[~(np.isnan(bb) + np.isinf(bb))]
+    _, p_ei = stats.ttest_ind(aa, bb, nan_policy='omit')
+    print '%.3f, %.3f' %(pdiff, p_ei)
+    '''    
+    bb = randAll_perActiveAll_exc_aveS[iday,:,:].flatten() # exc - exc for rand shuffles (not averaged across shuffles)    
+    _, p_e = stats.ttest_ind(aa, bb)
+    bb = randAll_perActiveAll_inh_aveS[iday,:,:].flatten()
+    _, p_i = stats.ttest_ind(aa, bb)    
+    print '%.3f, %.3f, %.3f, %.3f' %(pdiff, p_ei, p_e, p_i)
+    '''
+    
+
+    aa = wabsEmI[iday,:].flatten() # length(cvect_) # exc minus inh for shuffle averaged
+    aa = aa[~(np.isnan(aa) + np.isinf(aa))] # remove nan and inf values
+#    _, pdiff = stats.ttest_1samp(aa, 1, nan_policy='omit')
+    _, pdiff = stats.ttest_1samp(aa, 0, nan_policy='omit')
+    
+    bb = randAll_wabs_ei_aveS[iday,:,:].flatten()
+    bb = bb[~(np.isnan(bb) + np.isinf(bb))]
+    _, p_ei = stats.ttest_ind(aa, bb, nan_policy='omit')
+    print '%.3f, %.3f' %(pdiff, p_ei)
+    
+#    print '_____'
+"""
+
+#%% percent non-zero w: hist and P val for all days pooled (exc - inh)
+a = np.reshape(perActiveEmI_b0100nan,(-1,)) # pool across days x length(cvect_)  
+a = a[~(np.isnan(a) + np.isinf(a))]
+# against 0
+_, pdiff = stats.ttest_1samp(a, 1, nan_policy='omit')
+print 'p value:diff c path (all c) = %.3f' %(pdiff)
+print '\tmean = %.2f' %(np.mean(a))
+
+# against random null dist
+b = np.reshape(randAll_perActiveAll_ei_aveS_b0100nan,(-1,)) # pool across days x numSamples x length(cvect_)
+b = b[~(np.isnan(b) + np.isinf(b))]
+_, p = stats.ttest_ind(a, b, nan_policy='omit')
+print 'rand null dist: p value:diff c path (all c) = %.3f' %(p)
+print '\tmean = %.2f' %(np.mean(b))
+
+
+binEvery = .5
+#mv = 2
+#bn = np.arange(0.05,mv,binEvery)
+bn = np.arange(np.min(np.concatenate((a,b))), np.max(np.concatenate((a,b))), binEvery)
+#bn = np.arange(-4,4, binEvery)
+bn[-1] = np.max([np.max(a),np.max(b)]) # unlike digitize, histogram doesn't count the right most value
+#bn[0] = np.min([np.min(a),np.min(b)])
+
+hist, bin_edges = np.histogram(a, bins=bn)
+hist = hist/float(np.sum(hist))
+#d = stats.mode(np.diff(bin_edges))[0]/float(2)
+
+plt.figure()    
+plt.bar(bin_edges[0:-1], hist, binEvery, color='r', alpha=.5, label='exc-inh')
+
+hist, bin_edges = np.histogram(b, bins=bn)
+hist = hist/float(np.sum(hist))
+#d = stats.mode(np.diff(bin_edges))[0]/float(2)
+plt.bar(bin_edges[0:-1], hist, binEvery, color='k', alpha=.3, label='exc-exc, inh-inh')
+plt.legend()
+plt.xlabel('%non-zero w')
+plt.ylabel('Prob (data: all days, all c pooled; null: all shuff, all days, all c pooled)')
+plt.title('mean = %.2f, p=%.3f' %(np.mean(a), p))
+plt.xlim([-20,20])
+#plt.savefig('cpath_all_percnon0.svg', format='svg', dpi=300)
+
+
+#%% abs w: hist and P val for all days pooled (exc - inh)
+a = np.reshape(wabsEmI_b0100nan,(-1,)) 
+a = a[~(np.isnan(a) + np.isinf(a))]
+# against 0
+_, pdiff = stats.ttest_1samp(a, 1, nan_policy='omit')
+print 'p value:diff c path (all c) = %.3f' %(pdiff)
+print '\tmean = %.2f' %(np.mean(a))
+
+# against random null dist
+b = np.reshape(randAll_wabs_ei_aveS_b0100nan,(-1,))
+b = b[~(np.isnan(b) + np.isinf(b))]
+_, p = stats.ttest_ind(a, b, nan_policy='omit')
+print 'rand null dist: p value:diff c path (all c) = %.3f' %(p)
+print '\tmean = %.2f' %(np.mean(b))
+
+binEvery = .01
+mv = 2
+bn = np.arange(0.05,mv,binEvery)
+bn = np.arange(np.min(np.concatenate((a,b))), np.max(np.concatenate((a,b))), binEvery)
+bn[-1] = np.max([np.max(a),np.max(b)]) # unlike digitize, histogram doesn't count the right most value
+
+hist, bin_edges = np.histogram(a, bins=bn)
+hist = hist/float(np.sum(hist))
+
+#d = stats.mode(np.diff(bin_edges))[0]/float(2)
+plt.figure()    
+plt.bar(bin_edges[0:-1], hist, binEvery, color='r', alpha=.5, label='exc-inh')
+
+hist, bin_edges = np.histogram(b, bins=bn)
+hist = hist/float(np.sum(hist))
+#d = stats.mode(np.diff(bin_edges))[0]/float(2)
+plt.bar(bin_edges[0:-1], hist, binEvery, color='k', alpha=.3, label='exc-exc, inh-inh')
+plt.legend()
+plt.xlabel('abs w')
+plt.ylabel('Prob (data: all days, all c pooled; null: all shuff, all days, all c pooled)')
+plt.title('mean = %.2f, p=%.3f' %(np.mean(a), p))
+plt.xlim([-.5,.5])
+#plt.savefig('cpath_all_absw.svg', format='svg', dpi=300)
+
+
+#%% abs non-0 w: hist and P val for all days pooled (exc - inh)
+a = np.reshape(wabsEmI_non0,(-1,)) 
+a = a[~(np.isnan(a) + np.isinf(a))]
+# against 0
+_, pdiff = stats.ttest_1samp(a, 1, nan_policy='omit')
+print 'p value:diff c path (all c) = %.3f' %(pdiff)
+print '\tmean = %.2f' %(np.mean(a))
+
+# against random null dist
+b = np.reshape(randAll_non0_wabs_ei_aveS,(-1,))
+b = b[~(np.isnan(b) + np.isinf(b))]
+_, p = stats.ttest_ind(a, b, nan_policy='omit')
+print 'rand null dist: p value:diff c path (all c) = %.3f' %(p)
+print '\tmean = %.2f' %(np.mean(b))
+
+binEvery = .01
+mv = 2
+bn = np.arange(0.05,mv,binEvery)
+bn = np.arange(np.min(np.concatenate((a,b))), np.max(np.concatenate((a,b))), binEvery)
+bn[-1] = np.max([np.max(a),np.max(b)]) # unlike digitize, histogram doesn't count the right most value
+
+hist, bin_edges = np.histogram(a, bins=bn)
+hist = hist/float(np.sum(hist))
+
+#d = stats.mode(np.diff(bin_edges))[0]/float(2)
+plt.figure()    
+plt.bar(bin_edges[0:-1], hist, binEvery, color='r', alpha=.5, label='exc-inh')
+
+hist, bin_edges = np.histogram(b, bins=bn)
+hist = hist/float(np.sum(hist))
+#d = stats.mode(np.diff(bin_edges))[0]/float(2)
+plt.bar(bin_edges[0:-1], hist, binEvery, color='k', alpha=.3, label='exc-exc, inh-inh')
+plt.legend(loc=0)
+plt.xlabel('abs w')
+plt.ylabel('Prob (data: all days, all c pooled; null: all shuff, all days, all c pooled)')
+plt.title('mean = %.2f, p=%.3f' %(np.mean(a), p))
+plt.xlim([-.5,.5])
+#plt.savefig('cpath_all_absnon0w.svg', format='svg', dpi=300)
+
+
+#%% Look at days one by one (averages across shuffles)
+for iday in range(len(days)):
+    
+    print '____________________', days[iday], '____________________'
+    
+    plt.figure(figsize=(12,4))
+    '''    
+    plt.subplot(121)
+    plt.errorbar(perClassErAll_aveS[iday,:], wall_exc_aveNS[iday,:], wall_exc_stdNS[iday,:], color = 'b', label = 'excit')
+    plt.errorbar(perClassErAll_aveS[iday,:], wall_inh_aveNS[iday,:], wall_inh_stdNS[iday,:], color = 'r', label = 'inhibit')
+    plt.xscale('log')    
+    plt.xlabel('Training error %')
+    plt.ylabel('Mean+std of weights')
+    plt.legend(loc='upper right', bbox_to_anchor=(1.1,1))
+    '''
+    plt.subplot(131)
+    plt.errorbar(cvect_all[iday,:], perActiveAll_exc_aveS[iday,:], perActiveAll_exc_stdS[iday,:], color = 'b', label = 'excit')
+    plt.errorbar(cvect_all[iday,:], perActiveAll_inh_aveS[iday,:], perActiveAll_inh_stdS[iday,:], color = 'r', label = 'inhibit')
+    plt.xscale('log')
+    plt.xlabel('c (inverse of regularization parameter)')
+    plt.ylabel('Fraction non-0 weights')
+    
+    plt.subplot(132)
+    plt.errorbar(cvect_all[iday,:], wall_abs_exc_aveNS[iday,:], wall_abs_exc_stdNS[iday,:], color = 'b', label = 'excit')
+    plt.errorbar(cvect_all[iday,:], wall_abs_inh_aveNS[iday,:], wall_abs_inh_stdNS[iday,:], color = 'r', label = 'inhibit')
+    plt.xscale('log')
+    plt.xlabel('c (inverse of regularization parameter)')
+    plt.ylabel('Mean+std of abs weights')
+    
+    plt.subplot(133)
+    plt.errorbar(cvect_all[iday,:], wall_exc_aveNS[iday,:], wall_exc_stdNS[iday,:], color = 'b', label = 'excit')
+    plt.errorbar(cvect_all[iday,:], wall_inh_aveNS[iday,:], wall_inh_stdNS[iday,:], color = 'r', label = 'inhibit')
+    plt.xscale('log')
+    plt.xlabel('c (inverse of regularization parameter)')
+    plt.ylabel('Mean+std of weights')
+   
+    plt.subplots_adjust(hspace=.5, wspace=.25)      
+#    raw_input()
+#    plt.savefig('cpath'+days[iday]+'.svg', format='svg', dpi=300)
+    plt.show()       
+   
+    # percent non-zero
+    aa = perActiveAll_exc_aveS[iday,:]
+    bb = perActiveAll_inh_aveS[iday,:]
+    h, p_two = stats.ttest_ind(aa, bb)
+    p_tl = ttest2(aa, bb, tail='left')
+    p_tr = ttest2(aa, bb, tail='right')
+    print '\n%%non-zero p value (pooled for all values of c):\nexc ~= inh : %.2f\nexc < inh : %.2f\nexc > inh : %.2f' %(p_two, p_tl, p_tr)
+    
+    # plot hists 
+    '''
+    hist, bin_edges = np.histogram(aa, bins=30)
+    hist = hist/float(np.sum(hist))
+    fig = plt.figure(figsize=(4,2))
+    plt.bar(bin_edges[0:-1], hist, .7, color='b')
+    
+    hist, bin_edges = np.histogram(bb, bins=30)
+    hist = hist/float(np.sum(hist))
+    plt.bar(bin_edges[0:-1], hist, .7, color='r')
+    '''
+    
+    # abs weight
+    aa = wall_abs_exc_aveNS[iday,:]
+    bb = wall_abs_inh_aveNS[iday,:]
+    h, p_two = stats.ttest_ind(aa, bb)
+    p_tl = ttest2(aa, bb, tail='left')
+    p_tr = ttest2(aa, bb, tail='right')
+    print '\nabs w: p value (pooled for all values of c):\nexc ~= inh : %.2f\nexc < inh : %.2f\nexc > inh : %.2f' %(p_two, p_tl, p_tr)
+    
+    # plot hists
+    '''
+    hist, bin_edges = np.histogram(aa, bins=30)
+    hist = hist/float(np.sum(hist))
+    fig = plt.figure(figsize=(4,2))
+    plt.bar(bin_edges[0:-1], hist, .01, color='b')
+    
+    hist, bin_edges = np.histogram(bb, bins=30)
+    hist = hist/float(np.sum(hist))
+    plt.bar(bin_edges[0:-1], hist, .01, color='r')
+'''
+
+    # diff (exc - inh)
+    _, pdiff = stats.ttest_1samp(perActiveEmI[iday,:], 0)
+    print '\n%%non-0: p value:diff c path (all c) = %.3f' %(pdiff)
+    print '\tmean of diff of c path= %.2f' %(np.mean(perActiveEmI[iday,:]))
+    
+    aa = perActiveEmI[iday,:].flatten() # length(cvect_) # exc minus inh for shuffle averaged
+#    _, pdiff = stats.ttest_1samp(aa, 0)
+    bb = randAll_perActiveAll_ei_aveS[iday,:,:].flatten()
+    _, p_ei = stats.ttest_ind(aa, bb)
+    print 'rand null dist: p value:diff c path (all c) = %.3f' %(p_ei)
+    print '\tmean of diff of c path= %.2f' %(np.mean(bb))
+    
+
+    aa = wabsEmI[iday,:].flatten() # length(cvect_) # exc minus inh for shuffle averaged
+    aa = aa[~(np.isnan(aa) + np.isinf(aa))] # remove nan and inf values
+#    _, pdiff = stats.ttest_1samp(aa, 1, nan_policy='omit')
+    _, pdiff = stats.ttest_1samp(aa, 0, nan_policy='omit')
+    print '\nabs w: p value:diff c path (all c) = %.3f' %(pdiff)
+    print '\tmean of diff of c path= %.2f' %(np.mean(aa))
+    
+    bb = randAll_wabs_ei_aveS[iday,:,:].flatten()
+    bb = bb[~(np.isnan(bb) + np.isinf(bb))]
+    _, p_ei = stats.ttest_ind(aa, bb, nan_policy='omit')
+    print 'rand null dist: p value:diff c path (all c) = %.3f' %(p_ei)
+    print '\tmean of diff of c path= %.2f' %(np.mean(bb))    
+
+
+    aa = wabsEmI_non0[iday,:].flatten() # length(cvect_) # exc minus inh for shuffle averaged
+    aa = aa[~(np.isnan(aa) + np.isinf(aa))] # remove nan and inf values
+#    _, pdiff = stats.ttest_1samp(aa, 1, nan_policy='omit')
+    _, pdiff = stats.ttest_1samp(aa, 0, nan_policy='omit')
+    print '\nabs non0 w: p value:diff c path (all c) = %.3f' %(pdiff)
+    print '\tmean of diff of c path= %.2f' %(np.mean(aa))
+    
+    bb = randAll_non0_wabs_ei_aveS[iday,:,:].flatten()
+    bb = bb[~(np.isnan(bb) + np.isinf(bb))]
+    _, p_ei = stats.ttest_ind(aa, bb, nan_policy='omit')
+    print 'rand null dist: p value:diff c path (all c) = %.3f' %(p_ei)
+    print '\tmean of diff of c path= %.2f' %(np.mean(bb))    
+    
+    
+#%% Average across days ... not sure if this is valid bc the relatin of weights vs c (or training error) is not the same for different days and by averaging we will cancel out any difference between exc and inh populations.
+ave = np.mean(wall_exc_aveNS, axis=0) # length(cvect_)
 sde = np.std(wall_exc_aveNS, axis=0)
 
 avi = np.mean(wall_inh_aveNS, axis=0)
 sdi = np.std(wall_inh_aveNS, axis=0)
 
-# u're going to run the code w the same cvect so u can easily plot all days against cvect... but u should be fine to plot it against classError
-# work on this.
+#%% u're going to run the code w the same cvect so u can easily plot all days against cvect... but u should be fine to plot it against classError
+# work on this: plot ave and avi against classError
 
+#np.min(perClassErAll_aveS)
+step = 5
+b = np.arange(0, np.ceil(np.max(perClassErAll_aveS)).astype(int)+step, step)
+
+wall_exc_cerr = np.full((len(days), len(b)), np.nan)
+wall_inh_cerr = np.full((len(days), len(b)), np.nan)
+perActiveAll_exc_cerr = np.full((len(days), len(b)), np.nan)
+perActiveAll_inh_cerr = np.full((len(days), len(b)), np.nan)
+for iday in range(len(days)):
+    inds = np.digitize(perClassErAll_aveS[iday,:], bins=b)
+    for i in range(len(b)): #b[-1]
+       wall_exc_cerr[iday,i] = np.mean(wall_exc_aveNS[iday, inds==i+1]) # average weights that correspond to class errors in bin i+1
+       wall_inh_cerr[iday,i] = np.mean(wall_inh_aveNS[iday, inds==i+1])
+       perActiveAll_exc_cerr[iday,i] = np.mean(perActiveAll_exc_aveS[iday, inds==i+1])
+       perActiveAll_inh_cerr[iday,i] = np.mean(perActiveAll_inh_aveS[iday, inds==i+1])
+
+#%%       
+#plt.plot(b, wall_exc_cerr[iday,:],'o')
+plt.figure()
+plt.errorbar(b, np.nanmean(wall_exc_cerr, axis=0), yerr=np.nanstd(wall_exc_cerr, axis=0), fmt='b.-')
+plt.errorbar(b, np.nanmean(wall_inh_cerr, axis=0), yerr=np.nanstd(wall_inh_cerr, axis=0), fmt='r.-')
+
+plt.figure()
+plt.plot(b, np.nanmean(perActiveAll_exc_cerr, axis=0), 'b.-')
+plt.plot(b, np.nanmean(perActiveAll_inh_cerr, axis=0), 'r.-')
+
+# is averaging right... remember u had to get diff, or perhaps do ratio...
+# look at abs of weights and ave of non-zeros w
 
 #%% show c path diff of each day 
 '''
