@@ -1081,7 +1081,7 @@ if doPlots:
 # We quantify the contribution of excitatory and inhibitory neurons to the encoding of the choice by measuring participation percentage, defined as the percentatge of a given population of neurons that has non-zero weights. We produce paraticipation curves, participation ratio at different values of svm regularizer (c), for each data
 
 # In[292]:
-
+'''
 # This function finds the SVM decoder that predicts choices given responses in X by 
 # using different values for c. At each value of c, it computes fraction of non-zero weights
 # for exc and inh neurons, separately (perActive_inh, perActive_exc). Also it computes the 
@@ -1120,13 +1120,66 @@ def inh_exc_classContribution(X, Y, isinh):
         perClassEr.append(perClassError(Y, linear_svm.predict(X)));
     
     return perActive_inh, perActive_exc, perClassEr, cvect_, w_allc
+'''
+
+#%%
+# This function finds the SVM decoder that predicts choices given responses in X by 
+# using different values for c. At each value of c, it computes fraction of non-zero weights
+# for exc and inh neurons, separately (perActive_inh, perActive_exc). Also it computes the 
+# classification error (perClassEr) at each value of c. 
+# Outputs: perActive_inh, perActive_exc, perClassEr, cvect_
+
+def inh_exc_classContribution(X, Y, isinh): 
+    import numpy as np
+    from sklearn import svm
+        
+    def perClassError(Y, Yhat):
+        import numpy as np
+        perClassEr = sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
+        return perClassEr
+    
+    Y = np.squeeze(Y); # class labels    
+    eps = 10**-10 # tiny number below which weight is considered 0
+    isinh = isinh>0;  # vector of size number of neurons (1: neuron is inhibitory, 0: neuron is excitatoey); here I am making sure to convert it to logical
+    n_inh = sum(isinh);
+    n_exc = sum(~ isinh);
+#     cvect_ = 10**(np.arange(-4, 6,0.1))/len(Y);
+    cvect_ = 10**(np.arange(-6.5, 3.5, 0.1)) # FN: use this if you want the same cvect for all days
+
+    numShuffles_ei = 100 # 100 times we subselect trials as training and testing datasetes.    
+    regType = 'l1'
+    kfold = 10;
+    perClassErrorTrain_data_ei = np.full((numShuffles_ei, len(cvect_)), np.nan)
+    perClassErrorTest_data_ei = np.full((numShuffles_ei, len(cvect_)), np.nan)
+    w_data_ei = np.full((numShuffles_ei, len(cvect_), n_inh+n_exc), np.nan)
+    b_data_ei = np.full((numShuffles_ei, len(cvect_)), np.nan)
+    perActive_exc_data_ei = np.full((numShuffles_ei, len(cvect_)), np.nan)
+    perActive_inh_data_ei = np.full((numShuffles_ei, len(cvect_)), np.nan)
+    
+    for i in range(len(cvect_)): # At each value of cvect we compute the fraction of non-zero weights for excit and inhibit neurons.
+        summary_data_ei = [];     
+        for ii in range(numShuffles_ei): # training and testing datasets
+            if regType == 'l1':
+                summary_data_ei.append(crossValidateModel(X, Y, linearSVM, kfold = kfold, l1 = cvect_[i]))
+            elif regType == 'l2':
+                summary_data_ei.append(crossValidateModel(X, Y, linearSVM, kfold = kfold, l2 = cvect_[i]))
+
+            w = np.squeeze(summary_data_ei[ii].model.coef_);
+            perClassErrorTrain_data_ei[ii,i] = summary_data_ei[ii].perClassErrorTrain
+            perClassErrorTest_data_ei[ii,i] = summary_data_ei[ii].perClassErrorTest
+            w_data_ei[ii,i,:] = w;
+            b_data_ei[ii,i] = summary_data_ei[ii].model.intercept_;
+            perActive_inh_data_ei[ii,i] = sum(abs(w[isinh])>eps)/ (n_inh + 0.) * 100.
+            perActive_exc_data_ei[ii,i] = sum(abs(w[~isinh])>eps)/ (n_exc + 0.) * 100.
+            
+    return perActive_inh_data_ei, perActive_exc_data_ei, perClassErrorTrain_data_ei, perClassErrorTest_data_ei, cvect_, w_data_ei, b_data_ei 
 
 
 # In[293]:
 
 if neuronType==2:
-    perActive_inh_allExc, perActive_exc_allExc, perClassEr_allExc, cvect_, wei_all_allExc = inh_exc_classContribution(X[:, ~np.isnan(inhRois)], Y, inhRois[~np.isnan(inhRois)])
-
+#    perActive_inh_allExc, perActive_exc_allExc, perClassEr_allExc, cvect_, wei_all_allExc = inh_exc_classContribution(X[:, ~np.isnan(inhRois)], Y, inhRois[~np.isnan(inhRois)])
+    perActive_inh_allExc, perActive_exc_allExc, perClassEr_allExc, perClassErTest_allExc, cvect_, wei_all_allExc, bei_all_allExc = inh_exc_classContribution(X[:, ~np.isnan(inhRois)], Y, inhRois[~np.isnan(inhRois)])
 
 # In[308]:
 
@@ -1205,7 +1258,7 @@ if doPlots and neuronType==2:
 # In[315]:
 
 # Use equal number of exc and inh neurons
-if neuronType==2: #and np.sum(w)!=0:
+if neuronType==2 and np.sum(w)!=0:
     X_ = X[:, ~np.isnan(inhRois)];
     inhRois_ = inhRois[~np.isnan(inhRois)].astype('int32')
     ix_i = np.argwhere(inhRois_).squeeze()
@@ -1213,10 +1266,15 @@ if neuronType==2: #and np.sum(w)!=0:
     n = len(ix_i);
     Xei = np.zeros((len(Y), 2*n));
     inhRois_ei = np.zeros((2*n));
+    
     perActive_inh = [];
     perActive_exc = [];
     perClassEr = [];
     wei_all = []
+    
+    bei_all = []
+    perClassErTest = []
+    
     for i in range(numSamples):
         msk = rng.permutation(ix_e)[0:n];
         Xei[:, 0:n] = X_[:, msk]; # first n columns are X of random excit neurons.
@@ -1224,11 +1282,18 @@ if neuronType==2: #and np.sum(w)!=0:
 
         Xei[:, n:2*n] = X_[:, ix_i]; # second n icolumns are X of inhibit neurons.
         inhRois_ei[n:2*n] = 1;
-        ai, ae, ce, cvect_, wei = inh_exc_classContribution(Xei, Y, inhRois_ei); # ai is of length cvect defined in inh_exc_classContribution
+        
+        # below we fit svm onto Xei, which for all shuffles (numSamples) has the same set of inh neurons but different sets of exc neurons
+#         ai, ae, ce, cvect_, wei = inh_exc_classContribution(Xei, Y, inhRois_ei); # ai is of length cvect defined in inh_exc_classContribution
+        ai, ae, ce, ces, cvect_, wei, bei = inh_exc_classContribution(Xei, Y, inhRois_ei)
+
         perActive_inh.append(ai); # numSamples x length(cvect_)
         perActive_exc.append(ae);
-        wei_all.append(wei) # numSamples x length(cvect_) x numNeurons(inh+exc equal numbers)
+        wei_all.append(wei) # numSamples x length(cvect_) x numNeurons(inh+exc equal numbers)        
         perClassEr.append(ce);       
+        
+        bei_all.append(bei)
+        perClassErTest.append(ces);
             
 
 
@@ -1454,9 +1519,9 @@ if doPlots and neuronType==2: # and np.sum(w)!=0:
 if trialHistAnalysis:
 #     ep_ms = np.round((ep-eventI)*frameLength)
     th_stim_dur = []
-    svmn = 'excInhC_svmPrevChoice_%sN_%sITIs_ep%d-%dms_' %(ntName, itiName, ep_ms[0], ep_ms[-1])
+    svmn = 'excInhC2_svmPrevChoice_%sN_%sITIs_ep%d-%dms_' %(ntName, itiName, ep_ms[0], ep_ms[-1])
 else:
-    svmn = 'excInhC_svmCurrChoice_%sN_ep%d-%dms_' %(ntName, ep_ms[0], ep_ms[-1])   
+    svmn = 'excInhC2_svmCurrChoice_%sN_ep%d-%dms_' %(ntName, ep_ms[0], ep_ms[-1])   
 print '\n', svmn[:-1]
 
 if saveResults:
@@ -1479,6 +1544,8 @@ if saveResults:
                                'perClassEr':perClassEr, 'wei_all':wei_all, 
                                'perActive_inh_allExc':perActive_inh_allExc, 'perActive_exc_allExc':perActive_exc_allExc, 
                                'perClassEr_allExc':perClassEr_allExc, 'wei_all_allExc':wei_all_allExc,
+                               'bei_all_allExc':bei_all_allExc, 'perClassErTest_allExc':perClassErTest_allExc,
+                               'bei_all':bei_all, 'perClassErTest':perClassErTest,
                                'cvect_':cvect_}) 
     
 #    else:
