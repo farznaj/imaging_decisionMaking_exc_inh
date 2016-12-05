@@ -37,14 +37,16 @@ if 'ipykernel' in sys.modules:
 import sys
 import os
 import numpy as np
+from datetime import datetime
+nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 
 # Only run the following section if you are running the code in jupyter, not if on the cluster or in spyder!
 if ('ipykernel' in sys.modules and ~any('SPYDER' in name for name in os.environ))==-1:
     
     # Set these variables:
     mousename = 'fni17'
-    imagingFolder = '151007'
-    mdfFileNumber = [1] 
+    imagingFolder = '151102'
+    mdfFileNumber = [1,2] 
 
     roundi = 1; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
     trialHistAnalysis = 1;    
@@ -1132,6 +1134,8 @@ def inh_exc_classContribution(X, Y, isinh):
 def inh_exc_classContribution(X, Y, isinh): 
     import numpy as np
     from sklearn import svm
+    from crossValidateModel import crossValidateModel
+    from linearSVM import linearSVM
         
     def perClassError(Y, Yhat):
         import numpy as np
@@ -1258,7 +1262,7 @@ if doPlots and neuronType==2:
 # In[315]:
 
 # Use equal number of exc and inh neurons
-if neuronType==2 and np.sum(w)!=0:
+if (neuronType==2 and not 'w' in locals()) or (neuronType==2 and 'w' in locals() and np.sum(w)!=0):
     X_ = X[:, ~np.isnan(inhRois)];
     inhRois_ = inhRois[~np.isnan(inhRois)].astype('int32')
     ix_i = np.argwhere(inhRois_).squeeze()
@@ -1299,7 +1303,7 @@ if neuronType==2 and np.sum(w)!=0:
 
 # In[285]:
 
-if neuronType==2:# and np.sum(w)!=0:
+if (neuronType==2 and not 'w' in locals()) or (neuronType==2 and 'w' in locals() and np.sum(w)!=0):
     
     # p value of comparing exc and inh non-zero weights pooled across values of c :
     aa = np.array(perActive_exc).flatten()
@@ -1384,7 +1388,7 @@ if neuronType==2:# and np.sum(w)!=0:
 # Plot average of all weights, average of non-zero weights, and percentage of non-zero weights for each value of c
 # Training the classifier using all exc and inh neurons at different values of c.
 
-if doPlots and neuronType==2: # and np.sum(w)!=0:
+if doPlots and (neuronType==2 and not 'w' in locals()) or (neuronType==2 and 'w' in locals() and np.sum(w)!=0):
     
     xaxisErr = 0; # if 1 x axis will be training error, otherwise it will be c.
     
@@ -1519,9 +1523,9 @@ if doPlots and neuronType==2: # and np.sum(w)!=0:
 if trialHistAnalysis:
 #     ep_ms = np.round((ep-eventI)*frameLength)
     th_stim_dur = []
-    svmn = 'excInhC2_svmPrevChoice_%sN_%sITIs_ep%d-%dms_' %(ntName, itiName, ep_ms[0], ep_ms[-1])
+    svmn = 'excInh_svmPrevChoice_%sN_%sITIs_ep%d-%dms_%s_' %(ntName, itiName, ep_ms[0], ep_ms[-1], nowStr)
 else:
-    svmn = 'excInhC2_svmCurrChoice_%sN_ep%d-%dms_' %(ntName, ep_ms[0], ep_ms[-1])   
+    svmn = 'excInh_svmCurrChoice_%sN_ep%d-%dms_%s_' %(ntName, ep_ms[0], ep_ms[-1], nowStr)   
 print '\n', svmn[:-1]
 
 if saveResults:

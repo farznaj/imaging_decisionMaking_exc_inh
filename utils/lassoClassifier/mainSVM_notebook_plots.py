@@ -9,8 +9,8 @@ Created on Sun Oct 30 14:41:01 2016
 #%% 
 mousename = 'fni17'
 
-trialHistAnalysis = 0;
-iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
+trialHistAnalysis = 1;
+iTiFlg = 1; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
 ep_ms = [809, 1109] # only for trialHistAnalysis=0
         
 # Define days that you want to analyze
@@ -25,21 +25,22 @@ eps = 10**-10 # tiny number below which weight is considered 0
 palpha = .05 # p <= palpha is significant
 thR = 2 # Exclude days with only <=thR rounds with non-0 weights
 
-
 #%%
 import os
-import glob
+#import glob
 import numpy as np   
 import scipy as sci
 import scipy.io as scio
 import scipy.stats as stats
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
+import sys
+sys.path.append('/home/farznaj/Documents/trial_history/imaging/')  
 from setImagingAnalysisNamesP import *
 
-plt.rc('font', family='helvetica')        
+plt.rc('font', family='helvetica')    
 
-#%%
+
 frameLength = 1000/30.9; # sec.  # np.diff(time_aligned_stim)[0];
 
 if neuronType==0:
@@ -78,7 +79,7 @@ trs4project = 'trained' # 'trained', 'all', 'corr', 'incorr' # trials that will 
 if trialHistAnalysis:
 #     ep_ms = np.round((ep-eventI)*frameLength)
 #    th_stim_dur = []
-    suffn = 'prev_%sITIs_%sN_' %(ntName, itiName)
+    suffn = 'prev_%sITIs_%sN_' %(itiName, ntName)
     suffnei = 'prev_%sITIs_excInh_' %(itiName)
 else:
     suffn = 'curr_%sN_ep%d-%dms_' %(ntName, ep_ms[0], ep_ms[-1])   
@@ -96,7 +97,7 @@ if not os.path.exists(svmdir):
 daysOrig = days
 numDays = len(days);
 
-
+    
 
 
 #### Function definitions ####
@@ -127,20 +128,37 @@ def makeNicePlots(ax, rmv2ndXtickLabel=0, rmv2ndYtickLabel=0):
 #    ax.tick_params(axis='x', pad=30)
         
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
-def setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName='all'):
+# whichfile: index of svm file, after sorting by date (latest will be 0) in case there are several svm files.Set to [] if you want all svm files.       
+def setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName='all', whichfile=0):
     import glob
     
+    '''
     if trialHistAnalysis:
     #    ep_ms = np.round((ep-eventI)*frameLength)
     #    th_stim_dur = []
         svmn = 'svmPrevChoice_%sN_%sITIs_ep*ms_r%d_*' %(ntName, itiName, roundi)
     else:
         svmn = 'svmCurrChoice_%sN_ep*ms_r%d_*' %(ntName, roundi)   
+    '''    
+    if ~np.isnan(roundi): # mat file name includes the round number
+        rt = 'r%d_*' %(roundi)
+    else:
+        rt = '*-*_*_*' # the new names that include the date and time of analysis
     
+    if trialHistAnalysis:
+    #     ep_ms = np.round((ep-eventI)*frameLength)
+    #    th_stim_dur = []
+        svmn = 'svmPrevChoice_%sN_%sITIs_ep*ms_%s' %(ntName, itiName, rt)
+    else:
+        svmn = 'svmCurrChoice_%sN_ep*ms_%s' %(ntName, rt)   
+
+
     svmn = svmn + pnevFileName[-32:]    
     svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
     svmName = sorted(svmName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
-    svmName = svmName[0] # get the latest file
+    if isinstance(whichfile, int): # if an int only take a single svm file, otherwise output all svm files.
+        svmName = svmName[whichfile] # if 0, get the latest file
+    
     
     return svmName
     
@@ -221,20 +239,36 @@ for iday in range(len(days)):
     
     
     #%% loop over the 10 rounds of analysis for each day
+    if NsRandDone==1:
+        
+        for i in range(numRounds):
+            roundi = i+1        
+            svmName = setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName)
+    #        if roundi==1:
+            print '\t', os.path.basename(svmName)
+                
+            ##%% Load vars (w, etc)
+            Data = scio.loadmat(svmName, variable_names=['w'])
+            w = Data.pop('w')[0,:]    
+            w = w/sci.linalg.norm(w); # normalzied weights
+            w_alln.append(w)
+            
+    else:
+        svmName = setSVMname(pnevFileName, trialHistAnalysis, ntName, np.nan, itiName, 0) # latest is l1, then l2. we use [] to get both files.
 
-    for i in range(numRounds):
-        roundi = i+1        
-        svmName = setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName)
-#        if roundi==1:
         print '\t', os.path.basename(svmName)
             
         ##%% Load vars (w, etc)
-        Data = scio.loadmat(svmName, variable_names=['w'])
+        Data = scio.loadmat(svmName, variable_names=['w', 'regType'])
+        regType = Data.pop('regType').astype('str')
+        if regType!='l1':
+            print 'Error! Not L1 data'
         w = Data.pop('w')[0,:]    
         w = w/sci.linalg.norm(w); # normalzied weights
         w_alln.append(w)
 
 w_alln_all = np.concatenate(w_alln, axis=0)
+
 
 
 #%% Find days with all-0 weights (in all rounds)
@@ -292,10 +326,11 @@ if trialHistAnalysis:
 
 
 
+
 #%%
 '''
 #####################################################################################################################################################   
-############################ Classification accuracy (testing data) ###################################################################################################     
+############################ Classification accuracy ###################################################################################################     
 #####################################################################################################################################################
 '''
 
@@ -303,6 +338,8 @@ if trialHistAnalysis:
 
 err_test_data_ave_allDays = (np.ones((numRounds, numDays))+np.nan)
 err_test_shfl_ave_allDays = (np.ones((numRounds, numDays))+np.nan)
+err_train_data_ave_allDays = (np.ones((numRounds, numDays))+np.nan)
+err_train_shfl_ave_allDays = (np.ones((numRounds, numDays))+np.nan)
 
 for iday in range(len(days)):
     
@@ -327,6 +364,8 @@ for iday in range(len(days)):
     
     err_test_data_ave = (np.ones((1,numRounds))+np.nan)[0,:]
     err_test_shfl_ave = (np.ones((1,numRounds))+np.nan)[0,:]
+    err_train_data_ave = (np.ones((1,numRounds))+np.nan)[0,:]
+    err_train_shfl_ave = (np.ones((1,numRounds))+np.nan)[0,:]
     
     for i in range(numRounds):
         roundi = i+1
@@ -336,25 +375,31 @@ for iday in range(len(days)):
             print os.path.basename(svmName)
             
         Data = scio.loadmat(svmName, variable_names=['w'])
-        w = Data.pop('w')[0,:]
-        if abs(w.sum()) < eps:
-            print '\tIn round %d all weights are 0 ... not analyzing' %(roundi)
-            
-        else:
+#        w = Data.pop('w')[0,:]
+#        if abs(w.sum()) < eps: # I think it is wrong to do this. When ws are all 0, it means there was no decoder for that day, ie no info about the choice.
+#            print '\tIn round %d all weights are 0 ... not analyzing' %(roundi)
+#            
+#        else:
         
-            ##%% Load the class-loss array for the testing dataset (actual and shuffled) (length of array = number of samples, usually 100) 
-            Data = scio.loadmat(svmName, variable_names=['perClassErrorTest_data', 'perClassErrorTest_shfl'])
-            perClassErrorTest_data = Data.pop('perClassErrorTest_data')[0,:] # numSamples
-            perClassErrorTest_shfl = Data.pop('perClassErrorTest_shfl')[0,:]
-            perClassErrorTest_shfl.shape
+        ##%% Load the class-loss array for the testing dataset (actual and shuffled) (length of array = number of samples, usually 100) 
+        Data = scio.loadmat(svmName, variable_names=['perClassErrorTest_data', 'perClassErrorTest_shfl', 'perClassErrorTrain_data', 'perClassErrorTrain_shfl'])
+        perClassErrorTest_data = Data.pop('perClassErrorTest_data')[0,:] # numSamples
+        perClassErrorTest_shfl = Data.pop('perClassErrorTest_shfl')[0,:]
+#        perClassErrorTest_shfl.shape
+        perClassErrorTrain_data = Data.pop('perClassErrorTrain_data')[0,:] # numSamples
+        perClassErrorTrain_shfl = Data.pop('perClassErrorTrain_shfl')[0,:]
+        
+        # Average class error across samples for each round
+        err_test_data_ave[i] = perClassErrorTest_data.mean() # numRounds
+        err_test_shfl_ave[i] = perClassErrorTest_shfl.mean()   
+        err_train_data_ave[i] = perClassErrorTrain_data.mean() # numRounds
+        err_train_shfl_ave[i] = perClassErrorTrain_shfl.mean()   
             
-            # Average class error across samples for each round
-            err_test_data_ave[i] = perClassErrorTest_data.mean() # numRounds
-            err_test_shfl_ave[i] = perClassErrorTest_shfl.mean()   
-    
     # pool results of all rounds for days
     err_test_data_ave_allDays[:, iday] = err_test_data_ave # rounds x days. #it will be nan for rounds with all-0 weights
     err_test_shfl_ave_allDays[:, iday] = err_test_shfl_ave
+    err_train_data_ave_allDays[:, iday] = err_train_data_ave # rounds x days. #it will be nan for rounds with all-0 weights
+    err_train_shfl_ave_allDays[:, iday] = err_train_shfl_ave    
     
     
 #%% keep short and long ITI results to plot them against each other later.
@@ -362,20 +407,63 @@ if trialHistAnalysis:
     if iTiFlg==0:
         err_test_data_ave_allDays0 = err_test_data_ave_allDays
         err_test_shfl_ave_allDays0 = err_test_shfl_ave_allDays
-
+        err_train_data_ave_allDays0 = err_train_data_ave_allDays
+        err_train_shfl_ave_allDays0 = err_train_shfl_ave_allDays
+        
     elif iTiFlg==1:
         err_test_data_ave_allDays1 = err_test_data_ave_allDays
         err_test_shfl_ave_allDays1 = err_test_shfl_ave_allDays
-        
-    
+        err_train_data_ave_allDays1 = err_train_data_ave_allDays
+        err_train_shfl_ave_allDays1 = err_train_shfl_ave_allDays        
+
+
 #%% Average and std across rounds
 ave_test_d = 100-np.nanmean(err_test_data_ave_allDays, axis=0) # numDays
 ave_test_s = 100-np.nanmean(err_test_shfl_ave_allDays, axis=0) 
-sd_test_d = np.nanstd(err_test_data_ave_allDays, axis=0) 
-sd_test_s = np.nanstd(err_test_shfl_ave_allDays, axis=0) 
+sd_test_d = np.nanstd(err_test_data_ave_allDays, axis=0) / np.sqrt(np.shape(err_test_data_ave_allDays)[0])
+sd_test_s = np.nanstd(err_test_shfl_ave_allDays, axis=0) / np.sqrt(np.shape(err_test_data_ave_allDays)[0]) 
+ave_train_d = 100-np.nanmean(err_train_data_ave_allDays, axis=0) # numDays
+ave_train_s = 100-np.nanmean(err_train_shfl_ave_allDays, axis=0) 
+sd_train_d = np.nanstd(err_train_data_ave_allDays, axis=0) / np.sqrt(np.shape(err_train_data_ave_allDays)[0])
+sd_train_s = np.nanstd(err_train_shfl_ave_allDays, axis=0) / np.sqrt(np.shape(err_train_data_ave_allDays)[0]) 
 
 
-#%% Plot average across rounds for each day
+#%% Training data: Plot average across rounds for each day
+plt.figure(figsize=(6,2.5))
+gs = gridspec.GridSpec(1, 5)#, width_ratios=[2, 1]) 
+
+ax = plt.subplot(gs[0:-2])
+plt.errorbar(range(numDays), ave_train_d, yerr = sd_train_d, color='g', label='Data')
+plt.errorbar(range(numDays), ave_train_s, yerr = sd_train_s, color='k', label='Shuffled')
+plt.xlabel('Days', fontsize=13, labelpad=10)
+plt.ylabel('Classification accuracy (%)\n(Training data)', fontsize=13, labelpad=10)
+plt.xlim([-1, len(days)])
+lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.25), frameon=False)
+#leg.get_frame().set_linewidth(0.0)
+makeNicePlots(ax)
+ymin, ymax = ax.get_ylim()
+
+
+##%% Average across days
+x =[0,1]
+labels = ['Data', 'Shfl']
+ax = plt.subplot(gs[-2:-1])
+plt.errorbar(x, [np.mean(ave_train_d), np.mean(ave_train_s)], yerr = [np.std(ave_train_d), np.std(ave_train_s)], marker='o', fmt=' ', color='k')
+plt.xlim([x[0]-1, x[1]+1])
+plt.ylim([ymin, ymax])
+#plt.ylabel('Classification error (%) - testing data')
+plt.xticks(x, labels, rotation='vertical', fontsize=13)    
+#plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
+plt.subplots_adjust(wspace=1)
+makeNicePlots(ax)
+
+#dnow = '/l1_l2_subsel_comparison'
+dnow = '/shortLongITI_afterSFN'
+fign = os.path.join(svmdir+dnow, suffn+'train_subselL1'+'.'+fmt[0])
+plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')  
+
+
+#%% Testing data: Plot average across rounds for each day
 plt.figure(figsize=(6,2.5))
 gs = gridspec.GridSpec(1, 5)#, width_ratios=[2, 1]) 
 
@@ -404,7 +492,12 @@ plt.xticks(x, labels, rotation='vertical', fontsize=13)
 plt.subplots_adjust(wspace=1)
 makeNicePlots(ax)
 
-        
+#dnow = '/l1_l2_subsel_comparison'
+dnow = '/shortLongITI_afterSFN'
+fign = os.path.join(svmdir+dnow, suffn+'test_subselL1'+'.'+fmt[0])        
+plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')        
+
+
 #%% Save the figure
 if savefigs:
     for i in range(np.shape(fmt)[0]): # save in all format of fmt         

@@ -62,33 +62,78 @@ err_test_data_ave_allDays0 = shortLongITISameDays(daysOrig, fewRdays0, fewRdays1
 err_test_data_ave_allDays1 = shortLongITISameDays(daysOrig, fewRdays0, fewRdays1, err_test_data_ave_allDays1, 1)
 
 
+#%%
+pall = np.full((len(days),2), np.nan)
+for iday in range(len(days)):
+    _,p0 = stats.ttest_ind(err_test_data_ave_allDays0[:,iday], err_test_shfl_ave_allDays0[:,iday])
+    _,p1 = stats.ttest_ind(err_test_data_ave_allDays1[:,iday], err_test_shfl_ave_allDays1[:,iday])
+    pall[iday,:] = [p0,p1]
+
+pall
+
+
 #%% Average and std across rounds
-ave_test_d0 = np.nanmean(err_test_data_ave_allDays0, axis=0) # numDays
+ave_test_d0 = 100-np.nanmean(err_test_data_ave_allDays0, axis=0) # numDays
 sd_test_d0 = np.nanstd(err_test_data_ave_allDays0, axis=0) 
-ave_test_d1 = np.nanmean(err_test_data_ave_allDays1, axis=0) # numDays
+ave_test_d1 = 100-np.nanmean(err_test_data_ave_allDays1, axis=0) # numDays
 sd_test_d1 = np.nanstd(err_test_data_ave_allDays1, axis=0) 
 
-        
+ave_test_s0 = 100-np.nanmean(err_test_shfl_ave_allDays0, axis=0) # numDays
+sd_test_s0 = np.nanstd(err_test_shfl_ave_allDays0, axis=0) 
+ave_test_s1 = 100-np.nanmean(err_test_shfl_ave_allDays1, axis=0) # numDays
+sd_test_s1 = np.nanstd(err_test_shfl_ave_allDays1, axis=0) 
+
+ave_test_d0[pall[:,0]>.05] = np.nan
+ave_test_d1[pall[:,1]>.05] = np.nan
+ave_test_s0[pall[:,0]>.05] = np.nan
+ave_test_s1[pall[:,1]>.05] = np.nan
+
+a = np.sum(pall>.05,axis=1)!=0 
+ave_test_d0[a] = np.nan # either IIT is insig (when comparing its data w shuffle)
+ave_test_d1[a] = np.nan
+ave_test_s0[a] = np.nan
+ave_test_s1[a] = np.nan
+
+
 #%% Plot average across rounds for each day
 plt.figure(figsize=(6,2.5))
 gs = gridspec.GridSpec(1, 5)#, width_ratios=[2, 1]) 
 
-ax = plt.subplot(gs[0:-2])
+ax = plt.subplot(gs[0:3])
 plt.errorbar(range(numDays), ave_test_d0, yerr = sd_test_d0, color='g', label='Short ITI')
 plt.errorbar(range(numDays), ave_test_d1, yerr = sd_test_d1, color='k', label='Long ITI')
+
+plt.errorbar(range(numDays), ave_test_s0, yerr = sd_test_s0, color='g', alpha=.35)
+plt.errorbar(range(numDays), ave_test_s1, yerr = sd_test_s1, color='k', alpha=.35)
+
 plt.xlabel('Days')
-plt.ylabel('Classification error (%) - testing data')
+plt.ylabel('Classification accuracy (%) - testing data')
 plt.xlim([-1, len(days)])
 lgd = plt.legend(loc='upper center', bbox_to_anchor=(.8,1.3), frameon=False)
 #leg.get_frame().set_linewidth(0.0)
 makeNicePlots(ax)
 
+
 ##%% Average across days
 x =[0,1]
 labels = ['Short ITI', 'Long ITI']
-ax = plt.subplot(gs[-2:-1])
-plt.errorbar(x, [np.mean(ave_test_d0), np.mean(ave_test_d1)], yerr = [np.std(ave_test_d0), np.std(ave_test_d1)], marker='o', fmt=' ', color='k')
+ax = plt.subplot(gs[3:4])
+plt.errorbar(x, [np.nanmean(ave_test_d0), np.nanmean(ave_test_d1)], yerr = [np.nanstd(ave_test_d0), np.nanstd(ave_test_d1)], marker='o', fmt=' ', color='k')
 plt.xlim([x[0]-1, x[1]+1])
+plt.title('Data')
+#plt.ylabel('Classification error (%) - testing data')
+plt.xticks(x, labels, rotation='vertical')    
+#plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
+plt.subplots_adjust(wspace=1)
+makeNicePlots(ax)
+
+
+x =[0,1]
+labels = ['Short ITI', 'Long ITI']
+ax = plt.subplot(gs[4:5])
+plt.errorbar(x, [np.nanmean(ave_test_s0), np.nanmean(ave_test_s1)], yerr = [np.nanstd(ave_test_s0), np.nanstd(ave_test_s1)], marker='o', fmt=' ', color='k')
+plt.xlim([x[0]-1, x[1]+1])
+plt.title('Shuffle')
 #plt.ylabel('Classification error (%) - testing data')
 plt.xticks(x, labels, rotation='vertical')    
 #plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    

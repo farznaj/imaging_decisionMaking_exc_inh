@@ -24,8 +24,8 @@ def crossValidateModel(X, Y, modelFn, **options):
     Ys = Y[shfl];
     Xs = X[shfl, :]; 
     ## %%%%% divide data to training and testin sets
-    YTrain = Ys[np.arange(0, int((kfold-1.)/kfold*numObservations))];
-    YTest = Ys[np.arange(int((kfold-1.)/kfold*numObservations), numObservations)];
+    YTrain = Ys[np.arange(0, int((kfold-1.)/kfold*numObservations))]; # Take the first 90% of trials as training set
+    YTest = Ys[np.arange(int((kfold-1.)/kfold*numObservations), numObservations)]; # Take the last 10% of trials as testing set
 
     XTrain = Xs[np.arange(0, int((kfold-1.)/kfold*numObservations)), :];
     XTest = Xs[np.arange(int((kfold-1.)/kfold*numObservations), numObservations), :];

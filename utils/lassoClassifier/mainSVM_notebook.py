@@ -31,33 +31,38 @@ if 'ipykernel' in sys.modules:
     <form action="javascript:code_toggle()"><input type="submit" value="Click here to toggle on/off the raw code."></form>''')
 
 
-# In[2]:
+# In[3]:
 
-# import sys
+import sys
 import os
 import numpy as np
+from datetime import datetime
+nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 
-# Only run the following section if you are running the code in jupyter, not if on the cluster or in spyder!
-if ('ipykernel' in sys.modules and ~any('SPYDER' in name for name in os.environ))==-1:
+# Only run the following section if you are running the code in jupyter or in spyder, but not on the cluster!
+if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
     mousename = 'fni17'
-    imagingFolder = '151014'
-    mdfFileNumber = [1] 
+    imagingFolder = '151020'
+    mdfFileNumber = [1,2] 
 
-    roundi = 1; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
-    trialHistAnalysis = 1;    
+    trialHistAnalysis = 0;    
+    roundi = 2; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
 
-    iTiFlg = 0; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
-    numSamples = 5 #100; # number of iterations for finding the best c (inverse of regularization parameter)
-    neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
-    saveResults = 1; # save results in mat file.
-
-
-
-
-    # The following vars don't usually need to be changed
+    iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
     setNsExcluded = 0; # if 1, NsExcluded will be set even if it is already saved.
+    numSamples = 2 #100; # number of iterations for finding the best c (inverse of regularization parameter)
+    neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
+    saveResults = 0; # save results in mat file.
+
+    
+    doNsRand = 0; # if 1, a random set of neurons will be selected to make sure we have fewer neurons than trials. 
+    regType = 'l2' # 'l2' : regularization type
+    kfold = 10;
+    compExcInh = 0 # if 1, analyses will be run to compare exc inh neurons.
+    
+    # The following vars don't usually need to be changed    
     doPlots = 1; # Whether to make plots or not.
     saveHTML = 0; # whether to save the html file of notebook with all figures or not.
 
@@ -66,7 +71,7 @@ if ('ipykernel' in sys.modules and ~any('SPYDER' in name for name in os.environ)
         epEnd_rel2stimon_fr = 0 # 3; # -2 # epEnd = eventI + epEnd_rel2stimon_fr
     else:
         # not needed to set ep_ms here, later you define it as [choiceTime-300 choiceTime]ms # we also go 30ms back to make sure we are not right on the choice time!
-#         ep_ms = [425, 725] # optional, it will be set according to min choice time if not provided.# training epoch relative to stimOnset % we want to decode animal's upcoming choice by traninig SVM for neural average responses during ep ms after stimulus onset. [1000, 1300]; #[700, 900]; # [500, 700]; 
+        ep_ms = [809, 1109] #[425, 725] # optional, it will be set according to min choice time if not provided.# training epoch relative to stimOnset % we want to decode animal's upcoming choice by traninig SVM for neural average responses during ep ms after stimulus onset. [1000, 1300]; #[700, 900]; # [500, 700]; 
         # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.
         outcome2ana = 'corr' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials)
         strength2ana = 'all' # 'all', easy', 'medium', 'hard' % What stim strength to use for training?
@@ -82,7 +87,7 @@ if ('ipykernel' in sys.modules and ~any('SPYDER' in name for name in os.environ)
     pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
 
 
-# In[3]:
+# In[4]:
 
 if neuronType==0:
     ntName = 'excit'
@@ -114,24 +119,24 @@ print 'numSamples = %i' %(numSamples)
 
 # ## Import Libraries and Modules
 
-# In[4]:
+# In[5]:
 
 import scipy.io as scio
 import scipy as sci
 import scipy.stats as stats
-import numpy as np
+#import numpy as np
 import numpy.random as rng
 import sys
 from crossValidateModel import crossValidateModel
 from linearSVM import linearSVM
-from compiler.ast import flatten
+#from compiler.ast import flatten
 import matplotlib 
 from matplotlib import pyplot as plt
 if 'ipykernel' in sys.modules and doPlots:
     get_ipython().magic(u'matplotlib inline')
     get_ipython().magic(u"config InlineBackend.figure_format = 'svg'")
 matplotlib.rcParams['figure.figsize'] = (6,4) #(8,5)
-from IPython.display import display
+#from IPython.display import display
 import sklearn.svm as svm
 import os
 import glob
@@ -141,7 +146,7 @@ sys.path.append('/home/farznaj/Documents/trial_history/imaging') # Gamal's dir n
 # print sys.path
 
 
-# In[5]:
+# In[7]:
 
 # Extend the built in two tailed ttest function to one-tailed
 def ttest2(a, b, **tailOption):
@@ -160,7 +165,7 @@ def ttest2(a, b, **tailOption):
     return p
 
 
-# In[6]:
+# In[8]:
 
 
 """
@@ -207,8 +212,8 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     else:
         postNProvided = 0
         
-    #%%
-    import numpy as np
+    ##%%
+#    import numpy as np
     import platform
     import glob
     import os.path
@@ -216,7 +221,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     if len(pnev2load)==0:
         pnev2load = [0];
             
-    #%%
+    ##%%
     dataPath = []
     if platform.system()=='Linux':
         if os.getcwd().find('sonas')==1: # server
@@ -226,7 +231,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     else:
         dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data/'
         
-    #%%        
+    ##%%        
     tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
     r = '%03d-'*len(mdfFileNumber)
     r = r[:-1]
@@ -235,7 +240,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     date_major = imagingFolder+'_'+rr
     imfilename = os.path.join(tifFold,date_major+'.mat')
     
-    #%%
+    ##%%
     if len(signalCh)>0:
         if postNProvided:
             pnevFileName = 'post_'+date_major+'_ch'+str(signalCh)+'-Pnev*'
@@ -266,7 +271,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     else:
         pnevFileName = ''
     
-    #%%
+    ##%%
     return imfilename, pnevFileName
     
     
@@ -277,7 +282,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
 
 # ## Set mat-file names
 
-# In[7]:
+# In[9]:
 
 pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
 signalCh = [2] # since gcamp is channel 2, should be always 2.
@@ -296,10 +301,10 @@ print(postName)
 print(moreName)
 
 
-# ## Load matlab variables: event-aligned traces, inhibitRois, outcomes, and responses
+# ## Load matlab variables: event-aligned traces, inhibitRois, outcomes,  choice, etc
 #     - traces are set in set_aligned_traces.m matlab script.
 
-# In[8]:
+# In[10]:
 
 # Set traces_al_stim that is same as traces_al_stimAll except that in traces_al_stim some trials are set to nan, bc their stim duration is < 
 # th_stim_dur or bc their go tone happens before ep(end) or bc their choice happened before ep(end). 
@@ -310,33 +315,91 @@ print(moreName)
 
 frameLength = 1000/30.9; # sec.
     
+# Load time of some trial events    
 Data = scio.loadmat(postName, variable_names=['timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'time1stSideTry'])
 timeCommitCL_CR_Gotone = np.array(Data.pop('timeCommitCL_CR_Gotone')).flatten().astype('float')
 timeStimOnset = np.array(Data.pop('timeStimOnset')).flatten().astype('float')
 timeStimOffset = np.array(Data.pop('timeStimOffset')).flatten().astype('float')
 time1stSideTry = np.array(Data.pop('time1stSideTry')).flatten().astype('float')
 
-# Load stim-aligned_allTrials traces, frames, frame of event of interest
-Data = scio.loadmat(postName, variable_names=['stimAl_allTrs'],squeeze_me=True,struct_as_record=False)
-eventI = Data['stimAl_allTrs'].eventI - 1 # remember difference indexing in matlab and python!
-traces_al_stimAll = Data['stimAl_allTrs'].traces.astype('float')
-time_aligned_stim = Data['stimAl_allTrs'].time.astype('float')
-# time_aligned_stimAll = Data['stimAl_allTrs'].time.astype('float') # same as time_aligned_stim
 
-# print(np.shape(traces_al_stimAll))
+# Load stim-aligned_allTrials traces, frames, frame of event of interest
+if trialHistAnalysis==0:
+    Data = scio.loadmat(postName, variable_names=['stimAl_noEarlyDec'],squeeze_me=True,struct_as_record=False)
+    eventI = Data['stimAl_noEarlyDec'].eventI - 1 # remember difference indexing in matlab and python!
+    traces_al_stimAll = Data['stimAl_noEarlyDec'].traces.astype('float')
+    time_aligned_stim = Data['stimAl_noEarlyDec'].time.astype('float')
+
+else:
+    Data = scio.loadmat(postName, variable_names=['stimAl_allTrs'],squeeze_me=True,struct_as_record=False)
+    eventI = Data['stimAl_allTrs'].eventI - 1 # remember difference indexing in matlab and python!
+    traces_al_stimAll = Data['stimAl_allTrs'].traces.astype('float')
+    time_aligned_stim = Data['stimAl_allTrs'].time.astype('float')
+    # time_aligned_stimAll = Data['stimAl_allTrs'].time.astype('float') # same as time_aligned_stim
+
+print 'size of stimulus-aligned traces:', np.shape(traces_al_stimAll), '(frames x units x trials)'
 DataS = Data
 
 
-# ## Set the time window for training SVM (ep)
 
-# In[9]:
+# Load outcomes and choice (allResp_HR_LR) for the current trial
+# if trialHistAnalysis==0:
+Data = scio.loadmat(postName, variable_names=['outcomes', 'allResp_HR_LR'])
+outcomes = (Data.pop('outcomes').astype('float'))[0,:]
+# allResp_HR_LR = (Data.pop('allResp_HR_LR').astype('float'))[0,:]
+allResp_HR_LR = np.array(Data.pop('allResp_HR_LR')).flatten().astype('float')
+choiceVecAll = allResp_HR_LR+0;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
+# choiceVecAll = np.transpose(allResp_HR_LR);  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
+print 'Current outcome: %d correct choices; %d incorrect choices' %(sum(outcomes==1), sum(outcomes==0))
 
-if trialHistAnalysis==1:
-    traces_al_stim = traces_al_stimAll    
+
+if trialHistAnalysis:
+    # Load trialHistory structure to get choice vector of the previous trial
+    Data = scio.loadmat(postName, variable_names=['trialHistory'],squeeze_me=True,struct_as_record=False)
+    choiceVec0All = Data['trialHistory'].choiceVec0.astype('float')
+
+
     
+# Set trials strength and identify trials with stim strength of interest
+if trialHistAnalysis==0:
+    Data = scio.loadmat(postName, variable_names=['stimrate', 'cb'])
+    stimrate = np.array(Data.pop('stimrate')).flatten().astype('float')
+    cb = np.array(Data.pop('cb')).flatten().astype('float')
+
+    s = stimrate-cb; # how far is the stimulus rate from the category boundary?
+    if strength2ana == 'easy':
+        str2ana = (abs(s) >= (max(abs(s)) - thStimStrength));
+    elif strength2ana == 'hard':
+        str2ana = (abs(s) <= thStimStrength);
+    elif strength2ana == 'medium':
+        str2ana = ((abs(s) > thStimStrength) & (abs(s) < (max(abs(s)) - thStimStrength))); 
+    else:
+        str2ana = np.full((1, np.shape(outcomes)[0]), True, dtype=bool).flatten();
+
+    print 'Number of trials with stim strength of interest = %i' %(str2ana.sum())
+    print 'Stim rates for training = {}'.format(np.unique(stimrate[str2ana]))
+
+    '''
+    # Set to nan those trials in outcomes and allRes that are nan in traces_al_stim
+    I = (np.argwhere((~np.isnan(traces_al_stim).sum(axis=0)).sum(axis=1)))[0][0] # first non-nan neuron
+    allTrs2rmv = np.argwhere(sum(np.isnan(traces_al_stim[:,I,:])))
+    print(np.shape(allTrs2rmv))
+
+    outcomes[allTrs2rmv] = np.nan
+    allResp_HR_LR[allTrs2rmv] = np.nan
+    '''
+
+
+# ## Set the time window for training SVM (ep) and traces_al_stim
+
+# In[11]:
+
+traces_al_stim = traces_al_stimAll
+
+if trialHistAnalysis==1:    
     # either of the two below (stimulus-aligned and initTone-aligned) would be fine
-    # eventI = DataI['initToneAl'].eventI
-    eventI = DataS['stimAl_allTrs'].eventI    
+    # eventI = DataI['initToneAl'].eventI - 1
+    eventI = DataS['stimAl_allTrs'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
     epEnd = eventI + epEnd_rel2stimon_fr #- 2 # to be safe for decoder training for trial-history analysis we go upto the frame before the stim onset
     # epEnd = DataI['initToneAl'].eventI - 2 # to be safe for decoder training for trial-history analysis we go upto the frame before the initTone onset
     ep = np.arange(epEnd+1)
@@ -347,11 +410,24 @@ if trialHistAnalysis==1:
 else:
     # Set ep_ms if it is not provided: [choiceTime-300 choiceTime]ms # we also go 30ms back to make sure we are not right on the choice time!
     # by doing this you wont need to set ii below.
+    
+    # We first set to nan timeStimOnset of trials that anyway wont matter bc their outcome is  not of interest. we do this to make sure these trials dont affect our estimate of ep_ms
+    if outcome2ana == 'corr':
+        timeStimOnset[outcomes!=1] = np.nan; # analyze only correct trials.
+    elif outcome2ana == 'incorr':
+        timeStimOnset[outcomes!=0] = np.nan; # analyze only incorrect trials.   
+        
     if not 'ep_ms' in locals(): 
         ep_ms = [np.floor(np.nanmin(time1stSideTry-timeStimOnset))-30-300, np.floor(np.nanmin(time1stSideTry-timeStimOnset))-30]
         print 'Training window: [%d %d] ms' %(ep_ms[0], ep_ms[1])
     
-    
+    epStartRel2Event = np.ceil(ep_ms[0]/frameLength); # the start point of the epoch relative to alignedEvent for training SVM. (500ms)
+    epEndRel2Event = np.ceil(ep_ms[1]/frameLength); # the end point of the epoch relative to alignedEvent for training SVM. (700ms)
+    ep = np.arange(eventI+epStartRel2Event, eventI+epEndRel2Event+1).astype(int); # frames on stimAl.traces that will be used for trainning SVM.   
+    print 'Training epoch relative to stimOnset is {} ms'.format(np.round((ep-eventI)*frameLength - frameLength/2)) # print center of frames in ms
+            
+        
+    ########%% Exclude some trials from traces_al_stim
     # This criteria makes sense if you want to be conservative; otherwise if ep=[1000 1300]ms, go tone will definitely be before ep end, and you cannot have the following criteria.
     # Make sure in none of the trials Go-tone happened before the end of training window (ep)
     i = (timeCommitCL_CR_Gotone - timeStimOnset) <= ep_ms[-1];
@@ -396,7 +472,7 @@ else:
         # print 'minStimDurNoGoTone = %.2f ms' %minStimDurNoGoTone
 
 
-    # exclude trials whose stim duration was < th_stim_dur
+    # Exclude trials whose stim duration was < th_stim_dur
     j = (timeStimOffset - timeStimOnset) < th_stim_dur;
     if np.sum(j)>0:
         print 'Excluding %i trials from timeStimOnset bc their stimDur < %dms' %(np.sum(j), th_stim_dur)
@@ -411,14 +487,15 @@ else:
     toRmv = (j+ii)!=0; print 'Not excluding %i trials whose goTone is earlier than ep end' %sum(i)
     print 'Final: %i trials excluded in traces_al_stim' %np.sum(toRmv)
 
-    # Set traces_al_stim for SVM classification of current choice. 
-    traces_al_stim = traces_al_stimAll
+    
+    # Set traces_al_stim for SVM classification of current choice.     
     traces_al_stim[:,:,toRmv] = np.nan
+#     traces_al_stim[:,:,outcomes==-1] = np.nan
     # print(np.shape(traces_al_stim))
 
 
-    # Set ep
     '''
+    # Set ep
     if len(ep_ms)==0: # load ep from matlab
         # Load stimulus-aligned traces, frames, frame of event of interest, and epoch over which we will average the responses to do SVM analysis
         Data = scio.loadmat(postName, variable_names=['stimAl'],squeeze_me=True,struct_as_record=False)
@@ -430,16 +507,10 @@ else:
         ep_ms = np.round((ep-eventI)*frameLength).astype(int)
         
     else: # set ep here:
-    '''    
-    epStartRel2Event = np.ceil(ep_ms[0]/frameLength); # the start point of the epoch relative to alignedEvent for training SVM. (500ms)
-    epEndRel2Event = np.ceil(ep_ms[1]/frameLength); # the end point of the epoch relative to alignedEvent for training SVM. (700ms)
-    ep = np.arange(eventI+epStartRel2Event, eventI+epEndRel2Event+1).astype(int); # frames on stimAl.traces that will be used for trainning SVM.
-    
-    print 'Training epoch relative to stimOnset is {} ms'.format(np.round((ep-eventI)*frameLength - frameLength/2)) # print center of frames in ms
-    
+    '''        
 
 
-# In[10]:
+# In[12]:
 
 # Load 1stSideTry-aligned traces, frames, frame of event of interest
 # use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
@@ -510,64 +581,20 @@ if neuronType!=2:
     traces_al_stimAll = traces_al_stimAll[:, nt, :];
 else:
     nt = np.arange(np.shape(traces_al_1stSide)[1])    
-    
-    
-    
-# Load outcomes and allResp_HR_LR
-# if trialHistAnalysis==0:
-Data = scio.loadmat(postName, variable_names=['outcomes', 'allResp_HR_LR'])
-outcomes = (Data.pop('outcomes').astype('float'))[0,:]
-# allResp_HR_LR = (Data.pop('allResp_HR_LR').astype('float'))[0,:]
-allResp_HR_LR = np.array(Data.pop('allResp_HR_LR')).flatten().astype('float')
-choiceVecAll = allResp_HR_LR+0;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
-# choiceVecAll = np.transpose(allResp_HR_LR);  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
-print '%d correct choices; %d incorrect choices' %(sum(outcomes==1), sum(outcomes==0))
-
-
-
-# Set trials strength and identify trials with stim strength of interest
-if trialHistAnalysis==0:
-    Data = scio.loadmat(postName, variable_names=['stimrate', 'cb'])
-    stimrate = np.array(Data.pop('stimrate')).flatten().astype('float')
-    cb = np.array(Data.pop('cb')).flatten().astype('float')
-
-    s = stimrate-cb; # how far is the stimulus rate from the category boundary?
-    if strength2ana == 'easy':
-        str2ana = (abs(s) >= (max(abs(s)) - thStimStrength));
-    elif strength2ana == 'hard':
-        str2ana = (abs(s) <= thStimStrength);
-    elif strength2ana == 'medium':
-        str2ana = ((abs(s) > thStimStrength) & (abs(s) < (max(abs(s)) - thStimStrength))); 
-    else:
-        str2ana = np.full((1, np.shape(outcomes)[0]), True, dtype=bool).flatten();
-
-    print 'Number of trials with stim strength of interest = %i' %(str2ana.sum())
-    print 'Stim rates for training = {}'.format(np.unique(stimrate[str2ana]))
-
-    '''
-    # Set to nan those trials in outcomes and allRes that are nan in traces_al_stim
-    I = (np.argwhere((~np.isnan(traces_al_stim).sum(axis=0)).sum(axis=1)))[0][0] # first non-nan neuron
-    allTrs2rmv = np.argwhere(sum(np.isnan(traces_al_stim[:,I,:])))
-    print(np.shape(allTrs2rmv))
-
-    outcomes[allTrs2rmv] = np.nan
-    allResp_HR_LR[allTrs2rmv] = np.nan
-    '''
 
 
 # ## Set X (trials x neurons) and Y (trials x 1) for training the SVM classifier.
 #     X matrix (size trials x neurons) that contains neural responses at different trials.
 #     Y choice of high rate (modeled as 1) and low rate (modeled as 0)
 
-# In[11]:
+# In[13]:
 
 # Set choiceVec0  (Y: the response vector)
 
 if trialHistAnalysis:
-    # Load trialHistory structure
-    Data = scio.loadmat(postName, variable_names=['trialHistory'],squeeze_me=True,struct_as_record=False)
-    choiceVec0All = Data['trialHistory'].choiceVec0.astype('float')
     choiceVec0 = choiceVec0All[:,iTiFlg] # choice on the previous trial for short (or long or all) ITIs
+    choiceVec0S = choiceVec0All[:,0]
+    choiceVec0L = choiceVec0All[:,1]
 else: # set choice for the current trial
     choiceVec0 = allResp_HR_LR;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
     # choiceVec0 = np.transpose(allResp_HR_LR);  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
@@ -594,9 +621,10 @@ else:
 print 'Size of spikeAveEp0 (trs x neurons): ', spikeAveEp0.shape
 
 
-# In[12]:
+# In[14]:
 
-# Exclude nan trials to set X and Y
+# set trsExcluded and exclude them to set X and Y; trsExcluded are trials that are nan either in traces or in choice vector.
+
 '''
 #dirName = 'SVM_151102_001-002_ch2-PnevPanResults-160624-113108';
 dirName = 'SVM_151029_003_ch2-PnevPanResults-160426-191859';
@@ -617,13 +645,12 @@ trsExcluded = (np.sum(np.isnan(spikeAveEp0), axis = 1) + np.isnan(choiceVec0)) !
 # Exclude nan trials
 X = spikeAveEp0[~trsExcluded,:]; # trials x neurons
 Y = choiceVec0[~trsExcluded];
-print '%d high-rate trials, and %d low-rate trials\n' %(np.sum(Y==1), np.sum(Y==0))
+print '%d high-rate choices, and %d low-rate choices\n' %(np.sum(Y==1), np.sum(Y==0))
 
 
-# In[13]:
+# In[15]:
 
-# Set NsExcluded
-# Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
+# Set NsExcluded : Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
 # thAct and thTrsWithSpike are parameters that you can play with.
 
 # If it is already saved, load it (the idea is to use the same NsExcluded for all the analyses of a session). Otherwise set it.
@@ -631,40 +658,63 @@ if trialHistAnalysis==0:
     svmnowname = 'svmCurrChoice_allN' + '_*-' + pnevFileName[-32:]
 else:
     svmnowname = 'svmPrevChoice_allN_allITIs' + '_*-' + pnevFileName[-32:]
-svmNowName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmnowname))
+svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmnowname))
+svmName = sorted(svmName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
+    
 
-if setNsExcluded==0 and np.shape(svmNowName)[0]!=0: # NsExcluded is already set and saved # 0: #
-    print 'loading NsExcluded'    
-    svmNowName = svmNowName[0]
-    Data = scio.loadmat(svmNowName, variable_names=['NsExcluded'])
+if setNsExcluded==0 and np.shape(svmName)[0]!=0: # NsExcluded is already set and saved # 0: #    
+    svmName = svmName[0]  # get the latest file
+    print 'loading NsExcluded from file', svmName    
+    Data = scio.loadmat(svmName, variable_names=['NsExcluded'])
     NsExcluded = Data.pop('NsExcluded')[0,:].astype('bool')
-    NsExcluded = NsExcluded[nt]    
+    NsExcluded = NsExcluded[nt]      
+
+    stdX = np.std(X, axis = 0); # define stdX for all neurons; later we reset it only including active neurons
+    if min(stdX[~NsExcluded]) < thAct: # make sure the loaded NsExcluded makes sense; ie stdX of ~NsExcluded is above thAct
+        sys.exit(('min of stdX= %.8f; not supposed to be <%d (thAct)!'  %(min(stdX), thAct)))
 else:
+    
     print 'NsExcluded not saved, so setting it here'
     
-    # Define NsExcluded as neurons with low stdX
-    stdX = np.std(X, axis = 0);
-    NsExcluded = stdX < thAct
-    # np.sum(stdX < thAct)
+    if trialHistAnalysis and iTiFlg!=2:
+        # set X for short-ITI and long-ITI cases (XS,XL).
+        trsExcludedS = (np.sum(np.isnan(spikeAveEp0), axis = 1) + np.isnan(choiceVec0S)) != 0 
+        XS = spikeAveEp0[~trsExcludedS,:]; # trials x neurons
+        trsExcludedL = (np.sum(np.isnan(spikeAveEp0), axis = 1) + np.isnan(choiceVec0L)) != 0 
+        XL = spikeAveEp0[~trsExcludedL,:]; # trials x neurons
 
-    '''
-    # Set nonActiveNs, ie neurons whose average activity during ep is less than thAct.
-#     spikeAveEpAveTrs = np.nanmean(spikeAveEp0, axis=0); # 1 x units % response of each neuron averaged across epoch ep and trials.
-    spikeAveEpAveTrs = np.nanmean(X, axis=0); # 1 x units % response of each neuron averaged across epoch ep and trials.
-    # thAct = 5e-4; # 1e-5 #quantile(spikeAveEpAveTrs, .1);
-    nonActiveNs = spikeAveEpAveTrs < thAct;
-    print '\t%d neurons with ave activity in ep < %.5f' %(np.sum(nonActiveNs), thAct)
-    np.sum(nonActiveNs)
+        # Define NsExcluded as neurons with low stdX for either short ITI or long ITI trials. 
+        # This is to make sure short and long ITI cases will include the same set of neurons.
+        stdXS = np.std(XS, axis = 0);
+        stdXL = np.std(XL, axis = 0);
 
-    # Set NsFewTrActiv, ie neurons that are active in very few trials (by active I mean average activity during epoch ep)
-    # thTrsWithSpike = 1; # 3; # ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
-    nTrsWithSpike = np.sum(X > thAct, axis=0) # 0 # shows for each neuron, in how many trials the activity was above 0.
-    NsFewTrActiv = (nTrsWithSpike < thTrsWithSpike) # identify neurons that were active fewer than thTrsWithSpike.
-    print '\t%d neurons are active in < %i trials' %(np.sum(NsFewTrActiv), thTrsWithSpike)
+        NsExcluded = np.sum([stdXS < thAct, stdXL < thAct], axis=0)!=0 # if a neurons is non active for either short ITI or long ITI trials, exclude it.
+    
+    else:
+    
+        # Define NsExcluded as neurons with low stdX
+        stdX = np.std(X, axis = 0);
+        NsExcluded = stdX < thAct
+        # np.sum(stdX < thAct)
 
-    # Now set the final NxExcluded: (neurons to exclude)
-    NsExcluded = (NsFewTrActiv + nonActiveNs)!=0
-    '''
+        '''
+        # Set nonActiveNs, ie neurons whose average activity during ep is less than thAct.
+    #     spikeAveEpAveTrs = np.nanmean(spikeAveEp0, axis=0); # 1 x units % response of each neuron averaged across epoch ep and trials.
+        spikeAveEpAveTrs = np.nanmean(X, axis=0); # 1 x units % response of each neuron averaged across epoch ep and trials.
+        # thAct = 5e-4; # 1e-5 #quantile(spikeAveEpAveTrs, .1);
+        nonActiveNs = spikeAveEpAveTrs < thAct;
+        print '\t%d neurons with ave activity in ep < %.5f' %(np.sum(nonActiveNs), thAct)
+        np.sum(nonActiveNs)
+
+        # Set NsFewTrActiv, ie neurons that are active in very few trials (by active I mean average activity during epoch ep)
+        # thTrsWithSpike = 1; # 3; # ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
+        nTrsWithSpike = np.sum(X > thAct, axis=0) # 0 # shows for each neuron, in how many trials the activity was above 0.
+        NsFewTrActiv = (nTrsWithSpike < thTrsWithSpike) # identify neurons that were active fewer than thTrsWithSpike.
+        print '\t%d neurons are active in < %i trials' %(np.sum(NsFewTrActiv), thTrsWithSpike)
+
+        # Now set the final NxExcluded: (neurons to exclude)
+        NsExcluded = (NsFewTrActiv + nonActiveNs)!=0
+        '''
 
 print '%d = Final # non-active neurons' %(sum(NsExcluded))
 # a = size(spikeAveEp0,2) - sum(NsExcluded);
@@ -679,7 +729,7 @@ if neuronType==2:
 
 
 
-# In[14]:
+# In[16]:
 
 # Exclude non-active neurons from X and set inhRois (ie neurons that don't fire in any of the trials during ep)
 
@@ -694,7 +744,7 @@ if neuronType==2:
     
 
 
-# In[15]:
+# In[499]:
 
 ##  If number of neurons is more than 95% of trial numbers, identify n random neurons, where n= 0.95 * number of trials. This is to make sure we have more observations (trials) than features (neurons)
 
@@ -702,7 +752,11 @@ nTrs = np.shape(X)[0]
 nNeuronsOrig = np.shape(X)[1]
 nNeuronsNow = np.int(np.floor(nTrs * .95))
 
-if nNeuronsNow < nNeuronsOrig:
+if doNsRand==0:
+    print 'Chose not to do random selection of neurons' 
+    NsRand = np.ones(np.shape(X)[1]).astype('bool')
+
+elif nNeuronsNow < nNeuronsOrig:
     if neuronType==2:
         fractInh = np.sum(inhRois==1) / float(nNeuronsOrig)
         fractExc = np.sum(inhRois==0) / float(nNeuronsOrig)
@@ -749,13 +803,13 @@ if nNeuronsNow < nNeuronsOrig:
     NsRand = np.in1d(NsRand, neuronsNow)
     # np.shape(NsRand)
     # NsRand    
-else: # if number of neurons is already <= .95*numTrials, include all neurons.
+elif nNeuronsNow >= nNeuronsOrig: # if number of neurons is already <= .95*numTrials, include all neurons.
     print 'Not doing random selection of neurons (nNeurons=%d already fewer than .95*nTrials=%d)' %(np.shape(X)[1], nTrs)
-    NsRand = np.ones(np.shape(X)[1])
+    NsRand = np.ones(np.shape(X)[1]).astype('bool')
     
 
 
-# In[16]:
+# In[21]:
 
 # Set X and inhRois only for the randomly selected set of neurons
 
@@ -785,7 +839,7 @@ print '%d trials; %d neurons' %(numTrials, numNeurons)
 # print ' The data has %d frames recorded from %d neurons at %d trials' %Xt.shape    
 
 
-# In[17]:
+# In[22]:
 
 # Center and normalize X: feature normalization and scaling: to remove effects related to scaling and bias of each neuron, we need to zscore data (i.e., make data mean 0 and variance 1 for each neuron) 
 
@@ -795,7 +849,7 @@ stdX = np.std(X, axis = 0);
 X = (X-meanX)/stdX;
 
 
-# In[18]:
+# In[23]:
 
 if doPlots:
     plt.figure
@@ -820,7 +874,7 @@ if doPlots:
 #     Remove non-active neurons
 #     Do feature normalization and scaling for the traces (using mean and sd of X)
 
-# In[19]:
+# In[24]:
 
 # trs4project = 'incorr' # 'trained', 'all', 'corr', 'incorr'
 
@@ -892,11 +946,43 @@ Xt_stimAl_all = Xt_stimAl_all[:,NsRand,:]
 
 
 
-
 # Divide data into high-rate (modeled as 1) and low-rate (modeled as 0) trials
 hr_trs = (choiceVecNow==1)
 lr_trs = (choiceVecNow==0)
 # print 'Projection traces have %d high-rate trials, and %d low-rate trials' %(np.sum(hr_trs), np.sum(lr_trs))
+    
+    
+
+# window of training (ep)
+win = (ep-eventI)*frameLength
+
+# Plot stim-aligned averages after centering and normalization
+if doPlots:
+    plt.figure()
+    plt.subplot(1,2,1)
+    a1 = np.nanmean(Xt[:, :, hr_trs],  axis=1) # frames x trials (average across neurons)
+    tr1 = np.nanmean(a1,  axis = 1)
+    tr1_se = np.nanstd(a1,  axis = 1) / np.sqrt(numTrials);
+    a0 = np.nanmean(Xt[:, :, lr_trs],  axis=1) # frames x trials (average across neurons)
+    tr0 = np.nanmean(a0,  axis = 1)
+    tr0_se = np.nanstd(a0,  axis = 1) / np.sqrt(numTrials);
+    mn = np.concatenate([tr1,tr0]).min()
+    mx = np.concatenate([tr1,tr0]).max()
+    plt.plot([win[0], win[0]], [mn, mx], 'g-.') # mark the begining and end of training window
+    plt.plot([win[-1], win[-1]], [mn, mx], 'g-.')
+    plt.fill_between(time_aligned_stim, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
+    plt.fill_between(time_aligned_stim, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
+    plt.plot(time_aligned_stim, tr1, 'b', label = 'high rate')
+    plt.plot(time_aligned_stim, tr0, 'r', label = 'low rate')
+    # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, lr_trs],  axis = (1, 2)), 'r', label = 'high rate')
+    # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, hr_trs],  axis = (1, 2)), 'b', label = 'low rate')
+    plt.xlabel('time aligned to stimulus onset (ms)')
+    plt.title('Population average - raw')
+    plt.legend()
+    
+    
+    
+    
     
     
 ## Feature normalization and scaling
@@ -947,11 +1033,11 @@ np.shape(Xt)
 
 
 # window of training (ep)
-win = (ep-eventI)*frameLength
+# win = (ep-eventI)*frameLength
 
-# Plot stim-aligned raw averages
+# Plot stim-aligned averages after centering and normalization
 if doPlots:
-    plt.figure()
+#     plt.figure()
     plt.subplot(1,2,2)
     a1 = np.nanmean(Xt[:, :, hr_trs],  axis=1) # frames x trials (average across neurons)
     tr1 = np.nanmean(a1,  axis = 1)
@@ -970,7 +1056,7 @@ if doPlots:
     # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, lr_trs],  axis = (1, 2)), 'r', label = 'high rate')
     # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, hr_trs],  axis = (1, 2)), 'b', label = 'low rate')
     plt.xlabel('time aligned to stimulus onset (ms)')
-    plt.title('Population average')
+    plt.title('Population average - normalized')
     plt.legend()
 
 
@@ -981,12 +1067,14 @@ if doPlots:
 #     An average across all 100 samples is computed to find the minimum test class loss.
 #     Best regularization parameter is defined as the smallest regularization parameter whose test-dataset class loss is within mean+sem of minimum test class loss.
 
-# In[20]:
+# In[25]:
 
 # numSamples = 10; # number of iterations for finding the best c (inverse of regularization parameter)
+# if you don't want to regularize, go with a very high cbest and don't run the section below.
+# cbest = 10**6
 
-regType = 'l1'
-kfold = 10;
+# regType = 'l1'
+# kfold = 10;
 if regType == 'l1':
     print '\nRunning l1 svm classification\r' 
     # cvect = 10**(np.arange(-4, 6,0.2))/numTrials;
@@ -1021,7 +1109,7 @@ cbest = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErr
 cbest = cbest[0]; # best regularization term based on minError+SE criteria
 
 
-# In[21]:
+# In[37]:
 
 ##%%%%%% plot coss-validation results
 if doPlots:
@@ -1045,7 +1133,7 @@ if doPlots:
 #     All data in X are used for training.
 #     linear_svm is the trained SVM model that includes weights (w) and intercept (b).
 
-# In[22]:
+# In[38]:
 
 if regType == 'l1':
     linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
@@ -1064,7 +1152,7 @@ import copy
 linear_svm_0 = copy.deepcopy(linear_svm) 
 
 
-# In[23]:
+# In[39]:
 
 # Plot weights
 if doPlots:
@@ -1087,12 +1175,12 @@ if doPlots:
     print 'Training error = %.2f%%' %trainE
 
 
-# ## Null distribution using shuffles
+# ## Do cross-validation and set null distributions for classification error by shuffling trial labels
 #     Compute distritbutions of class loss for train and test datasets by fitting SVM for 100 times.
 #     Do this for both actual data and shuffled data (ie data in which Y is shuffled but X is not to serve as null distribution.)
 # 
 
-# In[24]:
+# In[40]:
 
 numShuffles = 100
 summary_data = [];
@@ -1128,7 +1216,7 @@ for i in range(numShuffles):
     b_shfl.append(summary_shfl[i].model.intercept_);
 
 
-# In[25]:
+# In[41]:
 
 pvalueTrain = ttest2(perClassErrorTrain_data, perClassErrorTrain_shfl, tail = 'left');
 pvalueTest = ttest2(perClassErrorTest_data, perClassErrorTest_shfl, tail = 'left');
@@ -1158,6 +1246,102 @@ if doPlots:
     plt.title('Mean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(perClassErrorTest_data), np.mean(perClassErrorTest_shfl), pvalueTest), fontsize = 10)
     plt.ylabel('count')
     plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
+
+
+# In[ ]:
+
+# Train SVM using different number of neurons, and compute training/testing error
+"""
+# if you don't want to regularize, go with a very high cbest and don't run the section below.
+cbest = 10**6
+
+if regType == 'l1':
+    linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
+elif regType == 'l2':
+    linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
+    
+
+numShuffles = 100 # for cross validation and null distributions    
+perClassErrorTrain_data_nN_all = []  # includes all shuffle values of all subselects of nN neurons for each value of nN
+perClassErrorTest_data_nN_all = []
+perClassErrorTrain_shfl_nN_all = [];
+perClassErrorTest_shfl_nN_all = [];
+# numShufflesN = 100 # for selecting nN neurons
+# Train using different number of neurons
+for nN in [x+1 for x in range(np.shape(X)[1])]: # nN = 1:totalNumNeurons 
+
+    # select nN random neurons from X, do this numShufflesN times
+    numShufflesN = 2*np.ceil(np.shape(X)[1]/float(nN)).astype(int) # if you are selecting only 1 neuron out of 500 neurons, you will do this 500 times to get a selection of all neurons. On the other hand if you are selecting 400 neurons out of 500 neurons, you will do this only once.
+    perClassErrorTrain_data_nN = [];
+    perClassErrorTest_data_nN = []
+    perClassErrorTrain_shfl_nN = [];
+    perClassErrorTest_shfl_nN = [];
+    
+    for ii in range(numShufflesN):
+        inds = rng.permutation(np.shape(X)[1])
+        inds = inds[range(nN)]
+        Xnow = X[:,inds]
+
+        '''
+        linear_svm.fit(Xnow, Y)    
+
+        w = np.squeeze(linear_svm.coef_);
+        b = linear_svm.intercept_;
+
+        trainE = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100;
+
+        # keep a copy of linear_svm
+        import copy
+        linear_svm_0 = copy.deepcopy(linear_svm) 
+        '''
+
+        # Null distributions
+#         numShuffles = 100 # for cross validation
+        summary_data = [];
+        summary_shfl = [];
+        perClassErrorTrain_data = [];
+        perClassErrorTest_data = []
+        perClassErrorTrain_shfl = [];
+        perClassErrorTest_shfl = [];
+        w_data = []
+        b_data = []
+        w_shfl = []
+        b_shfl = []
+        permIxsList = [];
+        for i in range(numShuffles):
+            # permIxs = rng.permutation(numTrials);
+            permIxs = rng.permutation(numDataPoints);
+            permIxsList.append(permIxs);
+            if regType == 'l1':
+                summary_data.append(crossValidateModel(Xnow, Y, linearSVM, kfold = kfold, l1 = cbest))
+                summary_shfl.append(crossValidateModel(Xnow, Y[permIxs], linearSVM, kfold = kfold, l1 = cbest))
+            elif regType == 'l2':
+                summary_data.append(crossValidateModel(Xnow, Y, linearSVM, kfold = kfold, l2 = cbest))
+                summary_shfl.append(crossValidateModel(Xnow, Y[permIxs], linearSVM, kfold = kfold, l2 = cbest))
+
+            perClassErrorTrain_data.append(summary_data[i].perClassErrorTrain);
+            perClassErrorTest_data.append(summary_data[i].perClassErrorTest);
+            w_data.append(np.squeeze(summary_data[i].model.coef_));
+            b_data.append(summary_data[i].model.intercept_);
+
+            perClassErrorTrain_shfl.append(summary_shfl[i].perClassErrorTrain);
+            perClassErrorTest_shfl.append(summary_shfl[i].perClassErrorTest);
+            w_shfl.append(np.squeeze(summary_shfl[i].model.coef_));
+            b_shfl.append(summary_shfl[i].model.intercept_);
+
+        # concatenate the 100 shuffles for all random sets of nN neurons
+        perClassErrorTrain_data_nN.append(perClassErrorTrain_data) 
+        perClassErrorTest_data_nN.append(perClassErrorTest_data)
+        perClassErrorTrain_shfl_nN.append(perClassErrorTrain_shfl)
+        perClassErrorTest_shfl_nN.append(perClassErrorTest_shfl)
+    
+    
+    # keep values for each nN     
+    perClassErrorTrain_data_nN_all.append(perClassErrorTrain_data_nN)
+    perClassErrorTest_data_nN_all.append(perClassErrorTest_data_nN)
+    perClassErrorTrain_shfl_nN_all.append(perClassErrorTrain_shfl_nN)
+    perClassErrorTest_shfl_nN_all.append(perClassErrorTest_shfl_nN)
+"""
 
 
 # ## Project traces onto SVM weights
@@ -1420,6 +1604,7 @@ if doPlots:
 
 
 # ## Classification accuracy at each time point
+#     Use the same SVM model trained during ep to predict animal's choice from the population responses at all time points.
 #     Same trials that went into projection traces will be used here.
 
 # In[28]:
@@ -1431,7 +1616,7 @@ if doPlots:
 temp = Xt # stimulus-aligned traces (I think you should use Xtsa for consistency... u get projections from Xtsa)
 nnf, nnu, nnt = temp.shape
 corrClass = np.ones((T, nnt)) + np.nan # frames x trials
-
+corrClassShfl = np.ones((T, nnt, numSamples)) + np.nan # frames x trials x numSamples
 # if trs4project!='trained':  # onlyTrainedTrs==0: 
 #     temp = temp[:,:,~trsExcluded] # make sure it has same size as Y, you need this for svm.predict below. 
 for t in range(T):
@@ -1440,6 +1625,15 @@ for t in range(T):
     # corrFract = 1 - abs(linear_svm.predict(trac)-Y); # trials x 1 # fraction of correct choice classification using stimulus-aligned neural responses at time t and the trained SVM model linear_svm.
     corrClass[t,:] = corrFract # frames x trials % fraction correct classification for all trials
     # perClassCorr_t.append(corrFract.mean()*100) # average correct classification across trials for time point t. Same as np.mean(corrClass, axis=1)    
+    
+    # shuffled data
+    for i in range(numSamples):
+        permIxs = rng.permutation(numDataPoints);
+        corrFractSh = 1 - abs(linear_svm.predict(trac)-choiceVecNow[permIxs]);
+        corrClassShfl[t,:,i] = corrFractSh # frames x trials
+#    corrFractShfl = np.mean(corrFractSh,axis=None) # average of trials across shuffles    
+#    corrClassShfl[numSamples,t,:] = corrFractShfl # frames x trials
+    
 
 
 # In[29]:
@@ -1449,10 +1643,23 @@ if doPlots:
     a = np.mean(corrClass, axis=1)*100 
     s = np.std(corrClass, axis=1)*100 /np.sqrt(numTrials);
 
+    a2 = np.mean(corrClassShfl, axis=(1,2))*100 # average across all shuffles and trials
+    s2 = np.std(corrClassShfl, axis=(1,2))*100 /np.sqrt(numTrials*numSamples);
+    '''
+    # first average across shuffles, then across shuffle-averaged trials ... the std of this will be like the average std of s2 above across all times.
+    a0 = np.mean(corrClassShfl, axis=2) # average across all shuffles
+    a2 = np.mean(a0, axis=1)*100 # average across shuffle-averaged trials
+    s2 = np.std(a0, axis=1)*100 /np.sqrt(numTrials);
+    '''
+    
     plt.figure()
     plt.subplot(1,2,1)
     plt.fill_between(time_aligned_stim, a-s, a+s, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_stim, a, 'r')
+
+    plt.fill_between(time_aligned_stim, a2-s2, a2+s2, alpha=0.5, edgecolor='k', facecolor='k')
+    plt.plot(time_aligned_stim, a2, 'k')
+    
     plt.xlabel('time since stimulus onset (ms)')
     plt.ylabel('classification accuracy (%)')
     plt.xlim([time_aligned_stim[0], time_aligned_stim[-1]])
@@ -1464,7 +1671,7 @@ if doPlots:
 
 # In[30]:
 
-if doPlots and neuronType==2:
+if compExcInh and doPlots and neuronType==2:
     w_inh = w[inhRois==1]
     w_exc = w[inhRois==0]
     
@@ -1491,7 +1698,7 @@ if doPlots and neuronType==2:
 
 # In[31]:
 
-if doPlots and neuronType==2:
+if compExcInh and doPlots and neuronType==2:
 
     # Set weights of excit neurons to 0 and project the traces onto this new decoder that cares only about inhibitory neurons.
 
@@ -1566,10 +1773,10 @@ if doPlots and neuronType==2:
     Xti_w_e = np.reshape(XtiN_w, (Ti,Ci), order='F');
 
 
-# In[32]:
+# In[501]:
 
 # Plot the excitatory vs inhibitory projections
-if doPlots and neuronType==2:
+if compExcInh and doPlots and neuronType==2:
 
     # window of training (ep)
     # win = (ep-eventI)*frameLength
@@ -1785,14 +1992,15 @@ if doPlots and neuronType==2:
 
 
 # ## Compute classification error of training and testing dataset for the following cases:
+#     Here we train the classifier using the best c found above (when including all neurons in the decoder) but using different sets of neurons and 90% training, 10% testing trials.
+#     
 #     1) All inhibitory neurons contribute to the decoder
 #     2) N excitatory neurons contribute, where n = number of inhibitory neurons. 
 #     3) All excitatory neurons contribute
-#     
 
 # In[33]:
 
-if neuronType==2:
+if compExcInh and neuronType==2:
     
     Xinh = X[:, inhRois==1]
     XallExc = X[:, inhRois==0]
@@ -1800,7 +2008,7 @@ if neuronType==2:
     excI = np.argwhere(inhRois==0)  
     
     numShuffles = 100 
-    numShufflesExc = 10 # we choose n random excitator neurons, how many times to do this?
+    numShufflesExc = 10 # we choose n random excitatory neurons, how many times to do this?
 
     summary_data_inh = [];
     summary_shfl_inh = [];
@@ -1946,7 +2154,7 @@ if neuronType==2:
 
 # Plot histograms of class error for training and testing datasets
 
-if neuronType==2:
+if compExcInh and neuronType==2:
     
     # inh
     print 'All inhibitory neurons'
@@ -2063,13 +2271,16 @@ if neuronType==2:
 
 
 # ## Set correct classification traces for the following cases:
+#     
 #     1) All inhibitory neurons contribute to the decoder
 #     2) N excitatory neurons contribute, where n = number of inhibitory neurons. 
 #     3) All excitatory neurons contribute
+#     
+#     Using best c we fit the classifier to Xinh, Xexc, XallExc using all trials.
 
 # In[35]:
 
-if neuronType==2:
+if compExcInh and neuronType==2:
     
     Xinh = X[:, inhRois==1]
     XallExc = X[:, inhRois==0]
@@ -2176,7 +2387,7 @@ if neuronType==2:
 #     2) N excitatory neurons contribute, where n = number of inhibitory neurons. 
 #     3) All excitatory neurons contribute
     
-if doPlots and neuronType==2:
+if compExcInh and doPlots and neuronType==2:
     
     plt.figure()   
 #     plt.subplot(1,2,1)
@@ -2227,11 +2438,11 @@ if doPlots and neuronType==2:
 
 # In[37]:
 
-if neuronType==2:
+if compExcInh and neuronType==2:
     
     # compute prediction error when all neurons are included.
     linear_svm = copy.deepcopy(linear_svm_0)
-    trainE = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100;
+#     trainE = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100; # redundant; already computed above
     
     
     # compute prediction error when setting weights of n excitatory neurons to 0, where n = number of inhibitory neurons
@@ -2412,11 +2623,11 @@ if neuronType==2:
     
 
 
-# In[59]:
+# In[502]:
 
 # Plot changes in class accuracy after setting exc w or inh w to 0 (relative to the original class accuracy).
 
-if doPlots and neuronType==2:
+if compExcInh and doPlots and neuronType==2:
     plt.figure(figsize=(7,3))
     
     # Compare correct classification traces for when inhibitory weights are set to 0 to when excitatory weights are set to 0.
@@ -2529,11 +2740,12 @@ if doPlots and neuronType==2:
     
 
 
-# ## Excitatory and Inhibitory Neurons Relative Contribution to the decoder
+# ## Excitatory and Inhibitory Neurons Relative Contribution to the Decoder
 # 
 # We quantify the contribution of excitatory and inhibitory neurons to the encoding of the choice by measuring participation percentage, defined as the percentatge of a given population of neurons that has non-zero weights. We produce paraticipation curves, participation ratio at different values of svm regularizer (c), for each data
 
-# In[60]:
+# In[467]:
+
 
 # This function finds the SVM decoder that predicts choices given responses in X by 
 # using different values for c. At each value of c, it computes fraction of non-zero weights
@@ -2560,6 +2772,7 @@ def inh_exc_classContribution(X, Y, isinh):
     perClassEr = [];
     perActive_inh = [];
     perActive_exc = [];
+    w_allc = []
     for i in range(len(cvect_)): # At each value of cvect we compute the fraction of non-zero weights for excit and inhibit neurons.
         linear_svm = [];
         linear_svm = svm.LinearSVC(C = cvect_[i], loss='squared_hinge', penalty='l1', dual=False);
@@ -2568,39 +2781,154 @@ def inh_exc_classContribution(X, Y, isinh):
         
         perActive_inh.append(sum(abs(w[isinh])>eps)/ (n_inh + 0.) * 100.)
         perActive_exc.append(sum(abs(w[~isinh])>eps)/ (n_exc + 0.) * 100.)
-        
+        w_allc.append(w) # includes weights of all neurons for each value of c
         perClassEr.append(perClassError(Y, linear_svm.predict(X)));
     
-    return perActive_inh, perActive_exc, perClassEr, cvect_
+    return perActive_inh, perActive_exc, perClassEr, cvect_, w_allc
+
+'''
+#%%
+# This function finds the SVM decoder that predicts choices given responses in X by 
+# using different values for c. At each value of c, it computes fraction of non-zero weights
+# for exc and inh neurons, separately (perActive_inh, perActive_exc). Also it computes the 
+# classification error (perClassEr) at each value of c. 
+# Outputs: perActive_inh, perActive_exc, perClassEr, cvect_
+
+def inh_exc_classContribution(X, Y, isinh): 
+    import numpy as np
+    from sklearn import svm
+    from crossValidateModel import crossValidateModel
+    from linearSVM import linearSVM
+        
+    def perClassError(Y, Yhat):
+        import numpy as np
+        perClassEr = sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
+        return perClassEr
+    
+    Y = np.squeeze(Y); # class labels    
+    eps = 10**-10 # tiny number below which weight is considered 0
+    isinh = isinh>0;  # vector of size number of neurons (1: neuron is inhibitory, 0: neuron is excitatoey); here I am making sure to convert it to logical
+    n_inh = sum(isinh);
+    n_exc = sum(~ isinh);
+#     cvect_ = 10**(np.arange(-4, 6,0.1))/len(Y);
+    cvect_ = 10**(np.arange(-6.5, 3.5, 0.1)) # FN: use this if you want the same cvect for all days
+
+    numShuffles_ei = 100 # 100 times we subselect trials as training and testing datasetes.    
+    regType = 'l1'
+    kfold = 10;
+    perClassErrorTrain_data_ei = np.full((numShuffles_ei, len(cvect_)), np.nan)
+    perClassErrorTest_data_ei = np.full((numShuffles_ei, len(cvect_)), np.nan)
+    w_data_ei = np.full((numShuffles_ei, len(cvect_), n_inh+n_exc), np.nan)
+    b_data_ei = np.full((numShuffles_ei, len(cvect_)), np.nan)
+    perActive_exc_data_ei = np.full((numShuffles_ei, len(cvect_)), np.nan)
+    perActive_inh_data_ei = np.full((numShuffles_ei, len(cvect_)), np.nan)
+    
+    for i in range(len(cvect_)): # At each value of cvect we compute the fraction of non-zero weights for excit and inhibit neurons.
+        summary_data_ei = [];     
+        for ii in range(numShuffles_ei): # training and testing datasets
+            if regType == 'l1':
+                summary_data_ei.append(crossValidateModel(X, Y, linearSVM, kfold = kfold, l1 = cvect_[i]))
+            elif regType == 'l2':
+                summary_data_ei.append(crossValidateModel(X, Y, linearSVM, kfold = kfold, l2 = cvect_[i]))
+
+            w = np.squeeze(summary_data_ei[ii].model.coef_);
+            perClassErrorTrain_data_ei[ii,i] = summary_data_ei[ii].perClassErrorTrain
+            perClassErrorTest_data_ei[ii,i] = summary_data_ei[ii].perClassErrorTest
+            w_data_ei[ii,i,:] = w;
+            b_data_ei[ii,i] = summary_data_ei[ii].model.intercept_;
+            perActive_inh_data_ei[ii,i] = sum(abs(w[isinh])>eps)/ (n_inh + 0.) * 100.
+            perActive_exc_data_ei[ii,i] = sum(abs(w[~isinh])>eps)/ (n_exc + 0.) * 100.
+            
+    return perActive_inh_data_ei, perActive_exc_data_ei, perClassErrorTrain_data_ei, perClassErrorTest_data_ei, cvect_, w_data_ei, b_data_ei 
+'''
 
 
-# In[61]:
 
-if neuronType==2:
-    perActive_inh, perActive_exc, perClassEr, cvect_ = inh_exc_classContribution(X[:, ~np.isnan(inhRois)], Y, inhRois[~np.isnan(inhRois)])
+# In[468]:
+
+if compExcInh and neuronType==2:
+    perActive_inh_allExc, perActive_exc_allExc, perClassEr_allExc, cvect_, wei_all_allExc = inh_exc_classContribution(X[:, ~np.isnan(inhRois)], Y, inhRois[~np.isnan(inhRois)])
+#     perActive_inh_allExc, perActive_exc_allExc, perClassEr_allExc, perClassErTest_allExc, cvect_, wei_all_allExc, bei_all_allExc = inh_exc_classContribution(X[:, ~np.isnan(inhRois)], Y, inhRois[~np.isnan(inhRois)])
 
 
-# In[62]:
+# In[342]:
 
-if doPlots and neuronType==2:    
-    plt.figure
-    plt.subplot(221)
-    plt.plot(cvect_, perActive_exc, 'b-', label = 'excit % non-zero w')
-    plt.plot(cvect_, perActive_inh, 'r-', label = 'inhibit % non-zero w')
-    plt.plot(cvect_, perClassEr, 'k-', label = '% classification error')
+# Plot average of all weights, average of non-zero weights, and percentage of non-zero weights for each value of c
+# Training the classifier using all exc and inh neurons at different values of c.
+
+if compExcInh and doPlots and neuronType==2:    
+    wei_all_allExc = np.array(wei_all_allExc)
+    # plot ave across neurons for each value of c
+    inhRois_allExc = inhRois[~np.isnan(inhRois)]
+    
+    
+    ########
+    # average and std of weights across neurons
+    plt.figure(figsize=(4,3))
+    plt.errorbar(cvect_, np.mean(wei_all_allExc[:,inhRois_allExc==0],axis=1), np.std(wei_all_allExc[:,inhRois_allExc==0],axis=1), color='b', label='excit')
+    plt.errorbar(cvect_, np.mean(wei_all_allExc[:,inhRois_allExc==1],axis=1), np.std(wei_all_allExc[:,inhRois_allExc==1],axis=1), color='r', label='inhibit')
+    plt.xscale('log')
+    plt.xlabel('c (inverse of regularization parameter)')
+#     plt.ylim([-10,110])
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7))
+    plt.ylabel('Average of weights')
+    
+    
+    ########
+    # Average and std of non-zero weights across neurons
+    wei_all_0inds = np.array([x==0 for x in wei_all_allExc]) # inds of zero weights
+    wei_all_non0 = wei_all_allExc+0
+    wei_all_non0[wei_all_0inds] = np.nan # set 0 weights to nan
+    
+    plt.figure(figsize=(4,3))
+    plt.errorbar(cvect_, np.nanmean(wei_all_non0[:,inhRois_allExc==0],axis=1), np.nanstd(wei_all_non0[:,inhRois_allExc==0],axis=1), color='b', label='excit')
+    plt.errorbar(cvect_, np.nanmean(wei_all_non0[:,inhRois_allExc==1],axis=1), np.nanstd(wei_all_non0[:,inhRois_allExc==1],axis=1), color='r', label='inhibit')
+    plt.xscale('log')
+    plt.xlabel('c (inverse of regularization parameter)')
+#     plt.ylim([-10,110])
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7))
+    plt.ylabel('Average of non-zero weights')
+    
+    
+    ########
+    # Percentage of non-zero weights
+    wei_all_0inds = np.array([x==0 for x in wei_all_allExc]) # inds of zero weights
+#     percNonZero_e = np.mean(wei_all_0inds[:,inhRois_ei==0]==0, axis=1) # fraction of nonzero weights per round and per c
+#     percNonZero_i = np.mean(wei_all_0inds[:,inhRois_ei==1]==0, axis=1)
+        
+    plt.figure(figsize=(4,3))
+    plt.plot(cvect_, perClassEr_allExc, 'k-', label = '% classification error')
+    plt.plot(cvect_, 100*np.nanmean(wei_all_0inds[:,inhRois_allExc==0]==0,axis=1), color='b', label='excit')
+    plt.plot(cvect_, 100*np.nanmean(wei_all_0inds[:,inhRois_allExc==1]==0,axis=1), color='r', label='inhibit')    
+#     plt.errorbar(cvect_, np.nanmean(wei_all_0inds[:,inhRois_allExc==0]==0,axis=1), np.nanstd(wei_all_0inds[:,inhRois_allExc==0],axis=1), color='b', label='excit')
+#     plt.errorbar(cvect_, np.nanmean(wei_all_0inds[:,inhRois_allExc==1]==0,axis=1), np.nanstd(wei_all_0inds[:,inhRois_allExc==1],axis=1), color='r', label='inhibit')
+    plt.xscale('log')
+    plt.xlabel('c (inverse of regularization parameter)')
+#     plt.ylim([-10,110])
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7))
+    plt.ylabel('% non-zero weights')
+    
+    '''
+#     if doPlots and neuronType==2:    
+    plt.figure(figsize=(4,3))
+#     plt.subplot(221)
+    plt.plot(cvect_, perActive_exc_allExc, 'b-', label = 'excit % non-zero w')
+    plt.plot(cvect_, perActive_inh_allExc, 'r-', label = 'inhibit % non-zero w')
+    plt.plot(cvect_, perClassEr_allExc, 'k-', label = '% classification error')
     plt.xscale('log')
     plt.xlabel('c (inverse of regularization parameter)')
     plt.ylim([-10,110])
     plt.legend(loc='center left', bbox_to_anchor=(1, .7))
+    '''
 
 
-#  ### Another version of the analysis:
+#  ### Another version of the analysis: equal number of exc and inh neurons
 #  We control for the different numbers of excitatory and inhibitory neurons by subsampling n excitatory neurons, where n is equal to the number of inhibitory neurons. More specifically, instead of sending the entire X to the function inh_exc_classContribution, we use a subset of X that includes equal number of exc and inh neurons (Exc neurons are randomly selected).
 
-# In[63]:
+# In[485]:
 
-# equal number of exc and inh neurons
-if neuronType==2 and np.sum(w)!=0:
+# Use equal number of exc and inh neurons
+if compExcInh and (neuronType==2 and not 'w' in locals()) or (neuronType==2 and 'w' in locals() and np.sum(w)!=0):
     X_ = X[:, ~np.isnan(inhRois)];
     inhRois_ = inhRois[~np.isnan(inhRois)].astype('int32')
     ix_i = np.argwhere(inhRois_).squeeze()
@@ -2608,9 +2936,14 @@ if neuronType==2 and np.sum(w)!=0:
     n = len(ix_i);
     Xei = np.zeros((len(Y), 2*n));
     inhRois_ei = np.zeros((2*n));
+    
     perActive_inh = [];
     perActive_exc = [];
     perClassEr = [];
+    wei_all = []    
+#     bei_all = []
+#     perClassErTest = []
+    
     for i in range(numSamples):
         msk = rng.permutation(ix_e)[0:n];
         Xei[:, 0:n] = X_[:, msk]; # first n columns are X of random excit neurons.
@@ -2618,15 +2951,23 @@ if neuronType==2 and np.sum(w)!=0:
 
         Xei[:, n:2*n] = X_[:, ix_i]; # second n icolumns are X of inhibit neurons.
         inhRois_ei[n:2*n] = 1;
-        ai, ae, ce, cvect_ = inh_exc_classContribution(Xei, Y, inhRois_ei); # ai is of length cvect defined in inh_exc_classContribution
+        
+        # below we fit svm onto Xei, which for all shuffles (numSamples) has the same set of inh neurons but different sets of exc neurons
+        ai, ae, ce, cvect_, wei = inh_exc_classContribution(Xei, Y, inhRois_ei); # ai is of length cvect defined in inh_exc_classContribution        
+#         ai, ae, ce, ces, cvect_, wei, bei = inh_exc_classContribution(Xei, Y, inhRois_ei)
+
         perActive_inh.append(ai); # numSamples x length(cvect_)
         perActive_exc.append(ae);
-        perClassEr.append(ce);
+        wei_all.append(wei) # numSamples x length(cvect_) x numNeurons(inh+exc equal numbers)        
+        perClassEr.append(ce);        
+#         bei_all.append(bei)
+#         perClassErTest.append(ces);
+        
 
 
-# In[64]:
+# In[486]:
 
-if neuronType==2 and np.sum(w)!=0:
+if all([compExcInh, (neuronType==2 and not 'w' in locals()) or (neuronType==2 and 'w' in locals() and np.sum(w)!=0)]):
     
     # p value of comparing exc and inh non-zero weights pooled across values of c :
     aa = np.array(perActive_exc).flatten()
@@ -2654,7 +2995,7 @@ if neuronType==2 and np.sum(w)!=0:
     
     # Plot the c path :
     if doPlots:
-        plt.figure() 
+        plt.figure(figsize=(4,3)) 
         plt.errorbar(cvect_, np.mean(np.array(perActive_exc), axis=0), yerr=2*np.std(np.array(perActive_exc), axis=0), color = 'b', label = 'excit % non-zero weights')
         plt.errorbar(cvect_, np.mean(np.array(perActive_inh), axis=0), yerr=2*np.std(np.array(perActive_inh), axis=0), color = 'r', label = 'inhibit % non-zero weights')
         plt.xscale('log')
@@ -2679,7 +3020,7 @@ if neuronType==2 and np.sum(w)!=0:
         # plt.tight_layout()
 
 
-        plt.figure()
+        plt.figure(figsize=(4,3))
         plt.subplot(212)
         # plt.plot(cvect_, p_two<.05, label = 'excit ~= inhibit')
         # plt.plot(cvect_, p_tl<.05, label = 'excit < inhibit')
@@ -2706,16 +3047,153 @@ if neuronType==2 and np.sum(w)!=0:
         plt.legend(loc='center left', bbox_to_anchor=(1, .7))
 
 
+# In[489]:
+
+# Plot average of all weights, average of non-zero weights, and percentage of non-zero weights for each value of c
+# Training the classifier using all exc and inh neurons at different values of c.
+
+if all([compExcInh, doPlots, (neuronType==2 and not 'w' in locals()) or (neuronType==2 and 'w' in locals() and np.sum(w)!=0)]):
+    xaxisErr = 0; # if 1 x axis will be training error, otherwise it will be c.
+    
+    wei_all = np.array(wei_all)
+    
+    ########
+    # average of weights    
+
+    # Average weights of all neurons for each value of c. Then plot average and std across rounds for each value of c.
+
+    # exc
+    wave = np.mean(wei_all[:,:,inhRois_ei==0], axis=2) # average of all neural weights per c value and per round
+    ave = np.mean(wave, axis=0) # average of weights across rounds
+    sde = np.std(wave, axis=0) # std of weights across rounds
+
+    # inh
+    wavi = np.mean(wei_all[:,:,inhRois_ei==1], axis=2) # average of all neural weights per c value and per round
+    avi = np.mean(wavi, axis=0) # average of weights across rounds
+    sdi = np.std(wavi, axis=0) # std of weights across rounds
+
+
+    aveEr = np.mean(np.array(perClassEr), axis=0)
+    if xaxisErr:
+        x = aveEr
+    else:
+        x = cvect_
+        
+    plt.figure(figsize=(4,3))
+    plt.errorbar(x, ave, sde, color = 'b', label = 'excit')
+    plt.errorbar(x, avi, sdi, color = 'r', label = 'inhibit')
+    
+    if xaxisErr:
+        plt.xlabel('Training error %')
+    else:
+        plt.xscale('log')
+        plt.xlim([x[0], x[-1]])
+        plt.xlabel('c (inverse of regularization parameter)')
+
+    plt.legend(loc=0)
+    plt.ylabel('Average of weights')
+
+
+
+
+    ########
+    # Average non-zero weights
+    wei_all_0inds = np.array([x==0 for x in wei_all]) # inds of zero weights
+    wei_all_non0 = wei_all+0
+    wei_all_non0[wei_all_0inds] = np.nan # set 0 weights to nan
+    # wei_all_non0.shape
+
+
+    # Average non-zero weights of all neurons for each value of c. Then plot average and std across rounds for each value of c.
+
+    # exc
+    wave = np.nanmean(wei_all_non0[:,:,inhRois_ei==0], axis=2) # average of all neural weights per c value and per round
+    ave = np.nanmean(wave, axis=0) # average of weights across rounds
+    sde = np.nanstd(wave, axis=0) # std of weights across rounds
+
+    # inh
+    wavi = np.nanmean(wei_all_non0[:,:,inhRois_ei==1], axis=2) # average of all neural weights per c value and per round
+    avi = np.nanmean(wavi, axis=0) # average of weights across rounds
+    sdi = np.nanstd(wavi, axis=0) # std of weights across rounds
+
+
+    if xaxisErr:
+        x = aveEr
+    else:
+        x = cvect_
+
+    plt.figure(figsize=(4,3))
+    plt.errorbar(x, ave, sde, color = 'b', label = 'excit')
+    plt.errorbar(x, avi, sdi, color = 'r', label = 'inhibit')
+    
+    if xaxisErr:
+        plt.xlabel('Training error %')
+    else:
+        plt.xscale('log')
+        plt.xlim([x[0], x[-1]])
+        plt.xlabel('c (inverse of regularization parameter)')
+
+    plt.legend(loc=0)
+    plt.ylabel('Average of non-zero weights')
+
+
+
+
+    ########
+    # Percentage of non-zero weights
+
+    wei_all_0inds = np.array([x==0 for x in wei_all]) # inds of zero weights
+    percNonZero_e = 100*np.mean(wei_all_0inds[:,:,inhRois_ei==0]==0, axis=2) # fraction of nonzero weights per round and per c
+    percNonZero_i = 100*np.mean(wei_all_0inds[:,:,inhRois_ei==1]==0, axis=2)
+
+    # Average of percentage of non-zero weights for each value of c across rounds.
+
+    # exc
+    ave = np.nanmean(percNonZero_e, axis=0) # average of weights across rounds
+    sde = np.nanstd(percNonZero_e, axis=0) # std of weights across rounds
+
+    # inh
+    avi = np.nanmean(percNonZero_i, axis=0) # average of weights across rounds
+    sdi = np.nanstd(percNonZero_i, axis=0) # std of weights across rounds
+
+
+    if xaxisErr:
+        x = aveEr
+    else:
+        x = cvect_
+
+    plt.figure(figsize=(4,3))
+    plt.errorbar(x ,np.mean(np.array(perClassEr), axis=0), np.std(np.array(perClassEr), axis=0), color = 'k', label = 'classification error') # range(len(perClassEr[0]))
+    plt.errorbar(x, ave, sde, color = 'b', label = 'excit')
+    plt.errorbar(x, avi, sdi, color = 'r', label = 'inhibit')
+    
+    if xaxisErr:
+        plt.xlabel('Training error %')
+    else:
+        plt.xscale('log')
+        plt.xlim([x[0], x[-1]])
+        plt.xlabel('c (inverse of regularization parameter)')
+
+    plt.xlabel('Training error %')
+    plt.legend(loc='upper left')
+    plt.ylabel('% non-zero weights')
+
+
 # ## Save results as .mat files in a folder named svm
 
-# In[66]:
+# In[526]:
+
+if doNsRand: # in the name of mat file include the round number
+    rt = 'r%d_%s_' %(roundi, nowStr)
+else:
+    rt = '%s_' %(nowStr)
 
 if trialHistAnalysis:
 #     ep_ms = np.round((ep-eventI)*frameLength)
     th_stim_dur = []
-    svmn = 'svmPrevChoice_%sN_%sITIs_ep%d-%dms_r%d_' %(ntName, itiName, ep_ms[0], ep_ms[-1], roundi)
+    svmn = 'svmPrevChoice_%sN_%sITIs_ep%d-%dms_%s' %(ntName, itiName, ep_ms[0], ep_ms[-1], rt)
 else:
-    svmn = 'svmCurrChoice_%sN_ep%d-%dms_r%d_' %(ntName, ep_ms[0], ep_ms[-1], roundi)   
+    svmn = 'svmCurrChoice_%sN_ep%d-%dms_%s' %(ntName, ep_ms[0], ep_ms[-1], rt)   
 print '\n', svmn[:-1]
 
 if saveResults:
@@ -2728,11 +3206,57 @@ if saveResults:
     svmName = os.path.join(d, svmn+os.path.basename(pnevFileName))
     print(svmName)
     # scio.savemat(svmName, {'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'meanX':meanX, 'stdX':stdX, 'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 'th_stim_dur':th_stim_dur})
-    if neuronType==2:
+    if compExcInh and neuronType==2:
 #         scio.savemat(svmName, {'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 'th_stim_dur':th_stim_dur, 'numSamples':numSamples, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 'w':w, 'b':b, 'cbest':cbest, 'corrClass':corrClass, 'perClassErrorTrain_data':perClassErrorTrain_data, 'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 'perClassErrorTest_data':perClassErrorTest_data, 'perClassErrorTest_shfl':perClassErrorTest_shfl, 'perClassErrorTest':perClassErrorTest, 'perClassErrorTrain':perClassErrorTrain, 'cvect':cvect, 'perActive_inh':perActive_inh, 'perActive_exc':perActive_exc, 'perClassEr':perClassEr, 'cvect_':cvect_, 'trainE':trainE, 'train_err_exc0':train_err_exc0, 'train_err_inh0':train_err_inh0, 'corrClass_exc0':corrClass_exc0, 'corrClass_inh0':corrClass_inh0, 'train_err_allExc0':train_err_allExc0, 'corrClass_allExc0':corrClass_allExc0})
-        scio.savemat(svmName, {'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 'th_stim_dur':th_stim_dur, 'numSamples':numSamples, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 'w':w, 'b':b, 'cbest':cbest, 'corrClass':corrClass, 'perClassErrorTrain_data':perClassErrorTrain_data, 'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 'perClassErrorTest_data':perClassErrorTest_data, 'perClassErrorTest_shfl':perClassErrorTest_shfl, 'perClassErrorTest':perClassErrorTest, 'perClassErrorTrain':perClassErrorTrain, 'cvect':cvect, 'perActive_inh':perActive_inh, 'perActive_exc':perActive_exc, 'perClassEr':perClassEr, 'cvect_':cvect_, 'trainE':trainE, 'train_err_exc0':train_err_exc0, 'train_err_inh0':train_err_inh0, 'corrClass_exc0':corrClass_exc0, 'corrClass_inh0':corrClass_inh0, 'train_err_allExc0':train_err_allExc0, 'corrClass_allExc0':corrClass_allExc0, 'perClassErrorTrain_data_inh':perClassErrorTrain_data_inh, 'perClassErrorTest_data_inh':perClassErrorTest_data_inh, 'perClassErrorTrain_shfl_inh':perClassErrorTrain_shfl_inh, 'perClassErrorTest_shfl_inh':perClassErrorTest_shfl_inh, 'perClassErrorTrain_data_allExc':perClassErrorTrain_data_allExc, 'perClassErrorTest_data_allExc':perClassErrorTest_data_allExc, 'perClassErrorTrain_shfl_allExc':perClassErrorTrain_shfl_allExc, 'perClassErrorTest_shfl_allExc':perClassErrorTest_shfl_allExc, 'perClassErrorTrain_data_exc':perClassErrorTrain_data_exc, 'perClassErrorTest_data_exc':perClassErrorTest_data_exc, 'perClassErrorTrain_shfl_exc':perClassErrorTrain_shfl_exc, 'perClassErrorTest_shfl_exc':perClassErrorTest_shfl_exc, 'corrClass_allExc':corrClass_allExc, 'corrClass_exc':corrClass_exc, 'corrClass_inh':corrClass_inh}) 
-    else:
-        scio.savemat(svmName, {'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 'th_stim_dur':th_stim_dur, 'numSamples':numSamples, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 'w':w, 'b':b, 'cbest':cbest, 'corrClass':corrClass, 'perClassErrorTrain_data':perClassErrorTrain_data, 'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 'perClassErrorTest_data':perClassErrorTest_data, 'perClassErrorTest_shfl':perClassErrorTest_shfl, 'perClassErrorTest':perClassErrorTest, 'perClassErrorTrain':perClassErrorTrain, 'cvect':cvect})
+        scio.savemat(svmName, {'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 
+                               'th_stim_dur':th_stim_dur, 'numSamples':numSamples, 
+                               'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 
+                               'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 'regType':regType, 'w':w, 'b':b, 
+                               'cbest':cbest, 'corrClass':corrClass, 'corrClassShfl':corrClassShfl,
+                               'perClassErrorTrain_data':perClassErrorTrain_data, 
+                               'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 
+                               'perClassErrorTest_data':perClassErrorTest_data, 
+                               'perClassErrorTest_shfl':perClassErrorTest_shfl, 
+                               'perClassErrorTest':perClassErrorTest, 
+                               'perClassErrorTrain':perClassErrorTrain, 'cvect':cvect, 'trainE':trainE, 
+                               'w_data':w_data,'b_data':b_data,'w_shfl':w_shfl,'b_shfl':b_shfl,
+                               'perActive_inh':perActive_inh, 'perActive_exc':perActive_exc, # vars related to exc, inh start from this line.
+                               'wei_all':wei_all, 'perClassEr':perClassEr, 
+                               'perActive_inh_allExc':perActive_inh_allExc, 'perActive_exc_allExc':perActive_exc_allExc, 
+                               'perClassEr_allExc':perClassEr_allExc, 'wei_all_allExc':wei_all_allExc, 'cvect_':cvect_,
+                               'train_err_exc0':train_err_exc0, 'train_err_inh0':train_err_inh0, 
+                               'corrClass_exc0':corrClass_exc0, 'corrClass_inh0':corrClass_inh0, 
+                               'train_err_allExc0':train_err_allExc0, 'corrClass_allExc0':corrClass_allExc0, 
+                               'perClassErrorTrain_data_inh':perClassErrorTrain_data_inh, 
+                               'perClassErrorTest_data_inh':perClassErrorTest_data_inh, 
+                               'perClassErrorTrain_shfl_inh':perClassErrorTrain_shfl_inh, 
+                               'perClassErrorTest_shfl_inh':perClassErrorTest_shfl_inh, 
+                               'perClassErrorTrain_data_allExc':perClassErrorTrain_data_allExc, 
+                               'perClassErrorTest_data_allExc':perClassErrorTest_data_allExc, 
+                               'perClassErrorTrain_shfl_allExc':perClassErrorTrain_shfl_allExc, 
+                               'perClassErrorTest_shfl_allExc':perClassErrorTest_shfl_allExc, 
+                               'perClassErrorTrain_data_exc':perClassErrorTrain_data_exc, 
+                               'perClassErrorTest_data_exc':perClassErrorTest_data_exc, 
+                               'perClassErrorTrain_shfl_exc':perClassErrorTrain_shfl_exc, 
+                               'perClassErrorTest_shfl_exc':perClassErrorTest_shfl_exc, 
+                               'corrClass_allExc':corrClass_allExc, 'corrClass_exc':corrClass_exc, 'corrClass_inh':corrClass_inh,
+                               'w_data_inh':w_data_inh,'b_data_inh':b_data_inh,'w_shfl_inh':w_shfl_inh,'b_shfl_inh':b_shfl_inh,
+                               'w_data_allExc':w_data_allExc,'b_data_allExc':b_data_allExc,'w_shfl_allExc':w_shfl_allExc,'b_shfl_allExc':b_shfl_allExc,
+                               'w_data_exc':w_data_exc,'b_data_exc':b_data_exc,'w_shfl_exc':w_shfl_exc,'b_shfl_exc':b_shfl_exc}) 
+    
+    else: # no exc inh comparison is done.
+        scio.savemat(svmName, {'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 
+                               'th_stim_dur':th_stim_dur, 'numSamples':numSamples, 
+                               'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 
+                               'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 'regType':regType, 'w':w, 'b':b, 
+                               'cbest':cbest, 'corrClass':corrClass, 'corrClassShfl':corrClassShfl,
+                               'perClassErrorTrain_data':perClassErrorTrain_data, 
+                               'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 
+                               'perClassErrorTest_data':perClassErrorTest_data, 
+                               'perClassErrorTest_shfl':perClassErrorTest_shfl, 
+                               'perClassErrorTest':perClassErrorTest, 
+                               'perClassErrorTrain':perClassErrorTrain, 'cvect':cvect, 'trainE':trainE,
+                               'w_data':w_data,'b_data':b_data,'w_shfl':w_shfl,'b_shfl':b_shfl})
 
     # save normalized traces as well                       
     # scio.savemat(svmName, {w':w, 'b':b, 'cbest':cbest, 'corrClass':corrClass, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'meanX':meanX, 'stdX':stdX, 'X':X, 'Y':Y, 'Xt':Xt, 'Xtg':Xtg, 'Xtc':Xtc, 'Xtr':Xtr, 'Xtp':Xtp})
@@ -2770,7 +3294,7 @@ else:
 # ## Move the autosaved .html file to a folder named "figs"
 #     Notebook html file will be autosaved in the notebook directory if jupyter_notebook_config.py exists in ~/.jupyter and includes the function script_post_save. Below we move the html to a directory named figs inside the root directory which contains moreFile, etc.
 
-# In[ ]:
+# In[45]:
 
 # make sure autosave is done so you move the most recent html file to figs directory.
 if 'ipykernel' in sys.modules and saveHTML:
