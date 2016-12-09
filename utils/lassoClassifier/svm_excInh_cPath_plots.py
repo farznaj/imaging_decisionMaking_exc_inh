@@ -1,17 +1,24 @@
 # -*- coding: utf-8 -*-
 """
+ You don't need to run any other scripts before this one. It works on its own.
+ This script includes analyses to compare exc vs inh decoding [when same  number of exc and inh are concatenated to train SVM]
+ fract non0 and weights are compared
+ To get vars for this script, you need to run mainSVM_excInh_cPath.py... normally on the cluster!
+ The saved mat files which will be loaded here are named excInhC2_svmCurrChoice_ and excInhC2_svmPrevChoice
+ (The mat files named excInhC dont have cross validation)
+
+
+
 Pool SVM results of all days and plot summary figures
 
 Created on Sun Oct 30 14:41:01 2016
 @author: farznaj
 """
-# Analyses comparing exc vs inh decoding [when exc and inh of same size are concatenated and svm is trained on them]
-# fract non0 and weights
 
 #%% 
 mousename = 'fni17'
 
-trialHistAnalysis = 1;
+trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
 ep_ms = [809, 1109] # only for trialHistAnalysis=0
         
@@ -804,9 +811,11 @@ for iday in range(len(days)):
 numSamples = np.shape(perClassErTestAll)[1]
 cbestAll = np.full((len(days)), np.nan)
 
-# Pick bestc from all range of c... it may end up a value at which all weights are 0. In the analysis below though you exclude shuffles with all0 weights.
 for iday in range(len(days)):
+
     cvect = cvect_all[iday,:]
+
+    # Pick bestc from all range of c... it may end up a value at which all weights are 0. In the analysis below though you exclude shuffles with all0 weights.
     meanPerClassErrorTest = np.mean(perClassErTestAll[iday,:,:], axis = 0) # perClassErTestAll_aveS[iday,:]
     semPerClassErrorTest = np.std(perClassErTestAll[iday,:,:], axis = 0)/np.sqrt(numSamples) # perClassErTestAll_stdS[iday,:]/np.sqrt(np.shape(perClassErTestAll)[1])
     ix = np.nanargmin(meanPerClassErrorTest)
@@ -814,10 +823,16 @@ for iday in range(len(days)):
     cbest = cbest[0]; # best regularization term based on minError+SE criteria
     cbestAll[iday] = cbest
     
-    # Make sure at bestc at least one weight is non-zero (ie pick bestc from only those values of c that give non-0 average weights.)
-    '''
-    a = (wAllC!=0) # non-zero weights
-    b = np.mean(a, axis=(0,2)) # Fraction of non-zero weights (averaged across shuffles)
+    
+    # Make sure at bestc at least one weight is non-zero (ie pick bestc from only those values of c that give non-0 average weights.)        
+    # compute percent non-zero w at each c
+    a = perActiveAll_exc[iday,:,:].squeeze()
+    b = perActiveAll_inh[iday,:,:].squeeze()    
+    c = np.mean((a,b), axis=0) # percent non-0 w for each shuffle at each c (including both exc and inh neurons. Remember SVM was trained on both so there is a single decoder including both exc and inh)
+    
+#    a = (wAllC!=0) # non-zero weights
+#    b = np.mean(a, axis=(0,2)) # Fraction of non-zero weights (averaged across shuffles)
+    b = np.mean(c, axis=(0)) # Fraction of non-zero weights (averaged across shuffles)
     c1stnon0 = np.argwhere(b)[0].squeeze() # first element of c with at least 1 non-0 w in 1 shuffle
     
     cvectnow = cvect[c1stnon0:]
@@ -826,10 +841,13 @@ for iday in range(len(days)):
     ix = np.argmin(meanPerClassErrorTestnow)
     cbest = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
     cbest = cbest[0]; # best regularization term based on minError+SE criteria
-    '''
+    cbestAll[iday] = cbest
+
+print cbestAll
 
 
 #%% compare exc vs inh dists (across all shuffls) at bestc for fract non0 and weights
+# IMPORTANT NOTE: I think you should exclude days with chance testing-data decoding performance... bc it doesn't really make sense to compare their weight or fract-non0 of exc and inh neurons.
 
 perActiveExc = []
 perActiveInh = []
@@ -837,15 +855,22 @@ wNon0AbsExc = []
 wNon0AbsInh = []    
 wAbsExc = []
 wAbsInh = []
+perClassErTest_bestc = np.full(len(days), np.nan)
+perClassErTest_bestc_sd = np.full(len(days), np.nan)
 
 for iday in range(len(days)):
     
     ibc = cvect_all[iday,:]==cbestAll[iday]
+
+    # class error for cv data at bestc
+    perClassErTest_bestc[iday] = perClassErTestAll_aveS[iday,ibc]
+    perClassErTest_bestc_sd[iday] = perClassErTestAll_stdS[iday,ibc]
+    
     
     # percent non-zero w
     a = perActiveAll_exc[iday,:,ibc].squeeze()
     b = perActiveAll_inh[iday,:,ibc].squeeze()
-    c = np.mean((a,b), axis=0) # percent non-0 w for each shuffle (including both exc and inh neurons. Remember SVM was trained on both so there is a single decoder including both exc and inh)
+    c = np.mean((a,b), axis=0) #nShuffs x 1 # percent non-0 w for each shuffle (including both exc and inh neurons. Remember SVM was trained on both so there is a single decoder including both exc and inh)
     i0 = (c==0) # shuffles at which all w (of both exc and inh) are 0, ie no decoder was identified for these shuffles.
     a[i0] = np.nan # ignore shuffles with all-0 weights
     b[i0] = np.nan # ignore shuffles with all-0 weights    
@@ -871,6 +896,8 @@ for iday in range(len(days)):
     wAbsExc.append(a)
     wAbsInh.append(b)
     
+
+    
 perActiveExc = np.array(perActiveExc)
 perActiveInh = np.array(perActiveInh)
 wNon0AbsExc = np.array(wNon0AbsExc)
@@ -879,8 +906,14 @@ wAbsExc = np.array(wAbsExc)
 wAbsInh = np.array(wAbsInh) 
 
 
+#%%
 ###################################### PLOTS ###################################### 
 dnow = '/excInh_afterSFN'
+if trialHistAnalysis:
+    dp = '/previousChoice'
+else:
+    dp = '/currentChoice'
+
 lab1 = 'exc'
 lab2 = 'inh'
 
@@ -959,7 +992,27 @@ def errbarAllDays(a,b,p):
     makeNicePlots(ax)
 
 
+#%% 
 ######################################  All days pooled ###################################### 
+
+###############%% classification accuracy of cv data at best c for each day ###############
+
+plt.figure(figsize=(5,5))    
+gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
+h1 = gs[0,0:2]
+plt.subplot(h1)
+plt.errorbar(np.arange(len(days)), 100-perClassErTest_bestc, perClassErTest_bestc_sd)
+plt.xlim([-1,len(days)+1])
+plt.xlabel('Days')
+plt.ylabel('% Class accuracy')
+makeNicePlots(plt.gca())
+
+if savefigs:#% Save the figure
+    fign = os.path.join(svmdir+dnow+'/bestC'+dp, suffn[0:5]+'classAccur'+'.'+fmt[0])
+    plt.savefig(fign, bbox_inches='tight')
+
+
+
 ###############%% percent non-zero w ###############    
 ### hist and P val for all days pooled (exc vs inh)
 lab = '% non-0 w'
@@ -994,7 +1047,7 @@ plt.ylabel(lab)
 
 #plt.savefig('cpath_all_absnon0w.svg', format='svg', dpi=300)
 if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow+'/bestC', suffn[0:5]+'excVSinh_allDays_percNon0W'+'.'+fmt[0])
+    fign = os.path.join(svmdir+dnow+'/bestC'+dp, suffn[0:5]+'excVSinh_allDays_percNon0W'+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight')
 
 
@@ -1032,7 +1085,7 @@ plt.ylabel(lab)
 
 
 if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow+'/bestC', suffn[0:5]+'excVSinh_allDays_absNon0W'+'.'+fmt[0])
+    fign = os.path.join(svmdir+dnow+'/bestC'+dp, suffn[0:5]+'excVSinh_allDays_absNon0W'+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight')
     
     
@@ -1070,14 +1123,18 @@ plt.ylabel(lab)
 
 
 if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow+'/bestC', suffn[0:5]+'excVSinh_allDays_absW'+'.'+fmt[0])
+    fign = os.path.join(svmdir+dnow+'/bestC'+dp, suffn[0:5]+'excVSinh_allDays_absW'+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight')
 
 
 
 
+
+#%%
 ###################################### Plot each day separately ######################################
 for iday in range(len(days)):
+    
+    print '\n_________________'+days[iday]+'_________________'    
     
     ###################
     lab = '% non-0 w'
@@ -1100,7 +1157,7 @@ for iday in range(len(days)):
     h1 = gs[0,0:2]
     h2 = gs[0,2:3]
     histerrbar(a,b,binEvery,p)    
-    
+    plt.title('cvClassEr= %.2f' %(perClassErTest_bestc[iday]))
 
     ###################
     lab = 'abs non-0 w'
@@ -1119,7 +1176,8 @@ for iday in range(len(days)):
     '''
     h1 = gs[1,0:2]
     h2 = gs[1,2:3]
-    histerrbar(a,b,binEvery,p)
+    if np.logical_and(b.shape[0], a.shape[0])!=0:
+        histerrbar(a,b,binEvery,p)
 
 
     ###################
@@ -1140,13 +1198,15 @@ for iday in range(len(days)):
     h1 = gs[2,0:2]
     h2 = gs[2,2:3]
     histerrbar(a,b,binEvery,p) 
-
-
+    
+    
     if savefigs:#% Save the figure
-        fign = os.path.join(svmdir+dnow+'/bestC', suffn[0:5]+'excVSinh_'+days[iday][0:6]+'.'+fmt[0])
+        fign = os.path.join(svmdir+dnow+'/bestC'+dp, suffn[0:5]+'excVSinh_'+days[iday][0:6]+'.'+fmt[0])
         plt.savefig(fign, bbox_inches='tight')
 
 
+    plt.show()
+    
 
 #%% exc minus inh at best c (average of shuffles) and null dist (subtraction of rand shuffles) at bestc... this is already done in computing b0100nan vars: you should perhaps exclude shuffles with all-0 weights bc they may mask the effects. (?)
 
@@ -1226,7 +1286,8 @@ print 'p value vs 0:diff c path (all c) = %.3f' %(pdiff)
 ### hist and P val for all days pooled (exc vs inh)
 lab = '% non-0 w'
 binEvery = 3 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
-
+r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
+binEvery = r/float(10)
 plt.figure(figsize=(5,15))    
 gs = gridspec.GridSpec(5, 3)#, width_ratios=[2, 1]) 
 h1 = gs[0,0:2]
@@ -1251,7 +1312,8 @@ print 'p value vs 0:diff c path (all c) = %.3f' %(pdiff)
 
 lab = 'abs non-0 w'
 binEvery = .006# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
-
+r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
+binEvery = r/float(10)
 #plt.figure(figsize=(5,5))    
 #gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
 h1 = gs[1,0:2]
@@ -1276,7 +1338,8 @@ print 'p value vs 0:diff c path (all c) = %.3f' %(pdiff)
 
 lab = 'abs w'
 binEvery = .002# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
-
+r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
+binEvery = r/float(10)
 #plt.figure(figsize=(5,5))    
 #gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
 h1 = gs[2,0:2]
@@ -1301,7 +1364,8 @@ print 'p value vs 0:diff c path (all c) = %.3f' %(pdiff)
 
 lab = 'w'
 binEvery = .003 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
-
+r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
+binEvery = r/float(10)
 #plt.figure(figsize=(5,5))    
 #gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
 h1 = gs[3,0:2]
@@ -1326,6 +1390,8 @@ print 'p value vs 0:diff c path (all c) = %.3f' %(pdiff)
 
 lab = 'non-0 w'
 binEvery = .006# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
+binEvery = r/float(10)
 #plt.figure(figsize=(5,5))    
 #gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
 h1 = gs[4,0:2]
@@ -1337,8 +1403,11 @@ plt.xlabel(lab)
 
 #plt.savefig('cpath_all_absnon0w.svg', format='svg', dpi=300)
 if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow+'/bestC', suffn[0:5]+'excMinusInh_allDays'+'.'+fmt[0])
+    fign = os.path.join(svmdir+dnow+'/bestC'+dp, suffn[0:5]+'excMinusInh_allDays'+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight')
+
+
+
 
 
 
@@ -1559,7 +1628,7 @@ plt.subplots_adjust(hspace=.3)
 
 
 if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow+'/allC', suffn[0:5]+'excMinusInh_AllDays'+'.'+fmt[0])
+    fign = os.path.join(svmdir+dnow+'/allC'+dp, suffn[0:5]+'excMinusInh_AllDays'+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight')
 
 
@@ -1680,7 +1749,7 @@ for iday in range(len(days)):
 #    plt.savefig('cpath'+days[iday]+'.svg', format='svg', dpi=300)    
       
     if savefigs:#% Save the figure
-        fign = os.path.join(svmdir+dnow++'/allC', suffn[0:5]+'excInh_'+days[iday][0:6]+'.'+fmt[0])
+        fign = os.path.join(svmdir+dnow+'/allC'+dp, suffn[0:5]+'excInh_'+days[iday][0:6]+'.'+fmt[0])
         plt.savefig(fign, bbox_inches='tight')
 
    
@@ -1942,40 +2011,95 @@ plt.ylabel('abs non0 w')
 
 
 if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow++'/allC', suffn[0:5]+'excInh_aveAllDays'+'.'+fmt[0])
+    fign = os.path.join(svmdir+dnow+'/allC'+dp, suffn[0:5]+'excInh_aveAllDays'+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight')
 
 
 
-#%%  Plot against class error
+#%% Plot average of fractnon0 and weights against class error (instad of c)
+
+# is averaging right... remember u had to get diff, or perhaps do ratio...
+# look at abs of weights and ave of non-zeros w
+
+
 # u're going to run the code w the same cvect so u can easily plot all days against cvect... but u should be fine to plot it against classError
 # work on this: plot ave and avi against classError
 
 #np.min(perClassErAll_aveS)
 step = 5
 b = np.arange(0, np.ceil(np.nanmax(perClassErAll_aveS)).astype(int)+step, step)
+b = np.arange(0, np.ceil(np.nanmax(perClassErTestAll_aveS)).astype(int)+step, step)
 
-wall_exc_cerr = np.full((len(days), len(b)), np.nan)
-wall_inh_cerr = np.full((len(days), len(b)), np.nan)
 perActiveAll_exc_cerr = np.full((len(days), len(b)), np.nan)
 perActiveAll_inh_cerr = np.full((len(days), len(b)), np.nan)
+wall_abs_exc_cerr = np.full((len(days), len(b)), np.nan)
+wall_abs_inh_cerr = np.full((len(days), len(b)), np.nan)
+wall_non0_abs_exc_cerr = np.full((len(days), len(b)), np.nan)
+wall_non0_abs_inh_cerr = np.full((len(days), len(b)), np.nan)
+wall_exc_cerr = np.full((len(days), len(b)), np.nan)
+wall_inh_cerr = np.full((len(days), len(b)), np.nan)
+wall_non0_exc_cerr = np.full((len(days), len(b)), np.nan)
+wall_non0_inh_cerr = np.full((len(days), len(b)), np.nan)
+
 for iday in range(len(days)):
+    
     inds = np.digitize(perClassErAll_aveS[iday,:], bins=b)
+    inds = np.digitize(perClassErTestAll_aveS[iday,:], bins=b)
+
     for i in range(len(b)): #b[-1]
-       wall_exc_cerr[iday,i] = np.mean(wall_exc_aveNS[iday, inds==i+1]) # average weights that correspond to class errors in bin i+1
-       wall_inh_cerr[iday,i] = np.mean(wall_inh_aveNS[iday, inds==i+1])
+
        perActiveAll_exc_cerr[iday,i] = np.mean(perActiveAll_exc_aveS[iday, inds==i+1])
        perActiveAll_inh_cerr[iday,i] = np.mean(perActiveAll_inh_aveS[iday, inds==i+1])
+       
+       wall_abs_exc_cerr[iday,i] = np.mean(wall_abs_exc_aveNS[iday, inds==i+1]) # average weights that correspond to class errors in bin i+1
+       wall_abs_inh_cerr[iday,i] = np.mean(wall_abs_inh_aveNS[iday, inds==i+1])
+
+       wall_non0_abs_exc_cerr[iday,i] = np.mean(wall_non0_abs_exc_aveNS[iday, inds==i+1]) # average weights that correspond to class errors in bin i+1
+       wall_non0_abs_inh_cerr[iday,i] = np.mean(wall_non0_abs_inh_aveNS[iday, inds==i+1])
+
+       wall_exc_cerr[iday,i] = np.mean(wall_exc_aveNS[iday, inds==i+1]) # average weights that correspond to class errors in bin i+1
+       wall_inh_cerr[iday,i] = np.mean(wall_inh_aveNS[iday, inds==i+1])
+
+       wall_non0_exc_cerr[iday,i] = np.mean(wall_non0_exc_aveNS[iday, inds==i+1]) # average weights that correspond to class errors in bin i+1
+       wall_non0_inh_cerr[iday,i] = np.mean(wall_non0_inh_aveNS[iday, inds==i+1])
+
 
 #%%       
 #plt.plot(b, wall_exc_cerr[iday,:],'o')
-plt.figure()
+plt.figure(figsize=(3,10))
+
+plt.subplot(511)
+plt.errorbar(b, np.nanmean(perActiveAll_exc_cerr, axis=0), yerr=np.nanstd(perActiveAll_exc_cerr, axis=0), fmt='b.-')
+plt.errorbar(b, np.nanmean(perActiveAll_inh_cerr, axis=0), yerr=np.nanstd(perActiveAll_inh_cerr, axis=0), fmt='r.-')
+plt.xlabel('class error')
+plt.ylabel('% non 0')
+
+plt.subplot(512)
+plt.errorbar(b, np.nanmean(wall_non0_abs_exc_cerr, axis=0), yerr=np.nanstd(wall_non0_abs_exc_cerr, axis=0), fmt='b.-')
+plt.errorbar(b, np.nanmean(wall_non0_abs_inh_cerr, axis=0), yerr=np.nanstd(wall_non0_abs_inh_cerr, axis=0), fmt='r.-')
+plt.xlabel('class error')
+plt.ylabel('non0 abs w')
+
+plt.subplot(513)
+plt.errorbar(b, np.nanmean(wall_abs_exc_cerr, axis=0), yerr=np.nanstd(wall_abs_exc_cerr, axis=0), fmt='b.-')
+plt.errorbar(b, np.nanmean(wall_abs_inh_cerr, axis=0), yerr=np.nanstd(wall_abs_inh_cerr, axis=0), fmt='r.-')
+plt.xlabel('class error')
+plt.ylabel('abs w')
+
+plt.subplot(514)
 plt.errorbar(b, np.nanmean(wall_exc_cerr, axis=0), yerr=np.nanstd(wall_exc_cerr, axis=0), fmt='b.-')
 plt.errorbar(b, np.nanmean(wall_inh_cerr, axis=0), yerr=np.nanstd(wall_inh_cerr, axis=0), fmt='r.-')
+plt.xlabel('class error')
+plt.ylabel('w')
 
-plt.figure()
-plt.plot(b, np.nanmean(perActiveAll_exc_cerr, axis=0), 'b.-')
-plt.plot(b, np.nanmean(perActiveAll_inh_cerr, axis=0), 'r.-')
+plt.subplot(515)
+plt.errorbar(b, np.nanmean(wall_non0_exc_cerr, axis=0), yerr=np.nanstd(wall_non0_exc_cerr, axis=0), fmt='b.-')
+plt.errorbar(b, np.nanmean(wall_non0_inh_cerr, axis=0), yerr=np.nanstd(wall_non0_inh_cerr, axis=0), fmt='r.-')
+plt.xlabel('class error')
+plt.ylabel('non0 w')
 
-# is averaging right... remember u had to get diff, or perhaps do ratio...
-# look at abs of weights and ave of non-zeros w
+
+if savefigs:#% Save the figure
+    fign = os.path.join(svmdir+dnow+'/allC'+dp, suffn[0:5]+'excInh_vsClassErr_aveAllDays'+'.'+fmt[0])
+    plt.savefig(fign, bbox_inches='tight')
+

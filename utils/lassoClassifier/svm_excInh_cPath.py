@@ -1,4 +1,5 @@
-# Analysis to get c path plots for exc and inh neurons
+# Main analysis to get c path plots for exc and inh neurons. To be run on the cluster.
+
 
 # coding: utf-8
 

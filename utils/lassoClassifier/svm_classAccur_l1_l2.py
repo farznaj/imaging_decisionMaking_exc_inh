@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 """
+This script computes classification accuracy when no subselection of neurons was performed. 
+First run the beginning of mainSVM_notebook_plots to get vars required here.
+Also run the class accuracy section there to get class accur for subselect l1, which you will compare with results here.
+
+
 Created on Fri Dec  2 09:26:33 2016
 
 @author: farznaj
 """
 
-
-# First run the beginning of mainSVM_notebook_plots
-# Also run the class accuracy section there to get class accur for subselect, l1
 
 numSamp = 500 #100 # number of shuffles for doing cross validation (ie number of random sets of test/train trials.... You changed the following: in mainSVM_notebook.py this is set to 100, so unless you change the value inside the code it should be always 100.)
 #dnow = '/shortLongITI_afterSFN/bestc_500Iters_non0decoder' # save directory in dropbox
