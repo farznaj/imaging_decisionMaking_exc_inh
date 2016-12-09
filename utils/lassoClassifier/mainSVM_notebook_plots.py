@@ -9,8 +9,8 @@ Created on Sun Oct 30 14:41:01 2016
 #%% 
 mousename = 'fni17'
 
-trialHistAnalysis = 1;
-iTiFlg = 1; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
+trialHistAnalysis = 0;
+iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
 ep_ms = [809, 1109] # only for trialHistAnalysis=0
         
 # Define days that you want to analyze
@@ -25,7 +25,8 @@ eps = 10**-10 # tiny number below which weight is considered 0
 palpha = .05 # p <= palpha is significant
 thR = 2 # Exclude days with only <=thR rounds with non-0 weights
 
-#%%
+
+##%%
 import os
 #import glob
 import numpy as np   
@@ -375,9 +376,9 @@ for iday in range(len(days)):
             print os.path.basename(svmName)
             
         Data = scio.loadmat(svmName, variable_names=['w'])
-#        w = Data.pop('w')[0,:]
-#        if abs(w.sum()) < eps: # I think it is wrong to do this. When ws are all 0, it means there was no decoder for that day, ie no info about the choice.
-#            print '\tIn round %d all weights are 0 ... not analyzing' %(roundi)
+        w = Data.pop('w')[0,:]
+        if abs(w.sum()) < eps: # I think it is wrong to exclude days with all0 decoder. When ws are all 0, it means there was no decoder for that day, ie no info about the choice.
+            print '\tIn round %d all weights are 0 ' %(roundi) #  ... not analyzing
 #            
 #        else:
         
@@ -457,10 +458,11 @@ plt.xticks(x, labels, rotation='vertical', fontsize=13)
 plt.subplots_adjust(wspace=1)
 makeNicePlots(ax)
 
-#dnow = '/l1_l2_subsel_comparison'
-dnow = '/shortLongITI_afterSFN'
-fign = os.path.join(svmdir+dnow, suffn+'train_subselL1'+'.'+fmt[0])
-plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')  
+if savefigs:
+    #dnow = '/l1_l2_subsel_comparison'
+    dnow = '/shortLongITI_afterSFN'
+    fign = os.path.join(svmdir+dnow, suffn+'train_subselL1'+'.'+fmt[0])
+    plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')  
 
 
 #%% Testing data: Plot average across rounds for each day
@@ -492,10 +494,11 @@ plt.xticks(x, labels, rotation='vertical', fontsize=13)
 plt.subplots_adjust(wspace=1)
 makeNicePlots(ax)
 
-#dnow = '/l1_l2_subsel_comparison'
-dnow = '/shortLongITI_afterSFN'
-fign = os.path.join(svmdir+dnow, suffn+'test_subselL1'+'.'+fmt[0])        
-plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')        
+if savefigs:
+    #dnow = '/l1_l2_subsel_comparison'
+    dnow = '/shortLongITI_afterSFN'
+    fign = os.path.join(svmdir+dnow, suffn+'test_subselL1'+'.'+fmt[0])        
+    plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')        
 
 
 #%% Save the figure

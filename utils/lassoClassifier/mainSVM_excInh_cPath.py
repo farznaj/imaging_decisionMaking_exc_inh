@@ -1162,7 +1162,7 @@ def inh_exc_classContribution(X, Y, isinh):
     
     for i in range(len(cvect_)): # At each value of cvect we compute the fraction of non-zero weights for excit and inhibit neurons.
         summary_data_ei = [];     
-        for ii in range(numShuffles_ei): # training and testing datasets
+        for ii in range(numShuffles_ei): # generate random training and testing datasets
             if regType == 'l1':
                 summary_data_ei.append(crossValidateModel(X, Y, linearSVM, kfold = kfold, l1 = cvect_[i]))
             elif regType == 'l2':
@@ -1175,7 +1175,16 @@ def inh_exc_classContribution(X, Y, isinh):
             b_data_ei[ii,i] = summary_data_ei[ii].model.intercept_;
             perActive_inh_data_ei[ii,i] = sum(abs(w[isinh])>eps)/ (n_inh + 0.) * 100.
             perActive_exc_data_ei[ii,i] = sum(abs(w[~isinh])>eps)/ (n_exc + 0.) * 100.
-            
+    
+    # Do this: here average values across trialShuffles to avoid very large vars
+    '''
+    perClassErrorTrain_data_ei = np.mean(perClassErrorTrain_data_ei, axis=0)
+    perClassErrorTest_data_ei = np.mean(perClassErrorTest_data_ei, axis=0)
+    w_data_ei = np.mean(w_data_ei, axis=0)
+    b_data_ei = np.mean(b_data_ei, axis=0)
+    perActive_inh_data_ei = np.mean(perActive_inh_data_ei, axis=0)
+    perActive_exc_data_ei = np.mean(perActive_exc_data_ei, axis=0)
+    '''
     return perActive_inh_data_ei, perActive_exc_data_ei, perClassErrorTrain_data_ei, perClassErrorTest_data_ei, cvect_, w_data_ei, b_data_ei 
 
 
@@ -1279,7 +1288,7 @@ if (neuronType==2 and not 'w' in locals()) or (neuronType==2 and 'w' in locals()
     bei_all = []
     perClassErTest = []
     
-    for i in range(numSamples):
+    for i in range(numSamples): # shuffle neurons
         msk = rng.permutation(ix_e)[0:n];
         Xei[:, 0:n] = X_[:, msk]; # first n columns are X of random excit neurons.
         inhRois_ei[0:n] = 0;
@@ -1291,13 +1300,13 @@ if (neuronType==2 and not 'w' in locals()) or (neuronType==2 and 'w' in locals()
 #         ai, ae, ce, cvect_, wei = inh_exc_classContribution(Xei, Y, inhRois_ei); # ai is of length cvect defined in inh_exc_classContribution
         ai, ae, ce, ces, cvect_, wei, bei = inh_exc_classContribution(Xei, Y, inhRois_ei)
 
-        perActive_inh.append(ai); # numSamples x length(cvect_)
-        perActive_exc.append(ae);
-        wei_all.append(wei) # numSamples x length(cvect_) x numNeurons(inh+exc equal numbers)        
-        perClassEr.append(ce);       
+        perActive_inh.append(ai); # numSamples x numTrialShuff x length(cvect_)
+        perActive_exc.append(ae); # numSamples x numTrialShuff x length(cvect_)
+        wei_all.append(wei) # numSamples x numTrialShuff x length(cvect_) x numNeurons(inh+exc equal numbers)        
+        perClassEr.append(ce); # numSamples x numTrialShuff x length(cvect_)      # numTrialShuff is number of times you shuffled trials to do cross validation. (it is variable numShuffles_ei in function inh_exc_classContribution)
         
-        bei_all.append(bei)
-        perClassErTest.append(ces);
+        bei_all.append(bei)  # numSamples x numTrialShuff x length(cvect_) 
+        perClassErTest.append(ces); perClassErTest
             
 
 

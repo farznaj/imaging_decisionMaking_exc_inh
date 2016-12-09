@@ -47,18 +47,18 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     imagingFolder = '151020'
     mdfFileNumber = [1,2] 
 
-    trialHistAnalysis = 0;    
+    trialHistAnalysis = 1;    
     roundi = 2; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
 
-    iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
-    setNsExcluded = 0; # if 1, NsExcluded will be set even if it is already saved.
+    iTiFlg = 1; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
+    setNsExcluded = 1; # if 1, NsExcluded will be set even if it is already saved.
     numSamples = 2 #100; # number of iterations for finding the best c (inverse of regularization parameter)
     neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
     saveResults = 0; # save results in mat file.
 
     
     doNsRand = 0; # if 1, a random set of neurons will be selected to make sure we have fewer neurons than trials. 
-    regType = 'l2' # 'l2' : regularization type
+    regType = 'l1' # 'l2' : regularization type
     kfold = 10;
     compExcInh = 0 # if 1, analyses will be run to compare exc inh neurons.
     
@@ -1089,23 +1089,43 @@ print 'try the following regularization values: \n', cvect
 
 perClassErrorTrain = np.ones((numSamples, len(cvect)))+np.nan;
 perClassErrorTest = np.ones((numSamples, len(cvect)))+np.nan;
+wAllC = np.ones((numSamples, len(cvect), X.shape[1]))+np.nan;
+bAllC = np.ones((numSamples, len(cvect)))+np.nan;
+
 for s in range(numSamples):
     for i in range(len(cvect)):
-        if regType == 'l1':
+        if regType == 'l1':                       
             summary =  crossValidateModel(X, Y, linearSVM, kfold = kfold, l1 = cvect[i])
         elif regType == 'l2':
             summary =  crossValidateModel(X, Y, linearSVM, kfold = kfold, l2 = cvect[i])
 
         perClassErrorTrain[s, i] = summary.perClassErrorTrain;
-        perClassErrorTest[s, i] = summary.perClassErrorTest;
+        perClassErrorTest[s, i] = summary.perClassErrorTest;        
+        wAllC[s,i,:] = np.squeeze(summary.model.coef_); # weights of all neurons for each value of c and each shuffle
+        bAllC[s,i] = np.squeeze(summary.model.intercept_);
 
+# compute averages across shuffles
 meanPerClassErrorTrain = np.mean(perClassErrorTrain, axis = 0);
 semPerClassErrorTrain = np.std(perClassErrorTrain, axis = 0)/np.sqrt(numSamples);
 
+# Pick bestc from all range of c... it may end up be a value at which all weights are 0.
 meanPerClassErrorTest = np.mean(perClassErrorTest, axis = 0);
 semPerClassErrorTest = np.std(perClassErrorTest, axis = 0)/np.sqrt(numSamples);
-ix = np.argmin(meanPerClassErrorTest);
+ix = np.argmin(meanPerClassErrorTest)
 cbest = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix])];
+cbest = cbest[0]; # best regularization term based on minError+SE criteria
+cbestAll = cbest
+
+# Make sure at bestc at least one weight is non-zero (ie pick bestc from only those values of c that give non-0 average weights.)
+a = (wAllC!=0) # non-zero weights
+b = np.mean(a, axis=(0,2)) # Fraction of non-zero weights (averaged across shuffles)
+c1stnon0 = np.argwhere(b)[0].squeeze() # first element of c with at least 1 non-0 w in 1 shuffle
+
+cvectnow = cvect[c1stnon0:]
+meanPerClassErrorTestnow = np.mean(perClassErrorTest[:,c1stnon0:], axis = 0);
+semPerClassErrorTestnow = np.std(perClassErrorTest[:,c1stnon0:], axis = 0)/np.sqrt(numSamples);
+ix = np.argmin(meanPerClassErrorTestnow)
+cbest = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
 cbest = cbest[0]; # best regularization term based on minError+SE criteria
 
 
@@ -1181,16 +1201,23 @@ if doPlots:
 # 
 
 # In[40]:
+# you don't need to again train classifier on data bc you already got it above when you found bestc. You just need to do it for shuffled. ... [you already have access to test/train error as well as b and w of training SVM with bestc.)]
+# we just get the values of perClassErrorTrain and perClassErrorTest at cbest (we already computed these values above when training on all values of c)
+indBestC = np.in1d(cvect, cbest)
+perClassErrorTrain_data = perClassErrorTrain[:,indBestC].squeeze()
+perClassErrorTest_data = perClassErrorTest[:,indBestC].squeeze()
+w_data = wAllC[:,indBestC,:].squeeze()
+b_data = bAllC[:,indBestC]
 
-numShuffles = 100
-summary_data = [];
+numShuffles = numSamples #100
+#summary_data = [];
+#perClassErrorTrain_data = [];
+#perClassErrorTest_data = []
+#w_data = []
+#b_data = []
 summary_shfl = [];
-perClassErrorTrain_data = [];
-perClassErrorTest_data = []
 perClassErrorTrain_shfl = [];
 perClassErrorTest_shfl = [];
-w_data = []
-b_data = []
 w_shfl = []
 b_shfl = []
 permIxsList = [];
@@ -1199,16 +1226,16 @@ for i in range(numShuffles):
     permIxs = rng.permutation(numDataPoints);
     permIxsList.append(permIxs);
     if regType == 'l1':
-        summary_data.append(crossValidateModel(X, Y, linearSVM, kfold = kfold, l1 = cbest))
+#        summary_data.append(crossValidateModel(X, Y, linearSVM, kfold = kfold, l1 = cbest))
         summary_shfl.append(crossValidateModel(X, Y[permIxs], linearSVM, kfold = kfold, l1 = cbest))
     elif regType == 'l2':
-        summary_data.append(crossValidateModel(X, Y, linearSVM, kfold = kfold, l2 = cbest))
+#        summary_data.append(crossValidateModel(X, Y, linearSVM, kfold = kfold, l2 = cbest))
         summary_shfl.append(crossValidateModel(X, Y[permIxs], linearSVM, kfold = kfold, l2 = cbest))
         
-    perClassErrorTrain_data.append(summary_data[i].perClassErrorTrain);
-    perClassErrorTest_data.append(summary_data[i].perClassErrorTest);
-    w_data.append(np.squeeze(summary_data[i].model.coef_));
-    b_data.append(summary_data[i].model.intercept_);
+#    perClassErrorTrain_data.append(summary_data[i].perClassErrorTrain);
+#    perClassErrorTest_data.append(summary_data[i].perClassErrorTest);
+#    w_data.append(np.squeeze(summary_data[i].model.coef_));
+#    b_data.append(summary_data[i].model.intercept_);
         
     perClassErrorTrain_shfl.append(summary_shfl[i].perClassErrorTrain);
     perClassErrorTest_shfl.append(summary_shfl[i].perClassErrorTest);
@@ -1216,6 +1243,9 @@ for i in range(numShuffles):
     b_shfl.append(summary_shfl[i].model.intercept_);
 
 
+
+
+    
 # In[41]:
 
 pvalueTrain = ttest2(perClassErrorTrain_data, perClassErrorTrain_shfl, tail = 'left');
@@ -3211,14 +3241,15 @@ if saveResults:
         scio.savemat(svmName, {'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 
                                'th_stim_dur':th_stim_dur, 'numSamples':numSamples, 
                                'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 
-                               'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 'regType':regType, 'w':w, 'b':b, 
-                               'cbest':cbest, 'corrClass':corrClass, 'corrClassShfl':corrClassShfl,
+                               'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 
+                               'regType':regType, 'cvect':cvect, 'cbest':cbest, 'cbestAll':cbestAll,
+                               'perClassErrorTest':perClassErrorTest, 'perClassErrorTrain':perClassErrorTrain, 'wAllC':wAllC, 'bAllC':bAllC,
+                               'w':w, 'b':b, 'trainE':trainE, 
+                               'corrClass':corrClass, 'corrClassShfl':corrClassShfl,
                                'perClassErrorTrain_data':perClassErrorTrain_data, 
                                'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 
                                'perClassErrorTest_data':perClassErrorTest_data, 
-                               'perClassErrorTest_shfl':perClassErrorTest_shfl, 
-                               'perClassErrorTest':perClassErrorTest, 
-                               'perClassErrorTrain':perClassErrorTrain, 'cvect':cvect, 'trainE':trainE, 
+                               'perClassErrorTest_shfl':perClassErrorTest_shfl,  
                                'w_data':w_data,'b_data':b_data,'w_shfl':w_shfl,'b_shfl':b_shfl,
                                'perActive_inh':perActive_inh, 'perActive_exc':perActive_exc, # vars related to exc, inh start from this line.
                                'wei_all':wei_all, 'perClassEr':perClassEr, 
@@ -3248,14 +3279,15 @@ if saveResults:
         scio.savemat(svmName, {'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 
                                'th_stim_dur':th_stim_dur, 'numSamples':numSamples, 
                                'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 
-                               'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 'regType':regType, 'w':w, 'b':b, 
-                               'cbest':cbest, 'corrClass':corrClass, 'corrClassShfl':corrClassShfl,
+                               'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 
+                               'regType':regType, 'cvect':cvect, 'cbest':cbest, 'cbestAll':cbestAll,                               
+                               'perClassErrorTest':perClassErrorTest, 'perClassErrorTrain':perClassErrorTrain, 'wAllC':wAllC, 'bAllC':bAllC, 
+                               'w':w, 'b':b, 'trainE':trainE, 
+                               'corrClass':corrClass, 'corrClassShfl':corrClassShfl,
                                'perClassErrorTrain_data':perClassErrorTrain_data, 
                                'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 
                                'perClassErrorTest_data':perClassErrorTest_data, 
-                               'perClassErrorTest_shfl':perClassErrorTest_shfl, 
-                               'perClassErrorTest':perClassErrorTest, 
-                               'perClassErrorTrain':perClassErrorTrain, 'cvect':cvect, 'trainE':trainE,
+                               'perClassErrorTest_shfl':perClassErrorTest_shfl,  
                                'w_data':w_data,'b_data':b_data,'w_shfl':w_shfl,'b_shfl':b_shfl})
 
     # save normalized traces as well                       
