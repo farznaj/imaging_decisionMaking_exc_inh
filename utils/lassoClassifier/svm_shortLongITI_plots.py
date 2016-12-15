@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Compare short vs long ITI SVM results after running each separately in mainSVM_notebook_plots.py
+If looking at results without subselection of neurons, run svm_classAccur_noSubsel.py to get the vars.
 
 Created on Sat Nov  5 14:36:16 2016
 @author: farznaj
@@ -105,7 +106,7 @@ sd_test_d1 = np.true_divide(np.nanstd(l1_err_test_data1, axis=0), np.sqrt(numNon
 
 ave_test_s0 = 100-np.nanmean(l1_err_test_shfl0, axis=0) # numDays
 #sd_test_s0 = np.nanstd(l1_err_test_shfl0, axis=0) / np.sqrt(np.shape(l1_err_train_data0)[0]) 
-sd_test_d0 = np.true_divide(np.nanstd(l1_err_test_shfl0, axis=0), np.sqrt(numNon0SampShfl0)) #/ np.sqrt(numSamp) 
+sd_test_s0 = np.true_divide(np.nanstd(l1_err_test_shfl0, axis=0), np.sqrt(numNon0SampShfl0)) #/ np.sqrt(numSamp) 
 ave_test_s1 = 100-np.nanmean(l1_err_test_shfl1, axis=0) # numDays
 #sd_test_s1 = np.nanstd(l1_err_test_shfl1, axis=0) / np.sqrt(np.shape(l1_err_train_data0)[0]) 
 sd_test_s1 = np.true_divide(np.nanstd(l1_err_test_shfl1, axis=0), np.sqrt(numNon0SampShfl1)) #/ np.sqrt(numSamp) 
@@ -154,7 +155,7 @@ plt.figure(figsize=(6,5))
 gs = gridspec.GridSpec(2,5)#, width_ratios=[2, 1]) 
 
 ax = plt.subplot(gs[0, 0:3])
-plt.errorbar(range(numDays), ave_test_d0, yerr = sd_test_d0, color='g', label='Short ITI')
+plt.errorbar(range(numDays), ave_test_d0, yerr = sd_test_d0, color='r', label='Short ITI')
 plt.errorbar(range(numDays), ave_test_d1, yerr = sd_test_d1, color='k', label='Long ITI')
 #plt.errorbar(range(numDays), ave_test_s0, yerr = sd_test_s0, color='g', alpha=.35)
 #plt.errorbar(range(numDays), ave_test_s1, yerr = sd_test_s1, color='k', alpha=.35)
@@ -173,11 +174,13 @@ labels = ['Short ITI', 'Long ITI']
 ax = plt.subplot(gs[0,3:4])
 plt.errorbar(x, [np.nanmean(ave_test_d0), np.nanmean(ave_test_d1)], yerr = [np.nanstd(ave_test_d0), np.nanstd(ave_test_d1)], marker='o', fmt=' ', color='k')
 plt.xlim([x[0]-1, x[1]+1])
-plt.title('Data')
+#plt.title('Data')
 #plt.ylabel('Classification error (%) - testing data')
 plt.xticks(x, labels, rotation='vertical')    
 ymin1, ymax = ax.get_ylim()
 #plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
+plt.title('Data\np= %.3f' %(p_shlo))
+
 plt.subplots_adjust(wspace=1)
 makeNicePlots(ax)
 
@@ -204,7 +207,7 @@ plt.ylim([ymn, ymax])
 
 # shuffle. all days
 ax = plt.subplot(gs[1,0:3])
-plt.errorbar(range(numDays), ave_test_s0, yerr = sd_test_s0, color='g', alpha=.35)
+plt.errorbar(range(numDays), ave_test_s0, yerr = sd_test_s0, color='r', alpha=.35)
 plt.errorbar(range(numDays), ave_test_s1, yerr = sd_test_s1, color='k', alpha=.35)
 
 plt.xlabel('Days')
@@ -220,7 +223,7 @@ plt.subplots_adjust(wspace=1, hspace=.7)
 
 
 if savefigs:
-    dnow = '/shortLongITI_afterSFN/bestc_500Iters_non0decoder/excludeCVSampsWith0Weights' # save directory in dropbox
+    dnow = '/shortLongAllITI_afterSFN/bestc_500Iters_non0decoder/setTo50ErrOfSampsWith0Weights' 
     fign = os.path.join(svmdir+dnow, suffn+'test_L1'+'.'+fmt[0])
     plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
 

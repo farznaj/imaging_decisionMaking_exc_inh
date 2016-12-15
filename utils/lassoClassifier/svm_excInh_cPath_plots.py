@@ -1,12 +1,22 @@
 # -*- coding: utf-8 -*-
+
+
+# IMPORTANT NOTE: I think you should exclude days with chance testing-data decoding performance... bc it doesn't really make sense to compare their weight or fract-non0 of exc and inh neurons.
+# For this you will need to get shuffles (shuffle labels of each trial)
+
+
 """
  You don't need to run any other scripts before this one. It works on its own.
+ 
  This script includes analyses to compare exc vs inh decoding [when same  number of exc and inh are concatenated to train SVM]
- fract non0 and weights are compared
+ 
+ fract non0 and weights are compared between exc and inh (at all c and at bestc).
+ 
  To get vars for this script, you need to run mainSVM_excInh_cPath.py... normally on the cluster!
+ 
  The saved mat files which will be loaded here are named excInhC2_svmCurrChoice_ and excInhC2_svmPrevChoice
- (The mat files named excInhC dont have cross validation)
-
+ (The mat files named excInhC do not have cross validation)
+ 
 
 
 Pool SVM results of all days and plot summary figures
@@ -18,7 +28,7 @@ Created on Sun Oct 30 14:41:01 2016
 #%% 
 mousename = 'fni17'
 
-trialHistAnalysis = 0;
+trialHistAnalysis = 1;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
 ep_ms = [809, 1109] # only for trialHistAnalysis=0
         
@@ -45,6 +55,8 @@ import scipy.io as scio
 import scipy.stats as stats
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
+import sys
+sys.path.append('/home/farznaj/Documents/trial_history/imaging') # Gamal's dir needs to be added using "if" that takes the value of pwd
 from setImagingAnalysisNamesP import *
 
 plt.rc('font', family='helvetica')        
@@ -361,7 +373,7 @@ for iday in range(len(days)):
         
     ##%% Load vars
     Data = scio.loadmat(svmName, variable_names=['perActive_exc', 'perActive_inh', 'wei_all', 'perClassEr', 'cvect_', 'bei_all', 'perClassErTest'])
-    perActive_exc = Data.pop('perActive_exc') # numSamples x numTrialShuff x length(cvect_)  # numSamples x length(cvect_)
+    perActive_exc = Data.pop('perActive_exc') # numSamples x numTrialShuff x length(cvect_)  # numSamples x length(cvect_)  # samples: shuffles of neurons
     perActive_inh = Data.pop('perActive_inh') # numSamples x numTrialShuff x length(cvect_)  # numSamples x length(cvect_)        
     wei_all = Data.pop('wei_all') # numSamples x numTrialShuff x length(cvect_) x numNeurons(inh+exc equal numbers) # numSamples x length(cvect_) x numNeurons(inh+exc equal numbers)  
     perClassEr = Data.pop('perClassEr') # numSamples x numTrialShuff x length(cvect_)
@@ -447,7 +459,7 @@ wall_non0_abs_exc_aveN = np.array(wall_non0_abs_exc_aveN)
 wall_non0_abs_inh_aveN = np.array(wall_non0_abs_inh_aveN)
 
 
-#%% Average weights,etc across shuffles for each day : numDays x length(cvect_) 
+#%% Average weights,etc across shuffles for each day : numDays x length(cvect_) (by shuffles we mean neuron shuffles ... not trial shuffles... you alreade averaged that when loading vars above)
 # NOTE: you may want to exclude shuffles with all0 weights from averaging
 
 #avax = (0,1) # (0) # average across axis; use (0,1) if shuffles of trials (for cross validation) as well as neurons are available. Otherwise use (0) if no crossvalidation was performed
@@ -846,8 +858,10 @@ for iday in range(len(days)):
 print cbestAll
 
 
-#%% compare exc vs inh dists (across all shuffls) at bestc for fract non0 and weights
-# IMPORTANT NOTE: I think you should exclude days with chance testing-data decoding performance... bc it doesn't really make sense to compare their weight or fract-non0 of exc and inh neurons.
+#%% Set %non0 and weights for exc and inh at bestc (across all shuffls) 
+# you also set shuffles with all0 w (for both exc and inh) to nan.
+# QUITE IMPORTANT NOTE: I think you should exclude days with chance testing-data decoding performance... bc it doesn't really make sense to compare their weight or fract-non0 of exc and inh neurons.
+# For this you will need to get shuffles (shuffle labels of each trial)
 
 perActiveExc = []
 perActiveInh = []
@@ -940,7 +954,7 @@ def histerrbar(a,b,binEvery,p):
     hist, bin_edges = np.histogram(a, bins=bn)
     hist = hist/float(np.sum(hist))    
     # Plot hist of a
-    ax = plt.subplot(h1) #(gs[0,0:2])
+    ax1 = plt.subplot(h1) #(gs[0,0:2])
     plt.bar(bin_edges[0:-1], hist, binEvery, color='k', alpha=.4, label=lab1)
     
     # set his of b
@@ -951,28 +965,31 @@ def histerrbar(a,b,binEvery,p):
     
     plt.legend(loc=0, frameon=False)
     plt.ylabel('Prob (all days & N shuffs at bestc)')
-    plt.title('mean diff= %.3f, p=%.3f' %(np.mean(a)-np.mean(b), p))
+#    plt.title('mean diff= %.3f, p=%.3f' %(np.mean(a)-np.mean(b), p))
+    plt.title('mean diff= %.3f' %(np.mean(a)-np.mean(b)))
     #plt.xlim([-.5,.5])
     plt.xlabel(lab)
-    makeNicePlots(ax)
+    makeNicePlots(ax1,0,1)
+
     
-    
-    # errorbar
-    ax = plt.subplot(h2) #(gs[0,2:3])
-    plt.errorbar([0,1], [a.mean(),b.mean()], [a.std()/np.sqrt(len(a)), b.std()/np.sqrt(len(b))],marker='o',color='k', fmt='.')
+    # errorbar: mean and st error
+    ax2 = plt.subplot(h2) #(gs[0,2:3])
+    plt.errorbar([0,1], [a.mean(),b.mean()], [a.std()/np.sqrt(len(a)), b.std()/np.sqrt(len(b))], marker='o',color='k', fmt='.')
     plt.xlim([-1,2])
 #    plt.title('%.3f, %.3f' %(a.mean(), b.mean()))
     plt.xticks([0,1], (lab1, lab2), rotation='vertical')
     plt.ylabel(lab)
-    makeNicePlots(ax)
+    plt.title('p=%.3f' %(p))
+    makeNicePlots(ax2,0,1)
 #    plt.tick_params
     
     plt.subplots_adjust(wspace=1, hspace=.5)
+    return ax1,ax2
 
 
 
 def errbarAllDays(a,b,p):
-    eav = np.nanmean(a, axis=1)
+    eav = np.nanmean(a, axis=1) # average across shuffles
     iav = np.nanmean(b, axis=1)
     ele = np.shape(a)[1] - np.sum(np.isnan(a),axis=1) # number of non-nan shuffles of each day
     ile = np.shape(b)[1] - np.sum(np.isnan(b),axis=1) # number of non-nan shuffles of each day
@@ -984,28 +1001,51 @@ def errbarAllDays(a,b,p):
     pp[p<=.05] = np.max((eav,iav))
     x = np.arange(np.shape(eav)[0])
     
+    ax = plt.subplot(gs[1,0:2])
     plt.errorbar(x, eav, esd, color='k')
     plt.errorbar(x, iav, isd, color='r')
     plt.plot(x, pp, marker='*',color='r', linestyle='')
     plt.xlim([-1, x[-1]+1])
     plt.xlabel('Days')
-    makeNicePlots(ax)
+    plt.ylabel(lab)
+    makeNicePlots(ax,0,1)
 
+    ax = plt.subplot(gs[1,2:3])
+    plt.errorbar(0, np.nanmean(eav), np.nanstd(eav)/np.sqrt(len(eav)), marker='o', color='k')
+    plt.errorbar(1, np.nanmean(iav), np.nanstd(iav)/np.sqrt(len(eav)), marker='o', color='k')
+    plt.xticks([0,1], (lab1, lab2), rotation='vertical')
+    plt.xlim([-1,2])
+    makeNicePlots(ax,0,1)
 
-#%% 
-######################################  All days pooled ###################################### 
+    _, p = stats.ttest_ind(eav, iav, nan_policy='omit')
+    plt.title('p=%.3f' %(p))
 
+    plt.subplots_adjust(wspace=1, hspace=.5)
+
+    
+#%%
 ###############%% classification accuracy of cv data at best c for each day ###############
-
-plt.figure(figsize=(5,5))    
-gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
-h1 = gs[0,0:2]
-plt.subplot(h1)
-plt.errorbar(np.arange(len(days)), 100-perClassErTest_bestc, perClassErTest_bestc_sd)
+# for each day plot averages across shuffles (neuron shuffles)
+plt.figure(figsize=(5,2.5))    
+gs = gridspec.GridSpec(1, 10)#, width_ratios=[2, 1]) 
+h1 = gs[0,0:7]
+ax = plt.subplot(h1)
+plt.errorbar(np.arange(len(days)), 100-perClassErTest_bestc, perClassErTest_bestc_sd, color='k')
 plt.xlim([-1,len(days)+1])
 plt.xlabel('Days')
 plt.ylabel('% Class accuracy')
+ymin, ymax = ax.get_ylim()
 makeNicePlots(plt.gca())
+
+# ave and std across days
+h2 = gs[0,7:8]
+ax = plt.subplot(h2)
+plt.errorbar(0, np.mean(100-perClassErTest_bestc), np.std(100-perClassErTest_bestc), marker='o', color='k')
+plt.ylim([ymin,ymax])
+#plt.xlim([-.01,.01])
+plt.axis('off')
+plt.subplots_adjust(wspace=0)
+#makeNicePlots(ax)
 
 if savefigs:#% Save the figure
     fign = os.path.join(svmdir+dnow+'/bestC'+dp, suffn[0:5]+'classAccur'+'.'+fmt[0])
@@ -1013,11 +1053,17 @@ if savefigs:#% Save the figure
 
 
 
+#%% 
+######################################  All days pooled ###################################### 
+### 1st row: pool all days and all neuron shuffles to get the histograms. Next to histograms plot the mean and st error of all shuffles of all days
+### On the 2nd row plot ave and st error across shuffles for each day. Next to it plot the ave and st error across days (averages of shuffles)
+
+
 ###############%% percent non-zero w ###############    
 ### hist and P val for all days pooled (exc vs inh)
 lab = '% non-0 w'
-binEvery = 10# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
-a = np.reshape(perActiveExc,(-1,)) 
+binEvery = 5# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+a = np.reshape(perActiveExc,(-1,))# perActiveExc includes average across neuron shuffles for each day.... 
 b = np.reshape(perActiveInh,(-1,))  
 a = a[~(np.isnan(a) + np.isinf(a))]
 b = b[~(np.isnan(b) + np.isinf(b))]
@@ -1032,17 +1078,17 @@ gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1])
 h1 = gs[0,0:2]
 h2 = gs[0,2:3]
 histerrbar(a,b,binEvery,p)
-plt.xlabel(lab)
+#plt.xlabel(lab)
 
-### show individual days
+### show ave and std across shuffles for each day
 a = perActiveExc
 b = perActiveInh
 _,p = stats.ttest_ind(a.transpose(), b.transpose(), nan_policy='omit')    
 print p
 #plt.figure(); plot.subplot(221)
-ax = plt.subplot(gs[1,0:3])
+#ax = plt.subplot(gs[1,0:3])
 errbarAllDays(a,b,p)
-plt.ylabel(lab)
+#plt.ylabel(lab)
 
 
 #plt.savefig('cpath_all_absnon0w.svg', format='svg', dpi=300)
@@ -1055,7 +1101,7 @@ if savefigs:#% Save the figure
 ###############%% abs non-0 w ###############
 ### hist and P val for all days pooled (exc vs inh)
 lab = 'abs non-0 w'
-binEvery = .01# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+binEvery = .005# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
 a = np.reshape(wNon0AbsExc,(-1,)) 
 b = np.reshape(wNon0AbsInh,(-1,))
 
@@ -1071,17 +1117,19 @@ plt.figure(figsize=(5,5))
 gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
 h1 = gs[0,0:2]
 h2 = gs[0,2:3]
-histerrbar(a,b,binEvery,p)
-plt.xlabel(lab)
+ax1,_ = histerrbar(a,b,binEvery,p)
+#plt.xlabel(lab)
+#ax1.set_xlim([0, .06])
+#ax1.set_xlim([0, .1])
 
 ### show individual days
 a = wNon0AbsExc
 b = wNon0AbsInh
 _,p = stats.ttest_ind(a.transpose(), b.transpose(), nan_policy='omit')    
 print p
-ax = plt.subplot(gs[1,0:3])
+#ax = plt.subplot(gs[1,0:3])
 errbarAllDays(a,b,p)
-plt.ylabel(lab)
+#plt.ylabel(lab)
 
 
 if savefigs:#% Save the figure
@@ -1093,7 +1141,7 @@ if savefigs:#% Save the figure
 ###############%% abs w  ###############
 ### hist and P val for all days pooled (exc vs inh)
 lab = 'abs w'
-binEvery = .005 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+binEvery = .002 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
 a = np.reshape(wAbsExc,(-1,)) 
 b = np.reshape(wAbsInh,(-1,))
 
@@ -1109,17 +1157,18 @@ plt.figure(figsize=(5,5))
 gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
 h1 = gs[0,0:2]
 h2 = gs[0,2:3]
-histerrbar(a,b,binEvery,p)
-plt.xlabel(lab)
+ax1,_ = histerrbar(a,b,binEvery,p)
+#plt.xlabel(lab)
+#ax1.set_xlim([0, .1])
 
 ### show individual days
 a = wAbsExc
 b = wAbsInh
 _,p = stats.ttest_ind(a.transpose(), b.transpose(), nan_policy='omit')    
 print p
-ax = plt.subplot(gs[1,0:3])
+#ax = plt.subplot(gs[1,0:3])
 errbarAllDays(a,b,p)
-plt.ylabel(lab)
+#plt.ylabel(lab)
 
 
 if savefigs:#% Save the figure

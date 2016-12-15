@@ -1,21 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-This script computes classification accuracy when no subselection of neurons was performed. 
-First run the beginning of mainSVM_notebook_plots to get vars required here.
-Also run the class accuracy section there to get class accur for subselect l1, which you will compare with results here.
+This script computes classification accuracy when no subselection of neurons was performed. (ie there are no "rounds" for each session.)
+To compare results with subselection, run the class accuracy section of svm_notebook_plots.py to get class accur.
 
 
 Created on Fri Dec  2 09:26:33 2016
-
 @author: farznaj
 """
 
+# Go to svm_plots_setVars and define vars!
+execfile("svm_plots_setVars.py")    
 
-numSamp = 500 #100 # number of shuffles for doing cross validation (ie number of random sets of test/train trials.... You changed the following: in mainSVM_notebook.py this is set to 100, so unless you change the value inside the code it should be always 100.)
+
+# for short long u have 500 iters for bestc but cv shuffs are 100.... so set numSamp to 100
+# for curr and prev, all is 500
+numSamp = 500 # 500 perClassErrorTest_shfl.shape[0]  # number of shuffles for doing cross validation (ie number of random sets of test/train trials.... You changed the following: in mainSVM_notebook.py this is set to 100, so unless you change the value inside the code it should be always 100.)
 #dnow = '/shortLongITI_afterSFN/bestc_500Iters_non0decoder' # save directory in dropbox
-dnow = '/shortLongAllITI_afterSFN/bestc_500Iters_non0decoder/excludeCVSampsWith0Weights' 
+dnow = '/shortLongAllITI_afterSFN/bestc_500Iters_non0decoder/setTo50ErrOfSampsWith0Weights' 
 #dnow = '/l1_l2_subsel_comparison'
-
+thNon0Ws = 2 # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!
+thSamps = 10  # Days that have <thSamps samples that satisfy >=thNon0W non0 weights will be manually set to 50 (class error of all their samples) ... bc we think <5 samples will not give us an accurate measure of class error of a day.
+setToNaN = 1 # if 1, the above two jobs will be done.
 
 #%%
 '''
@@ -43,15 +48,16 @@ l2_b_all = np.full((1, len(days)), np.nan).flatten()
 nTrAll = np.full((1, len(days)), np.nan).flatten() # number of trials for each session ... you want to see if subselection helps when there are much fewer trials than neurons
 nNeurAll = np.full((1, len(days)), np.nan).flatten()
 
-numNon0SampShfl = np.full((1, len(days)), np.nan).flatten()
+numNon0SampShfl = np.full((1, len(days)), np.nan).flatten() # For each day: number of cv samples with >=2 non-0 weights
 numNon0SampData = np.full((1, len(days)), np.nan).flatten()
+numNon0WShfl = np.full((1, len(days)), np.nan).flatten() # For each day: average number of non0 weights across all samples of shuffled data
 
 for iday in range(len(days)):
     
     imagingFolder = days[iday][0:6]; #'151013'
     mdfFileNumber = map(int, (days[iday][7:]).split("-")); #[1,2] 
         
-    #%% Set .mat file names
+    ##%% Set .mat file names
     pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
     signalCh = [2] # since gcamp is channel 2, should be always 2.
     postNProvided = 1; # If your directory does not contain pnevFile and instead it contains postFile, set this to 1 to get pnevFileName
@@ -67,7 +73,7 @@ for iday in range(len(days)):
     
     
     #%%
-    svmNameAll = setSVMname(pnevFileName, trialHistAnalysis, ntName, np.nan, itiName, []) # latest is l1, then l2. we use [] to get both files.
+    svmNameAll = setSVMname(pnevFileName, trialHistAnalysis, ntName, np.nan, itiName, []) # latest is l1, then l2. we use [] to get both files. # after that you again ran analysis with cross validation shuffles (l1).
 #    svmNameAll = setSVMname(pnevFileName, trialHistAnalysis, ntName, np.nan, itiName, 0) # go w latest for 500 shuffles and bestc including at least one non0 w.
 
     for i in [0]: #range(len(svmNameAll)):
@@ -78,31 +84,42 @@ for iday in range(len(days)):
         w = Data.pop('w')[0,:]
         
         if abs(w.sum()) < eps:  # I think it is wrong to do this. When ws are all 0, it means there was no decoder for that day, ie no info about the choice.
-            print '\tAll weights are 0 ... '
+            print '\tAll weights in the allTrials-trained decoder are 0 ... '
 #            
 #        else:    
         ##%% Load the class-loss array for the testing dataset (actual and shuffled) (length of array = number of samples, usually 100) 
-        Data = scio.loadmat(svmName, variable_names=['w_data','w_shfl','corrClass','b','regType', 'perClassErrorTest_data', 'perClassErrorTest_shfl', 'perClassErrorTrain_data', 'perClassErrorTrain_shfl'])
+        Data = scio.loadmat(svmName, variable_names=['cbest','cbestAll','w_data','w_shfl','corrClass','b','regType', 'perClassErrorTest_data', 'perClassErrorTest_shfl', 'perClassErrorTrain_data', 'perClassErrorTrain_shfl'])
         regType = Data.pop('regType').astype(str)
         b = Data.pop('b').astype(float)
         perClassErrorTest_data = Data.pop('perClassErrorTest_data')[0,:] # numSamples
         perClassErrorTest_shfl = Data.pop('perClassErrorTest_shfl')[0,:]
         perClassErrorTrain_data = Data.pop('perClassErrorTrain_data')[0,:] # numSamples
         perClassErrorTrain_shfl = Data.pop('perClassErrorTrain_shfl')[0,:]
+        cbest = Data.pop('cbest')
+        cbestAll = Data.pop('cbestAll')
         
         corrClass = Data.pop('corrClass')
         nTrAll[iday] = np.shape(corrClass)[1]    
         nNeurAll[iday] = len(w)
         
-        w_shfl = Data.pop('w_shfl')
-        ash = np.mean(w_shfl!=0,axis=1) # fraction non-0 weights
-        ash = ash>0 # index of samples that have at least 1 non0 weight for shuffled
-        w_data = Data.pop('w_data')
-        ada = np.mean(w_data!=0,axis=1) # fraction non-0 weights        
-        ada = ada>0 # index of samples that have at least 1 non0 weight for data
-        numNon0SampShfl[iday] = ash.sum() # number of cv samples with non-0 weights
-        numNon0SampData[iday] = ada.sum()
         
+        w_shfl = Data.pop('w_shfl')
+#        ash = np.mean(w_shfl!=0,axis=1) # fraction non-0 weights
+#        ash = ash>0 # index of samples that have at least 1 non0 weight for shuffled  
+        ash = np.sum(w_shfl!=0,axis=1)<thNon0Ws # samples w fewer than 2 non-0 weights
+        ash = ~ash # samples w >=2 non0 weights
+        w_data = Data.pop('w_data')
+#        ada = np.mean(w_data!=0,axis=1) # fraction non-0 weights                
+#        ada = ada>0 # index of samples that have at least 1 non0 weight for data
+        ada = np.sum(w_data!=0,axis=1)<thNon0Ws # samples w fewer than 2 non-0 weights        
+        ada = ~ada # samples w >=2 non0 weights
+        numNon0SampShfl[iday] = ash.sum() # number of cv samples with >=2 non-0 weights
+        numNon0SampData[iday] = ada.sum()
+
+        numNon0WShfl[iday] = np.sum(w_shfl!=0,axis=1).mean() # average number of non0 weights across all samples of shuffled data
+        
+        
+            
         if regType=='l1':
             l1_err_test_data[:, iday] = perClassErrorTest_data #it will be nan for rounds with all-0 weights
             l1_err_test_shfl[:, iday] = perClassErrorTest_shfl
@@ -110,12 +127,15 @@ for iday in range(len(days)):
             l1_err_train_shfl[:, iday] = perClassErrorTrain_shfl
             l1_wnon0_all[iday] = (w!=0).mean() # this is not w_shfl or w_data... this is w when all trials were used for training
             l1_b_all[iday] = b
-
-            # set to nan the test/train error of those samples that have all-0 weights
-            l1_err_test_data[~ada, iday] = np.nan #it will be nan for rounds with all-0 weights
-            l1_err_test_shfl[~ash, iday] = np.nan
-            l1_err_train_data[~ada, iday] = np.nan #it will be nan for rounds with all-0 weights
-            l1_err_train_shfl[~ash, iday] = np.nan
+            
+            if setToNaN:
+                # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!
+                # The reson I don't simply exclude them is that I want them to count when I get average across days... lets say I am comparing two conditions, one doesn't have much decoding info (as a result mostly 0 weights)... I don't want to throw it away... not having information about the choice is informative for me.
+                # set to nan the test/train error of those samples that have all-0 weights
+                l1_err_test_data[~ada, iday] = 50#np.nan #it will be nan for samples with all-0 weights
+                l1_err_test_shfl[~ash, iday] = 50#np.nan
+                l1_err_train_data[~ada, iday] = 50#np.nan #it will be nan for samples with all-0 weights
+                l1_err_train_shfl[~ash, iday] = 50#np.nan
             
         elif regType=='l2':
             l2_err_test_data[:, iday] = perClassErrorTest_data
@@ -125,9 +145,22 @@ for iday in range(len(days)):
             l2_wnon0_all[iday] = (w!=0).mean()
             l2_b_all[iday] = b
 
+        if setToNaN:
+            # For days that have <10 samples that satisfy >=2 non0 weights, we will manually set the class error of all samples to 50 ... bc we think <5 samples will not give us an accurate measure of class error of a day.
+            if numNon0SampShfl[iday]<thSamps:
+                l1_err_test_shfl[:, iday] = 50*np.ones((perClassErrorTest_data.shape))#np.nan
+                l1_err_train_shfl[:, iday] = 50*np.ones((perClassErrorTest_data.shape))#np.nan
+                numNon0SampShfl[iday] = perClassErrorTest_shfl.shape[0]
+                
+            if numNon0SampData[iday]<thSamps:
+                l1_err_test_data[:, iday] = 50*np.ones((perClassErrorTest_data.shape))#np.nan
+                l1_err_train_data[:, iday] = 50*np.ones((perClassErrorTest_data.shape))#np.nan
+                numNon0SampData[iday] = perClassErrorTest_data.shape[0]
+            
+            
 print numNon0SampData
 print numNon0SampShfl
-
+print numNon0WShfl
 
 #%% keep short and long ITI results to plot them against each other later.
 if trialHistAnalysis:
@@ -210,12 +243,18 @@ plt.ylim([ymin, ymax])
 #plt.ylabel('Classification error (%) - testing data')
 plt.xticks(x, labels, rotation='vertical', fontsize=13)    
 #plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
+#av_l1_test_d = 100-np.nanmean(l1_err_test_data0, axis=0) # numDays
+#av_l1_test_s = 100-np.nanmean(l1_err_test_shfl0, axis=0) 
+_,p = stats.ttest_ind(av_l1_test_d, av_l1_test_s)
+plt.title('p= %.3f' %(p))
+
 plt.subplots_adjust(wspace=1)
 makeNicePlots(ax)
 
 if savefigs:#% Save the figure
     fign = os.path.join(svmdir+dnow, suffn+'test_L1'+'.'+fmt[0])
     plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')  
+
 
 
 

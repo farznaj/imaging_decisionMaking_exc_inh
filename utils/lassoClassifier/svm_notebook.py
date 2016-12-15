@@ -1,3 +1,7 @@
+# This is the main SVM script that includes all analyses (training SVM, comparing exc, inh etc.... )
+# For comparing exc, inh you have svm_excInh_cPath which is more extensive ... use that.
+# This script should be run on the cluster.
+
 
 # coding: utf-8
 
@@ -1060,12 +1064,22 @@ if doPlots:
     plt.legend()
 
 
+
+
+
+
+#%% Decoding starts here:
+########################################################################################################################################
+########################################################################################################################################
 # ## Identify the best regularization parameter
 #     Perform 10-fold cross validation to obtain the best regularization parameter
 #         More specifically: "crossValidateModel" divides data into training and test datasets. It calls linearSVM.py, which does linear SVM using XTrain, and returns percent class loss for XTrain and XTest.
 #     This procedure gets repeated for numSamples (100 times) for each value of regulariazation parameter. 
 #     An average across all 100 samples is computed to find the minimum test class loss.
 #     Best regularization parameter is defined as the smallest regularization parameter whose test-dataset class loss is within mean+sem of minimum test class loss.
+########################################################################################################################################
+########################################################################################################################################
+
 
 # In[25]:
 
@@ -1131,7 +1145,7 @@ cbest = cbest[0]; # best regularization term based on minError+SE criteria
 
 # In[37]:
 
-##%%%%%% plot coss-validation results
+##%%%%%% plot C path
 if doPlots:
     print 'Best c (inverse of regularization parameter) = %.2f' %cbest
     plt.figure('cross validation')
@@ -1195,10 +1209,15 @@ if doPlots:
     print 'Training error = %.2f%%' %trainE
 
 
+#%%
+####################################################################################################################################
+####################################################################################################################################
 # ## Do cross-validation and set null distributions for classification error by shuffling trial labels
 #     Compute distritbutions of class loss for train and test datasets by fitting SVM for 100 times.
 #     Do this for both actual data and shuffled data (ie data in which Y is shuffled but X is not to serve as null distribution.)
 # 
+####################################################################################################################################
+####################################################################################################################################
 
 # In[40]:
 # you don't need to again train classifier on data bc you already got it above when you found bestc. You just need to do it for shuffled. ... [you already have access to test/train error as well as b and w of training SVM with bestc.)]
@@ -1374,9 +1393,15 @@ for nN in [x+1 for x in range(np.shape(X)[1])]: # nN = 1:totalNumNeurons
 """
 
 
+
+#%%
+####################################################################################################################################
+####################################################################################################################################
 # ## Project traces onto SVM weights
 #     Stimulus-aligned, choice-aligned, etc traces projected onto SVM fitted weights.
 #     More specifically, project traces of all trials onto normalized w (ie SVM weights computed from fitting model using X and Y of all trials).
+####################################################################################################################################
+####################################################################################################################################
 
 # In[26]:
 
@@ -1633,9 +1658,16 @@ if doPlots:
     # plt.tight_layout()
 
 
+
+
+#%%
+####################################################################################################################################
+####################################################################################################################################
 # ## Classification accuracy at each time point
 #     Use the same SVM model trained during ep to predict animal's choice from the population responses at all time points.
 #     Same trials that went into projection traces will be used here.
+####################################################################################################################################
+####################################################################################################################################
 
 # In[28]:
 
@@ -1695,7 +1727,20 @@ if doPlots:
     plt.xlim([time_aligned_stim[0], time_aligned_stim[-1]])
 
 
-# # Comparison of Excitatory and Inhibitory Neurons 
+
+
+
+
+#%%
+####################################################################################################################################
+####################################################################################################################################
+####################################################################################################################################
+######################################## Comparison of Excitatory and Inhibitory Neurons ##################################################################
+####################################################################################################################################
+####################################################################################################################################
+####################################################################################################################################
+
+
 
 # ## Compare weights of inhibitory and excitatory neurons
 
@@ -2021,12 +2066,18 @@ if compExcInh and doPlots and neuronType==2:
     # plt.tight_layout()
 
 
+
+
+
+#%%
+####################################################################################################################################
 # ## Compute classification error of training and testing dataset for the following cases:
-#     Here we train the classifier using the best c found above (when including all neurons in the decoder) but using different sets of neurons and 90% training, 10% testing trials.
+#     Here we train the classifier using the best c found above (when including all neurons in the decoder) but using different sets of neurons (and 90% training, 10% testing trials.) ... I think this is problematic to use bestc of a decoder trained on a different population!
 #     
 #     1) All inhibitory neurons contribute to the decoder
 #     2) N excitatory neurons contribute, where n = number of inhibitory neurons. 
 #     3) All excitatory neurons contribute
+####################################################################################################################################
 
 # In[33]:
 
@@ -2300,6 +2351,9 @@ if compExcInh and neuronType==2:
         plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)    
 
 
+
+
+####################################################################################################################################
 # ## Set correct classification traces for the following cases:
 #     
 #     1) All inhibitory neurons contribute to the decoder
@@ -2462,9 +2516,14 @@ if compExcInh and doPlots and neuronType==2:
     plt.legend(loc='center left', bbox_to_anchor=(1, .7))
 
 
+
+
+#%%
+####################################################################################################################################
 # ### Alternative way of doing the analysis above: compare prediction error when setting weights of excitatory neurons to 0 with when setting weights of inhibitory neurons to 0
 #     When setting weights of excit neurons to 0, we only do it for n excit neurons, where n = number of inhibitory neurons. This is to  control for the difference in the number of excit and inhibit neurons.
 #     
+####################################################################################################################################
 
 # In[37]:
 
@@ -2475,7 +2534,7 @@ if compExcInh and neuronType==2:
 #     trainE = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100; # redundant; already computed above
     
     
-    # compute prediction error when setting weights of n excitatory neurons to 0, where n = number of inhibitory neurons
+    # set weights of n excitatory neurons to 0, where n = number of inhibitory neurons
     
     numShuffles = 100
     lenInh = (inhRois==1).sum()
@@ -2524,6 +2583,7 @@ if compExcInh and neuronType==2:
         
         
     #%% set weights of all excit Ns to 0
+        
     ww = w+0;    
     ww[inhRois==0] = 0 
     linear_svm = copy.deepcopy(linear_svm_0)
@@ -2551,7 +2611,8 @@ if compExcInh and neuronType==2:
     
     
     
-    #%% compute prediction error when setting weights of inhibitory neurons to 0
+    #%% set weights of inhibitory neurons to 0
+    
     numShufflesI = 1; # bc we use all inh neurons (ie no random selection), we don't need to run it multiple times.
     train_err_inh0 = []    
     inhI = np.argwhere(inhRois==1)    
@@ -2770,9 +2831,13 @@ if compExcInh and doPlots and neuronType==2:
     
 
 
-# ## Excitatory and Inhibitory Neurons Relative Contribution to the Decoder
-# 
+
+#%%
+####################################################################################################################################
+################################## Excitatory and Inhibitory Neurons Relative Contribution to the Decoder ##############################################
 # We quantify the contribution of excitatory and inhibitory neurons to the encoding of the choice by measuring participation percentage, defined as the percentatge of a given population of neurons that has non-zero weights. We produce paraticipation curves, participation ratio at different values of svm regularizer (c), for each data
+####################################################################################################################################
+
 
 # In[467]:
 
@@ -2952,6 +3017,8 @@ if compExcInh and doPlots and neuronType==2:
     '''
 
 
+#%%
+####################################################################################################################################
 #  ### Another version of the analysis: equal number of exc and inh neurons
 #  We control for the different numbers of excitatory and inhibitory neurons by subsampling n excitatory neurons, where n is equal to the number of inhibitory neurons. More specifically, instead of sending the entire X to the function inh_exc_classContribution, we use a subset of X that includes equal number of exc and inh neurons (Exc neurons are randomly selected).
 
@@ -3209,7 +3276,12 @@ if all([compExcInh, doPlots, (neuronType==2 and not 'w' in locals()) or (neuronT
     plt.ylabel('% non-zero weights')
 
 
-# ## Save results as .mat files in a folder named svm
+
+#%%
+####################################################################################################################################
+############################################ Save results as .mat files in a folder named svm ####################################################################################################################################
+####################################################################################################################################
+
 
 # In[526]:
 

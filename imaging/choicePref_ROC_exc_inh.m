@@ -108,7 +108,11 @@ end
 % save roc_curr_stimstr2 eventI_stimOn_all choicePref_all_alld_exc choicePref_all_alld_inh
 
 
-%% Align all traces on stim onset
+%% Load and align all traces on stim onset
+% run the 1st section of this script
+% cd /home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/ROC
+% load('roc_curr.mat')
+% load('roc_prev.mat')
 
 nPost = nan(1,length(days));
 for iday = 1:length(days)
@@ -174,7 +178,8 @@ hh(h==0) = nan;
 
 %% Plots
 
-figure; hold on
+figure('position',[10   556   792   383]); 
+subplot(121); hold on
 h1 = boundedline(time_aligned, mean(aveexc,2), std(aveexc,0,2)/sqrt(size(aveexc,2)), 'g', 'alpha');
 h2 = boundedline(time_aligned, mean(aveinh,2), std(aveinh,0,2)/sqrt(size(aveinh,2)), 'r', 'alpha');
 a = get(gca, 'ylim');
@@ -182,9 +187,10 @@ plot(time_aligned, hh0*(a(2)-.05*diff(a)), 'k')
 legend([h1,h2], 'Excitatory', 'Inhibitory')
 xlabel('Time since stim onset (ms)')
 ylabel('ROC performance')
+title('mean+se days')
 
-%%
-figure; hold on
+%%%
+subplot(122); hold on
 h1 = boundedline(time_aligned, mean(excall,2), std(excall,0,2)/sqrt(size(excall,2)), 'g', 'alpha');
 h2 = boundedline(time_aligned, mean(inhall,2), std(inhall,0,2)/sqrt(size(inhall,2)), 'r', 'alpha');
 a = get(gca, 'ylim');
@@ -192,9 +198,10 @@ plot(time_aligned, hh*(a(2)-.05*diff(a)), 'k')
 legend([h1,h2], 'Excitatory', 'Inhibitory')
 xlabel('Time since stim onset (ms)')
 ylabel('ROC performance')
+title('mean+se all neurons of all days')
 
 
-%% Average in the window [800 1100]ms for each neuron
+%% Average of ROC performance in the window [800 1100]ms for each neuron (to compare it with SVM performance in this same window)
 
 eventI = nPreMin+1;
 if trialHistAnalysis
@@ -217,8 +224,10 @@ choicePref_inh_aligned_aveEP = cellfun(@(x)mean(x(ep,:),1), choicePref_inh_align
 %%%
 exc_ep = cell2mat(choicePref_exc_aligned_aveEP);
 inh_ep = cell2mat(choicePref_inh_aligned_aveEP);
-size(exc_ep), size(inh_ep)
+fprintf('Num exc neurons = %d, inh = %d\n', length(exc_ep), length(inh_ep))
 
+[~, p] = ttest2(exc_ep, inh_ep);
+fprintf('ROC at ep, pval= %.3f\n', p)
 
 % fraction of neurons that carry >=10% info relative to chance (ie >=60% or <=40%)
 fract_exc_inh_above10PercInfo = [mean(abs(exc_ep-.5)>.1) , mean(abs(inh_ep-.5)>.1)]
@@ -226,19 +235,34 @@ fract_exc_inh_above10PercInfo = [mean(abs(exc_ep-.5)>.1) , mean(abs(inh_ep-.5)>.
 
 %% Histogram of ROC AUC for all neurons (averaged during ep)
 
-bins = 0:.1:1;
+bins = 0:.01:1;
 [nexc, e] = histcounts(exc_ep, bins);
 [ninh, e] = histcounts(inh_ep, bins);
 
 x = mode(diff(bins))/2 + bins; x = x(1:end-1);
-figure; hold on
-plot(x, nexc/sum(nexc))
-plot(x, ninh/sum(ninh))
+ye = nexc/sum(nexc);
+yi = ninh/sum(ninh);
+ye = smooth(ye);
+yi = smooth(yi);
+
+figure; 
+subplot(211), hold on
+plot(x, ye)
+plot(x, yi)
 xlabel('ROC AUC')
 ylabel('Fraction neurons')
 legend('exc','inh')
-plot([.5 .5],[0 .5], 'k:')
+plot([.5 .5],[0 max([ye;yi])], 'k:')
+a = gca;
 
+subplot(212), hold on
+plot(x, cumsum(ye))
+plot(x, cumsum(yi))
+xlabel('ROC AUC')
+ylabel('Cum fraction neurons')
+legend('exc','inh')
+plot([.5 .5],[0 max([ye;yi])], 'k:')
+a = [a, gca];
 
-
+linkaxes(a, 'x')
 
