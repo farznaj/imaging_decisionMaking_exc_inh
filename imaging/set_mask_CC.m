@@ -3,7 +3,7 @@ function set_mask_CC(mouse, imagingFolder, mdfFileNumber)
 % - plotEftyVarsMean (if needed follow by setPmtOffFrames to set pmtOffFrames and by findTrsWithMissingFrames to set frame-dropped trials. In this latter case you will need to rerun CNMF!): for a quick evaluation of the traces and spotting any potential frame drops, etc
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
 % - set_mask_CC
-% - find_badROIs
+% - findBadROIs
 % - inhibit_excit_prep
 % - imaging_prep_analysis (calls set_aligned_traces... you will need its outputs)
 %
@@ -50,14 +50,15 @@ else
 end
 
 
+fprintf('Done!\n')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Plot ROIs found by Eftychios's algorithm on the sdImage
 
 load(imfilename, 'sdImage')
-% im = sdImage{2};
-im = normImage(sdImage{2});
+im = sdImage{2};
+% im = normImage(sdImage{2});
 plotCOMs = 0;
 
 if exist('im', 'var') && ~isempty(im)
@@ -84,8 +85,6 @@ if exist('im', 'var') && ~isempty(im)
     end
 end
 
-
-fprintf('Done!\n')
 
 %%
 % Use below for those days that you need to get srt_val, or to normalize

@@ -5,7 +5,8 @@
 % merging ROIs were found).
 
 
-%% index of mergedROIs after sorting
+%% Index of mergedROIs after sorting
+
 nNeurons = size(C,1); % 491;
 nMerged = length(merging_vars.merged_ROIs);
 
@@ -14,8 +15,24 @@ find(ismember(srt, mergeI)) % index of mergedROIs after sorting
 
 
 %% Check tau of merged_ROIs
-tau((ismember(srt, mergeI)), 2)
-figure; plot(tau(:,2))
+% with fast merge you gn will be set to 0, so you cannot compute tau!
+
+frameLength = 1000/30.9; % sec.
+tau = nan(size(P.gn,1), 2);
+for i = 1:length(tau)
+    g = P.gn{i};
+    tau(i,:) = tau_d2c(g,frameLength); % tau(:,1) is rise, and tau(:,2) is decay time constant (in ms).
+end
+
+t = tau((ismember(srt, mergeI)), 2)
+
+figure; hold on
+plot(tau(:,2))
+plot(find(ismember(srt, mergeI)), t, 'ro')
+
+
+
+
 
 
 %%
@@ -37,27 +54,30 @@ load(imfilename, 'sdImage', 'imHeight', 'imWidth');
 im = sdImage{2};
 
 
-%%
-load(pnevFileName, 'A', 'A_m', 'merging_vars_m', 'badComps', 'C_df', 'C_df_m')
+%%%
+load(pnevFileName, 'A', 'A_m', 'merging_vars_m', 'badComps', 'C', 'C_m')
 % merged_ROIs_m = merging_vars_m.merged_ROIs;
 merged_ROIs_m = merging_vars_m.merged_ROIs{1};
 
 
-%%
+%%%
 A = A(:, ~badComps);
-C_df = C_df(~badComps, :);
+C = C(~badComps, :);
 
-% get rid of the background component in C_df
-if size(C_df,1) == size(A,2)+1
+
+%%%
+% get rid of the background component in C
+if size(C,1) == size(A,2)+1
     %     bk_df = temporalDf(end,:); % background DF/F
-    C_df(end,:) = [];
+    C(end,:) = [];
 end
 
-% get rid of the background component in C_df
-if size(C_df_m,1) == size(A_m,2)+1
+% get rid of the background component in C
+if size(C_m,1) == size(A_m,2)+1
     %     bk_df = temporalDf(end,:); % background DF/F
-    C_df_m(end,:) = [];
+    C_m(end,:) = [];
 end
+
 
 
 %%
@@ -68,10 +88,11 @@ COMs_m = fastCOMsA(A_m, [imHeight, imWidth]); % size(medImage{2})
 size(COMs_m)
 
 
-%% Plot contours
+%% Plot contours and mark the merged ROIs
 
 % [CC, CCorig] = ROIContoursPnevCC(A, imHeight, imWidth, contour_threshold);
 
+%{
 sp = A_m;
 contour_threshold = .95;
 plotCOMs = 0;
@@ -79,6 +100,77 @@ plotCOMs = 0;
 CC = setCC_cleanCC_plotCC_setMask(sp, imHeight, imWidth, contour_threshold, im, plotCOMs);
 % [CC, ~, COMs_m, mask] = setCC_cleanCC_plotCC_setMask(sp, imHeight, imWidth, contour_threshold, im, plotCOMs);
 % [CC] = ROIContoursPnevCC(A, imHeight, imWidth, contour_threshold);
+%}
+
+load(moreName, 'CC')
+CC = CC(~badROIs01);
+
+plotCOMs = 0;
+im = sdImage{2};
+% im = normImage(sdImage{2});
+
+% if exist('im', 'var') && ~isempty(im)
+colors = hot(2*size(CC,1));
+colors = colors(end:-1:1,:);
+
+figure;
+imagesc(im);  % imagesc(log(im));
+hold on;
+%     colormap gray
+
+for rr = 1:length(CC) % find(~badROIs01)' 
+    if plotCOMs
+        plot(COMs(rr,2), COMs(rr,1), 'r.')
+
+    else
+        %[CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(Ain, imHeight, imWidth, contour_threshold, im);
+        if ~isempty(CC{rr})
+            plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
+        else
+            fprintf('Contour of ROI %i is empty!\n', rr)
+        end
+    end
+end
+% end
+
+
+hold on
+col = repmat([1 0 0; 1 0 1; .3 0 0], ceil(length(merged_ROIs_m)/3), 1);
+for i = 1:length(merged_ROIs_m)
+    for rr = merged_ROIs_m{i}        
+        plot(COMs(rr,2), COMs(rr,1), '.', 'color', col(i,:))
+%         plot(COMs(rr,2), COMs(rr,1), '.', 'color', 'r')
+    end
+%     pause
+end
+
+
+%% Plot contours after merging
+
+contour_threshold = .95;
+[CC_m] = ROIContoursPnevCC(A_m, imHeight, imWidth, contour_threshold);
+
+
+figure;
+imagesc(im);  % imagesc(log(im));
+hold on;
+%     colormap gray
+
+for rr = 1:length(CC_m) % find(~badROIs01)' 
+    if plotCOMs
+        plot(COMs(rr,2), COMs(rr,1), 'r.')
+
+    else
+        %[CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(Ain, imHeight, imWidth, contour_threshold, im);
+        if ~isempty(CC_m{rr})
+            plot(CC_m{rr}(2,:), CC_m{rr}(1,:), 'color', colors(rr, :))
+        else
+            fprintf('Contour of ROI %i is empty!\n', rr)
+        end
+    end
+end
+
+
 
 %%
 %%%%%%%%%%%%%%%% Single round of merging
@@ -109,31 +201,32 @@ end
 
 
 %%
-% find index of merged_ROIs in C_df_m
-lt = size(C_df_m,1);
+% find index of merged_ROIs in C_m
+lt = size(C_m,1);
 lm = length(merged_ROIs_m);
-merged_1st_ind = lt - lm + 1; % index of 1st merged_ROI in C_df_m
-merged_inds = (1:lm) + (merged_1st_ind-1); % index of merged_ROIs in C_df_m : merged_inds(i)=j means C_df_m(j,:) is the merged trace of ROIs that are in merged_ROIs{i}
+merged_1st_ind = lt - lm + 1; % index of 1st merged_ROI in C_m
+merged_inds = (1:lm) + (merged_1st_ind-1); % index of merged_ROIs in C_m : merged_inds(i)=j means C_m(j,:) is the merged trace of ROIs that are in merged_ROIs{i}
 
 f = figure;
 ff = figure; figure(ff), imagesc(log(im)), hold on
 cnt = 0;
+
+% colors = jet(64);
 
 for i = merged_inds(end:-1:1) % merged_inds
     
     cnt = cnt+1;    
     m = merged_ROIs_m{end-cnt+1}; % m = merged_ROIs_m{cnt};
         
-    
     %% plot traces
     figure(f), title('k: merged'); hold on
     
     % plot merged trace
-    plot(C_df_m(i,:), 'linewidth', 1.5, 'color', 'k')
+    plot(C_m(i,:), 'linewidth', 1.5, 'color', 'k')
     % plot individual traces before merging
-    plot(C_df(m,:)', 'linewidth', .2)
+    plot(C(m,:)', 'linewidth', .2)
     % look at correlations
-    corr(C_df(m,:)')
+    corr(C(m,:)')
     
     
     %% Plot ROI COMs (and contours if desired) that got merged. (ie before merging)
@@ -143,13 +236,16 @@ for i = merged_inds(end:-1:1) % merged_inds
 %     h = plot(COMs_m(i,2), COMs_m(i,1), 'r.');
     % plot contours
     for rr = 1:length(m)
-        hh = [hh, plot(CC{m(rr)}(2,:), CC{m(rr)}(1,:), 'color', 'r')];
+        hh = [hh, plot(CC{m(rr)}(2,:), CC{m(rr)}(1,:), 'color', 'b')];        
+%         pause
     end
     
+    %%
+%     A_corr(m(i), merged_ROIs{1}(j))
     
     %%
     drawnow, pause
-    figure(f), cla
+    figure(f), clf;% cla
     figure(ff), % delete(h), 
     delete(hh)
     
@@ -160,17 +256,17 @@ end
 
 %% Look at unmerged components and compare their traces before and after merging
 
-origInds = 1:size(C_df,1);
-origInds(cell2mat(merged_ROIs_m)) = []; % origInds(i) = j: index i in C_df_m is same as index j in C_df
+origInds = 1:size(C,1);
+origInds(cell2mat(merged_ROIs_m)) = []; % origInds(i) = j: index i in C_m is same as index j in C
 fprintf('Number of unmerged components = %d\n', length(origInds))
 % figure; plot(origInds) 
 
 figure; 
 for i = 1:length(origInds)
     hold on
-    plot(C_df(origInds(i),:))
-    plot(C_df_m(i,:))   
-    
+    plot(C(origInds(i),:))
+    plot(C_m(i,:))   
+    legend
     pause
     cla
 end
@@ -182,6 +278,7 @@ end
 
 
 
+%%
 
 %% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -425,3 +522,5 @@ for m0 = 1:length(merged_ROIs_m{r})
     pause
 end
 %}
+
+

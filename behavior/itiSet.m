@@ -25,6 +25,9 @@ function [iti_noscan, iti_gui_state] = itiSet(alldata)
 % of the current trial.
 iti_noscan = zeros(length(alldata),1); % iti_noscan(1)=0 indicates preceding trial 1, iti_noscan is zero (which makes sense.)
 for itr = 2:length(alldata)
+    % IF you need to check for the following it is because you are running
+    % trialization on both mdfFiles... you need to run it on each mdf file
+    % separately.
 %     if ~isempty(alldata(itr).parsedEvents) & ~isempty(alldata(itr-1).parsedEvents)
         if isfield(alldata(itr).parsedEvents.states, 'trial_start_rot_scope')
             iti_noscan(itr) = alldata(itr).parsedEvents.states.trial_start_rot_scope(1)*1000 - (alldata(itr-1).parsedEvents.states.stop_rotary_scope(1)+.5)*1000;

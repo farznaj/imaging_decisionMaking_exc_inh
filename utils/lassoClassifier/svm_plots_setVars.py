@@ -9,7 +9,7 @@ Created on Tue Dec 13 15:07:58 2016
 #%% 
 mousename = 'fni17'
 
-trialHistAnalysis = 1;
+trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
 ep_ms = [809, 1109] # only for trialHistAnalysis=0
         

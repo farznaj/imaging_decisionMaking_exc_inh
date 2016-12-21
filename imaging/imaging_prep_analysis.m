@@ -6,7 +6,7 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % Right after you are done with preproc on the cluster, run the following scripts:
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
 % - set_mask_CC
-% - find_badROIs
+% - findBadROIs
 % - inhibit_excit_prep
 % - imaging_prep_analysis
 % - set_aligned_traces
