@@ -180,15 +180,13 @@ fprintf('Data merged.\n');
 
 %% Take care of trials that are in alldata but not in imaging data.
 
-if set2nan
-    
+if set2nan    
     % For trials that were not imaged, set frameTimes, dFOF, spikes and activity traces to all nans (size:
     % min(framesPerTrial) x #neurons).
     [alldata([alldata.hasActivity]==0).dFOF] = deal(NaN(min(framesPerTrial), size(dFOF,2)));
     [alldata([alldata.hasActivity]==0).spikes] = deal(NaN(min(framesPerTrial), size(dFOF,2)));
     [alldata([alldata.hasActivity]==0).activity] = deal(NaN(min(framesPerTrial), size(dFOF,2)));
-    [alldata([alldata.hasActivity]==0).frameTimes] = deal(NaN(1, min(framesPerTrial)));
-    
+    [alldata([alldata.hasActivity]==0).frameTimes] = deal(NaN(1, min(framesPerTrial)));    
 end
 
 

@@ -29,6 +29,14 @@ th_badHighlightCorr = .4; % .5;
 % complete ROI already exists that is not a badHighlightCorr.
 %}
 
+% Right after you are done with preproc on the cluster, run the following scripts:
+% - plotEftyVarsMean (if needed follow by setPmtOffFrames to set pmtOffFrames and by findTrsWithMissingFrames to set frame-dropped trials. In this latter case you will need to rerun CNMF!): for a quick evaluation of the traces and spotting any potential frame drops, etc
+% - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
+% - set_mask_CC
+% - findBadROIs
+% - inhibit_excit_prep
+% - imaging_prep_analysis (calls set_aligned_traces... you will need its outputs)
+
 
 %% Set imfilename, pnevFileName
 

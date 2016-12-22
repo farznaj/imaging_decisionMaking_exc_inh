@@ -4,12 +4,13 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
    imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength);
 %
 % Right after you are done with preproc on the cluster, run the following scripts:
+% - plotEftyVarsMean (if needed follow by setPmtOffFrames to set pmtOffFrames and by findTrsWithMissingFrames to set frame-dropped trials. In this latter case you will need to rerun CNMF!): for a quick evaluation of the traces and spotting any potential frame drops, etc
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
 % - set_mask_CC
 % - findBadROIs
 % - inhibit_excit_prep
-% - imaging_prep_analysis
-% - set_aligned_traces
+% - imaging_prep_analysis (calls set_aligned_traces... you will need its outputs)
+%
 %
 % This is the main and starting function for the analysis of your imaging
 % data. It gives you the vars that you need for further analyses.
@@ -277,6 +278,9 @@ if any(bf)
     cprintf('red', 'Number of badFrames on each channel = %d %d\n', bf)
     warning('Take care of badFrames!')
 end
+
+pmtOffFrames0 = pmtOffFrames;
+badFrames0 = badFrames;
 
 
 %% Load and clean Efty's vars

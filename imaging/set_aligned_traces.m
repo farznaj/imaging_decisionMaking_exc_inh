@@ -88,7 +88,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Align traces on initiation tone (I don't think you need to exclude any trials from timeInitTone)
-
+disp('______________________________________')
 % remember traces_al_sm has nan for trs2rmv as well as trs in alignedEvent that are nan.
 alignedEvent = 'initTone'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
 
@@ -109,7 +109,7 @@ initToneAl
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Align traces on stimulus, including all timeStimOnset trials, including the ones with early-decision outcome.
 % NOTE: Because you are using timeStimOnsetAll instad of timeStimOnset, stimAl_allTrs that you compute here will include early-decision trials (outcomes=-1). So you may need to remove them later.
-
+disp('______________________________________')
 % remember traces_al_sm has nan for trs2rmv as well as trs in alignedEvent that are nan.
 alignedEvent = 'stimOn'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
 
@@ -127,6 +127,7 @@ stimAl_allTrs
 
 %% Align traces on stimulus, excluding trials with early-decision outcome
 % NOTE: Because you are using timeStimOnsetAll instad of timeStimOnset, stimAl_allTrs that you compute here will include early-decision trials (outcomes=-1). So you may need to remove them later.
+disp('______________________________________')
 
 % remember traces_al_sm has nan for trs2rmv as well as trs in alignedEvent that are nan.
 alignedEvent = 'stimOn'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
@@ -251,7 +252,7 @@ stimAl
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+disp('______________________________________')
 % We don't want to include in time1stSideTry, change-of-mind trials, ie
 % mouse did a single try on one side, did not commit it, and then tried the
 % other side. You can put their aligned traces in a separate array, to
@@ -306,7 +307,7 @@ firstSideTryAl
 
 
 %% Align traces on 1stSideTry: analyze COM trials:
-
+disp('______________________________________')
 if sum(trs_com)>0
     time1stSideTry = time1stSideTry0;
     time1stSideTry(~trs_com) = NaN;
@@ -365,7 +366,7 @@ title(['# trs with stim after go tone = ', num2str(numTrsGoToneBefStimOffset)])
 
 
 %% Align traces on goTone: include all trials (even if stimulus continued after go tone)
-
+disp('______________________________________')
 alignedEvent = 'goTone'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
 timeCommitCL_CR_Gotone = timeCommitCL_CR_Gotone0;
 
@@ -381,38 +382,44 @@ goToneAl
 
 
 %% Align traces on goTone: include only trials without stimulus after go tone
-
+disp('______________________________________')
 if sum(timeCommitCL_CR_Gotone0 <= timeStimOffset)>0
-    cprintf('blue', 'Setting goToneAl_noStimAft for %i trials\n',sum(timeCommitCL_CR_Gotone0 <= timeStimOffset))
+    cprintf('blue', 'Setting goToneAl_noStimAft for %i trials\n',sum(timeCommitCL_CR_Gotone0 > timeStimOffset))
 
     % set to nan timeGoTone for trials that have stim after go tone
     timeCommitCL_CR_Gotone(timeCommitCL_CR_Gotone0 <= timeStimOffset) = NaN;  
 
     fprintf('#isnan(timeCommitCL_CR_Gotone0)=%i; #isnan(timeCommitCL_CR_Gotone)=%i\n', sum(isnan(timeCommitCL_CR_Gotone0)), sum(isnan(timeCommitCL_CR_Gotone)))
 
-    alignedEvent = 'goTone'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
+    if sum(~isnan(timeCommitCL_CR_Gotone)) > 0
+        alignedEvent = 'goTone'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
 
-    [traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
-        (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
-        timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
+        [traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
+            (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
+            timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
 
-    clear goToneAl_noStimAft
-    goToneAl_noStimAft.traces = traces_al_sm;
-    goToneAl_noStimAft.time = time_aligned;
-    goToneAl_noStimAft.eventI = eventI;
-    
+        clear goToneAl_noStimAft
+        goToneAl_noStimAft.traces = traces_al_sm;
+        goToneAl_noStimAft.time = time_aligned;
+        goToneAl_noStimAft.eventI = eventI;
+        
+    else
+        cprintf('blue', 'goToneAl_noStimAft set to [] bc in all trials stim continued after go tone!\n')
+        goToneAl_noStimAft = [];
+    end
+
 else % no trials with stim continuing after go tone.
     goToneAl_noStimAft = goToneAl;
 end
-goToneAl_noStimAft
 
+goToneAl_noStimAft
 
 
 %% Now take care of trials you want to use for reward alignment.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+disp('______________________________________')
 % bc allowCorrectResp = 'change', timeReward trials are not preceded by
 % incorrect response.
 
@@ -446,7 +453,7 @@ rewardAl
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+disp('______________________________________')
 % bc u changed outcomes for allowCorrection trials, timeCommitIncorrResp
 % will reflect the 1st committed choice, and it may be followed by a reward
 % (in case mouse entered allowCorrection and corrected his choice).

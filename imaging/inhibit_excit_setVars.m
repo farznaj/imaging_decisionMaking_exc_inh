@@ -212,14 +212,37 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     end
     title('gcamp ROIs identified as unsure');
 
+   
+    %% Compare spike rates
+    
+    load(pnevFileName, 'S')
+    S = S(~badROIs01,:);
+    meanS_uns_inh_exc = [mean(mean(top(isnan(inhibitRois),:))), mean(mean(top(inhibitRois==1,:))), mean(mean(top(inhibitRois==0,:)))]  
+    
     
     %% Compare average C of inhibit and excit neurons
     
     figure;
-    subplot(311), plot(mean(C(inhibitRois==1,:))), title('inhibit')
-    subplot(312),  plot(mean(C(inhibitRois==0,:))), title('excit')
-    subplot(313),  plot(mean(C(isnan(inhibitRois),:))), title('unsure')
+    top = C;
+    subplot(421), hold on;
+    plot(mean(top(isnan(inhibitRois),:)),'c'); plot(mean(top(inhibitRois==1,:)),'r'); plot(mean(top(inhibitRois==0,:)),'color',[0,127,0]/255); legend('uns', 'inh', 'exc'); xlim([1,length(top)]); title('C')
+    subplot(423), plot(mean(top(inhibitRois==1,:))), title('inhibit'); xlim([1,length(top)])
+    subplot(425),  plot(mean(top(inhibitRois==0,:))), title('excit'); xlim([1,length(top)])
+    subplot(427),  plot(mean(top(isnan(inhibitRois),:))), title('unsure'); xlim([1,length(top)])
     
+   
+    
+%     figure;
+    top = S;
+    subplot(422), hold on;
+    plot(mean(top(isnan(inhibitRois),:)),'c'); plot(mean(top(inhibitRois==1,:)),'r'); plot(mean(top(inhibitRois==0,:)),'color',[0,127,0]/255); legend('uns', 'inh', 'exc'); xlim([1,length(top)]); title(sprintf('S; meanS: uns %.1f; inh %.1f; exc %.1f', meanS_uns_inh_exc))
+    subplot(424), plot(mean(top(inhibitRois==1,:))), title('inhibit'); xlim([1,length(top)])
+    subplot(426),  plot(mean(top(inhibitRois==0,:))), title('excit'); xlim([1,length(top)])
+    subplot(428),  plot(mean(top(isnan(inhibitRois),:))), title('unsure'); xlim([1,length(top)])
+    
+    
+
+
     %{
     subplot(221), plot(mean(activity_man_eftMask_ch2(:, inhibitRois==1), 2)), title('ch2, inhibit')
     subplot(223),  plot(mean(activity_man_eftMask_ch2(:, inhibitRois==0), 2)), title('ch2, excit')

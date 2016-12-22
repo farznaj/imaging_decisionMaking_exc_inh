@@ -617,7 +617,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             %             rr2 = rr; % plot ROIs in the original order
             %         end
             
-            set(fimag, 'name', sprintf('ROI %d. medImage of inhibitory channel. Use Esc to quit! ', rr2))
+            set(fimag, 'name', sprintf('ROI %d (%d/%d). medImage of inhibitory channel. Use Esc to quit! ', rr2, rr, length(unsure_inds_hi2lo)))
             %             set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
             
             % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
@@ -786,7 +786,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             %             rr2 = rr; % plot ROIs in the original order
             %         end
             
-            set(fimag, 'name', sprintf('ROI %d. medImage of inhibitory channel. Use Esc to quit! ', rr2))
+            set(fimag, 'name', sprintf('ROI %d (%d/%d). medImage of inhibitory channel. Use Esc to quit! ', rr2, rr, length(inhibit_inds_lo2hi)))
             %             set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
             
             % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
@@ -947,7 +947,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             %             rr2 = rr; % plot ROIs in the original order
             %         end
             
-            set(fimag, 'name', sprintf('ROI %d. medImage of inhibitory channel. Use Esc to quit! ', rr2))
+            set(fimag, 'name', sprintf('ROI %d (%d/%d). medImage of inhibitory channel. Use Esc to quit! ', rr2, rr, length(excit_inds_hi2lo)))
             %             set(fimag, 'name', sprintf('ROI %d. Sig/Surr threshold = %.2f. medImage of inhibitory channel. Use Esc to quit! ', rr2, sigTh))
             
             % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.

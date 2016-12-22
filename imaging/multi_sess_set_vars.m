@@ -26,6 +26,10 @@ celldisp(imfilename_sess)
 
 
 %%
+% load(imfilename, 'pmtOffFrames', 'badFrames')
+% pmtOffFrames0 = pmtOffFrames;
+% badFrames0 = badFrames;
+csnow = [0, cumsum(nFrsSess)];
 
 pmtOffFrames_sess = cell(1, length(mdfFileNumber));
 badFrames_sess = cell(1, length(mdfFileNumber));
@@ -37,21 +41,34 @@ trialCodeMissing_sess = cell(1, length(mdfFileNumber));
 
 for ise = 1:length(mdfFileNumber)
     
+    disp('_____________________')
     % Load alldata for each session
     [all_data_sess{ise}, ~] = loadBehavData(alldata_fileNames(mdfFileNumber(ise)));
-    
+
     
     %%
-    clear 'pmtOffFrames' 'badFrames'
+    clear cs_frtrs pmtOffFrames badFrames
     load(imfilename_sess{ise}, 'pmtOffFrames', 'badFrames')
     
-    if ~exist('pmtOffFrames', 'var')
-        fprintf('pmtOffFrames does not exist. Setting it to all false and saving it!\n')
-        load(imfilename_sess{ise}, 'cs_frtrs')
+%     if exist('pmtOffFrames', 'var')
+%         error('How come? shoulnt it be saved under the combined mat file and not in individual mat files?')
+%     end
+    if ~exist('pmtOffFrames', 'var') % Should be always the case if it is the 1st time that you run this code on a multi-session day. Because in multi-session case, badFrames and pmtOffFrames get saved in the combined (_001-002) mat file!
+%         fprintf('pmtOffFrames does not exist. Setting it to all false and saving it!\n')
+%         load(imfilename_sess{ise}, 'cs_frtrs')       
+        
         pmtOffFrames = cell(1,2); 
-        pmtOffFrames{1} = false(cs_frtrs(end),1); 
-        pmtOffFrames{2} = pmtOffFrames{1}; 
-        badFrames = pmtOffFrames;
+        pmtOffFrames{1} = pmtOffFrames0{1}(csnow(ise)+1 : csnow(ise+1));
+%         pmtOffFrames{1} = false(cs_frtrs(end),1); 
+        pmtOffFrames{2} = pmtOffFrames{1};         
+%         badFrames = pmtOffFrames;
+
+        badFrames = cell(1,2); 
+        badFrames{1} = badFrames0{1}(csnow(ise)+1 : csnow(ise+1));
+%         pmtOffFrames{1} = false(cs_frtrs(end),1); 
+        badFrames{2} = badFrames{1}; 
+        
+        
         save(imfilename_sess{ise}, 'pmtOffFrames', 'badFrames', '-append')
     end
     pmtOffFrames_sess{ise} = pmtOffFrames;
@@ -121,6 +138,7 @@ minPts = 7000; % 800;
 set2nan = 1; % if 1, in trials that were not imaged, set frameTimes, dFOF, spikes and activity traces to all nans (size: min(framesPerTrial) x #neurons).
 
 for ise = 1:length(mdfFileNumber)
+    disp('_____________________')
     fprintf('Merging session %i ... \n', ise)
     [all_data_sess{ise}, mscanLag] = mergeActivityIntoAlldata_fn(all_data_sess{ise}, activity_sess{ise}, framesPerTrial_sess{ise}, ...
         trialNumbers_sess{ise}, frame1RelToStartOff_sess{ise}, badFrames_sess{ise}{signalCh}, pmtOffFrames_sess{ise}{signalCh}, ...
