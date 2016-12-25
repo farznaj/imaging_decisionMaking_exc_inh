@@ -26,7 +26,7 @@ fprintf('Number of trials with stim strength of interest = %i\n', sum(str2ana))
 if trialHistAnalysis
 %     popClassifier_trialHistory % computes choiceVec0; % trials x 1;  1 for HR choice, 0 for LR prev choice.
     load(postName, 'trialHistory')
-    choiceVec0 = trialHistory.choiceVec0(:,3);;
+    choiceVec0 = trialHistory.choiceVec0(:,3);
 else
     choiceVec0 = allResp_HR_LR';  % trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.
     
@@ -90,6 +90,53 @@ fprintf('%d high-rate trials, and %d low-rate trials\n', sum(Y==1), sum(Y==0))
 
 
 %% Identify neurons that are very little active.
+if trialHistAnalysis && iTiFlg~=2
+    % set X for short-ITI and long-ITI cases (XS,XL).
+    trsExcludedS = (sum(isnan(spikeAveEp0), 2) + isnan(choiceVec0S)) ~= 0; 
+    XS = spikeAveEp0(~trsExcludedS,:); % trials x neurons
+    trsExcludedL = (sum(isnan(spikeAveEp0), 2) + isnan(choiceVec0L)) ~= 0; 
+    XL = spikeAveEp0(~trsExcludedL,:); % trials x neurons
+
+    % Define NsExcluded as neurons with low stdX for either short ITI or long ITI trials. 
+    % This is to make sure short and long ITI cases will include the same set of neurons.
+    stdXS = std(XS, [], 1);
+    stdXL = std(XL, [], 1);
+
+    NsExcluded = sum([stdXS < thAct; stdXL < thAct], 1)~=0; % if a neurons is non active for either short ITI or long ITI trials, exclude it.
+
+else
+
+    % Define NsExcluded as neurons with low stdX
+    stdX = std(X, [], 1);
+    NsExcluded = stdX < thAct;
+    % sum(stdX < thAct)
+
+    %{
+    % Set nonActiveNs, ie neurons whose average activity during ep is less than thAct.
+%     spikeAveEpAveTrs = nanmean(spikeAveEp0, 1); % 1 x units % response of each neuron averaged across epoch ep and trials.
+    spikeAveEpAveTrs = nanmean(X, 1); % 1 x units % response of each neuron averaged across epoch ep and trials.
+    % thAct = 5e-4; % 1e-5 %quantile(spikeAveEpAveTrs, .1);
+    nonActiveNs = spikeAveEpAveTrs < thAct;
+    fprintf('\t%d neurons with ave activity in ep < %.5f' %(sum(nonActiveNs), thAct)
+    sum(nonActiveNs)
+
+    % Set NsFewTrActiv, ie neurons that are active in very few trials (by active I mean average activity during epoch ep)
+    % thTrsWithSpike = 1; % 3; % ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
+    nTrsWithSpike = sum(X > thAct, 1) % 0 % shows for each neuron, in how many trials the activity was above 0.
+    NsFewTrActiv = (nTrsWithSpike < thTrsWithSpike) % identify neurons that were active fewer than thTrsWithSpike.
+    fprintf('\t%d neurons are active in < %i trials' %(sum(NsFewTrActiv), thTrsWithSpike)
+
+    % Now set the final NxExcluded: (neurons to exclude)
+    NsExcluded = (NsFewTrActiv + nonActiveNs)~=0
+    %}
+end
+
+fprintf('%d = Final % non-active neurons\n', sum(NsExcluded))
+% a = size(spikeAveEp0,2) - sum(NsExcluded);
+fprintf('Using %d out of %d neurons; Fraction excluded = %.2f\n', length(spikeAveEp0)-sum(NsExcluded), length(spikeAveEp0), sum(NsExcluded)/length(spikeAveEp0))
+
+
+%{
 % Little activity = neurons that are active in few trials. Also neurons that
 % have little average activity during epoch ep across all trials.
 
@@ -127,7 +174,7 @@ NsExcluded = logical(NsFewTrActiv + nonActiveNs);
 % cprintf('blue', 'included neurons= %d; total neurons= %d; fract= %.3f\n', a, size(spikeAveEp0,2), a/size(spikeAveEp0,2))
 fprintf('%d = Final # non-active neurons\n', sum(NsExcluded))
 fprintf('\toriginal # neurons = %d; fraction excluded = %.2f\n', size(spikeAveEp0,2), sum(NsExcluded)/size(spikeAveEp0,2))
-
+%}
 
 %% Remove neurons that are very little active.
 % Remove (from X) neurons that are active in few trials. Also neurons that

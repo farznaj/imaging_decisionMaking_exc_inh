@@ -1,9 +1,51 @@
 %% Stability of subspaces (variance and stimulus, choice of TDR)
 
+mouse = 'fni17';
+days = {'151102_1-2', '151101_1', '151029_2-3', '151028_1-2-3', '151027_2', '151026_1', ...
+    '151023_1', '151022_1-2', '151021_1', '151020_1-2', '151019_1-2', '151016_1', ...
+    '151015_1', '151014_1', '151013_1-2', '151012_1-2-3', '151010_1', '151008_1', '151007_1'};
 
 %%
+trialHistAnalysis = 0;
+iTiFlg = 2; % Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
+rmvInactiveNsDurEp = 1; % if 0 you wont remove any neurons; otherwise inactive neurons during ep will be removed. Set to 1 for svm analysis. otherwise set to 0.
+setNsExcluded = 1; % if 1, NsExcluded will be set even if it is already saved.
+% numSamples = 100; % number of iterations for finding the best c (inverse of regularization parameter)
+neuronType = 2; % 0: excitatory, 1: inhibitory, 2: all types.    
+% saveResults = 0; % save results in mat file.
+
+
+doPlots = 0; % Whether to make plots or not.
+
+if trialHistAnalysis==1 % more parameters are specified in popClassifier_trialHistory.m
+%        iTiFlg = 1; % 0: short ITI, 1: long ITI, 2: all ITIs.
+    epEnd_rel2stimon_fr = 0; % 3; % -2 % epEnd = eventI + epEnd_rel2stimon_fr
+else
+    % not needed to set ep_ms here, later you define it as [choiceTime-300 choiceTime]ms % we also go 30ms back to make sure we are not right on the choice time!
+    ep_ms = [809, 1109]; %[425, 725] % optional, it will be set according to min choice time if not provided.% training epoch relative to stimOnset % we want to decode animal's upcoming choice by traninig SVM for neural average responses during ep ms after stimulus onset. [1000, 1300]; %[700, 900]; % [500, 700]; 
+    % outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.
+    outcome2ana = 'corr'; % '', corr', 'incorr' % trials to use for SVM training (all, correct or incorrect trials)
+    strength2ana = 'all'; % 'all', easy', 'medium', 'hard' % What stim strength to use for training?
+    thStimStrength = 3; % 2; % threshold of stim strength for defining hard, medium and easy trials.
+    th_stim_dur = 800; % min stim duration to include a trial in timeStimOnset
+end
+trs4project = 'trained'; % 'trained', 'all', 'corr', 'incorr' % trials that will be used for projections and the class accuracy trace; if 'trained', same trials that were used for SVM training will be used. "corr" and "incorr" refer to current trial's outcome, so they don't mean much if trialHistAnalysis=1. 
+
+thAct = 5e-4; %5e-4; % 1e-5 % neurons whose average activity during ep is less than thAct will be called non-active and will be excluded.
+% thTrsWithSpike = 1; % 3 % remove neurons that are active in <thSpTr trials.
+
+pnev2load = []; % which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
+
+frameLength = 1000/30.9; % sec.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% you used to run the following part and the commented part below
+% popClassifier_setXYall. Then you replaced them with popClassifier_setXYall, and used the vars above.... in case you get errors check what has changed between the 2!
+
+%{
 trialHistAnalysis = 0; %1;
-nt = 1;
+neuronType = 1; % nt = 1;
 
 
 frameLength = 1000/30.9; % sec.
@@ -21,19 +63,16 @@ outcome2ana = 'corr'; % only used if trialHistAnalysis is 0; % '', corr', 'incor
 strength2ana = 'all'; % only used if trialHistAnalysis is 0; % 'all', easy', 'medium', 'hard' % What stim strength to use for training?
 thAct = 5e-4; % 1e-4; % quantile(spikeAveEpAveTrs, .1);
 thTrsWithSpike = 1; % 3; % 1; % ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
-
+%}
     
-mouse = 'fni17';
-days = {'151102_1-2', '151101_1', '151029_2-3', '151028_1-2-3', '151027_2', '151026_1', ...
-    '151023_1', '151022_1-2', '151021_1', '151020_1-2', '151019_1-2', '151016_1', ...
-    '151015_1', '151014_1', '151013_1-2', '151012_1-2-3', '151010_1', '151008_1', '151007_1'};
+
 
 
 %%
-if nt==0
+if neuronType==0
     aIx_all_alld_exc = cell(1, length(days));
     angle_all_alld_exc = cell(1, length(days));
-elseif nt==1
+elseif neuronType==1
     aIx_all_alld_inh = cell(1, length(days));
     angle_all_alld_inh = cell(1, length(days));
 end
@@ -60,6 +99,9 @@ for iday = 1:length(days)
     % stimrate: trials x 1; stimulus rate of each trial.
     
     
+    popClassifier_setXYall % It does all the below
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %{
     signalCh = 2;
     pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the latest pnev vile). Set [] to load the latest one.
     postNProvided = 1; % whether the directory cotains the postFile or not. if it does, then mat file names will be set using postFile, otherwise using pnevFile.
@@ -99,6 +141,7 @@ for iday = 1:length(days)
     
     % Set X, Y, TrsExcluded, NsExcluded
     popClassifier_setXY % set X, Y, TrsExcluded, NsExcluded
+    %}
     
     % Exclude nan trials and non-active neurons from traces_al_stim
     traces_al_stim = traces_al_stim(:, ~NsExcluded, ~trsExcluded);
@@ -111,15 +154,15 @@ for iday = 1:length(days)
     
     inhRois = inhibitRois(~NsExcluded);
     
-    % traces_al_stim = traces_al_stim(:,inhRois==nt,:);
-    fe = find(inhRois==nt); % exc or inh analysis?
+    % traces_al_stim = traces_al_stim(:,inhRois==neuronType,:);
+    fe = find(inhRois==neuronType); % exc or inh analysis?
     
     T = size(traces_al_stim,1);
     regressBins = 2;
     t = floor(T/regressBins);
-    if nt==0
+    if neuronType==0
         rmax = 10;
-    elseif nt==1
+    elseif neuronType==1
         rmax = 1;
     end
     
@@ -140,7 +183,7 @@ for iday = 1:length(days)
         
         
         %%
-        if nt==2 % for now, needs work for nt~=2
+        if neuronType==2 % for now, needs work for neuronType~=2
             % Then I identify a random subset of neurons ( = 0.95 * numTrials):
             % ##  If number of neurons is more than 95% of trial numbers, identify n random neurons, where n= 0.95 * number of trials. This is to make sure we have more observations (trials) than features (neurons)
             
@@ -310,10 +353,10 @@ for iday = 1:length(days)
     end
     
     
-    if nt==0
+    if neuronType==0
         aIx_all_alld_exc{iday} = aIx_all;
         angle_all_alld_exc{iday} = angle_all;
-    elseif nt==1
+    elseif neuronType==1
         aIx_all_alld_inh{iday} = aIx_all;
         angle_all_alld_inh{iday} = angle_all;
     end
@@ -325,15 +368,15 @@ end
 %%
 if trialHistAnalysis==0
     if exist('stab_all_curr.mat', 'file')==2
-        if nt==0
+        if neuronType==0
             save('stab_all_curr', '-append', 'aIx_all_alld_exc', 'angle_all_alld_exc')
-        elseif nt==1
+        elseif neuronType==1
             save('stab_all_curr', '-append', 'aIx_all_alld_inh', 'angle_all_alld_inh')
         end
     else
-        if nt==0
+        if neuronType==0
             save('stab_all_curr', 'aIx_all_alld_exc', 'angle_all_alld_exc')
-        elseif nt==1
+        elseif neuronType==1
             save('stab_all_curr', 'aIx_all_alld_inh', 'angle_all_alld_inh')
         end
     end

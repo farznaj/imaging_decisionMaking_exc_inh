@@ -47,16 +47,16 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni17'
-    imagingFolder = '151020'
+    mousename = 'fni16'
+    imagingFolder = '150930'
     mdfFileNumber = [1,2] 
 
-    trialHistAnalysis = 1;    
-    roundi = 2; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
+    trialHistAnalysis = 0;    
+    roundi = 1; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
 
-    iTiFlg = 1; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
+    iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
     setNsExcluded = 1; # if 1, NsExcluded will be set even if it is already saved.
-    numSamples = 2 #100; # number of iterations for finding the best c (inverse of regularization parameter)
+    numSamples = 100 #100; # number of iterations for finding the best c (inverse of regularization parameter)
     neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
     saveResults = 0; # save results in mat file.
 
@@ -305,6 +305,7 @@ print(postName)
 print(moreName)
 
 
+###########################################################################################################################################
 # ## Load matlab variables: event-aligned traces, inhibitRois, outcomes,  choice, etc
 #     - traces are set in set_aligned_traces.m matlab script.
 
@@ -343,7 +344,7 @@ else:
 
 print 'size of stimulus-aligned traces:', np.shape(traces_al_stimAll), '(frames x units x trials)'
 DataS = Data
-
+traces_al_stim = traces_al_stimAll
 
 
 # Load outcomes and choice (allResp_HR_LR) for the current trial
@@ -394,11 +395,10 @@ if trialHistAnalysis==0:
     '''
 
 
+###########################################################################################################################################
 # ## Set the time window for training SVM (ep) and traces_al_stim
 
 # In[11]:
-
-traces_al_stim = traces_al_stimAll
 
 if trialHistAnalysis==1:    
     # either of the two below (stimulus-aligned and initTone-aligned) would be fine
@@ -430,8 +430,10 @@ else:
     ep = np.arange(eventI+epStartRel2Event, eventI+epEndRel2Event+1).astype(int); # frames on stimAl.traces that will be used for trainning SVM.   
     print 'Training epoch relative to stimOnset is {} ms'.format(np.round((ep-eventI)*frameLength - frameLength/2)) # print center of frames in ms
             
-        
-    ########%% Exclude some trials from traces_al_stim
+
+
+########################%% Exclude some trials from traces_al_stim ########################
+if trialHistAnalysis==0:            
     # This criteria makes sense if you want to be conservative; otherwise if ep=[1000 1300]ms, go tone will definitely be before ep end, and you cannot have the following criteria.
     # Make sure in none of the trials Go-tone happened before the end of training window (ep)
     i = (timeCommitCL_CR_Gotone - timeStimOnset) <= ep_ms[-1];
@@ -514,57 +516,11 @@ else:
     '''        
 
 
-# In[12]:
-
-# Load 1stSideTry-aligned traces, frames, frame of event of interest
-# use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
-Data = scio.loadmat(postName, variable_names=['firstSideTryAl'],squeeze_me=True,struct_as_record=False)
-traces_al_1stSide = Data['firstSideTryAl'].traces.astype('float')
-time_aligned_1stSide = Data['firstSideTryAl'].time.astype('float')
-# print(np.shape(traces_al_1stSide))
 
 
-# Load goTone-aligned traces, frames, frame of event of interest
-# use goToneAl_noStimAft to make sure there was no stim after go tone.
-Data = scio.loadmat(postName, variable_names=['goToneAl'],squeeze_me=True,struct_as_record=False)
-traces_al_go = Data['goToneAl'].traces.astype('float')
-time_aligned_go = Data['goToneAl'].time.astype('float')
-# print(np.shape(traces_al_go))
+###########################################################################################################################################
+#%% Load inhibitRois and set traces for specific neuron types: inhibitory, excitatory or all neurons
 
-
-# Load reward-aligned traces, frames, frame of event of interest
-Data = scio.loadmat(postName, variable_names=['rewardAl'],squeeze_me=True,struct_as_record=False)
-traces_al_rew = Data['rewardAl'].traces.astype('float')
-time_aligned_rew = Data['rewardAl'].time.astype('float')
-# print(np.shape(traces_al_rew))
-
-
-# Load commitIncorrect-aligned traces, frames, frame of event of interest
-Data = scio.loadmat(postName, variable_names=['commitIncorrAl'],squeeze_me=True,struct_as_record=False)
-traces_al_incorrResp = Data['commitIncorrAl'].traces.astype('float')
-time_aligned_incorrResp = Data['commitIncorrAl'].time.astype('float')
-# print(np.shape(traces_al_incorrResp))
-
-
-# Load initiationTone-aligned traces, frames, frame of event of interest
-Data = scio.loadmat(postName, variable_names=['initToneAl'],squeeze_me=True,struct_as_record=False)
-traces_al_init = Data['initToneAl'].traces.astype('float')
-time_aligned_init = Data['initToneAl'].time.astype('float')
-# print(np.shape(traces_al_init))
-# DataI = Data
-'''
-if trialHistAnalysis:
-    # either of the two below (stimulus-aligned and initTone-aligned) would be fine
-    # eventI = DataI['initToneAl'].eventI
-    eventI = DataS['stimAl_allTrs'].eventI    
-    epEnd = eventI + epEnd_rel2stimon_fr #- 2 # to be safe for decoder training for trial-history analysis we go upto the frame before the stim onset
-    # epEnd = DataI['initToneAl'].eventI - 2 # to be safe for decoder training for trial-history analysis we go upto the frame before the initTone onset
-    ep = np.arange(epEnd+1)
-    print 'training epoch is {} ms'.format(np.round((ep-eventI)*frameLength))
-'''
-    
-
-# Load inhibitRois
 Data = scio.loadmat(moreName, variable_names=['inhibitRois'])
 inhibitRois = Data.pop('inhibitRois')[0,:]
 # print '%d inhibitory, %d excitatory; %d unsure class' %(np.sum(inhibitRois==1), np.sum(inhibitRois==0), np.sum(np.isnan(inhibitRois)))
@@ -577,16 +533,14 @@ if neuronType!=2:
     # good_inhibit = inhibitRois==1;        
     
     traces_al_stim = traces_al_stim[:, nt, :];
-    traces_al_1stSide = traces_al_1stSide[:, nt, :];
-    traces_al_go = traces_al_go[:, nt, :];
-    traces_al_rew = traces_al_rew[:, nt, :];
-    traces_al_incorrResp = traces_al_incorrResp[:, nt, :];
-    traces_al_init = traces_al_init[:, nt, :];
     traces_al_stimAll = traces_al_stimAll[:, nt, :];
 else:
-    nt = np.arange(np.shape(traces_al_1stSide)[1])    
+    nt = np.arange(np.shape(traces_al_stim)[1])    
 
 
+
+
+###########################################################################################################################################
 # ## Set X (trials x neurons) and Y (trials x 1) for training the SVM classifier.
 #     X matrix (size trials x neurons) that contains neural responses at different trials.
 #     Y choice of high rate (modeled as 1) and low rate (modeled as 0)
@@ -872,11 +826,78 @@ if doPlots:
     # plt.subplots_adjust(hspace=.5)
 
 
+
+########################################################################################################################################
 # ## Set the traces that will be used for projections and plotting 
 #     Traces are of size (frames x neurons x trials)
 #     Choose trials that will be used for projections (trs4project = 'trained', 'all', 'corr', 'incorr')
 #     Remove non-active neurons
 #     Do feature normalization and scaling for the traces (using mean and sd of X)
+
+
+###########################################################################################################################################
+# Load event-aligned trace and inhibitRois
+
+# In[12]:
+
+# Load 1stSideTry-aligned traces, frames, frame of event of interest
+# use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
+Data = scio.loadmat(postName, variable_names=['firstSideTryAl'],squeeze_me=True,struct_as_record=False)
+traces_al_1stSide = Data['firstSideTryAl'].traces.astype('float')
+time_aligned_1stSide = Data['firstSideTryAl'].time.astype('float')
+# print(np.shape(traces_al_1stSide))
+
+
+# Load goTone-aligned traces, frames, frame of event of interest
+# use goToneAl_noStimAft to make sure there was no stim after go tone.
+Data = scio.loadmat(postName, variable_names=['goToneAl'],squeeze_me=True,struct_as_record=False)
+traces_al_go = Data['goToneAl'].traces.astype('float')
+time_aligned_go = Data['goToneAl'].time.astype('float')
+# print(np.shape(traces_al_go))
+
+
+# Load reward-aligned traces, frames, frame of event of interest
+Data = scio.loadmat(postName, variable_names=['rewardAl'],squeeze_me=True,struct_as_record=False)
+traces_al_rew = Data['rewardAl'].traces.astype('float')
+time_aligned_rew = Data['rewardAl'].time.astype('float')
+# print(np.shape(traces_al_rew))
+
+
+# Load commitIncorrect-aligned traces, frames, frame of event of interest
+Data = scio.loadmat(postName, variable_names=['commitIncorrAl'],squeeze_me=True,struct_as_record=False)
+traces_al_incorrResp = Data['commitIncorrAl'].traces.astype('float')
+time_aligned_incorrResp = Data['commitIncorrAl'].time.astype('float')
+# print(np.shape(traces_al_incorrResp))
+
+
+# Load initiationTone-aligned traces, frames, frame of event of interest
+Data = scio.loadmat(postName, variable_names=['initToneAl'],squeeze_me=True,struct_as_record=False)
+traces_al_init = Data['initToneAl'].traces.astype('float')
+time_aligned_init = Data['initToneAl'].time.astype('float')
+# print(np.shape(traces_al_init))
+# DataI = Data
+'''
+if trialHistAnalysis:
+    # either of the two below (stimulus-aligned and initTone-aligned) would be fine
+    # eventI = DataI['initToneAl'].eventI
+    eventI = DataS['stimAl_allTrs'].eventI    
+    epEnd = eventI + epEnd_rel2stimon_fr #- 2 # to be safe for decoder training for trial-history analysis we go upto the frame before the stim onset
+    # epEnd = DataI['initToneAl'].eventI - 2 # to be safe for decoder training for trial-history analysis we go upto the frame before the initTone onset
+    ep = np.arange(epEnd+1)
+    print 'training epoch is {} ms'.format(np.round((ep-eventI)*frameLength))
+'''
+    
+
+    
+# Set traces for specific neuron types: inhibitory, excitatory or all neurons
+if neuronType!=2:    
+    traces_al_1stSide = traces_al_1stSide[:, nt, :];
+    traces_al_go = traces_al_go[:, nt, :];
+    traces_al_rew = traces_al_rew[:, nt, :];
+    traces_al_incorrResp = traces_al_incorrResp[:, nt, :];
+    traces_al_init = traces_al_init[:, nt, :];
+
+
 
 # In[24]:
 
@@ -1068,7 +1089,7 @@ if doPlots:
 
 
 
-#%% Decoding starts here:
+#%% SVM starts here:
 ########################################################################################################################################
 ########################################################################################################################################
 # ## Identify the best regularization parameter
@@ -1438,7 +1459,7 @@ if doPlots:
     Xti_w = np.reshape(XtiN_w, (Ti,Ci), order='F');
 
 
-# ## Plot projections and raw averages of neural population responses
+# ## Plot projections and raw averages of population activity
 
 # In[27]:
 
@@ -2069,7 +2090,7 @@ if compExcInh and doPlots and neuronType==2:
 
 
 
-#%%
+#%% Instead of this, use svm_excInh_trainDecoder.py which does the following in a more controlled way (finding bestc for each population instead of using the one above.)
 ####################################################################################################################################
 # ## Compute classification error of training and testing dataset for the following cases:
 #     Here we train the classifier using the best c found above (when including all neurons in the decoder) but using different sets of neurons (and 90% training, 10% testing trials.) ... I think this is problematic to use bestc of a decoder trained on a different population!
@@ -2527,7 +2548,7 @@ if compExcInh and doPlots and neuronType==2:
 
 # In[37]:
 
-if compExcInh and neuronType==2:
+if neuronType==2: #compExcInh and neuronType==2: # This is the only excInh analysis that you don't do in a seprate script... so removing if compExcInh.. so you can save its vars!
     
     # compute prediction error when all neurons are included.
     linear_svm = copy.deepcopy(linear_svm_0)
@@ -2718,7 +2739,7 @@ if compExcInh and neuronType==2:
 
 # Plot changes in class accuracy after setting exc w or inh w to 0 (relative to the original class accuracy).
 
-if compExcInh and doPlots and neuronType==2:
+if doPlots and neuronType==2: # compExcInh and doPlots and neuronType==2:
     plt.figure(figsize=(7,3))
     
     # Compare correct classification traces for when inhibitory weights are set to 0 to when excitatory weights are set to 0.
@@ -2832,7 +2853,7 @@ if compExcInh and doPlots and neuronType==2:
 
 
 
-#%%
+#%% Instead of this use svm_excInh_cPath.py which does the following more detailed.
 ####################################################################################################################################
 ################################## Excitatory and Inhibitory Neurons Relative Contribution to the Decoder ##############################################
 # We quantify the contribution of excitatory and inhibitory neurons to the encoding of the choice by measuring participation percentage, defined as the percentatge of a given population of neurons that has non-zero weights. We produce paraticipation curves, participation ratio at different values of svm regularizer (c), for each data
@@ -3360,7 +3381,10 @@ if saveResults:
                                'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 
                                'perClassErrorTest_data':perClassErrorTest_data, 
                                'perClassErrorTest_shfl':perClassErrorTest_shfl,  
-                               'w_data':w_data,'b_data':b_data,'w_shfl':w_shfl,'b_shfl':b_shfl})
+                               'w_data':w_data,'b_data':b_data,'w_shfl':w_shfl,'b_shfl':b_shfl,
+                               'train_err_exc0':train_err_exc0, 'train_err_inh0':train_err_inh0, # these are related to excInh comp, but unlike the rest of excInh vars you are getting them in this script.
+                               'corrClass_exc0':corrClass_exc0, 'corrClass_inh0':corrClass_inh0, 
+                               'train_err_allExc0':train_err_allExc0, 'corrClass_allExc0':corrClass_allExc0})
 
     # save normalized traces as well                       
     # scio.savemat(svmName, {w':w, 'b':b, 'cbest':cbest, 'corrClass':corrClass, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'meanX':meanX, 'stdX':stdX, 'X':X, 'Y':Y, 'Xt':Xt, 'Xtg':Xtg, 'Xtc':Xtc, 'Xtr':Xtr, 'Xtp':Xtp})

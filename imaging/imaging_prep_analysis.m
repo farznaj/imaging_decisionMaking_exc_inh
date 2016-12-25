@@ -933,6 +933,11 @@ end
 set_aligned_traces
 
 
+%% Plot average ca traces (across all neurons) for HR and LR trials, aligned on different trial events. (at the begining of the script you set some vars... check them if you want to customize them!).
+
+plotAlTracesHrLr
+
+
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%% Start some analyses: alignement, choice preference, SVM %%%%%%%%%%%%%%%%%%%%%%%
 

@@ -12,10 +12,10 @@ roundi = 1; # For the same dataset we run the code multiple times, each time we 
     
 
 # Optional inputs:
-#iTiFlg = 2; # 0: short ITI, 1: long ITI, 2: all ITIs.
-#numSamples = 100; # number of iterations for finding the best c (inverse of regularization parameter)
-#neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
-#saveResults = 1; # save results in mat file.
+iTiFlg = 2; # 0: short ITI, 1: long ITI, 2: all ITIs.
+numSamples = 100; # number of iterations for finding the best c (inverse of regularization parameter)
+neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
+saveResults = 1; # save results in mat file.
 
 mainSVM_notebook_setVars(mousename, imagingFolder, mdfFileNumber, trialHistAnalysis, roundi)
 #mainSVM_notebook_setVars(mousename, imagingFolder, mdfFileNumber, trialHistAnalysis, roundi, iTiFlg=2, numSamples=100, neuronType=2, saveResults=1)
@@ -29,7 +29,7 @@ def svm_notebook_setVars(mousename, imagingFolder, mdfFileNumber, trialHistAnaly
     doNsRand = 0; # if 1, a random set of neurons will be selected to make sure we have fewer neurons than trials. 
     regType = 'l1' # 'l2' : regularization type
     kfold = 10;
-    compExcInh = 1 # if 1, analyses will be run to compare exc inh neurons.
+    compExcInh = 0 # if 1, analyses will be run to compare exc inh neurons.
 #    setNsExcluded = 0; # if 1, NsExcluded will be set even if it is already saved.
     doPlots = 0; # Whether to make plots or not.
     saveHTML = 0; # whether to save the html file of notebook with all figures or not.
@@ -55,8 +55,7 @@ def svm_notebook_setVars(mousename, imagingFolder, mdfFileNumber, trialHistAnaly
     pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
 
     #%% Run mainSVM_notebook
-#    execfile("svm_notebook.py")
-#    execfile("svm_diffNumNeurons.py")
+    execfile("svm_notebook.py")
 #    execfile("svm_excInh_cPath.py")
-    execfile("svm_excInh_trainDecoder.py")
-    
+#    execfile("svm_excInh_trainDecoder.py")
+#    execfile("svm_diffNumNeurons.py")    
