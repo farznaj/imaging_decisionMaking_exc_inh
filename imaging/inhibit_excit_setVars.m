@@ -16,12 +16,14 @@ load(moreName, 'mask', 'CC', 'badROIs01')
 load(imfilename, 'imHeight', 'imWidth', 'sdImage', 'aveImage')
 load(pnevFileName, 'A') % pnevFileName should contain Eft results after merging-again has been performed.
 
+A = A(:, ~badROIs01);
+
 COMs = fastCOMsA(A, [imHeight, imWidth]); % size(medImage{2})
 
 % Remove bad components
 mask = mask(:,:,~badROIs01);
 CC = CC(~badROIs01);
-COMs = COMs(~badROIs01,:);
+% COMs = COMs(~badROIs01,:);
 %
 
 %{
@@ -168,7 +170,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     
     %%
     
-    [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibitROIselection(mask, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CC, ch2Image, COMs, C, do2dGauss); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
+    [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibitROIselection(mask, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CC, ch2Image, COMs, C, A, do2dGauss); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
     
     
     %% Show the results
@@ -177,11 +179,11 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     
     % plot inhibitory and excitatory ROIs on the image of inhibit channel.
     im2p = normImage(sdImage{1});
-    colors = hot(2*size(A,2));
+    colors = hot(2*length(CC));
     colors = colors(end:-1:1,:);
     
     % plot inhibitory ROIs on the image of inhibit channel.
-    figure('name', 'sdImage of inhibit channel', 'position', [288     1   560   972]);
+    figure('name', 'sdImage of inhibit channel', 'position', [288          75        1083         898]);
     subplot(221)
     imagesc(im2p)
     colormap gray
@@ -217,6 +219,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     
     load(pnevFileName, 'S')
     S = S(~badROIs01,:);
+    top = S;
     meanS_uns_inh_exc = [mean(mean(top(isnan(inhibitRois),:))), mean(mean(top(inhibitRois==1,:))), mean(mean(top(inhibitRois==0,:)))]  
     
     

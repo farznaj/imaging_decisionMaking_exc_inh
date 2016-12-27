@@ -2,7 +2,6 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
         trs2rmv, stimdur, stimrate, stimtype, cb, timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, ...
         timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename, pnevFileName] = ....
    imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength);
-%
 % Right after you are done with preproc on the cluster, run the following scripts:
 % - plotEftyVarsMean (if needed follow by setPmtOffFrames to set pmtOffFrames and by findTrsWithMissingFrames to set frame-dropped trials. In this latter case you will need to rerun CNMF!): for a quick evaluation of the traces and spotting any potential frame drops, etc
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
@@ -11,19 +10,12 @@ function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, goo
 % - inhibit_excit_prep
 % - imaging_prep_analysis (calls set_aligned_traces... you will need its outputs)
 %
+% This is the main and starting function for the analysis of your imaging data. It gives you the vars that you need for further analyses. It used to be named aveTrialAlign_setVars
 %
-% This is the main and starting function for the analysis of your imaging
-% data. It gives you the vars that you need for further analyses.
-% it used to be named aveTrialAlign_setVars
+% pnev_manual_comp_setVars is also a very nice script (together with pnev_manual_comp_match) that allows you to plot and compare the trace and ROIs of 2 different methods.
+% You can use it to compare Eftychios vs manual. Or 2 different channels. Or 2 different methods of Eftychios, etc.
 %
-% pnev_manual_comp_setVars is also a very nice script (together with
-% pnev_manual_comp_match) that allows you to plot and compare the trace and
-% ROIs of 2 different methods.
-%  you can use it to compare Eftychios vs manual. Or 2 different channels.
-% Or 2 different methods of Eftychios, etc.
-%
-% It seems the following is not a concern when using Eftychios's algorithm:
-% worry about bleedthrough, and visual artifact.
+% worry about bleedthrough, and visual artifact.... it seems not to be a concern when using Eftychios's algorithm:
 %
 % outcomes:
 %    1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation,
@@ -37,7 +29,6 @@ mouse = 'fni17';
 imagingFolder = '151020'; %'151029'; %  '150916'; % '151021';
 mdfFileNumber = [1,2];  % 3; %1; % or tif major
 
-
 % best is to set the 2 vars below to 0 so u get times of events for all trials; later decide which ones to set to nan.
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
 rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
@@ -45,17 +36,21 @@ rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset af
 normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
 
 % set the following vars to 1 when first evaluating a session.
-evaluateEftyOuts = 0; 
-compareManual = 0; % compare results with manual ROI extraction
+evaluateEftyOuts = 1; 
+compareManual = 1; % compare results with manual ROI extraction
 
-plot_ave_noTrGroup = 0; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
+plot_ave_noTrGroup = 1; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
 
 setInhibitExcit = 0; % if 1, inhibitory and excitatory neurons will be set unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 plotEftyAC1by1 = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
 frameLength = 1000/30.9; % sec.
 
 % Once done use set_aligned_traces to set aligned traces on different trial events with carefully chosen trials.
-
+%{
+evaluateEftyOuts = 0; 
+compareManual = 0; % compare results with manual ROI extraction
+plot_ave_noTrGroup = 0; 
+%}
 %}
 
 home
@@ -171,7 +166,8 @@ figure; plot([alldata.stimDur_diff]+[alldata.stimDur_aftRew]+[alldata.extraStimD
 % stimDur_diff
 fhand = figure;
 subplot(221), hold on
-title(sprintf('thbeg = %d', thbeg))
+% title(sprintf('thbeg = %d', thbeg))
+title({'Actual stim duration will be shorter if','the final state happens earlier than','alldata.stimDuration'})
 plot([all_data.extraStimDuration])
 plot([all_data.stimDur_aftRew])
 plot([all_data.stimDur_diff])
@@ -617,6 +613,7 @@ plot(allResp_HR_LR), ylim([-.5 1.5]), xlabel('Trials'), ylabel('Response (HR:1 ,
 rmv_timeGoTone_if_stimOffset_aft_goTone = 0; % if 1, trials with stimOffset after goTone will be removed from timeGoTone (ie any analyses that aligns trials on the go tone)
 rmv_time1stSide_if_stimOffset_aft_1stSide = 0; % if 1, trials with stimOffset after 1stSideTry will be removed from time1stSideTry (ie any analyses that aligns trials on the 1stSideTry)
 setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
+
 %}
 scopeTTLOrigTime = 1;
 stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, setNaN_goToneEarlierThanStimOffset};

@@ -65,7 +65,7 @@ rightLicks = cell(size(alldata)); rightLicks(:) = {NaN};
 
 for tr = 1:length(alldata)
     
-    
+    %%
     if ~ismember(tr, trs2rmv) & ~isnan(outcomes(tr))
         
         % set t0 : event times will be relative to t0.

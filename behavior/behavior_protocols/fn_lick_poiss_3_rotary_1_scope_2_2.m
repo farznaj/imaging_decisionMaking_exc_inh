@@ -2240,7 +2240,7 @@ switch action,
         
         % keep playing the stim for StimDur_aftRew sec. after that or if the animal errorLicks the stim stops.
         % but remember if the stim has already stopped, then this state
-        % wont mean anything!
+        % wont mean anything! For this reason it makes no sense to make this state last for stimdur_aftrew... fix this for your new mice!
         sma = add_state(sma, 'name', 'stopstim_pre',...
             'self_timer', stimdur_aftrew,... % 1
             'output_actions', {'DOut', trial_ports},...

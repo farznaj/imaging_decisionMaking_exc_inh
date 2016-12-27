@@ -23,6 +23,9 @@ th_shortDecayTau = 200;
 th_badTempCorr = .4;
 th_badHighlightCorr = .4; % .5;
 
+[badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB] = findBadROIs(mouse, imagingFolder, mdfFileNumber, fixed_th_srt_val, savebadROIs01, exclude_badHighlightCorr,evalBadRes, th_AG, th_srt_val, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr);
+
+
 % If you don't exclude badHighlightCorr, still most of the neurons will
 % have good trace quality, but they are mostly fragmented parts of ROIs or
 % neuropils. Also remember in most cases of fragmented ROIs, a more
@@ -309,8 +312,12 @@ if evalBadRes
     % which ROIs to plot?
     
     rois2p = find(~badROIs01);
-%     rois2p = nearbyROIs;
 %     rois2p = find(badROIs01);
+    %{
+    i = 128;
+    nearbyROIs = findNearbyROIs(COMs, COMs(i,:), 8)
+    rois2p = nearbyROIs;
+    %}
     rois2p = rois2p(randperm(length(rois2p)));    
     
     %% Nice figure to evaluate the results

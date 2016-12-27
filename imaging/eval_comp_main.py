@@ -8,7 +8,7 @@ Created on Tue Aug 23 09:52:25 2016
 #%% Specify the file you want to analyze
 '''
 mousename = 'fni16'
-imagingFolder = '151002'
+imagingFolder = '151007'
 mdfFileNumber = [1,2] 
 '''
 #%% Set pnevFileName 

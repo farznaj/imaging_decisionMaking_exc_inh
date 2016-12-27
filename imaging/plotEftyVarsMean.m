@@ -40,7 +40,6 @@ load(pnevFileName, 'C', 'C_df', 'S', 'f')
 fprintf('...done\n')
 
 load(imfilename, 'Nnan_nanBeg_nanEnd')
-
 [C, S, C_df] = processEftyOuts(C, S, C_df, Nnan_nanBeg_nanEnd, normalizeSpikes);    % S(:, [32672       32333       32439       32547]) = nan; % sharp spikes due to frame missing (their trials will be excluded... you are just doing this so they dont affect the normalization.)
 
 %}
@@ -130,6 +129,9 @@ xlim([0  size(C, 2)])
 x = get(gca,'xlim'); len = x(end);
 r2 = 0;
 for rr = 1:floor(len/.5e4)+1
+
+
+
     r1 = r2;
     r2 = r1+.5e4;
     xlim([r1 r2])

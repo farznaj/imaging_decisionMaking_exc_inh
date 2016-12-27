@@ -1,4 +1,4 @@
-function [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibitROIselection(maskGcamp, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CCgcamp, ch2Image, COMs, C, do2dGauss)
+function [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibitROIselection(maskGcamp, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CCgcamp, ch2Image, COMs, C, A, do2dGauss)
 % inhibitRois = inhibitROIselection(maskGcamp, inhibitImage, sigTh, CCgcamp);
 %
 % Identifies inhibitory neurons on a gcamp channel (containing both
@@ -56,14 +56,27 @@ roiSig_all = NaN(1, size(maskGcamp,3));
 
 for rr = 1 : size(maskGcamp,3);
     
-    % Compute roiSing: signal magnitude of ch2 ROI (maskGcamp) on ch1 image (inhibitImage).
+%     fprintf('ROI %i\n', rr)    
+
+    % For some annoying mysterious reason if I compute roiMask0 like below
+    % (instead of getting it from maskGcamp), then the following command
+    % roiMask(~roiMask) = NaN; will take a long time!!!! otherwise I prefer
+    % the following definitoin for roiMask0 more than roiMask0 = maskGcamp(:,:,rr);
     
-    roiMask0 = maskGcamp(:,:,rr); % mask of ch2 ROI % figure; imagesc(roiMask)
+    % Set mask of gcamp ROI, but don't use any contours )like in
+    % maskGcamp)... ie all non-0 values will be 1 in the mask.    
+%     roiMask0 = logical(reshape(A(:,rr), [imHeight, imWidth])); % figure; imagesc(roiMask0)
+    
+    
+       
+    % Compute roiSing: signal magnitude of ch2 ROI (maskGcamp) on ch1 image (inhibitImage).
+    %
+    roiMask0 = maskGcamp(:,:,rr); % mask of ch2 ROI % figure; imagesc(roiMask)    
     % set pixels outside the ROI to nan. use this if you are doing roiSig = nanmean(roiIm(:)); below
     roiMask = roiMask0;
     roiMask = double(roiMask);
     roiMask(~roiMask) = NaN;
-    
+    %
     roiIm = inhibitImage .* roiMask; % image of ch2 ROI on ch1. % figure; imagesc(roiIm)
     ss = roiIm(:)~=0 & ~isnan(roiIm(:));
     s = sum(ss); % number of non-zero pixels in the image of ch2 ROI on ch1.
@@ -88,7 +101,7 @@ for rr = 1 : size(maskGcamp,3);
     
     %% Set surrMask : a square mask surrounding roiMask (mask of ch2 ROI)
     
-    surr_sz = 5; % 1; 5; % remember for 151029_003 you used 5.
+    surr_sz = 3; % changed 5 to 3 after fni16, 151002  %1; 5; % remember for 151029_003 you used 5.
     xl = [find(sum(roiMask0), 1, 'first')  find(sum(roiMask0), 1, 'last')];
     yl = [find(sum(roiMask0,2), 1, 'first')  find(sum(roiMask0,2), 1, 'last')];
     
@@ -128,6 +141,7 @@ for rr = 1 : size(maskGcamp,3);
     %}
     
 end
+
 
 %%
 % sum(~roi2surr_sig)
@@ -185,7 +199,7 @@ plot([0 length(roi2surr_sig)], [sigTh sigTh], 'r')
 plot([0 length(roi2surr_sig)], [quantile(roi2surr_sig, .9)  quantile(roi2surr_sig, .9)], 'g')
 xlabel('Neuron number')
 ylabel('ROI / surround')
-legend('.8 quant of roi2surr\_sig', '.9 quantile of roi2surr\_sig')
+legend({sprintf('%.2f=.8 quant of roi2surr\_sig', sigThI), sprintf('%.2f=.9 quantile of roi2surr\_sig', sigThE)}, 'Interpreter', 'none')
 
 if manThSet % if 1, you will change the default .8 quantile to whatever you wish :)
     disp('use Data Cursor to find a threshold, then type dbcont to return to the function')
@@ -237,7 +251,84 @@ cprintf('blue', '%d: num, %.3f: fraction of inhibitory neurons in gcamp channel.
 
 
 
+%% Compute Corr between A (spatial comp) and corresponing ROI on the inhibitory channel... if high corr, then A is positive on the inh channel, ie ROI is inhibitory!
 
+pad = 0;
+% fc = figure;
+corr_A_inh = nan(1, size(maskGcamp,3));
+for rr = 1:size(maskGcamp,3);
+
+%     fprintf('ROI %i\n', rr)
+    %{
+    roiMask0 = maskGcamp(:,:,rr); % mask of ch2 ROI % figure; imagesc(roiMask)
+    % set pixels outside the ROI to nan. use this if you are doing roiSig = nanmean(roiIm(:)); below
+    roiMask = roiMask0;
+    roiMask = double(roiMask);
+    roiMask(~roiMask) = NaN;
+
+    roiIm = inhibitImage .* roiMask; % image of ch2 ROI on ch1. % figure; imagesc(roiIm)
+    
+    Anow = A(:,rr);
+    
+    Anow(~Anow) = NaN;
+    corr_A_inh(rr) = corr(roiIm(:), Anow, 'rows', 'complete');
+    
+%     figure(fc); subplot(211),imagesc(reshape(A(:,rr), imHeight, imWidth)); a=gca; colorbar
+%     subplot(212), imagesc(roiIm); a=[a,gca];linkaxes(a); colorbar
+    %}
+
+    
+    Anow = A(:,rr);    
+    AMat = reshape(Anow, [imHeight, imWidth]);    
+
+    [i, j] = find(AMat);    
+    xRange = [max(min(j)-pad, 1) min(max(j)+pad, imWidth)];
+    yRange = [max(min(i)-pad, 1) min(max(i)+pad, imHeight)];    
+    % Clip A to only include non-0 values
+    AClip = AMat(yRange(1):yRange(2), xRange(1):xRange(2));
+    % set 0s to nans
+    AClip(~AClip) = NaN;
+    
+    
+    % inhibit channel
+    % First set roiIm, ie the ROI on the inhibit channel
+    roiMask = AMat;
+    roiMask(AMat~=0) = 1;
+    roiIm = inhibitImage .* roiMask; % image of ch2 ROI on ch1. % figure; imagesc(roiIm)
+    % Clip A to only include non-0 values
+    inhClip = roiIm(yRange(1):yRange(2), xRange(1):xRange(2));
+    % set 0s to nans
+    inhClip(~inhClip) = NaN;
+    
+%     figure; imagesc(AClip); figure; imagesc(inhClip)
+
+    % now get the corr btwn the 2
+    corr_A_inh(rr) = corr(inhClip(:), full(AClip(:)), 'rows', 'complete'); % corr2(inhClip, AClip);
+
+end
+
+figure; plot(corr_A_inh), ylabel('Corr A,inh')
+
+% Another way of defining inhibitRois... good but still needs evaluation
+% like roi2surr_sig
+% inhibitRois = zeros(1, length(roi2surr_sig));
+% inhibitRois(corr_A_inh>=0 & roi2surr_sig >= sigThE) = 1; % positive corr_A_inh and high sig intensity means inhibitory neuron!
+
+
+%% Adjust inhibitRois based on corr_A_inh
+
+% Set unsure ROIs that have high corr_A_inh to inhibit:
+inhibitRois(isnan(inhibitRois) & corr_A_inh > .55) = 1; %.5
+
+% Set inhibit ROIs that have very low corr_A_inh to unsure:
+inhibitRois(inhibitRois==1 & corr_A_inh < 0) = nan;
+
+disp('_________ adjusted by corr_A_inh _______')
+cprintf('blue', '%d inhibitory; %d excitatory; %d unsure neurons in gcamp channel.\n', sum(inhibitRois==1), sum(inhibitRois==0), sum(isnan(inhibitRois)))
+cprintf('blue', '%.1f%% inhibitory; %.1f%% excitatory; %.1f%% unsure neurons in gcamp channel.\n', mean(inhibitRois==1)*100, mean(inhibitRois==0)*100, mean(isnan(inhibitRois)*100))
+
+
+%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % x_all = []; % predicted paramteres of the gaussian : [Amplitude, x0, sigmax, y0, sigmay, angel(in rad)]
 % cost_all = []; % normalized cost (0: good, 1: max failure)
@@ -267,7 +358,7 @@ if do2dGauss
         roiMask = double(roiMask);
         %     roiMask(~roiMask) = NaN;
         
-        roiIm = inhibitImage .* roiMask; % image of ch2 ROI on ch1. % figure; imagesc(roiIm)
+        roiIm = inhibitImage .* roiMask; % image of ch2 ROI on ch1. % figure; imagesc(roiIm)        
         
         %%
         x0 = [100, COMs(rr,2), 4, COMs(rr,1), 4, 0]; %[1,0,50,0,50,0]; %Inital guess parameters [Amplitude, x0, sigmax, y0, sigmay, angel(in rad)]
@@ -488,12 +579,13 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
     
     figh = figure;
     set(figh, 'position', [1   676   415   300])
-    subplot(211), imagesc(ch2Image); hold on
-    subplot(212), imagesc(inhibitImage); hold on
+    subplot(221), imagesc(ch2Image); hold on
+    subplot(223), imagesc(inhibitImage); hold on
+    
     %     imagesc(normImage(ch2Image));
     %     colormap gray
     
-    subplot(211)
+    subplot(221)
     for rr = 1:length(CCgcamp)
         %         if plotCOMs
         %             plot(COMs(rr,2), COMs(rr,1), 'r.')
@@ -507,10 +599,11 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
         end
         %         end
     end
-    title('ROIs shown on the sdImage of channel 2')
+    title('ch2 image')
+%     title('ROIs shown on the sdImage of channel 2')
     
     
-    subplot(212)
+    subplot(223)
     for rr = 1:length(CCgcamp)
         if ~isempty(CCgcamp{rr})
             plot(CCgcamp{rr}(2,:), CCgcamp{rr}(1,:), 'color', colors(rr, :))
@@ -539,7 +632,8 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
     
     
     % excit
-    a = roi2surr_sig(inhibitRois==0);
+%     a = roi2surr_sig(inhibitRois==0);
+    a = roiSig_all(inhibitRois==0); % sort based on ROI signal only (not the ratio)... you may see the suspicious ROIs earlier!
     [~, i] = sort(a, 'descend');
     f = find(inhibitRois==0);
     excit_inds_hi2lo = f(i); % indeces of excit neurons in the array that includes all neurons, sorted from high to low value of roi2surr_sig
@@ -612,7 +706,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             %         if plotInhFirst
             %             rr2 = inds_inh_exc(rr); % first plot all inhibit neurons, then all excit neurons.
             rr2 = unsure_inds_hi2lo(rr); % rr2 is the index in the array including all neurons
-            nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 6); nearbyROIs(nearbyROIs==rr2) = [];
+            nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 8); nearbyROIs(nearbyROIs==rr2) = [];
             %         else
             %             rr2 = rr; % plot ROIs in the original order
             %         end
@@ -622,21 +716,28 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             
             % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
             figure(figh)
-            subplot(211)
+            subplot(221)
+            a = findobj(gca,'type','line'); set(a, 'linewidth',.1, 'color', 'r') % reset all contours thickness and color
             plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5)
             comd = 20;
             xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
             ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
             
-            subplot(212) % plot on inhibitImage, the current ROI and its too nearby ROIs
+            subplot(223) % plot on inhibitImage, the current ROI and its too nearby ROIs
+            a = findobj(gca,'type','line'); set(a, 'linewidth',.1, 'color', 'r') % reset all contours thickness and color
             plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5);
             xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
             ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
             if ~isempty(nearbyROIs)
                 for nnb = nearbyROIs'
-                    plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1.5)
+                    plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1)
                 end
             end
+            
+            subplot(222), imagesc(reshape(A(:,rr2), imHeight, imWidth)); 
+            xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
+            ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
+            title(sprintf('corr A,inh= %.2f', corr_A_inh(rr2)))
             % axis image
             
             %         ch = 0;
@@ -673,6 +774,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 figure(fimag)
                 h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r');
                 title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
+                title(sprintf('sig/surr = %.2f ; sig = %.0f', roi2surr_sig(rr2), roiSig_all(rr2)), 'color', 'r')
                 
                 %                 if ~isempty(nearbyROIs)
                 %                     hold on
@@ -685,7 +787,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             else
                 figure(fimag)
                 h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'y');
-                title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'k')
+                title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'k')                
             end
             
             
@@ -781,7 +883,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             
             %             fprintf('%.2f, %.2f, %.2f, %.2f\n', [cost_all(rr2), x_all(rr2,1), x_all(rr2,3), x_all(rr2,5)])
             
-            nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 6); nearbyROIs(nearbyROIs==rr2) = [];
+            nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 8); nearbyROIs(nearbyROIs==rr2) = [];
             %         else
             %             rr2 = rr; % plot ROIs in the original order
             %         end
@@ -791,27 +893,33 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             
             % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
             figure(figh)
-            subplot(211)
+            subplot(221)
+            a = findobj(gca,'type','line'); set(a, 'linewidth',.1, 'color', 'r') % reset all contours thickness and color
             plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5)
             comd = 20;
             xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
             ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
             
-            subplot(212) % plot on inhibitImage, the current ROI and its too nearby ROIs
+            subplot(223) % plot on inhibitImage, the current ROI and its too nearby ROIs
+            a = findobj(gca,'type','line'); set(a, 'linewidth',.1, 'color', 'r') % reset all contours thickness and color
             plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5);
             xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
             ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
             if ~isempty(nearbyROIs)
                 for nnb = nearbyROIs'
-                    plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1.5)
+                    plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1)
                 end
             end
             
+            subplot(222), imagesc(reshape(A(:,rr2), imHeight, imWidth)); 
+            xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
+            ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])            
+            title(sprintf('corr A,inh= %.2f', corr_A_inh(rr2)))
             %         ch = 0;
             %         while ch~=13
             
             % lines will be red for neurons identified as inhibitory.
-            if inhibitRois(rr2)
+            if inhibitRois(rr2)==1
                 % Plot the trace
                 %             t1 = activity_man_eftMask_ch1(:,rr2);
                 %             t2 = activity_man_eftMask_ch2(:,rr2);
@@ -840,7 +948,8 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 % Plot ROI contour on the image
                 figure(fimag)
                 h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r');
-                title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
+%                 title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
+                title(sprintf('sig/surr = %.2f ; sig = %.0f', roi2surr_sig(rr2), roiSig_all(rr2)), 'color', 'r')
                 %             title(sprintf('sig/surr = %.2f   corr = %.3f', roi2surr_sig(rr2), crr(rr2)), 'color', 'r')
                 
             else
@@ -942,7 +1051,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             
             %             fprintf('%.2f, %.2f, %.2f, %.2f\n', [cost_all(rr2), x_all(rr2,1), x_all(rr2,3), x_all(rr2,5)])
             
-            nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 6); nearbyROIs(nearbyROIs==rr2) = [];
+            nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 8); nearbyROIs(nearbyROIs==rr2) = [];
             %         else
             %             rr2 = rr; % plot ROIs in the original order
             %         end
@@ -952,22 +1061,28 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             
             % zoom on the gcamp channel image so you get an idea of the surrounding ROIs.
             figure(figh)
-            subplot(211)
+            subplot(221)
+            a = findobj(gca,'type','line'); set(a, 'linewidth',.1, 'color', 'r') % reset all contours thickness and color
             plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5)
             comd = 20;
             xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
             ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
             
-            subplot(212) % plot on inhibitImage, the current ROI and its too nearby ROIs
+            subplot(223) % plot on inhibitImage, the current ROI and its too nearby ROIs
+            a = findobj(gca,'type','line'); set(a, 'linewidth',.1, 'color', 'r') % reset all contours thickness and color
             plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r', 'linewidth', 1.5);
             xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
             ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
             if ~isempty(nearbyROIs)
                 for nnb = nearbyROIs'
-                    plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1.5)
+                    plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1)
                 end
             end
-            
+
+            subplot(222), imagesc(reshape(A(:,rr2), imHeight, imWidth)); 
+            xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
+            ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
+            title(sprintf('corr A,inh= %.2f', corr_A_inh(rr2)))
             %         ch = 0;
             %         while ch~=13
             
@@ -1003,7 +1118,8 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 
                 figure(fimag)
                 h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'y');
-                title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'k')
+%                 title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'k')
+                title(sprintf('sig/surr = %.2f ; sig = %.0f', roi2surr_sig(rr2), roiSig_all(rr2)), 'color', 'k')
                 %             title(sprintf('sig/surr = %.2f   corr = %.3f', roi2surr_sig(rr2), crr(rr2)), 'color', 'k')
             end
             

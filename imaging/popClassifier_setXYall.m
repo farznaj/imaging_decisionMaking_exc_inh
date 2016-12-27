@@ -179,16 +179,20 @@ if trialHistAnalysis==0
     % th_stim_dur = 800; % min stim duration to include a trial in timeStimOnset
     
     if doPlots
+        load(postName, 'timeReward', 'timeCommitIncorrResp')
+        
         figure; hold on
 %         subplot(1,2,1); 
         plot(timeCommitCL_CR_Gotone - timeStimOnset)
         plot(timeStimOffset - timeStimOnset, 'r')
         plot(time1stSideTry - timeStimOnset, 'm')
+        plot(timeReward - timeStimOnset)
+        plot(timeCommitIncorrResp - timeStimOnset)
         plot([1, length(timeCommitCL_CR_Gotone)],[th_stim_dur, th_stim_dur], 'g:')
         plot([1, length(timeCommitCL_CR_Gotone)],[ep_ms(end), ep_ms(end)], 'k:')
         xlabel('Trial')
         ylabel('Time relative to stim onset (ms)')
-        legend('goTone', 'stimOffset', '1stSideTry', 'th\_stim\_dur', 'epoch end')
+        legend('goTone', 'stimOffset', '1stSideTry', 'reward', 'incorr', 'th\_stim\_dur', 'epoch end')
         % minStimDurNoGoTone = nanmin(timeCommitCL_CR_Gotone - timeStimOnset); % this is the duration after stim onset during which no go tone occurred for any of the trials.
         % fprintf('minStimDurNoGoTone = %.2f ms' %minStimDurNoGoTone
     end
@@ -309,7 +313,7 @@ fprintf('%d high-rate choices, and %d low-rate choices\n', sum(Y==1), sum(Y==0))
 % thAct and thTrsWithSpike are parameters that you can play with.
 
 if ~rmvInactiveNsDurEp
-    NsExcluded = zeros(1, size(traces_al_stim,2)); % use this if you don't want to exclude any neurons.
+    NsExcluded = false(1, size(traces_al_stim,2)); % use this if you don't want to exclude any neurons.
     fprintf('chose not to remove any neurons!\n')
 else
     % If it is already saved, load it (the idea is to use the same NsExcluded for all the analyses of a session). Otherwise set it.

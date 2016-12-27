@@ -16,6 +16,9 @@ manThSet = 0; % if 1, you will set the threshold for identifying inhibit neurons
 identifInh = 1; % if 0, only bleedthrough-corrected ch1 image will be created, but no inhibitory neurons will be identified.
 do2dGauss = 0; % Do 2D gaussian fitting on ch1 images of gcamp ROIs for ROIs identified by your measure as unsure.
 
+inhibit_excit_prep(mouse, imagingFolder, mdfFileNumber, saveInhibitRois, assessClass_unsure_inh_excit, keyEval, manThSet, identifInh, do2dGauss)
+
+
 % Above .8 quantile is defined as inhibitory and below as excitatory.
 %{
 % Not doing below:
@@ -52,6 +55,7 @@ else
     % 0 for excit ROIs.
     % nan for ROIs that could not be classified as inhibit or excit.
     
+    % calls inhibitROIselection to set inhibitRois
     [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss);
     
     if saveInhibitRois
