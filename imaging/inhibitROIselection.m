@@ -317,19 +317,26 @@ figure; plot(corr_A_inh), ylabel('Corr A,inh')
 
 %% Adjust inhibitRois based on corr_A_inh
 
-% Set unsure ROIs that have high corr_A_inh to inhibit:
+% Reset unsure ROIs that have high corr_A_inh to inhibit:
 inhibitRois(isnan(inhibitRois) & corr_A_inh > .55) = 1; %.5
 
-% Set inhibit ROIs that have very low corr_A_inh to unsure:
-inhibitRois(inhibitRois==1 & corr_A_inh < 0) = nan;
+% Reset inhibit ROIs that have low corr_A_inh to unsure:
+inhibitRois(inhibitRois==1 & corr_A_inh < .15) = nan; % <0 <.1
+
+% Reset excit ROIs that have high corr_A_inh to unsure:
+inhibitRois(inhibitRois==0 & corr_A_inh > .3) = nan;
+
 
 disp('_________ adjusted by corr_A_inh _______')
 cprintf('blue', '%d inhibitory; %d excitatory; %d unsure neurons in gcamp channel.\n', sum(inhibitRois==1), sum(inhibitRois==0), sum(isnan(inhibitRois)))
 cprintf('blue', '%.1f%% inhibitory; %.1f%% excitatory; %.1f%% unsure neurons in gcamp channel.\n', mean(inhibitRois==1)*100, mean(inhibitRois==0)*100, mean(isnan(inhibitRois)*100))
 
 
+
 %%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % x_all = []; % predicted paramteres of the gaussian : [Amplitude, x0, sigmax, y0, sigmay, angel(in rad)]
 % cost_all = []; % normalized cost (0: good, 1: max failure)
 
@@ -395,44 +402,44 @@ if do2dGauss
     
     
     %{
-costQ = quantile(cost_all, 9)
-ampQ = quantile(x_all(:,1), 9)
-sigmaxQ = quantile(x_all(:,3), 9)
-sigmayQ = quantile(x_all(:,5), 9)
+    costQ = quantile(cost_all, 9)
+    ampQ = quantile(x_all(:,1), 9)
+    sigmaxQ = quantile(x_all(:,3), 9)
+    sigmayQ = quantile(x_all(:,5), 9)
 
-figure; plot(roi2surr_sig)
-hold on; plot(cost_all)
-c = corrcoef(roi2surr_sig, cost_all);
-title(sprintf('corr = %.2f', c(2)))
+    figure; plot(roi2surr_sig)
+    hold on; plot(cost_all)
+    c = corrcoef(roi2surr_sig, cost_all);
+    title(sprintf('corr = %.2f', c(2)))
 
-figure;
-[n,v] = histcounts(roi2surr_sig, 100); bar(v(1:end-1)+mode(diff(v))/2, n)
-xlabel('roi2surr\_sig')
-ylabel('counts')
-    %}
-    
-    %%%%%%%%%%%%%%%%%%%%%
-    %{
-th_cost = .25;
-th_amp = 1000;
-th_sigx = 3;
-th_sigy = 3;
+    figure;
+    [n,v] = histcounts(roi2surr_sig, 100); bar(v(1:end-1)+mode(diff(v))/2, n)
+    xlabel('roi2surr\_sig')
+    ylabel('counts')
+        %}
 
-cm = cost_all'<th_cost;
-am = x_all(:,1)>th_amp;
-sxm = x_all(:,3)<th_sigx;
-sym = x_all(:,5)<th_sigy;
+        %%%%%%%%%%%%%%%%%%%%%
+        %{
+    th_cost = .25;
+    th_amp = 1000;
+    th_sigx = 3;
+    th_sigy = 3;
 
-meas = [cm, am, sxm, sym];
-meas = meas(:,[1:2]);
+    cm = cost_all'<th_cost;
+    am = x_all(:,1)>th_amp;
+    sxm = x_all(:,3)<th_sigx;
+    sym = x_all(:,5)<th_sigy;
 
-aa = sum(meas,2);
-fin = aa==size(meas,2);
-sum(fin)
+    meas = [cm, am, sxm, sym];
+    meas = meas(:,[1:2]);
 
-inhibitRois = NaN(1, length(roi2surr_sig));
-inhibitRois(fin) = 1;
-inhibitRois(~fin) = 0;
+    aa = sum(meas,2);
+    fin = aa==size(meas,2);
+    sum(fin)
+
+    inhibitRois = NaN(1, length(roi2surr_sig));
+    inhibitRois(fin) = 1;
+    inhibitRois(~fin) = 0;
     %}
     
     
@@ -530,8 +537,10 @@ inhibitRois(~fin) = 0;
 else
     x_all = []; cost_all = [];
 end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 %% Compute correlation in the activity of each ch2 ROI between ch2 movie and ch1 movie.
@@ -705,7 +714,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             
             %         if plotInhFirst
             %             rr2 = inds_inh_exc(rr); % first plot all inhibit neurons, then all excit neurons.
-            rr2 = unsure_inds_hi2lo(rr); % rr2 is the index in the array including all neurons
+            rr2 = unsure_inds_hi2lo(rr); fprintf('ROI %d; corr %.2f\n', rr2, corr_A_inh(rr2)) % rr2 is the index in the array including all neurons
             nearbyROIs = findNearbyROIs(COMs, COMs(rr2,:), 8); nearbyROIs(nearbyROIs==rr2) = [];
             %         else
             %             rr2 = rr; % plot ROIs in the original order
@@ -733,11 +742,12 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1)
                 end
             end
+            title(sprintf('corr A,inh= %.2f', corr_A_inh(rr2)))
             
-            subplot(222), imagesc(reshape(A(:,rr2), imHeight, imWidth)); 
+            subplot(224), imagesc(reshape(A(:,rr2), imHeight, imWidth)); 
             xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
             ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
-            title(sprintf('corr A,inh= %.2f', corr_A_inh(rr2)))
+%             title(sprintf('corr A,inh= %.2f', corr_A_inh(rr2)))
             % axis image
             
             %         ch = 0;
@@ -750,7 +760,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 %             t2 = activity_man_eftMask_ch2(:,rr2);
                 %                 crr = corr(t1, t2);
                 figure(ftrace), cla
-                plot(C(rr2,:))
+                plot(C(rr2,:)), x1 = randi(size(C,2)-1e4); xlim([x1, x1+1e4])
                 
                 % If there are any too close ROIs (which most likely are
                 % all the same ROI) plot them.
@@ -807,22 +817,27 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     %                 break
                     
                     
-                    % if number 0 pressed, you want to assign this unsure ROI as excit.
+                % if number 0 pressed, you want to assign this unsure ROI as excit.
                 elseif ch==48
                     unsureEval(rr2) = 0; % rr2 is index in the all neurons array (not the inhibit neurons array).
                     fprintf('Reset as excit\n')
                     
-                    % if number 1 pressed, you want to assign this unsure ROI as inhibit.
+                % if number 1 pressed, you want to assign this unsure ROI as inhibit.
                 elseif ch==49
                     unsureEval(rr2) = 1;
                     fprintf('Reset as inhibit\n')
                     
-                    % if escape button, stop showing ROIs
+                % if number 2 pressed, set it as unsure again.
+                elseif ch==50
+                    unsureEval(rr2) = 2;
+                    fprintf('Reset as unsure\n')
+                    
+                % if escape button, stop showing ROIs
                 elseif ch==27
                     rr = length(CCgcamp);
                     break
                     
-                    % if any key other than enter and escape, then keep deleting and reploting the same roi
+                % if any key other than enter and escape, then keep deleting and reploting the same roi
                 else
                     ch = getkey;
                 end
@@ -879,7 +894,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             
             %         if plotInhFirst
             %             rr2 = inds_inh_exc(rr); % first plot all inhibit neurons, then all excit neurons.
-            rr2 = inhibit_inds_lo2hi(rr); % rr2 is the index in the array including all neurons
+            rr2 = inhibit_inds_lo2hi(rr); fprintf('ROI %d; corr %.2f\n', rr2, corr_A_inh(rr2)) % rr2 is the index in the array including all neurons
             
             %             fprintf('%.2f, %.2f, %.2f, %.2f\n', [cost_all(rr2), x_all(rr2,1), x_all(rr2,3), x_all(rr2,5)])
             
@@ -910,11 +925,12 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1)
                 end
             end
+            title(sprintf('corr A,inh= %.2f', corr_A_inh(rr2)))
             
-            subplot(222), imagesc(reshape(A(:,rr2), imHeight, imWidth)); 
+            subplot(224), imagesc(reshape(A(:,rr2), imHeight, imWidth)); 
             xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
             ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])            
-            title(sprintf('corr A,inh= %.2f', corr_A_inh(rr2)))
+%             title(sprintf('corr A,inh= %.2f', corr_A_inh(rr2)))
             %         ch = 0;
             %         while ch~=13
             
@@ -925,7 +941,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 %             t2 = activity_man_eftMask_ch2(:,rr2);
                 %                 crr = corr(t1, t2);
                 figure(ftrace), cla
-                plot(C(rr2,:))
+                plot(C(rr2,:)), x1 = randi(size(C,2)-1e4); xlim([x1, x1+1e4])
                 %             ht = plot(t1); hold on
                 %             ht2 = plot(t2);
                 
@@ -974,22 +990,28 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     %                 break
                     
                     
-                    % if number 0 pressed, you want to reassign this ROI as excit.
+                % if number 0 pressed, you want to reassign this ROI as excit.
                 elseif ch==48
                     inhibitEval(rr2) = 0; % rr2 is index in the all neurons array (not the inhibit neurons array).
                     fprintf('Reset as excit\n')
                     
-                    % if number 2 pressed, you are unsure if this neuron is an inhibit neuron.
+                % if number 2 pressed, you are unsure if this neuron is an inhibit neuron.
                 elseif ch==50
                     inhibitEval(rr2) = 2;
                     fprintf('Reset as unsure\n')
                     
-                    % if escape button, stop showing ROIs
+                % if number 1 pressed, reset as inh
+                elseif ch==49
+                    inhibitEval(rr2) = 1;
+                    fprintf('Reset as inhibit\n')
+                    
+                    
+                % if escape button, stop showing ROIs
                 elseif ch==27
                     rr = length(CCgcamp);
                     break
                     
-                    % if any key other than enter and escape, then keep deleting and reploting the same roi
+                % if any key other than enter and escape, then keep deleting and reploting the same roi
                 else
                     ch = getkey;
                 end
@@ -1047,7 +1069,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
             
             %         if plotInhFirst
             %             rr2 = inds_inh_exc(rr); % first plot all inhibit neurons, then all excit neurons.
-            rr2 = excit_inds_hi2lo(rr);
+            rr2 = excit_inds_hi2lo(rr); fprintf('ROI %d; corr %.2f\n', rr2, corr_A_inh(rr2))
             
             %             fprintf('%.2f, %.2f, %.2f, %.2f\n', [cost_all(rr2), x_all(rr2,1), x_all(rr2,3), x_all(rr2,5)])
             
@@ -1078,16 +1100,17 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     plot(CCgcamp{nnb}(2,:), CCgcamp{nnb}(1,:), 'y', 'linewidth', 1)
                 end
             end
+            title(sprintf('corr A,inh= %.2f', corr_A_inh(rr2)))
 
-            subplot(222), imagesc(reshape(A(:,rr2), imHeight, imWidth)); 
+            subplot(224), imagesc(reshape(A(:,rr2), imHeight, imWidth)); 
             xlim([COMs(rr2,2)-comd  COMs(rr2,2)+comd])
             ylim([COMs(rr2,1)-comd  COMs(rr2,1)+comd])
-            title(sprintf('corr A,inh= %.2f', corr_A_inh(rr2)))
+%             title(sprintf('corr A,inh= %.2f', corr_A_inh(rr2)))
             %         ch = 0;
             %         while ch~=13
             
             % lines will be red for neurons identified as inhibitory.
-            if inhibitRois(rr2)
+            if inhibitRois(rr2)==1
                 figure(fimag)
                 h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r');
                 title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
@@ -1096,7 +1119,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 %             t2 = activity_man_eftMask_ch2(:,rr2);
                 %                 crr = corr(t1, t2);
                 figure(ftrace), cla
-                plot(C(rr2,:))
+                plot(C(rr2,:)), x1 = randi(size(C,2)-1e4); xlim([x1, x1+1e4])
                 %             ht = plot(t1); hold on
                 %             ht2 = plot(t2);
                 
@@ -1139,22 +1162,27 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     %                 break
                     
                     
-                    % if number 1 pressed, you want to reassign this ROI as inhibit.
+                % if number 1 pressed, you want to reassign this ROI as inhibit.
                 elseif ch==49
-                    excitEval(rr2) = 0;
+                    excitEval(rr2) = 1; % this was 0 by mistake and u figured it out on Dec 28 2016! (after analyzing fni16, 151009)... so exc neurons that were reset as inh, were not taken changed in the end!
                     fprintf('Reset as inhibit\n')
                     
-                    % if number 2 pressed, you are unsure if this neuron is an excit neuron.
+                % if number 2 pressed, you are unsure if this neuron is an excit neuron.
                 elseif ch==50
                     excitEval(rr2) = 2;
                     fprintf('Reset as unsure\n')
                     
-                    % if escape button, stop showing ROIs
+                % if number 0 pressed, rest as excit.
+                elseif ch==48
+                    excitEval(rr2) = 0; % rr2 is index in the all neurons array (not the inhibit neurons array).
+                    fprintf('Reset as excit\n')
+                    
+                % if escape button, stop showing ROIs
                 elseif ch==27
                     rr = length(CCgcamp);
                     break
                     
-                    % if any key other than enter and escape, then keep deleting and reploting the same roi
+                % if any key other than enter and escape, then keep deleting and reploting the same roi
                 else
                     ch = getkey;
                 end

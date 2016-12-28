@@ -120,18 +120,12 @@ savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons'))
 
 %%
 %{
-% trace = mean(C_df); 
-% trace = f;
-% figure; hold on; plot(trace), plot([cs_frtrs ; cs_frtrs], [min(trace) max(trace)], 'g')
+% trace = mean(C_df); trace = f; figure; hold on; plot(trace), plot([cs_frtrs ; cs_frtrs], [min(trace) max(trace)], 'g')
 
 xlim([0  size(C, 2)])
-
 x = get(gca,'xlim'); len = x(end);
 r2 = 0;
 for rr = 1:floor(len/.5e4)+1
-
-
-
     r1 = r2;
     r2 = r1+.5e4;
     xlim([r1 r2])

@@ -163,7 +163,7 @@ if trialHistAnalysis==0
     % Make sure in none of the trials choice (1st side try) happened before the end of training window (ep)
     ii = (time1stSideTry - timeStimOnset) <= ep_ms(end);
     if sum(ii)>0
-        fprint('Excluding %i trials from timeStimOnset bc their choice is earlier than ep end\n', sum(ii))
+        fprintf('Excluding %i trials from timeStimOnset bc their choice is earlier than ep end\n', sum(ii))
         %     timeStimOnset[i] = nan;  % by setting to nan, the aligned-traces of these trials will be computed as nan.
     else
         fprintf('No trials with choice before the end of ep. Good :)\n')

@@ -111,13 +111,14 @@ end
 normims = 0;
 warning('off', 'MATLAB:nargchk:deprecated')
 ax1 = [];
-figure('name', sprintf('model: red = offset + slope * green, commonSlope = %.2f', slope_common));
+figure('name', sprintf('Average images. Model: red = offset + slope * green, commonSlope = %.2f', slope_common));
 % figure('name', sprintf('model: red = offset + slope * green, commonSlope = %.2f, cost = %.2f', slope_common, cost_common));
 ha = tight_subplot(2,2,[.05],[.05],[.05]);
 
 if normims,	im = normImage(origImage{1}); else im = origImage{1}; end
 axes(ha(1)); imagesc(im), freezeColors, colorbar, title('ch1')
 ax1 = [ax1, gca];
+hold on, plotCOMsCC(COMs)
 
 if normims,	im = normImage(origImage{2}); else im = origImage{2}; end
 axes(ha(2)); imagesc(im), freezeColors, colorbar, title('ch2')
@@ -130,6 +131,7 @@ hold on, plotCOMsCC(COMs)
 if normims, im = normImage(inhibitImage); else im = inhibitImage; end
 axes(ha(3)); imagesc(im), freezeColors, colorbar, title('corrected image: ch1 - commonSlope*ch2')
 ax1 = [ax1, gca];
+hold on, plotCOMsCC(COMs)
 
 %
 % medImageInhibit = workingImage; % medImageInhibit(medImageInhibit < 0) = 0;
@@ -137,6 +139,7 @@ ax1 = [ax1, gca];
 im = origImage{1} - inhibitImage;
 axes(ha(4)); imagesc(im), freezeColors, colorbar, title('ch1 - corrected image')
 ax1 = [ax1, gca];
+hold on, plotCOMsCC(COMs)
 % hold on, plotCOMsCC(COMs)
 %}
 linkaxes(ax1)
@@ -183,7 +186,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     colors = colors(end:-1:1,:);
     
     % plot inhibitory ROIs on the image of inhibit channel.
-    figure('name', 'sdImage of inhibit channel', 'position', [288          75        1083         898]);
+    figure('name', 'Normalized sdImage of inhibit channel', 'position', [288          75        1083         898]);
     subplot(221)
     imagesc(im2p)
     colormap gray
@@ -223,9 +226,9 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     meanS_uns_inh_exc = [mean(mean(top(isnan(inhibitRois),:))), mean(mean(top(inhibitRois==1,:))), mean(mean(top(inhibitRois==0,:)))]  
     
     
-    %% Compare average C of inhibit and excit neurons
+    %% Compare average C and S of inhibit and excit neurons
     
-    figure;
+    figure('position', [675          77        1019         899]);
     top = C;
     subplot(421), hold on;
     plot(mean(top(isnan(inhibitRois),:)),'c'); plot(mean(top(inhibitRois==1,:)),'r'); plot(mean(top(inhibitRois==0,:)),'color',[0,127,0]/255); legend('uns', 'inh', 'exc'); xlim([1,length(top)]); title('C')
@@ -233,7 +236,6 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     subplot(425),  plot(mean(top(inhibitRois==0,:))), title('excit'); xlim([1,length(top)])
     subplot(427),  plot(mean(top(isnan(inhibitRois),:))), title('unsure'); xlim([1,length(top)])
     
-   
     
 %     figure;
     top = S;
@@ -242,8 +244,6 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     subplot(424), plot(mean(top(inhibitRois==1,:))), title('inhibit'); xlim([1,length(top)])
     subplot(426),  plot(mean(top(inhibitRois==0,:))), title('excit'); xlim([1,length(top)])
     subplot(428),  plot(mean(top(isnan(inhibitRois),:))), title('unsure'); xlim([1,length(top)])
-    
-    
 
 
     %{

@@ -45,6 +45,7 @@ setInhibitExcit = 0; % if 1, inhibitory and excitatory neurons will be set unles
 plotEftyAC1by1 = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
 frameLength = 1000/30.9; % sec.
 
+
 % Once done use set_aligned_traces to set aligned traces on different trial events with carefully chosen trials.
 %{
 evaluateEftyOuts = 0; 
@@ -393,7 +394,7 @@ if evaluateEftyOuts
         set([h0; h00], 'handlevisibility', 'off'); 
     end 
     set([h], 'handlevisibility', 'off')
-    plot(shiftScaleY(f), 'y')
+    plot(shiftScaleY(f), 'color', [255,215,0]/255)
     plot(shiftScaleY(mean(activity_man_eftMask_ch2,2)), 'b')
     plot(shiftScaleY(mean(C)), 'k')
     plot(shiftScaleY(mean(S)), 'm')
