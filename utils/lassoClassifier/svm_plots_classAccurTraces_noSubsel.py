@@ -10,9 +10,12 @@ Created on Tue Dec 13 15:14:54 2016
 """
 
 # Go to svm_plots_setVars and define vars!
+from svm_plots_setVars import *
 execfile("svm_plots_setVars.py")    
 
-dnow = '/classAccurTraces_L1'
+dnow = '/classAccurTraces/'+mousename
+#dnow = '/classAccurTraces_L1'
+
 
 #%%
 '''
@@ -29,6 +32,7 @@ eventI_allDays = np.full([numDays,1], np.nan).flatten().astype('int')
 
 for iday in range(len(days)):
     
+    print '___________________'    
     imagingFolder = days[iday][0:6]; #'151013'
     mdfFileNumber = map(int, (days[iday][7:]).split("-")); #[1,2] 
         
@@ -45,6 +49,7 @@ for iday in range(len(days)):
     moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
     
     print(os.path.basename(imfilename))
+   
    
     #%% Load eventI (we need it for the final alignment of corrClass traces of all days)
     

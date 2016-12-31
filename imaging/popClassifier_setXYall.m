@@ -73,6 +73,10 @@ traces_al_stim = traces_al_stimAll;
 
 % Load outcomes and choice (allResp_HR_LR) for the current trial
 load(postName, 'outcomes', 'allResp_HR_LR')
+%{
+outcomes = outcomes(1:length(all_data_sess{1}));
+allResp_HR_LR = allResp_HR_LR(1:length(all_data_sess{1}));
+%}
 choiceVecAll = allResp_HR_LR;  % trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.
 fprintf('Current outcome: %d correct choices; %d incorrect choices\n', sum(outcomes==1), sum(outcomes==0))
 

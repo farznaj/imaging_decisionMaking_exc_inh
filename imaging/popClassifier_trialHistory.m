@@ -141,4 +141,6 @@ choiceVec0 = allResp_HR_LR_prevTr(:);  % trials x 1;  1 for HR choice, 0 for LR 
 % and current trial, but in short and long ITI since ITI is defined as time
 % between commiting a choice in  trial i and stimulus onset in trial i+1,
 % trials with outcomes like wrong init or no side commit will be exclluded.
-fprintf('Number of short, long, all ITI trials: %d, %d, %d\n', sum(~isnan(choiceVec0)))
+% fprintf('Number of short, long, all ITI trials: %d, %d, %d\n', sum(~isnan(choiceVec0)))
+
+

@@ -17,6 +17,14 @@
 % postFile is created in imaging_prep_analysis, here you append vars to it.
 save_aligned_traces = 1; %1; % if 1, the following structures will be appended to postName: 'stimAl', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl'
 
+% If you want to use trials of only one of the sessions:
+%{
+alldata = all_data_sess{1};
+alldataSpikesGood = alldataSpikesGood(1:length(all_data_sess{1}));
+trs2rmv(trs2rmv>length(all_data_sess{1})) = [];
+outcomes = outcomes(1:length(all_data_sess{1}));
+allResp_HR_LR = allResp_HR_LR(1:length(all_data_sess{1}));
+%}
 
 %%
 [pd, pnev_n] = fileparts(pnevFileName);

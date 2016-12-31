@@ -21,8 +21,10 @@
 %   bs: vector of size (N x 1), which includes the offset elements
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [a, bs] = regressCommonSlopeModel(Xs, Ys)
-maxIter = 100;                              % maximum number of iterations allowed.
+function [a, bs] = regressCommonSlopeModel(Xs, Ys, maxIter)
+if ~exist('maxIter', 'var')
+    maxIter = 100;                              % maximum number of iterations allowed.
+end
 N = length(Xs);                             % number of variables (i.e., # neurons)
 a = randn;                                  % initial value for a
 bs = randn(N, 1);                           % initial value for bs

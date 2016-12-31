@@ -3,6 +3,13 @@
 Pool SVM results of all days and plot summary figures
 First run svm_notebook.py to get vars.... normally on the cluster!
 
+This script is for when you do subselection of neurons (doNsRand). The more recent scripts are :
+svm_plots_classAccur_noSubsel.py
+svm_plots_classAccurTraces_noSubsel.py
+
+use them to make plots for classification accuracy of data ran without subselection of neurons.
+
+
 
 Created on Sun Oct 30 14:41:01 2016
 @author: farznaj

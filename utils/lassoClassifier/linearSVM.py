@@ -20,7 +20,7 @@ def linearSVM(XTrain, YTrain, XTest, YTest, options):
 
     def perClassError(Y, Yhat):
         import numpy as np
-        perClassEr = sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
+        perClassEr = np.sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
         return perClassEr
     
     perClassErrorTest = perClassError(YTest, linear_svm.predict(XTest));

@@ -9,10 +9,10 @@ Created on Sat Nov  5 14:36:16 2016
 
 #%% 
 
-itiName = 'shortLong'
 savefigs = 1
 
 
+itiName = 'shortLong'
 suffn = 'prev_%sITIs_%sN_' %(itiName, ntName)
 suffnei = 'prev_%sITIs_%s_' %(itiName, 'excInh')
 print '\n', suffn[:-1], ' - ', suffnei[:-1]
@@ -223,7 +223,7 @@ plt.subplots_adjust(wspace=1, hspace=.7)
 
 
 if savefigs:
-    dnow = '/shortLongAllITI_afterSFN/bestc_500Iters_non0decoder/setTo50ErrOfSampsWith0Weights' 
+#    dnow = '/shortLongAllITI_afterSFN/bestc_500Iters_non0decoder/setTo50ErrOfSampsWith0Weights' 
     fign = os.path.join(svmdir+dnow, suffn+'test_L1'+'.'+fmt[0])
     plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
 

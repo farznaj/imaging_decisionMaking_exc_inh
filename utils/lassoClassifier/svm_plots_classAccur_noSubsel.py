@@ -9,18 +9,21 @@ Created on Fri Dec  2 09:26:33 2016
 """
 
 # Go to svm_plots_setVars and define vars!
+from svm_plots_setVars import *
 execfile("svm_plots_setVars.py")    
 
-
+# fni17:
 # for short long u have 500 iters for bestc but cv shuffs are 100.... so set numSamp to 100
 # for curr and prev, all is 500
-numSamp = 500 # 500 perClassErrorTest_shfl.shape[0]  # number of shuffles for doing cross validation (ie number of random sets of test/train trials.... You changed the following: in mainSVM_notebook.py this is set to 100, so unless you change the value inside the code it should be always 100.)
+numSamp = 100 # 500 perClassErrorTest_shfl.shape[0]  # number of shuffles for doing cross validation (ie number of random sets of test/train trials.... You changed the following: in mainSVM_notebook.py this is set to 100, so unless you change the value inside the code it should be always 100.)
+dnow = '/classAccur/'+mousename
 #dnow = '/shortLongITI_afterSFN/bestc_500Iters_non0decoder' # save directory in dropbox
-dnow = '/shortLongAllITI_afterSFN/bestc_500Iters_non0decoder/setTo50ErrOfSampsWith0Weights' 
+#dnow = '/shortLongAllITI_afterSFN/bestc_500Iters_non0decoder/setTo50ErrOfSampsWith0Weights' 
 #dnow = '/l1_l2_subsel_comparison'
 thNon0Ws = 2 # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!
 thSamps = 10  # Days that have <thSamps samples that satisfy >=thNon0W non0 weights will be manually set to 50 (class error of all their samples) ... bc we think <5 samples will not give us an accurate measure of class error of a day.
-setToNaN = 1 # if 1, the above two jobs will be done.
+setTo50 = 1 # if 1, the above two jobs will be done.
+
 
 #%%
 '''
@@ -30,7 +33,7 @@ setToNaN = 1 # if 1, the above two jobs will be done.
 '''
 
 #%% Loop over days    
-    
+# test in the names below means cv (cross validated or testing data!)    
 l1_err_test_data = np.full((numSamp, len(days)), np.nan)
 l1_err_test_shfl = np.full((numSamp, len(days)), np.nan)
 l1_err_train_data = np.full((numSamp, len(days)), np.nan)
@@ -54,6 +57,7 @@ numNon0WShfl = np.full((1, len(days)), np.nan).flatten() # For each day: average
 
 for iday in range(len(days)):
     
+    print '___________________'
     imagingFolder = days[iday][0:6]; #'151013'
     mdfFileNumber = map(int, (days[iday][7:]).split("-")); #[1,2] 
         
@@ -118,7 +122,9 @@ for iday in range(len(days)):
 
         numNon0WShfl[iday] = np.sum(w_shfl!=0,axis=1).mean() # average number of non0 weights across all samples of shuffled data
         
-        
+        print numNon0SampData[iday], '=number of cv samples (data) with >=2 non-0 weights'
+        print numNon0SampShfl[iday], '=number of cv samples (shfl) with >=2 non-0 weights'
+        print '%.2f =%% neurons with non0 weights' %(100*numNon0WShfl[iday]/w_shfl.shape[1]) # (mean across all samples of shuffled data)
             
         if regType=='l1':
             l1_err_test_data[:, iday] = perClassErrorTest_data #it will be nan for rounds with all-0 weights
@@ -128,7 +134,7 @@ for iday in range(len(days)):
             l1_wnon0_all[iday] = (w!=0).mean() # this is not w_shfl or w_data... this is w when all trials were used for training
             l1_b_all[iday] = b
             
-            if setToNaN:
+            if setTo50:
                 # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!
                 # The reson I don't simply exclude them is that I want them to count when I get average across days... lets say I am comparing two conditions, one doesn't have much decoding info (as a result mostly 0 weights)... I don't want to throw it away... not having information about the choice is informative for me.
                 # set to nan the test/train error of those samples that have all-0 weights
@@ -145,22 +151,25 @@ for iday in range(len(days)):
             l2_wnon0_all[iday] = (w!=0).mean()
             l2_b_all[iday] = b
 
-        if setToNaN:
+        if setTo50:
             # For days that have <10 samples that satisfy >=2 non0 weights, we will manually set the class error of all samples to 50 ... bc we think <5 samples will not give us an accurate measure of class error of a day.
             if numNon0SampShfl[iday]<thSamps:
+                print 'setting class error of shfl (both cv and trained) to 50 bc only %d samples had >= %d non-0 weights' %(numNon0SampShfl[iday], thNon0Ws)
                 l1_err_test_shfl[:, iday] = 50*np.ones((perClassErrorTest_data.shape))#np.nan
                 l1_err_train_shfl[:, iday] = 50*np.ones((perClassErrorTest_data.shape))#np.nan
                 numNon0SampShfl[iday] = perClassErrorTest_shfl.shape[0]
                 
             if numNon0SampData[iday]<thSamps:
+                print 'setting class error of data (both cv and trained) to 50 bc only %d samples had >= %d non-0 weights' %(numNon0SampData[iday], thNon0Ws)
                 l1_err_test_data[:, iday] = 50*np.ones((perClassErrorTest_data.shape))#np.nan
                 l1_err_train_data[:, iday] = 50*np.ones((perClassErrorTest_data.shape))#np.nan
                 numNon0SampData[iday] = perClassErrorTest_data.shape[0]
             
-            
+# these values are after resetting class error to 50 (if setTo50 is 1):
 print numNon0SampData
 print numNon0SampShfl
 print numNon0WShfl
+
 
 #%% keep short and long ITI results to plot them against each other later.
 if trialHistAnalysis:
@@ -406,7 +415,7 @@ plt.xlim([-1, len(days)])
 lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.25), frameon=False)
 #leg.get_frame().set_linewidth(0.0)
 makeNicePlots(ax)
-ymin, ymax = ax.get_ylim()
+ymin,_ = ax.get_ylim()
 
 ##%% Average across days
 x =[0,1]
@@ -414,10 +423,16 @@ labels = ['Data', 'Shfl']
 ax = plt.subplot(gs[-2:-1])
 plt.errorbar(x, [np.mean(av_l1_train_d), np.mean(av_l1_train_s)], yerr = [np.std(av_l1_train_d), np.std(av_l1_train_s)], marker='o', fmt=' ', color='k')
 plt.xlim([x[0]-1, x[1]+1])
+
+_, ymax = ax.get_ylim()
 plt.ylim([ymin, ymax])
 #plt.ylabel('Classification error (%) - testing data')
 plt.xticks(x, labels, rotation='vertical', fontsize=13)    
 #plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
+
+plt.subplot(gs[0:-2])
+plt.ylim([ymin, ymax])
+
 plt.subplots_adjust(wspace=1)
 makeNicePlots(ax)
 

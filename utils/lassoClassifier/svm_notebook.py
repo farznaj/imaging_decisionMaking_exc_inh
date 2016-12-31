@@ -48,13 +48,13 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
     mousename = 'fni16'
-    imagingFolder = '150930'
-    mdfFileNumber = [1,2] 
+    imagingFolder = '151001'
+    mdfFileNumber = [1] 
 
-    trialHistAnalysis = 0;    
+    trialHistAnalysis = 1;    
     roundi = 1; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
 
-    iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
+    iTiFlg = 1; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
     setNsExcluded = 1; # if 1, NsExcluded will be set even if it is already saved.
     numSamples = 100 #100; # number of iterations for finding the best c (inverse of regularization parameter)
     neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
@@ -1101,7 +1101,7 @@ if doPlots:
 ########################################################################################################################################
 ########################################################################################################################################
 
-
+#if numTrials <= kfold # we will get only 1 test trial!
 # In[25]:
 
 # numSamples = 10; # number of iterations for finding the best c (inverse of regularization parameter)

@@ -57,7 +57,9 @@ roiSig_all = NaN(1, size(maskGcamp,3));
 for rr = 1 : size(maskGcamp,3);
     
 %     fprintf('ROI %i\n', rr)    
-
+    
+    % solution to problem below: instead of inhibitImage .* roiMask, do
+    % inhibitImage(roiMask~=0) .* roiMask(roiMask~=0)
     % For some annoying mysterious reason if I compute roiMask0 like below
     % (instead of getting it from maskGcamp), then the following command
     % roiMask(~roiMask) = NaN; will take a long time!!!! otherwise I prefer
@@ -67,8 +69,20 @@ for rr = 1 : size(maskGcamp,3);
     % maskGcamp)... ie all non-0 values will be 1 in the mask.    
 %     roiMask0 = logical(reshape(A(:,rr), [imHeight, imWidth])); % figure; imagesc(roiMask0)
     
+    % Instead of simply averaging pixels of roi on inh ch, first weigh each
+    % pixel by its A value, then average them...  The idea is that pixels belong to
+    % the neuron at different weights (identified by values of A) and we control for it.
+    %{
+    Anow = reshape(A(:,rr), [imHeight, imWidth]);
+    roiMask0 = logical(Anow);
+%     Anow(Anow==0) = nan;
+    roiIm = inhibitImage(Anow~=0) .* Anow(Anow~=0); % weigh each pixel in inh ch by its value in A. 
+    roiIm(roiIm==0) = nan;    
+    %}
     
-       
+    
+    %
+    %%%%%%%%%%%%%%%%%
     % Compute roiSing: signal magnitude of ch2 ROI (maskGcamp) on ch1 image (inhibitImage).
     %
     roiMask0 = maskGcamp(:,:,rr); % mask of ch2 ROI % figure; imagesc(roiMask)    
@@ -85,6 +99,9 @@ for rr = 1 : size(maskGcamp,3);
     roiSigN = s;
     %     else, roiSig = 0; end
     roi2surr_sig_num(rr) = roiSigN;
+    %%%%%%%%%%%%%%%%%%%
+    %
+    
     % if not doing nans for pixels outside ROI, use below.
     %{
     a = roiIm(ss);
@@ -98,6 +115,19 @@ for rr = 1 : size(maskGcamp,3);
     %     roi2surr_sig(rr) = roiSig; % use this if you don't want to account for surround mask.
     roiSig_all(rr) = roiSig;
     
+    
+    % roiSig_all is the average of inh ch pixels inside the roi... it is
+    % not weighted by A. (unlike roiSig)
+    %{
+    a = maskGcamp(:,:,rr); % mask of ch2 ROI % figure; imagesc(roiMask)    
+    roiIm2 = inhibitImage(a~=0) .* a(a~=0); % image of ch2 ROI on ch1. % figure; imagesc(roiIm)
+    roiSig2 = nanmean(roiIm2(:)); % mean of pixels inside the ROI. All pixels outside the ROI are set to nan.
+    if roiSig2<0
+        roiSig2 = 0; % nan;
+    end
+    %     roi2surr_sig(rr) = roiSig; % use this if you don't want to account for surround mask.
+    roiSig_all(rr) = roiSig2;
+    %}
     
     %% Set surrMask : a square mask surrounding roiMask (mask of ch2 ROI)
     
@@ -141,7 +171,8 @@ for rr = 1 : size(maskGcamp,3);
     %}
     
 end
-
+% figure; plot(roi2surr_sig)
+% figure; plot(roiSig_all)
 
 %%
 % sum(~roi2surr_sig)
@@ -185,7 +216,7 @@ sigThE = quantile(roi2surr_sig, qexc);
 sigTh_IE = [sigThI, sigThE];
 
 %     cprintf('red', 'Not performing manual evaulation!\n')
-cprintf('red', 'inhibit: > %.2f quantile (%.2f)\nexcit: < %.2f quantile (%.2f) of roi2surr_sig\n', qinh, sigThI, qexc, sigThE)
+cprintf('red', 'inhibit: > %.2f quantile (%.3f)\nexcit: < %.2f quantile (%.3f) of roi2surr_sig\n', qinh, sigThI, qexc, sigThE)
 
 
 %%%%%%%%%%%%%%%%%% the following not really needed
@@ -199,7 +230,7 @@ plot([0 length(roi2surr_sig)], [sigTh sigTh], 'r')
 plot([0 length(roi2surr_sig)], [quantile(roi2surr_sig, .9)  quantile(roi2surr_sig, .9)], 'g')
 xlabel('Neuron number')
 ylabel('ROI / surround')
-legend({sprintf('%.2f=.8 quant of roi2surr\_sig', sigThI), sprintf('%.2f=.9 quantile of roi2surr\_sig', sigThE)}, 'Interpreter', 'none')
+legend({sprintf('%.3f=.8 quant of roi2surr_sig', sigThI), sprintf('%.3f=.9 quantile of roi2surr_sig', sigThE)}, 'Interpreter', 'none')
 
 if manThSet % if 1, you will change the default .8 quantile to whatever you wish :)
     disp('use Data Cursor to find a threshold, then type dbcont to return to the function')
@@ -307,7 +338,7 @@ for rr = 1:size(maskGcamp,3);
 
 end
 
-figure; plot(corr_A_inh), ylabel('Corr A,inh')
+% figure; plot(corr_A_inh), ylabel('Corr A,inh')
 
 % Another way of defining inhibitRois... good but still needs evaluation
 % like roi2surr_sig
@@ -776,15 +807,15 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 
                 %             ht = plot(t1); hold on
                 %             ht2 = plot(t2);
-                xlim([0  size(C, 2)])
+                % xlim([0  size(C, 2)])
                 %             title(crr(rr2))
                 
                 
                 % Plot ROI contour on the image
                 figure(fimag)
                 h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r');
-                title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
-                title(sprintf('sig/surr = %.2f ; sig = %.0f', roi2surr_sig(rr2), roiSig_all(rr2)), 'color', 'r')
+%                 title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
+                title(sprintf('sig/surr = %.3f ; sig = %.0f', roi2surr_sig(rr2), roiSig_all(rr2)), 'color', 'r')
                 
                 %                 if ~isempty(nearbyROIs)
                 %                     hold on
@@ -957,7 +988,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     hold off
                 end
                 
-                xlim([0  size(C, 2)])
+                % xlim([0  size(C, 2)])
                 %             title(crr(rr2))
                 
                 
@@ -965,7 +996,7 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                 figure(fimag)
                 h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'r');
 %                 title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'r')
-                title(sprintf('sig/surr = %.2f ; sig = %.0f', roi2surr_sig(rr2), roiSig_all(rr2)), 'color', 'r')
+                title(sprintf('sig/surr = %.3f ; sig = %.0f', roi2surr_sig(rr2), roiSig_all(rr2)), 'color', 'r')
                 %             title(sprintf('sig/surr = %.2f   corr = %.3f', roi2surr_sig(rr2), crr(rr2)), 'color', 'r')
                 
             else
@@ -1135,14 +1166,14 @@ if exist('CCgcamp', 'var') && any(assessClass_unsure_inh_excit)
                     hold off
                 end
                 
-                xlim([0  size(C, 2)])
+                % xlim([0  size(C, 2)])
                 %             title(crr(rr2))
                 
                 
                 figure(fimag)
                 h = plot(CCgcamp{rr2}(2,:), CCgcamp{rr2}(1,:), 'y');
 %                 title(sprintf('sig/surr = %.2f', roi2surr_sig(rr2)), 'color', 'k')
-                title(sprintf('sig/surr = %.2f ; sig = %.0f', roi2surr_sig(rr2), roiSig_all(rr2)), 'color', 'k')
+                title(sprintf('sig/surr = %.3f ; sig = %.0f', roi2surr_sig(rr2), roiSig_all(rr2)), 'color', 'k')
                 %             title(sprintf('sig/surr = %.2f   corr = %.3f', roi2surr_sig(rr2), crr(rr2)), 'color', 'k')
             end
             

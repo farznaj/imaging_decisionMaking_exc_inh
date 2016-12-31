@@ -59,7 +59,7 @@ fname = fullfile(pd, sprintf('more_%s.mat', pnev_n));
 load(pnevFileName, 'activity_man_eftMask_ch2', 'C', 'P', 'srt_val', 'A', 'highlightCorrROI', 'roiPatch', 'highlightPatchAvg')
 load(pnevFileName, 'rval_space') % Efty's version of our highlightCorr measure.
 load(imfilename, 'imHeight', 'imWidth', 'sdImage')
-load(fname, 'fitness', 'mask', 'CC') % 'idx_components', 
+load(fname, 'fitness', 'mask', 'CC') % 'idx_components',
 
 fitnessNow = fitness';
 % below commented bc u modified Andrea's python code so fitness and erfc
@@ -67,14 +67,14 @@ fitnessNow = fitness';
 %{
 % idx_components(i) = j; i: after-sort index; j: before-sort index.
 if ~min(idx_components)
-    idx_components = idx_components+1; % bc python's indeces are from 0! 
+    idx_components = idx_components+1; % bc python's indeces are from 0!
 end
 fitnessNow = NaN(size(fitness')); % turn fitness into an array whose indeces match Efty's outputs.
 fitnessNow(idx_components) = fitness;
 %}
 
 % highlightCorrROI = highlightCorrROI';
-% highlightCorrROI = rval_space; 
+% highlightCorrROI = rval_space;
 srt_val = full(srt_val);
 
 
@@ -177,7 +177,7 @@ subplot(616), plot(mask_numpix), title('mask # pixels')
 
 %% Identify bad components for each criterion
 
-badAG = fitnessNow >= th_AG; 
+badAG = fitnessNow >= th_AG;
 
 numbad = sum(fitnessNow >= th_AG);
 ss = sort(srt_val);
@@ -186,12 +186,12 @@ if ~fixed_th_srt_val
     th_srt_val = ss(numbad); % you are trying to find a good threshold for srt_val (below which ROIs are bad).
 end
 % fprintf('Threshold for Efty srt_val= %.2f\n', full(th_srt_val))
-badEP = srt_val < th_srt_val; 
-smallROI = mask_numpix < th_smallROI; 
-shortDecayTau = tau(:,2) < th_shortDecayTau; 
-badTempCorr = temp_corr < th_badTempCorr; 
-badHighlightCorr = rval_space < th_badHighlightCorr; 
-badHighlightCorr_DB = highlightCorrROI' < th_badHighlightCorr; 
+badEP = srt_val < th_srt_val;
+smallROI = mask_numpix < th_smallROI;
+shortDecayTau = tau(:,2) < th_shortDecayTau;
+badTempCorr = temp_corr < th_badTempCorr;
+badHighlightCorr = rval_space < th_badHighlightCorr;
+badHighlightCorr_DB = highlightCorrROI' < th_badHighlightCorr;
 
 fprintf('sum(badAG): %d\n', sum(badAG))
 fprintf('sum(badEP & ~badAll): %d\n', sum(badEP & ~(badAG | smallROI | shortDecayTau | badTempCorr | badHighlightCorr))) %
@@ -252,7 +252,7 @@ im = sdImage{2}; % medImage{2};
 
 
 % bad components
-fh2 = figure;
+fh2 = figure('position', [680     5   760   971]);
 subplot(211);
 imagesc(im)
 hold on
@@ -282,7 +282,7 @@ i = 182;
 nearbyROIs = findNearbyROIs(COMs, COMs(i,:), 5)
 rois2p = nearbyROIs;
 
-figure, subplot(211); 
+figure, subplot(211);
 imagesc(im); hold on
 for rr = nearbyROIs %find(badROIs01')
     plot(COMs(rr,2), COMs(rr,1), 'r.')
@@ -310,71 +310,80 @@ size(rois2p)
 if evalBadRes
     
     % which ROIs to plot?
-    
-    rois2p = find(~badROIs01);
-%     rois2p = find(badROIs01);
-    %{
-    i = 128;
-    nearbyROIs = findNearbyROIs(COMs, COMs(i,:), 8)
-    rois2p = nearbyROIs;
-    %}
-    rois2p = rois2p(randperm(length(rois2p)));    
-    
-    %% Nice figure to evaluate the results
-    
-    badROIs = find(badROIs01);
-    % goodinds = ~badROIs01;
-
-    fh3 = figure('position', [-249         248        2365         609]);
-    subplot(3,6,13);
-    imagesc(log(sdImage{2}))
-    
-    for i = rois2p' % 589 %413; 589; %412; 432; % rois2p'; % % %; %ag_eb % f%ab_eg; %find(bc)' %find(mask_numpix<15); %nearbyROIs' %1:size(C,1) % fb'; % fb'; %220; %477;
+    for goodbad=1:2
         
-%         fprintf('hilight_in_out_hilightROIdiff= %.2f %.2f %.2f\n', [aveHighlightInRoi(i)  aveHighlightOutRoi(i)  highlightRoiDiff(i)]) % [cinall(i) coutall(i) ds(i)]
-        if ismember(i, badROIs)
-            col = 'r';
+        if goodbad==1
+            fprintf('Showing a few example good neurons...\n')
+            rois2p = find(~badROIs01);
         else
-            col = 'k';
+            fprintf('Showing a few example bad neurons...\n')
+            rois2p = find(badROIs01);
         end
-        %     i
-        figure(fh3); set(gcf,'name', sprintf('ROI: %i', i));  hold on
-        a1 = subplot(3,6,[1:6]);
-%         h1 = plot(C(i,:));
-        % superimpose C and raw (shift and scale for comparison)
-        h2 = plot(shiftScaleY(activity_man_eftMask_ch2(:,i)), 'b'); hold on; h1 = plot(shiftScaleY(C(i,:)), 'r');
-        %     title(sprintf('tau = %.2f ms', tau(i,2))),  % title(sprintf('%.2f, %.2f', [temp_corr(i), tau(i,2)])),
-        title(sprintf('fitness = %.2f,  srtval = %.2f', fitnessNow(i), full(srt_val(i))), 'color', col)
-        xlim([1 size(C,2)])
-        ylabel('Raw and C')% (denoised-demixed trace)')
-        %
-        figure(fh3);
-        a2 = subplot(3,6,[7:12]);
-        h0 = plot(C(i,:)); % plot(activity_man_eftMask_ch2(:,i));
-        %     h2 = plot(yrac(i,:));
-        title(sprintf('tau = %.2f ms, temp corr = %.2f', tau(i,2), temp_corr(i)), 'color', col)
-        xlim([1 size(C,2)])
-        ylabel('C') % (averaged pixel intensities)')
-        linkaxes([a1,a2], 'x')
+        %{
+        i = 128;
+        nearbyROIs = findNearbyROIs(COMs, COMs(i,:), 8)
+        rois2p = nearbyROIs;
         %}
-        figure(fh3);
-        subplot(3,6,13); hold on
-        h3 = plot(CC{i}(2,:), CC{i}(1,:), 'r');
-        xlim([COMs(i,2)-50  COMs(i,2)+50])
-        ylim([COMs(i,1)-50  COMs(i,1)+50])
-        %     imagesc(reshape(A(:,i), imHeight, imWidth))
-        title(sprintf('#pix = %i', mask_numpix(i)), 'color', col)
-        %     title(sprintf('#pix = %i, fitness = %.2f srtval = %.2f', mask_numpix(i), fitness(i), full(srt_val(i))))
-        %     title(sprintf('#pix = %i,  meansdsig = %.2f', mask_numpix(i), meansdsig(i)))
+        rois2p = rois2p(randperm(length(rois2p)));
+        rois2p = rois2p(1:5); % show only 5 example neurons
         
-        figure(fh3);
-        plotCorr_FN(roiPatch, highlightPatchAvg, rval_space, A, CC, COMs, [imHeight, imWidth], i, [3,6,14], [3,6,15])
-        h4 = subplot(3,6,14);
-        h5 = subplot(3,6,15);
-        subplot(3,6,15), title(sprintf('raw, our corr = %.2f', highlightCorrROI(i)))
         
-        pause
-        delete([h0,h1,h2,h3,h4,h5])
+        %% Nice figure to evaluate the results
+        
+        badROIs = find(badROIs01);
+        % goodinds = ~badROIs01;
+        
+        fh3 = figure('position', [-249         248        2365         609]);
+        subplot(3,6,13);
+        imagesc(log(sdImage{2}))
+        
+        for i = rois2p' % 589 %413; 589; %412; 432; % rois2p'; % % %; %ag_eb % f%ab_eg; %find(bc)' %find(mask_numpix<15); %nearbyROIs' %1:size(C,1) % fb'; % fb'; %220; %477;
+            
+            %         fprintf('hilight_in_out_hilightROIdiff= %.2f %.2f %.2f\n', [aveHighlightInRoi(i)  aveHighlightOutRoi(i)  highlightRoiDiff(i)]) % [cinall(i) coutall(i) ds(i)]
+            if ismember(i, badROIs)
+                col = 'r';
+            else
+                col = 'k';
+            end
+            %     i
+            figure(fh3); set(gcf,'name', sprintf('ROI: %i', i));  hold on
+            a1 = subplot(3,6,[1:6]);
+            %         h1 = plot(C(i,:));
+            % superimpose C and raw (shift and scale for comparison)
+            h2 = plot(shiftScaleY(activity_man_eftMask_ch2(:,i)), 'b'); hold on; h1 = plot(shiftScaleY(C(i,:)), 'r');
+            %     title(sprintf('tau = %.2f ms', tau(i,2))),  % title(sprintf('%.2f, %.2f', [temp_corr(i), tau(i,2)])),
+            title(sprintf('fitness = %.2f,  srtval = %.2f', fitnessNow(i), full(srt_val(i))), 'color', col)
+            xlim([1 size(C,2)])
+            ylabel('Raw and C')% (denoised-demixed trace)')
+            %
+            figure(fh3);
+            a2 = subplot(3,6,[7:12]);
+            h0 = plot(C(i,:)); % plot(activity_man_eftMask_ch2(:,i));
+            %     h2 = plot(yrac(i,:));
+            title(sprintf('tau = %.2f ms, temp corr = %.2f', tau(i,2), temp_corr(i)), 'color', col)
+            xlim([1 size(C,2)])
+            ylabel('C') % (averaged pixel intensities)')
+            linkaxes([a1,a2], 'x')
+            %}
+            figure(fh3);
+            subplot(3,6,13); hold on
+            h3 = plot(CC{i}(2,:), CC{i}(1,:), 'r');
+            xlim([COMs(i,2)-50  COMs(i,2)+50])
+            ylim([COMs(i,1)-50  COMs(i,1)+50])
+            %     imagesc(reshape(A(:,i), imHeight, imWidth))
+            title(sprintf('#pix = %i', mask_numpix(i)), 'color', col)
+            %     title(sprintf('#pix = %i, fitness = %.2f srtval = %.2f', mask_numpix(i), fitness(i), full(srt_val(i))))
+            %     title(sprintf('#pix = %i,  meansdsig = %.2f', mask_numpix(i), meansdsig(i)))
+            
+            figure(fh3);
+            plotCorr_FN(roiPatch, highlightPatchAvg, rval_space, A, CC, COMs, [imHeight, imWidth], i, [3,6,14], [3,6,15])
+            h4 = subplot(3,6,14);
+            h5 = subplot(3,6,15);
+            subplot(3,6,15), title(sprintf('raw, our corr = %.2f', highlightCorrROI(i)))
+            
+            pause
+            delete([h0,h1,h2,h3,h4,h5])
+        end
     end
     
 end

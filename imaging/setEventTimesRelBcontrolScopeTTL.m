@@ -22,6 +22,8 @@ elseif ~isempty(stimAftGoToneParams)
     % stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, setNaN_goToneEarlierThanStimOffset};    
 end
 
+doplots = 0;
+
 % remember if you change outcomes for allowCorrEntered trials, then time of
 % events will reflect that, bc outcomes is provided as input.
 
@@ -317,29 +319,30 @@ if isempty(trsGoToneEarlierThanStimOffset)
     fprintf('No trials with goTone earlier than stimOffset :)\n')
 
 elseif ~isempty(stimAftGoToneParams)
-    
-    figure('name', 'Trials with goTone earlier than stimulus offset');
-    subplot(211), hold on
-    plot(timeStimOffset(trsGoToneEarlierThanStimOffset)  -  ...
-        timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset))
-    
-    plot(time1stSideTry(trsGoToneEarlierThanStimOffset)  -  ...
-        timeStimOffset(trsGoToneEarlierThanStimOffset))
-    plot([1 length(trsGoToneEarlierThanStimOffset)], [3*frameLength 3*frameLength], 'k:')
-    ylabel('Time (ms)')
-    legend('post-goTone duration with stimulus', 'pre-1stSideTry duration without stimulus') % this is a more understandable legend
-    %     legend('stimOffset - goTone', '1stSideTry - stimOffset')
-    
-    subplot(212), hold on;
-    plot(timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset))
-    plot(timeStimOffset(trsGoToneEarlierThanStimOffset), 'r')
-    plot(time1stSideTry(trsGoToneEarlierThanStimOffset), 'g')
-    plot(timeReward(trsGoToneEarlierThanStimOffset), 'm')
-    plot(timeCommitIncorrResp(trsGoToneEarlierThanStimOffset), 'c')
-    xlabel('Trials with Go tone earlier than stim offset')
-    ylabel('Time (ms)')
-    legend('goTone', 'stimOffset', '1stSideTry', 'Reward', 'commitIncorr')
-    
+   
+    if doplots
+        figure('name', 'Trials with goTone earlier than stimulus offset');
+        subplot(211), hold on
+        plot(timeStimOffset(trsGoToneEarlierThanStimOffset)  -  ...
+            timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset))
+
+        plot(time1stSideTry(trsGoToneEarlierThanStimOffset)  -  ...
+            timeStimOffset(trsGoToneEarlierThanStimOffset))
+        plot([1 length(trsGoToneEarlierThanStimOffset)], [3*frameLength 3*frameLength], 'k:')
+        ylabel('Time (ms)')
+        legend('post-goTone duration with stimulus', 'pre-1stSideTry duration without stimulus') % this is a more understandable legend
+        %     legend('stimOffset - goTone', '1stSideTry - stimOffset')
+
+        subplot(212), hold on;
+        plot(timeCommitCL_CR_Gotone(trsGoToneEarlierThanStimOffset))
+        plot(timeStimOffset(trsGoToneEarlierThanStimOffset), 'r')
+        plot(time1stSideTry(trsGoToneEarlierThanStimOffset), 'g')
+        plot(timeReward(trsGoToneEarlierThanStimOffset), 'm')
+        plot(timeCommitIncorrResp(trsGoToneEarlierThanStimOffset), 'c')
+        xlabel('Trials with Go tone earlier than stim offset')
+        ylabel('Time (ms)')
+        legend('goTone', 'stimOffset', '1stSideTry', 'Reward', 'commitIncorr')
+    end
     
     %%
     cprintf('blue', '%d trials with goTone earlier than stimOffset...\n', length(trsGoToneEarlierThanStimOffset))
