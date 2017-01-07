@@ -15,7 +15,7 @@ execfile("svm_plots_setVars.py")
 # fni17:
 # for short long u have 500 iters for bestc but cv shuffs are 100.... so set numSamp to 100
 # for curr and prev, all is 500
-numSamp = 100 # 500 perClassErrorTest_shfl.shape[0]  # number of shuffles for doing cross validation (ie number of random sets of test/train trials.... You changed the following: in mainSVM_notebook.py this is set to 100, so unless you change the value inside the code it should be always 100.)
+numSamp = 500 # 500 perClassErrorTest_shfl.shape[0]  # number of shuffles for doing cross validation (ie number of random sets of test/train trials.... You changed the following: in mainSVM_notebook.py this is set to 100, so unless you change the value inside the code it should be always 100.)
 dnow = '/classAccur/'+mousename
 #dnow = '/shortLongITI_afterSFN/bestc_500Iters_non0decoder' # save directory in dropbox
 #dnow = '/shortLongAllITI_afterSFN/bestc_500Iters_non0decoder/setTo50ErrOfSampsWith0Weights' 
@@ -23,6 +23,7 @@ dnow = '/classAccur/'+mousename
 thNon0Ws = 2 # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!
 thSamps = 10  # Days that have <thSamps samples that satisfy >=thNon0W non0 weights will be manually set to 50 (class error of all their samples) ... bc we think <5 samples will not give us an accurate measure of class error of a day.
 setTo50 = 1 # if 1, the above two jobs will be done.
+doL2All = 0 # for fni17 you also did subsel and L2... set this to 1, to get their plots and compare them with L1 (no subsel)
 
 
 #%%
@@ -266,132 +267,132 @@ if savefigs:#% Save the figure
 
 
 
-
-#%% L2;
-plt.figure(figsize=(6,2.5))
-gs = gridspec.GridSpec(1, 5)#, width_ratios=[2, 1]) 
-
-ax = plt.subplot(gs[0:-2])
-#ax = plt.subplot(121)
-plt.errorbar(range(numDays), av_l2_test_d, yerr = sd_l2_test_d, color='g', label='L2 Data')
-plt.errorbar(range(numDays), av_l2_test_s, yerr = sd_l2_test_s, color='k', label='Shuffled')
-plt.xlabel('Days', fontsize=13, labelpad=10)
-plt.ylabel('Classification accuracy (%)\n(cross-validated)', fontsize=13, labelpad=10)
-plt.xlim([-1, len(days)])
-lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.25), frameon=False)
-#leg.get_frame().set_linewidth(0.0)
-makeNicePlots(ax)
-ymin, ymax = ax.get_ylim()
-
-##%% Average across days
-x =[0,1]
-labels = ['Data', 'Shfl']
-ax = plt.subplot(gs[-2:-1])
-plt.errorbar(x, [np.mean(av_l2_test_d), np.mean(av_l2_test_s)], yerr = [np.std(av_l2_test_d), np.std(av_l2_test_s)], marker='o', fmt=' ', color='k')
-plt.xlim([x[0]-1, x[1]+1])
-plt.ylim([ymin, ymax])
-#plt.ylabel('Classification error (%) - testing data')
-plt.xticks(x, labels, rotation='vertical', fontsize=13)    
-#plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
-plt.subplots_adjust(wspace=1)
-makeNicePlots(ax)
-
-if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow, suffn+'test_L2'+'.'+fmt[0])
-    plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
-
-
-#%% All on the same figure: L1, L2, subsel
-plt.figure(figsize=(6,5.5))
-gs = gridspec.GridSpec(2, 5)#, width_ratios=[2, 1]) 
-
-ax = plt.subplot(gs[0,0:3])
-#ax = plt.subplot(121)
-plt.errorbar(range(numDays), ave_test_d, yerr = sd_test_d, color='g', label='Subsel L1')
-plt.errorbar(range(numDays), av_l1_test_d, yerr = sd_l1_test_d, color='b', label='L1')
-if all(np.isnan(av_l2_test_d))==0:
-    plt.errorbar(range(numDays), av_l2_test_d, yerr = sd_l2_test_d, color='k', label='L2')
-plt.xlabel('Days', fontsize=13, labelpad=10)
-plt.ylabel('Classification accuracy (%)\n(cross-validated)', fontsize=13, labelpad=10)
-plt.xlim([-1, len(days)])
-lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.4), frameon=False)
-makeNicePlots(ax)
-
-
-##%% Average across days
-# data
-if all(np.isnan(av_l2_test_d))==0:
-    x = [0,1,2]
-    labels = ['Subsel', 'L1', 'L2']
-    y = [np.mean(ave_test_d), np.mean(av_l1_test_d), np.mean(av_l2_test_d)]
-    yerr = [np.std(ave_test_d), np.std(av_l1_test_d), np.std(av_l2_test_d)]
-else:
-    x = [0,1]
-    labels = ['Subsel', 'L1']
-    y = [np.mean(ave_test_d), np.mean(av_l1_test_d)]
-    yerr = [np.std(ave_test_d), np.std(av_l1_test_d)]
+if doL2All:
+    #%% L2;
+    plt.figure(figsize=(6,2.5))
+    gs = gridspec.GridSpec(1, 5)#, width_ratios=[2, 1]) 
     
-ax = plt.subplot(gs[0,3:4])
-plt.errorbar(x, y, yerr, marker='o', fmt=' ', color='k')
-plt.xlim([x[0]-1, x[-1]+1])
-#plt.ylim([ymin, ymax])
-#plt.ylabel('Classification error (%) - testing data')
-plt.xticks(x, labels, rotation='vertical', fontsize=13)    
-#plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
-plt.title('Data')
-ymin, ymax = ax.get_ylim()
-makeNicePlots(ax)
-
-
-
-# shuffle
-ax = plt.subplot(gs[1,0:3])
-#ax = plt.subplot(121)
-plt.errorbar(range(numDays), ave_test_s, yerr = sd_test_s, color='g', label='Subsel L1')
-plt.errorbar(range(numDays), av_l1_test_s, yerr = sd_l1_test_s, color='b', label='L1')
-plt.errorbar(range(numDays), av_l2_test_s, yerr = sd_l2_test_s, color='k', label='L2')
-plt.xlabel('Days', fontsize=13, labelpad=10)
-plt.ylabel('Classification accuracy (%)\n(cross-validated)', fontsize=13, labelpad=10)
-plt.xlim([-1, len(days)])
-#lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.4), frameon=False)
-plt.title('Shuffle')
-makeNicePlots(ax)
-
-
-# average across days
-if all(np.isnan(av_l2_test_s))==0:
-    x = [0,1,2]
-    labels = ['Subsel', 'L1', 'L2']
-    y = [np.mean(ave_test_s), np.mean(av_l1_test_s), np.mean(av_l2_test_s)]
-    yerr = [np.std(ave_test_s), np.std(av_l1_test_s), np.std(av_l2_test_s)]
-else:
-    x = [0,1]
-    labels = ['Subsel', 'L1']
-    y = [np.mean(ave_test_s), np.mean(av_l1_test_s)]
-    yerr = [np.std(ave_test_s), np.std(av_l1_test_s)]
+    ax = plt.subplot(gs[0:-2])
+    #ax = plt.subplot(121)
+    plt.errorbar(range(numDays), av_l2_test_d, yerr = sd_l2_test_d, color='g', label='L2 Data')
+    plt.errorbar(range(numDays), av_l2_test_s, yerr = sd_l2_test_s, color='k', label='Shuffled')
+    plt.xlabel('Days', fontsize=13, labelpad=10)
+    plt.ylabel('Classification accuracy (%)\n(cross-validated)', fontsize=13, labelpad=10)
+    plt.xlim([-1, len(days)])
+    lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.25), frameon=False)
+    #leg.get_frame().set_linewidth(0.0)
+    makeNicePlots(ax)
+    ymin, ymax = ax.get_ylim()
     
-ax = plt.subplot(gs[0,4:5])
-plt.errorbar(x, y, yerr, marker='o', fmt=' ', color='k')
-plt.xlim([x[0]-1, x[-1]+1])
-ymin, _ = ax.get_ylim()
-plt.ylim([ymin, ymax])
-#plt.ylabel('Classification error (%) - testing data')
-plt.xticks(x, labels, rotation='vertical', fontsize=13)    
-#plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
-plt.subplots_adjust(wspace=1)
-plt.title('Shuffle')
-makeNicePlots(ax)
-
-plt.subplot(gs[0,3:4])
-plt.ylim([ymin, ymax])
-
-
-plt.subplots_adjust(wspace=1, hspace=.9)
-
-
-if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow, suffn+'test_all'+'.'+fmt[0])
-    plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
+    ##%% Average across days
+    x =[0,1]
+    labels = ['Data', 'Shfl']
+    ax = plt.subplot(gs[-2:-1])
+    plt.errorbar(x, [np.mean(av_l2_test_d), np.mean(av_l2_test_s)], yerr = [np.std(av_l2_test_d), np.std(av_l2_test_s)], marker='o', fmt=' ', color='k')
+    plt.xlim([x[0]-1, x[1]+1])
+    plt.ylim([ymin, ymax])
+    #plt.ylabel('Classification error (%) - testing data')
+    plt.xticks(x, labels, rotation='vertical', fontsize=13)    
+    #plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
+    plt.subplots_adjust(wspace=1)
+    makeNicePlots(ax)
+    
+    if savefigs:#% Save the figure
+        fign = os.path.join(svmdir+dnow, suffn+'test_L2'+'.'+fmt[0])
+        plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
+    
+    
+    #%% All on the same figure: L1, L2, subsel
+    plt.figure(figsize=(6,5.5))
+    gs = gridspec.GridSpec(2, 5)#, width_ratios=[2, 1]) 
+    
+    ax = plt.subplot(gs[0,0:3])
+    #ax = plt.subplot(121)
+    plt.errorbar(range(numDays), ave_test_d, yerr = sd_test_d, color='g', label='Subsel L1')
+    plt.errorbar(range(numDays), av_l1_test_d, yerr = sd_l1_test_d, color='b', label='L1')
+    if all(np.isnan(av_l2_test_d))==0:
+        plt.errorbar(range(numDays), av_l2_test_d, yerr = sd_l2_test_d, color='k', label='L2')
+    plt.xlabel('Days', fontsize=13, labelpad=10)
+    plt.ylabel('Classification accuracy (%)\n(cross-validated)', fontsize=13, labelpad=10)
+    plt.xlim([-1, len(days)])
+    lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.4), frameon=False)
+    makeNicePlots(ax)
+    
+    
+    ##%% Average across days
+    # data
+    if all(np.isnan(av_l2_test_d))==0:
+        x = [0,1,2]
+        labels = ['Subsel', 'L1', 'L2']
+        y = [np.mean(ave_test_d), np.mean(av_l1_test_d), np.mean(av_l2_test_d)]
+        yerr = [np.std(ave_test_d), np.std(av_l1_test_d), np.std(av_l2_test_d)]
+    else:
+        x = [0,1]
+        labels = ['Subsel', 'L1']
+        y = [np.mean(ave_test_d), np.mean(av_l1_test_d)]
+        yerr = [np.std(ave_test_d), np.std(av_l1_test_d)]
+        
+    ax = plt.subplot(gs[0,3:4])
+    plt.errorbar(x, y, yerr, marker='o', fmt=' ', color='k')
+    plt.xlim([x[0]-1, x[-1]+1])
+    #plt.ylim([ymin, ymax])
+    #plt.ylabel('Classification error (%) - testing data')
+    plt.xticks(x, labels, rotation='vertical', fontsize=13)    
+    #plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
+    plt.title('Data')
+    ymin, ymax = ax.get_ylim()
+    makeNicePlots(ax)
+    
+    
+    
+    # shuffle
+    ax = plt.subplot(gs[1,0:3])
+    #ax = plt.subplot(121)
+    plt.errorbar(range(numDays), ave_test_s, yerr = sd_test_s, color='g', label='Subsel L1')
+    plt.errorbar(range(numDays), av_l1_test_s, yerr = sd_l1_test_s, color='b', label='L1')
+    plt.errorbar(range(numDays), av_l2_test_s, yerr = sd_l2_test_s, color='k', label='L2')
+    plt.xlabel('Days', fontsize=13, labelpad=10)
+    plt.ylabel('Classification accuracy (%)\n(cross-validated)', fontsize=13, labelpad=10)
+    plt.xlim([-1, len(days)])
+    #lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.4), frameon=False)
+    plt.title('Shuffle')
+    makeNicePlots(ax)
+    
+    
+    # average across days
+    if all(np.isnan(av_l2_test_s))==0:
+        x = [0,1,2]
+        labels = ['Subsel', 'L1', 'L2']
+        y = [np.mean(ave_test_s), np.mean(av_l1_test_s), np.mean(av_l2_test_s)]
+        yerr = [np.std(ave_test_s), np.std(av_l1_test_s), np.std(av_l2_test_s)]
+    else:
+        x = [0,1]
+        labels = ['Subsel', 'L1']
+        y = [np.mean(ave_test_s), np.mean(av_l1_test_s)]
+        yerr = [np.std(ave_test_s), np.std(av_l1_test_s)]
+        
+    ax = plt.subplot(gs[0,4:5])
+    plt.errorbar(x, y, yerr, marker='o', fmt=' ', color='k')
+    plt.xlim([x[0]-1, x[-1]+1])
+    ymin, _ = ax.get_ylim()
+    plt.ylim([ymin, ymax])
+    #plt.ylabel('Classification error (%) - testing data')
+    plt.xticks(x, labels, rotation='vertical', fontsize=13)    
+    #plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
+    plt.subplots_adjust(wspace=1)
+    plt.title('Shuffle')
+    makeNicePlots(ax)
+    
+    plt.subplot(gs[0,3:4])
+    plt.ylim([ymin, ymax])
+    
+    
+    plt.subplots_adjust(wspace=1, hspace=.9)
+    
+    
+    if savefigs:#% Save the figure
+        fign = os.path.join(svmdir+dnow, suffn+'test_all'+'.'+fmt[0])
+        plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
 
@@ -441,131 +442,131 @@ if savefigs:#% Save the figure
     plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')  
 
 
-
-#%% L2;
-plt.figure(figsize=(6,2.5))
-gs = gridspec.GridSpec(1, 5)#, width_ratios=[2, 1]) 
-
-ax = plt.subplot(gs[0:-2])
-#ax = plt.subplot(121)
-plt.errorbar(range(numDays), av_l2_train_d, yerr = sd_l2_train_d, color='g', label='L2 Data')
-plt.errorbar(range(numDays), av_l2_train_s, yerr = sd_l2_train_s, color='k', label='Shuffled')
-plt.xlabel('Days', fontsize=13, labelpad=10)
-plt.ylabel('Classification accuracy (%)\n(training data)', fontsize=13, labelpad=10)
-plt.xlim([-1, len(days)])
-lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.25), frameon=False)
-#leg.get_frame().set_linewidth(0.0)
-makeNicePlots(ax)
-ymin, ymax = ax.get_ylim()
-
-##%% Average across days
-x =[0,1]
-labels = ['Data', 'Shfl']
-ax = plt.subplot(gs[-2:-1])
-plt.errorbar(x, [np.mean(av_l2_train_d), np.mean(av_l2_train_s)], yerr = [np.std(av_l2_train_d), np.std(av_l2_train_s)], marker='o', fmt=' ', color='k')
-plt.xlim([x[0]-1, x[1]+1])
-plt.ylim([ymin, ymax])
-#plt.ylabel('Classification error (%) - testing data')
-plt.xticks(x, labels, rotation='vertical', fontsize=13)    
-#plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
-plt.subplots_adjust(wspace=1)
-makeNicePlots(ax)
-
-if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow, suffn+'train_L2'+'.'+fmt[0])
-    plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
-
+if doL2All:
+    #%% L2;
+    plt.figure(figsize=(6,2.5))
+    gs = gridspec.GridSpec(1, 5)#, width_ratios=[2, 1]) 
+    
+    ax = plt.subplot(gs[0:-2])
+    #ax = plt.subplot(121)
+    plt.errorbar(range(numDays), av_l2_train_d, yerr = sd_l2_train_d, color='g', label='L2 Data')
+    plt.errorbar(range(numDays), av_l2_train_s, yerr = sd_l2_train_s, color='k', label='Shuffled')
+    plt.xlabel('Days', fontsize=13, labelpad=10)
+    plt.ylabel('Classification accuracy (%)\n(training data)', fontsize=13, labelpad=10)
+    plt.xlim([-1, len(days)])
+    lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.25), frameon=False)
+    #leg.get_frame().set_linewidth(0.0)
+    makeNicePlots(ax)
+    ymin, ymax = ax.get_ylim()
+    
+    ##%% Average across days
+    x =[0,1]
+    labels = ['Data', 'Shfl']
+    ax = plt.subplot(gs[-2:-1])
+    plt.errorbar(x, [np.mean(av_l2_train_d), np.mean(av_l2_train_s)], yerr = [np.std(av_l2_train_d), np.std(av_l2_train_s)], marker='o', fmt=' ', color='k')
+    plt.xlim([x[0]-1, x[1]+1])
+    plt.ylim([ymin, ymax])
+    #plt.ylabel('Classification error (%) - testing data')
+    plt.xticks(x, labels, rotation='vertical', fontsize=13)    
+    #plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
+    plt.subplots_adjust(wspace=1)
+    makeNicePlots(ax)
+    
+    if savefigs:#% Save the figure
+        fign = os.path.join(svmdir+dnow, suffn+'train_L2'+'.'+fmt[0])
+        plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
+    
+            
+    
+    #%% L1, L2, subsel
+    plt.figure(figsize=(6,5.5))
+    gs = gridspec.GridSpec(2,5)#, width_ratios=[2, 1]) 
+    
+    ax = plt.subplot(gs[0,0:3])
+    #ax = plt.subplot(121)
+    plt.errorbar(range(numDays), ave_train_d, yerr = sd_train_d, color='g', label='Subsel L1') # , marker='o', fmt=' '
+    plt.errorbar(range(numDays), av_l1_train_d, yerr = sd_l1_train_d, color='b', label='L1')
+    if all(np.isnan(av_l2_train_d))==0:
+        plt.errorbar(range(numDays), av_l2_train_d, yerr = sd_l2_train_d, color='k', label='L2')
+    plt.xlabel('Days', fontsize=13, labelpad=10)
+    plt.ylabel('Classification accuracy (%)\n(training data)', fontsize=13, labelpad=10)
+    plt.xlim([-1, len(days)])
+    lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.7), frameon=False)
+    makeNicePlots(ax)
+    
+    
+    ##%% Average across days
+    if all(np.isnan(av_l2_test_d))==0:
+        x = [0,1,2]
+        labels = ['Subsel', 'L1', 'L2']
+        y = [np.mean(ave_train_d), np.mean(av_l1_train_d), np.mean(av_l2_train_d)]
+        yerr = [np.std(ave_train_d), np.std(av_l1_train_d), np.std(av_l2_train_d)]
+    else:
+        x = [0,1]
+        labels = ['Subsel', 'L1']
+        y = [np.mean(ave_train_d), np.mean(av_l1_train_d)]
+        yerr = [np.std(ave_train_d), np.std(av_l1_train_d)]
         
-
-#%% L1, L2, subsel
-plt.figure(figsize=(6,5.5))
-gs = gridspec.GridSpec(2,5)#, width_ratios=[2, 1]) 
-
-ax = plt.subplot(gs[0,0:3])
-#ax = plt.subplot(121)
-plt.errorbar(range(numDays), ave_train_d, yerr = sd_train_d, color='g', label='Subsel L1') # , marker='o', fmt=' '
-plt.errorbar(range(numDays), av_l1_train_d, yerr = sd_l1_train_d, color='b', label='L1')
-if all(np.isnan(av_l2_train_d))==0:
-    plt.errorbar(range(numDays), av_l2_train_d, yerr = sd_l2_train_d, color='k', label='L2')
-plt.xlabel('Days', fontsize=13, labelpad=10)
-plt.ylabel('Classification accuracy (%)\n(training data)', fontsize=13, labelpad=10)
-plt.xlim([-1, len(days)])
-lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.7), frameon=False)
-makeNicePlots(ax)
-
-
-##%% Average across days
-if all(np.isnan(av_l2_test_d))==0:
-    x = [0,1,2]
-    labels = ['Subsel', 'L1', 'L2']
-    y = [np.mean(ave_train_d), np.mean(av_l1_train_d), np.mean(av_l2_train_d)]
-    yerr = [np.std(ave_train_d), np.std(av_l1_train_d), np.std(av_l2_train_d)]
-else:
-    x = [0,1]
-    labels = ['Subsel', 'L1']
-    y = [np.mean(ave_train_d), np.mean(av_l1_train_d)]
-    yerr = [np.std(ave_train_d), np.std(av_l1_train_d)]
+    ax = plt.subplot(gs[0,3:4])
+    plt.errorbar(x, y, yerr, marker='o', fmt=' ', color='k')
+    plt.xlim([x[0]-1, x[-1]+1])
+    #plt.ylim([ymin, ymax])
+    #plt.ylabel('Classification error (%) - testing data')
+    plt.xticks(x, labels, rotation='vertical', fontsize=13)    
+    #plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
+    plt.title('Data')
+    ymin, ymax = ax.get_ylim()
+    makeNicePlots(ax)
     
-ax = plt.subplot(gs[0,3:4])
-plt.errorbar(x, y, yerr, marker='o', fmt=' ', color='k')
-plt.xlim([x[0]-1, x[-1]+1])
-#plt.ylim([ymin, ymax])
-#plt.ylabel('Classification error (%) - testing data')
-plt.xticks(x, labels, rotation='vertical', fontsize=13)    
-#plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
-plt.title('Data')
-ymin, ymax = ax.get_ylim()
-makeNicePlots(ax)
-
-
-
-# shuffle
-ax = plt.subplot(gs[1,0:3])
-#ax = plt.subplot(121)
-plt.errorbar(range(numDays), ave_train_s, yerr = sd_train_s, color='g', label='Subsel L1')
-plt.errorbar(range(numDays), av_l1_train_s, yerr = sd_l1_train_s, color='b', label='L1')
-plt.errorbar(range(numDays), av_l2_train_s, yerr = sd_l2_train_s, color='k', label='L2')
-plt.xlabel('Days', fontsize=13, labelpad=10)
-plt.ylabel('Classification accuracy (%)\n(training data)', fontsize=13, labelpad=10)
-plt.xlim([-1, len(days)])
-#lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.4), frameon=False)
-plt.title('Shuffle')
-makeNicePlots(ax)
-
-
-
-if all(np.isnan(av_l2_test_d))==0:
-    x = [0,1,2]
-    labels = ['Subsel', 'L1', 'L2']
-    y = [np.mean(ave_train_s), np.mean(av_l1_train_s), np.mean(av_l2_train_s)]
-    yerr = [np.std(ave_train_s), np.std(av_l1_train_s), np.std(av_l2_train_s)]
-else:
-    x = [0,1]
-    labels = ['Subsel', 'L1']
-    y = [np.mean(ave_train_s), np.mean(av_l1_train_s)]
-    yerr = [np.std(ave_train_s), np.std(av_l1_train_s)]
     
-ax = plt.subplot(gs[0,4:5])
-plt.errorbar(x, y, yerr, marker='o', fmt=' ', color='k')
-plt.xlim([x[0]-1, x[-1]+1])
-ymin, _ = ax.get_ylim()
-plt.ylim([ymin, ymax])
-#plt.ylabel('Classification error (%) - testing data')
-plt.xticks(x, labels, rotation='vertical', fontsize=13)    
-#plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
-#plt.subplots_adjust(wspace=1)
-plt.title('Shuffle')
-makeNicePlots(ax)
-
-plt.subplot(gs[0,3:4])
-plt.ylim([ymin, ymax])
-
-
-plt.subplots_adjust(wspace=1, hspace=.9)
-
-if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow, suffn+'train_all'+'.'+fmt[0])
-    plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
+    
+    # shuffle
+    ax = plt.subplot(gs[1,0:3])
+    #ax = plt.subplot(121)
+    plt.errorbar(range(numDays), ave_train_s, yerr = sd_train_s, color='g', label='Subsel L1')
+    plt.errorbar(range(numDays), av_l1_train_s, yerr = sd_l1_train_s, color='b', label='L1')
+    plt.errorbar(range(numDays), av_l2_train_s, yerr = sd_l2_train_s, color='k', label='L2')
+    plt.xlabel('Days', fontsize=13, labelpad=10)
+    plt.ylabel('Classification accuracy (%)\n(training data)', fontsize=13, labelpad=10)
+    plt.xlim([-1, len(days)])
+    #lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.4), frameon=False)
+    plt.title('Shuffle')
+    makeNicePlots(ax)
+    
+    
+    
+    if all(np.isnan(av_l2_test_d))==0:
+        x = [0,1,2]
+        labels = ['Subsel', 'L1', 'L2']
+        y = [np.mean(ave_train_s), np.mean(av_l1_train_s), np.mean(av_l2_train_s)]
+        yerr = [np.std(ave_train_s), np.std(av_l1_train_s), np.std(av_l2_train_s)]
+    else:
+        x = [0,1]
+        labels = ['Subsel', 'L1']
+        y = [np.mean(ave_train_s), np.mean(av_l1_train_s)]
+        yerr = [np.std(ave_train_s), np.std(av_l1_train_s)]
+        
+    ax = plt.subplot(gs[0,4:5])
+    plt.errorbar(x, y, yerr, marker='o', fmt=' ', color='k')
+    plt.xlim([x[0]-1, x[-1]+1])
+    ymin, _ = ax.get_ylim()
+    plt.ylim([ymin, ymax])
+    #plt.ylabel('Classification error (%) - testing data')
+    plt.xticks(x, labels, rotation='vertical', fontsize=13)    
+    #plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
+    #plt.subplots_adjust(wspace=1)
+    plt.title('Shuffle')
+    makeNicePlots(ax)
+    
+    plt.subplot(gs[0,3:4])
+    plt.ylim([ymin, ymax])
+    
+    
+    plt.subplots_adjust(wspace=1, hspace=.9)
+    
+    if savefigs:#% Save the figure
+        fign = os.path.join(svmdir+dnow, suffn+'train_all'+'.'+fmt[0])
+        plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
     
     
     

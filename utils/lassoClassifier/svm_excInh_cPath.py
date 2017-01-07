@@ -1275,7 +1275,8 @@ def inh_exc_classContribution(X, Y, isinh):
 
 #%%
 # This function finds the SVM decoder that predicts choices given responses in X by 
-# using different values for c. At each value of c, it computes fraction of non-zero weights
+# using different values for c and doing 10-fold cross validation. At each value of c, it subselects training and testing trials 
+# 100 (numShuffles_ei) times to train the decoder. Then it computes fraction of non-zero weights
 # for exc and inh neurons, separately (perActive_inh, perActive_exc). Also it computes the 
 # classification error (perClassEr) at each value of c. 
 # Outputs: perActive_inh, perActive_exc, perClassEr, cvect_
@@ -1419,7 +1420,14 @@ if doPlots and neuronType==2:
 ######################################################################################################################################################
 ######################################################################################################################################################
 #  ### Another version of the analysis: equal number of exc and inh neurons
-#  We control for the different numbers of excitatory and inhibitory neurons by subsampling n excitatory neurons, where n is equal to the number of inhibitory neurons. More specifically, instead of sending the entire X to the function inh_exc_classContribution, we use a subset of X that includes equal number of exc and inh neurons (Exc neurons are randomly selected).
+#  We control for the different numbers of excitatory and inhibitory neurons by subsampling n excitatory neurons, where n is equal to 
+#  the number of inhibitory neurons. More specifically, instead of sending the entire X to the function inh_exc_classContribution, 
+#  we use a subset of X that includes equal number of exc and inh neurons (Exc neurons are randomly selected).
+
+# 1. For numSamples times a different X is created, which includes different sets of exc neurons but same set of inh neurons.
+# 2. For each X, classifier is trained numShuffles_ei times (using different sets of training and testing datasets).
+# 3. The above procedure is done for each value of c.
+
 ######################################################################################################################################################
 ######################################################################################################################################################
 
@@ -1461,7 +1469,7 @@ if (neuronType==2 and not 'w' in locals()) or (neuronType==2 and 'w' in locals()
         perClassEr.append(ce); # numSamples x numTrialShuff x length(cvect_)      # numTrialShuff is number of times you shuffled trials to do cross validation. (it is variable numShuffles_ei in function inh_exc_classContribution)
         
         bei_all.append(bei)  # numSamples x numTrialShuff x length(cvect_) 
-        perClassErTest.append(ces); perClassErTest
+        perClassErTest.append(ces); #perClassErTest
             
 
 

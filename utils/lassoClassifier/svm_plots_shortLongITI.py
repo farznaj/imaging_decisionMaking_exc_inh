@@ -17,7 +17,9 @@ suffn = 'prev_%sITIs_%sN_' %(itiName, ntName)
 suffnei = 'prev_%sITIs_%s_' %(itiName, 'excInh')
 print '\n', suffn[:-1], ' - ', suffnei[:-1]
 
-    
+
+# part below commented... you used it for subsel (fni17)
+"""    
 #%% Set days that need be removed from short and long ITI data to make sure we are comparing the same days with each other
 def shortLongITISameDays(daysOrig, fewRdays0, fewRdays1, data, longiti, axn=1):
     in0not1 = fewRdays0[~np.in1d(fewRdays0, fewRdays1)]
@@ -80,7 +82,7 @@ for iday in range(len(days)):
 numSigDays_short_longITI = np.sum(pall<=.05,axis=0) # number of sig days for short and long ITIs
 print pall
 print numSigDays_short_longITI 
- 
+""" 
  
 #%% Average and std across rounds for subselect and across shuffles for L1
  # subselect L1

@@ -7,19 +7,24 @@ Created on Tue Dec 13 15:07:58 2016
 
 
 #%% 
-mousename = 'fni16' #'fni17'
+mousename = 'fni17' #'fni17'
 
 trialHistAnalysis = 1;
-iTiFlg = 0; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
-ep_ms = [] #[809, 1109] # set to [] if each day had a different ep # will be used only for trialHistAnalysis=0
+iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
+if mousename=='fni17':  
+    ep_ms = [809, 1109]
+elif mousename=='fni16':
+    ep_ms = [] #[809, 1109] # set to [] if each day had a different ep # will be used only for trialHistAnalysis=0
         
 # Define days that you want to analyze
 if mousename=='fni17':  
-    # reverse the order, so it is from early days to last days
-    days = ['151102_1-2', '151101_1', '151029_2-3', '151028_1-2-3', '151027_2', '151026_1', '151023_1', '151022_1-2', '151021_1', '151020_1-2', '151019_1-2', '151016_1', '151015_1', '151014_1', '151013_1-2', '151012_1-2-3', '151010_1', '151008_1', '151007_1'];
+    # Done on 6Jan2017: reverse the order, so it is from early days to last days
+    days = ['151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2']
+#    days = ['151102_1-2', '151101_1', '151029_2-3', '151028_1-2-3', '151027_2', '151026_1', '151023_1', '151022_1-2', '151021_1', '151020_1-2', '151019_1-2', '151016_1', '151015_1', '151014_1', '151013_1-2', '151012_1-2-3', '151010_1', '151008_1', '151007_1'];
 elif mousename=='fni16':
     days = ['150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2'];
-
+#    days = ['150930_1-2', '151001_1', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2'];
+    
     if trialHistAnalysis == 1 and iTiFlg == 1:
         days.remove('151001_1') # this day has only 8 long ITI trials, 1 of which is hr ... so not enough trials for the HR class to train the classifier!
         

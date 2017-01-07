@@ -14,8 +14,8 @@
  
  To get vars for this script, you need to run mainSVM_excInh_cPath.py... normally on the cluster!
  
- The saved mat files which will be loaded here are named excInhC2_svmCurrChoice_ and excInhC2_svmPrevChoice
- (The mat files named excInhC do not have cross validation)
+ The saved mat files which will be loaded here are named excInhC_svmCurrChoice_ and excInhC_svmPrevChoice (for fni17, names are 'C2', bc mat files named excInhC do not have cross validation) 
+ 
  
 
 
@@ -25,913 +25,44 @@ Created on Sun Oct 30 14:41:01 2016
 @author: farznaj
 """
 
-#%% 
-mousename = 'fni17'
+# Go to svm_plots_setVars and define vars!
+execfile("svm_plots_setVars.py")   
 
-trialHistAnalysis = 1;
-iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
-ep_ms = [809, 1109] # only for trialHistAnalysis=0
-        
-# Define days that you want to analyze
-days = ['151102_1-2', '151101_1', '151029_2-3', '151028_1-2-3', '151027_2', '151026_1', '151023_1', '151022_1-2', '151021_1', '151020_1-2', '151019_1-2', '151016_1', '151015_1', '151014_1', '151013_1-2', '151012_1-2-3', '151010_1', '151008_1', '151007_1'];
-#days = days[1:]
-numRounds = 10; # number of times svm analysis was ran for the same dataset but sampling different sets of neurons.    
-savefigs = False
+dnow = '/excInh_cPath'
 
-fmt = ['pdf', 'svg', 'eps'] #'png', 'pdf': preserve transparency # Format of figures for saving
-figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/' # Directory for saving figures.
-neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
-eps = 10**-10 # tiny number below which weight is considered 0
-palpha = .05 # p <= palpha is significant
-thR = 2 # Exclude days with only <=thR rounds with non-0 weights
-
-
-##%%
-import os
-import glob
-import numpy as np   
-import scipy as sci
-import scipy.io as scio
-import scipy.stats as stats
-from matplotlib import pyplot as plt
-import matplotlib.gridspec as gridspec
-import sys
-sys.path.append('/home/farznaj/Documents/trial_history/imaging') # Gamal's dir needs to be added using "if" that takes the value of pwd
-from setImagingAnalysisNamesP import *
-
-plt.rc('font', family='helvetica')        
-
-##%%
-frameLength = 1000/30.9; # sec.  # np.diff(time_aligned_stim)[0];
-
-if neuronType==0:
-    ntName = 'excit'
-elif neuronType==1:
-    ntName = 'inhibit'
-elif neuronType==2:
-    ntName = 'all'     
-
-if trialHistAnalysis==1:    
-    if iTiFlg==0:
-        itiName = 'short'
-    elif iTiFlg==1:
-        itiName = 'long'
-    elif iTiFlg==2:
-        itiName = 'all'
-else: # wont be used, only not to get error when running setSVMname
-        itiName = 'all'
-
-
-if trialHistAnalysis==1: # more parameters are specified in popClassifier_trialHistory.m
-#        iTiFlg = 1; # 0: short ITI, 1: long ITI, 2: all ITIs.
-    epEnd_rel2stimon_fr = 0 # 3; # -2 # epEnd = eventI + epEnd_rel2stimon_fr
-else:
-    # not needed to set ep_ms here, later you define it as [choiceTime-300 choiceTime]ms # we also go 30ms back to make sure we are not right on the choice time!
-#         ep_ms = [425, 725] # optional, it will be set according to min choice time if not provided.# training epoch relative to stimOnset % we want to decode animal's upcoming choice by traninig SVM for neural average responses during ep ms after stimulus onset. [1000, 1300]; #[700, 900]; # [500, 700]; 
-    # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.
-    outcome2ana = 'corr' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials)
-    strength2ana = 'all' # 'all', easy', 'medium', 'hard' % What stim strength to use for training?
-#    thStimStrength = 3; # 2; # threshold of stim strength for defining hard, medium and easy trials.
-#    th_stim_dur = 800; # min stim duration to include a trial in timeStimOnset
-
-trs4project = 'trained' # 'trained', 'all', 'corr', 'incorr' # trials that will be used for projections and the class accuracy trace; if 'trained', same trials that were used for SVM training will be used. "corr" and "incorr" refer to current trial's outcome, so they don't mean much if trialHistAnalysis=1. 
-
-# Set fig names
 if trialHistAnalysis:
-#     ep_ms = np.round((ep-eventI)*frameLength)
-#    th_stim_dur = []
-    suffn = 'prev_%sITIs_%sN_' %(ntName, itiName)
-    suffnei = 'prev_%sITIs_excInh_' %(itiName)
+    dp = '/previousChoice'
 else:
-    suffn = 'curr_%sN_ep%d-%dms_' %(ntName, ep_ms[0], ep_ms[-1])   
-    suffnei = 'curr_%s_ep%d-%dms_' %('excInh', ep_ms[0], ep_ms[-1])   
-print '\n', suffn[:-1], ' - ', suffnei[:-1]
-
-
-
-# Make folder named SVM to save figures inside it
-svmdir = os.path.join(figsDir, 'SVM')
-if not os.path.exists(svmdir):
-    os.makedirs(svmdir)    
-
-
-daysOrig = days
-numDays = len(days);
-
-
-
-
-#### Function definitions ####
-
-#%% Function to only show left and bottom axes of plots, make tick directions outward, remove every other tick label if requested.
-def makeNicePlots(ax, rmv2ndXtickLabel=0, rmv2ndYtickLabel=0):
-    # Hide the right and top spines
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    # Only show ticks on the left and bottom spines
-    ax.yaxis.set_ticks_position('left')
-    ax.xaxis.set_ticks_position('bottom')
+    dp = '/currentChoice'
     
-    # Make tick directions outward    
-    ax.tick_params(direction='out')    
-    # Tweak spacing between subplots to prevent labels from overlapping
-    #plt.subplots_adjust(hspace=0.5)
-#    ymin, ymax = ax.get_ylim()
-
-    # Remove every other tick label
-    if rmv2ndXtickLabel:
-        [label.set_visible(False) for label in ax.xaxis.get_ticklabels()[::2]]
-        
-    if rmv2ndYtickLabel:
-        [label.set_visible(False) for label in ax.yaxis.get_ticklabels()[::2]]
     
-    # gap between tick labeles and axis
-#    ax.tick_params(axis='x', pad=30)
-        
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
 def setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName='all'):
     import glob
     
     if trialHistAnalysis:
-    #    ep_ms = np.round((ep-eventI)*frameLength)
-    #    th_stim_dur = []
-        if np.isnan(roundi): # set excInh name
-            svmn = 'excInhC2_svmPrevChoice_%sN_%sITIs_ep*-*ms_*' %(ntName, itiName) # C2 has test/trial shuffles as well. C doesn't have it.
+        if pnevFileName.find('fni17')!=-1: # fni17: C2 has test/trial shuffles as well. C doesn't have it.
+            svmn = 'excInhC2_svmPrevChoice_%sN_%sITIs_ep*-*ms_*' %(ntName, itiName) 
         else:
-            svmn = 'svmPrevChoice_%sN_%sITIs_ep*ms_r%d_*' %(ntName, itiName, roundi)
+            svmn = 'excInhC_svmPrevChoice_%sN_%sITIs_ep*-*ms_*' %(ntName, itiName) 
     else:
-        if np.isnan(roundi): # set excInh name
-            svmn = 'excInhC2_svmCurrChoice_%sN_ep%d-%dms_*' %(ntName, ep_ms[0], ep_ms[-1])   
+        if pnevFileName.find('fni17')!=-1: # fni17: C2 has test/trial shuffles as well. C doesn't have it.
+            svmn = 'excInhC2_svmCurrChoice_%sN_ep%d-%dms_*' %(ntName, ep_ms[0], ep_ms[-1])
         else:
-            svmn = 'svmCurrChoice_%sN_ep*ms_r%d_*' %(ntName, roundi)   
-    
+            svmn = 'excInhC_svmCurrChoice_%sN_ep*-*ms_*' %(ntName)   
+                           
     svmn = svmn + pnevFileName[-32:]    
     svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
     svmName = sorted(svmName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
     svmName = svmName[0] # get the latest file
     
     return svmName
-    
-#%% Function to extend the built in two tailed ttest function to one-tailed
-def ttest2(a, b, **tailOption):
-    import scipy.stats as stats
-    import numpy as np
-    h, p = stats.ttest_ind(a, b)
-    d = np.mean(a)-np.mean(b)
-    if tailOption.get('tail'):
-        tail = tailOption.get('tail').lower()
-        if tail == 'right':
-            p = p/2.*(d>0) + (1-p/2.)*(d<0)
-        elif tail == 'left':
-            p = (1-p/2.)*(d>0) + p/2.*(d<0)
-    if d==0:
-        p = 1;
-    return p     
-    
-    
-    
-    
-       
-#%%
-"""       
-''' 
-##############################################################################################   
-########### Find days with all-0 weights for all rounds and exclude them ##########################     
-########### Also find days with few rounds with non-zero weights (these are outlier days) ##############
-####################################################################################################               
-'''
-
-w_alln = [];
-choiceBefEpEndFract = np.full((1, len(days)), 0).flatten()
-    
-for iday in range(len(days)):
-    
-    imagingFolder = days[iday][0:6]; #'151013'
-    mdfFileNumber = map(int, (days[iday][7:]).split("-")); #[1,2] 
-        
-    #%%
-    pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
-    signalCh = [2] # since gcamp is channel 2, should be always 2.
-    postNProvided = 1; # If your directory does not contain pnevFile and instead it contains postFile, set this to 1 to get pnevFileName
-    
-    # from setImagingAnalysisNamesP import *
-    
-    imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
-    
-    postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
-    moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
-    
-    print(os.path.basename(imfilename))
-
-
-    #%% For current choice analysis, identify days with trials in which choice happened after the training epoch 
-
-    if trialHistAnalysis==0:
-        
-        Data = scio.loadmat(postName, variable_names=['timeStimOnset', 'time1stSideTry', 'outcomes'])
-        timeStimOnset = np.array(Data.pop('timeStimOnset')).flatten().astype('float')
-        time1stSideTry = np.array(Data.pop('time1stSideTry')).flatten().astype('float')
-        outcomes = (Data.pop('outcomes').astype('float'))[0,:]
-        
-        # We first set to nan timeStimOnset of trials that anyway wont matter bc their outcome is  not of interest. we do this to make sure these trials dont affect our estimate of ep_ms
-        if outcome2ana == 'corr':
-            timeStimOnset[outcomes!=1] = np.nan; # analyze only correct trials.
-        elif outcome2ana == 'incorr':
-            timeStimOnset[outcomes!=0] = np.nan; # analyze only incorrect trials.  
-        
-        a = (time1stSideTry - timeStimOnset)
-        ii = a <= ep_ms[-1]; # trials in which choice happened earlier than the end of training epoch ... we don't want them!
-        
-        print '%.2f%% trials have choice before the end of ep (%dms)!' %(np.mean(ii)*100, ep_ms[-1])
-        if sum(ii)>0:
-            print '\t, Choice times: ', a[ii]            
-            choiceBefEpEndFract[iday] = np.mean(ii);
-    
-    
-    #%% loop over the 10 rounds of analysis for each day
-
-    for i in range(numRounds):
-        roundi = i+1        
-        svmName = setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName)
-#        if roundi==1:
-        print '\t', os.path.basename(svmName)
-            
-        ##%% Load vars (w, etc)
-        Data = scio.loadmat(svmName, variable_names=['w'])
-        w = Data.pop('w')[0,:]    
-        w = w/sci.linalg.norm(w); # normalzied weights
-        w_alln.append(w)
-
-w_alln_all = np.concatenate(w_alln, axis=0)
-
-
-#%% Find days with all-0 weights (in all rounds)
-
-b = np.reshape(w_alln, (numDays,numRounds))
-
-# for each day find number of rounds without all-zero weights
-nRoundsNonZeroW = [np.sum([abs(x)>eps for x in np.nansum(map(None, b[i,:]), axis=1)]) for i in range(numDays)]  # /float(numRounds)
-print '\nnumber of rounds with non-zero weights for each day = ',  nRoundsNonZeroW
-
-
-sumw = [np.nansum(map(None, b[i,:]), axis=0).sum() for i in range(numDays)] # sum across rounds and neurons for each day
-all0d = [not x for x in sumw]
-print '\n', sum(all0d), 'days with all-0 weights: ', np.array(days)[np.array(all0d, dtype=bool)]
-all0days = np.argwhere(all0d).flatten() # index of days with all-0 weights
-
-
-# days with few non-zero rounds
-r0w = [nRoundsNonZeroW[i]<=thR for i in range(len(nRoundsNonZeroW))]
-fewRdays = np.argwhere(r0w).squeeze()
-print sum(r0w), 'days with <=', thR, 'rounds of non-zero weights: ', np.array(days)[np.array(r0w, dtype=bool)]
-
-
-# Find days that have more than 10% (?) of the trials with choice earlier than ep end and perhaps exclude them! Add this later.
-if trialHistAnalysis==0:
-    np.set_printoptions(precision=3)
-    print '%d days have choice before the end of ep (%dms)\n\t%% of trials with early choice: ' %(sum(choiceBefEpEndFract>0), ep_ms[-1]), choiceBefEpEndFract[choiceBefEpEndFract!=0]*100
-        
-        
-#%% Exclude days with all-0 weights (in all rounds) from analysis
-'''
-print 'Excluding %d days from analysis because all SVM weights of all rounds are 0' %(sum(all0d))
-days = np.delete(daysOrig, all0days)
-'''
-##%% Exclude days with only few (<=thR) rounds with non-0 weights from analysis
-print 'Excluding %d days from analysis: they have <%d rounds with non-zero weights' %(len(fewRdays), thR)
-days = np.delete(daysOrig, fewRdays)
-
-numDays = len(days)
-print 'Using', numDays, 'days for analysis:', days
-
-
-#%% keep short and long ITI results to plot them against each other later.
-if trialHistAnalysis:
-    if iTiFlg==0:
-        fewRdays0 = fewRdays
-        days0 = days
-        nRoundsNonZeroW0 = nRoundsNonZeroW
-    elif iTiFlg==1:
-        fewRdays1 = fewRdays
-        days1 = days
-        nRoundsNonZeroW1 = nRoundsNonZeroW
-
-"""
-
-
-    
-    
-    
-    
-    
-
-
-#%%
-'''
-#####################################################################################################################################################    
-################# Excitatory vs inhibitory neurons:  c path #########################################################################################
-######## Fraction of non-zero weights vs. different values of c #####################################################################################
-#####################################################################################################################################################   
-'''    
-    
-wall_exc = []
-wall_inh = []
-perActiveAll_exc = []
-perActiveAll_inh = []
-cvect_all = []
-perClassErAll = []
-ball = []
-perClassErTestAll = []    
-
-for iday in range(len(days)):
-
-    imagingFolder = days[iday][0:6]; #'151013'
-    mdfFileNumber = map(int, (days[iday][7:]).split("-")); #[1,2] 
-        
-    #%% Set .mat file names
-    pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
-    signalCh = [2] # since gcamp is channel 2, should be always 2.
-    postNProvided = 1; # If your directory does not contain pnevFile and instead it contains postFile, set this to 1 to get pnevFileName
-    
-    # from setImagingAnalysisNamesP import *
-    
-    imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
-    
-    postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
-    moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
-    
-    print(os.path.basename(imfilename))
-    
-    # Load inhibitRois
-    Data = scio.loadmat(moreName, variable_names=['inhibitRois'])
-    inhibitRois = Data.pop('inhibitRois')[0,:]
-
-    
-    #%%     
-    svmName = setSVMname(pnevFileName, trialHistAnalysis, ntName, np.nan, itiName)    
-    print os.path.basename(svmName)
-        
-    ##%% Load vars
-    Data = scio.loadmat(svmName, variable_names=['perActive_exc', 'perActive_inh', 'wei_all', 'perClassEr', 'cvect_', 'bei_all', 'perClassErTest'])
-    perActive_exc = Data.pop('perActive_exc') # numSamples x numTrialShuff x length(cvect_)  # numSamples x length(cvect_)  # samples: shuffles of neurons
-    perActive_inh = Data.pop('perActive_inh') # numSamples x numTrialShuff x length(cvect_)  # numSamples x length(cvect_)        
-    wei_all = Data.pop('wei_all') # numSamples x numTrialShuff x length(cvect_) x numNeurons(inh+exc equal numbers) # numSamples x length(cvect_) x numNeurons(inh+exc equal numbers)  
-    perClassEr = Data.pop('perClassEr') # numSamples x numTrialShuff x length(cvect_)
-    cvect_ = Data.pop('cvect_').flatten() # length(cvect_)
-    bei_all = Data.pop('bei_all') # numSamples x numTrialShuff x length(cvect_)  # numTrialShuff is number of times you shuffled trials to do cross validation. (it is variable numShuffles_ei in function inh_exc_classContribution)
-    perClassErTest = Data.pop('perClassErTest') # numSamples x numTrialShuff x length(cvect_) 
-    
-    if abs(wei_all.sum()) < eps:
-        print '\tWeights of all c and all shuffles are 0' # ... not analyzing' # I dont think you should do this!!
-        
-#    else:            
-    ##%% Load vars (w, etc)
-    Data = scio.loadmat(svmName, variable_names=['NsExcluded', 'NsRand'])        
-    NsExcluded = Data.pop('NsExcluded')[0,:].astype('bool')
-    NsRand = Data.pop('NsRand')[0,:].astype('bool')
-
-    # Set inhRois which is same as inhibitRois but with non-active neurons excluded. (it has same size as X)        
-    inhRois = inhibitRois[~NsExcluded]        
-    inhRois = inhRois[NsRand]
-        
-    n = sum(inhRois==1)                
-    inhRois_ei = np.zeros((2*n));
-    inhRois_ei[n:2*n] = 1;
-        
-        
-    # if cvTrialShuffle was performed we take averages across trialShuffles        
-    wall_exc.append(np.mean(wei_all[:,:,:,inhRois_ei==0], axis=1)) #average across trialShfls # numDays (each day: numSamples x length(cvect_) x numNeurons(inh+exc equal numbers))     
-    wall_inh.append(np.mean(wei_all[:,:,:,inhRois_ei==1], axis=1))                
-#    wall_exc.append(wei_all[:,:,inhRois_ei==0]) # numDays (each day: numSamples x length(cvect_) x numNeurons(inh+exc equal numbers))     
-#    wall_inh.append(wei_all[:,:,inhRois_ei==1])        
-    ball.append(np.mean(bei_all, axis=1)) # numDays x numSamples x length(cvect_)   
-    
-    perActiveAll_exc.append(np.mean(perActive_exc, axis=1)) # numDays x numSamples x length(cvect_)        
-    perActiveAll_inh.append(np.mean(perActive_inh, axis=1))        
-
-    cvect_all.append(cvect_) # numDays x length(cvect_)
-    perClassErAll.append(np.mean(perClassEr, axis=1)) # numDays x numSamples x length(cvect_)     
-    perClassErTestAll.append(np.mean(perClassErTest, axis=1)) # numDays x numSamples x length(cvect_)     
-   
-   
-   
-   
-#%%    
-perActiveAll_exc = np.array(perActiveAll_exc)  # days x numSamples x length(cvect_) # percent non-zero weights
-perActiveAll_inh = np.array(perActiveAll_inh)  # days x numSamples x length(cvect_) # percent non-zero weights
-perClassErAll = np.array(perClassErAll)  # days x numSamples x length(cvect_) # classification error
-cvect_all = np.array(cvect_all) # days x length(cvect_)  # c values
-perClassErTestAll = np.array(perClassErTestAll)
-ball = np.array(ball)
-
-
-#%% For each day average weights across neurons
-nax = 2 # dimension of neurons in wall_exc (since u're averaging across trialShuffles, it will be 2.) (if cross validation is performed, it will be 3, ie in excinhC2 mat files. Otherwise it will be 2.)
-wall_exc_aveN = []
-wall_inh_aveN = []
-wall_abs_exc_aveN = [] # average of abs values of weights
-wall_abs_inh_aveN = []
-wall_non0_exc_aveN = [] # average of abs values of weights
-wall_non0_inh_aveN = []
-wall_non0_abs_exc_aveN = [] # average of abs values of weights
-wall_non0_abs_inh_aveN = []
-for iday in range(len(days)):
-    wall_exc_aveN.append(np.mean(wall_exc[iday], axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons
-    wall_inh_aveN.append(np.mean(wall_inh[iday], axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons
-    wall_abs_exc_aveN.append(np.mean(abs(wall_exc[iday]), axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons
-    wall_abs_inh_aveN.append(np.mean(abs(wall_inh[iday]), axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons
-    a = wall_exc[iday] + 0
-    a[wall_exc[iday]==0] = np.nan # only take non-0 weights
-    wall_non0_exc_aveN.append(np.nanmean(a, axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons
-    wall_non0_abs_exc_aveN.append(np.nanmean(abs(a), axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons
-    a = wall_inh[iday] + 0 
-    a[wall_inh[iday]==0] = np.nan
-    wall_non0_inh_aveN.append(np.nanmean(a, axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons    
-    wall_non0_abs_inh_aveN.append(np.nanmean(abs(a), axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons
-    
-wall_exc_aveN = np.array(wall_exc_aveN)
-wall_inh_aveN = np.array(wall_inh_aveN)
-wall_abs_exc_aveN = np.array(wall_abs_exc_aveN)
-wall_abs_inh_aveN = np.array(wall_abs_inh_aveN)
-wall_non0_exc_aveN = np.array(wall_non0_exc_aveN)
-wall_non0_inh_aveN = np.array(wall_non0_inh_aveN)
-wall_non0_abs_exc_aveN = np.array(wall_non0_abs_exc_aveN)
-wall_non0_abs_inh_aveN = np.array(wall_non0_abs_inh_aveN)
-
-
-#%% Average weights,etc across shuffles for each day : numDays x length(cvect_) (by shuffles we mean neuron shuffles ... not trial shuffles... you alreade averaged that when loading vars above)
-# NOTE: you may want to exclude shuffles with all0 weights from averaging
-
-#avax = (0,1) # (0) # average across axis; use (0,1) if shuffles of trials (for cross validation) as well as neurons are available. Otherwise use (0) if no crossvalidation was performed
-
-wall_exc_aveNS = np.array([np.mean(wall_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
-wall_inh_aveNS = np.array([np.mean(wall_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
-wall_abs_exc_aveNS = np.array([np.mean(wall_abs_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
-wall_abs_inh_aveNS = np.array([np.mean(wall_abs_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
-wall_non0_exc_aveNS = np.array([np.nanmean(wall_non0_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
-wall_non0_inh_aveNS = np.array([np.nanmean(wall_non0_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
-wall_non0_abs_exc_aveNS = np.array([np.nanmean(wall_non0_abs_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
-wall_non0_abs_inh_aveNS = np.array([np.nanmean(wall_non0_abs_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
-perClassErAll_aveS = np.array([np.mean(perClassErAll[iday,:,:], axis=0) for iday in range(len(days))])
-perClassErTestAll_aveS = np.array([np.mean(perClassErTestAll[iday,:,:], axis=0) for iday in range(len(days))])
-perActiveAll_exc_aveS = np.array([np.mean(perActiveAll_exc[iday,:,:], axis=0) for iday in range(len(days))])
-perActiveAll_inh_aveS = np.array([np.mean(perActiveAll_inh[iday,:,:], axis=0) for iday in range(len(days))])
-
-# std
-wall_exc_stdNS = np.array([np.std(wall_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # std of w across shuffles for each day
-wall_inh_stdNS = np.array([np.std(wall_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
-wall_abs_exc_stdNS = np.array([np.std(wall_abs_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # std of w across shuffles for each day
-wall_abs_inh_stdNS = np.array([np.std(wall_abs_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
-wall_non0_exc_stdNS = np.array([np.nanstd(wall_non0_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
-wall_non0_inh_stdNS = np.array([np.nanstd(wall_non0_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
-wall_non0_abs_exc_stdNS = np.array([np.nanstd(wall_non0_abs_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
-wall_non0_abs_inh_stdNS = np.array([np.nanstd(wall_non0_abs_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
-perClassErAll_stdS = np.array([np.std(perClassErAll[iday,:,:], axis=0) for iday in range(len(days))])
-perClassErTestAll_stdS = np.array([np.std(perClassErTestAll[iday,:,:], axis=0) for iday in range(len(days))])
-perActiveAll_exc_stdS = np.array([np.std(perActiveAll_exc[iday,:,:], axis=0) for iday in range(len(days))])
-perActiveAll_inh_stdS = np.array([np.std(perActiveAll_inh[iday,:,:], axis=0) for iday in range(len(days))])
-
-
-#%% For each day compute exc-inh for shuffle-averages. Also set %non0, weights, etc to nan when both exc and inh percent non-0 are 0 or 100.
-
-perActiveEmI = np.full((perActiveAll_exc_aveS.shape), np.nan)
-wabsEmI = np.full((perActiveAll_exc_aveS.shape), np.nan)
-wabsEmI_non0 = np.full((perActiveAll_exc_aveS.shape), np.nan)
-wEmI = np.full((perActiveAll_exc_aveS.shape), np.nan)
-wEmI_non0 = np.full((perActiveAll_exc_aveS.shape), np.nan)
-
-perActiveEmI_b0100nan = np.full((perActiveAll_exc_aveS.shape), np.nan)
-wabsEmI_b0100nan = np.full((perActiveAll_exc_aveS.shape), np.nan)
-wabsEmI_non0_b0100nan = np.full((perActiveAll_exc_aveS.shape), np.nan)
-wEmI_b0100nan = np.full((perActiveAll_exc_aveS.shape), np.nan)
-wEmI_non0_b0100nan = np.full((perActiveAll_exc_aveS.shape), np.nan)
-
-for iday in range(len(days)):
-    perActiveEmI[iday,:] = perActiveAll_exc_aveS[iday,:] - perActiveAll_inh_aveS[iday,:] # days x length(cvect_) # at each c value, divide %non-zero (averaged across shuffles) of exc and inh  
-    wabsEmI[iday,:] = wall_abs_exc_aveNS[iday,:] - wall_abs_inh_aveNS[iday,:]
-    wabsEmI_non0[iday,:] = wall_non0_abs_exc_aveNS[iday,:] - wall_non0_abs_inh_aveNS[iday,:]
-    wEmI[iday,:] = wall_exc_aveNS[iday,:] - wall_inh_aveNS[iday,:]
-    wEmI_non0[iday,:] = wall_non0_exc_aveNS[iday,:] - wall_non0_inh_aveNS[iday,:]
-#    plt.plot(perActiveEmI[iday,:])
-
-    # exclude c values for which both exc and inh %non-0 are 0 or 100.
-    # you need to do +0, if not perActiveAll_exc_aveS will be also set to nan (same for w)
-    a = perActiveAll_exc_aveS[iday,:]
-    b = perActiveAll_inh_aveS[iday,:]    
-    i0 = np.logical_and(a==0, b==0) # c values for which all weights of both exc and inh populations are 0.
-    i100 = np.logical_and(a==100, b==100)  # c values for which all weights of both exc and inh populations are 100.
-    a[i0] = np.nan
-    b[i0] = np.nan
-    a[i100] = np.nan
-    b[i100] = np.nan
-    perActiveEmI_b0100nan[iday,:] = a - b
-    
-    a = wall_abs_exc_aveNS[iday,:]
-    b = wall_abs_inh_aveNS[iday,:] 
-    a[i0] = np.nan
-    b[i0] = np.nan
-    a[i100] = np.nan
-    b[i100] = np.nan
-    wabsEmI_b0100nan[iday,:] = a - b
-    
-    a = wall_non0_abs_exc_aveNS[iday,:]
-    b = wall_non0_abs_inh_aveNS[iday,:] 
-    a[i0] = np.nan
-    b[i0] = np.nan
-    a[i100] = np.nan
-    b[i100] = np.nan
-    wabsEmI_non0_b0100nan[iday,:] = a - b
-
-    a = wall_exc_aveNS[iday,:]
-    b = wall_inh_aveNS[iday,:] 
-    a[i0] = np.nan
-    b[i0] = np.nan
-    a[i100] = np.nan
-    b[i100] = np.nan
-    wEmI_b0100nan[iday,:] = a - b
-    
-    a = wall_non0_exc_aveNS[iday,:]
-    b = wall_non0_inh_aveNS[iday,:] 
-    a[i0] = np.nan
-    b[i0] = np.nan
-    a[i100] = np.nan
-    b[i100] = np.nan
-    wEmI_non0_b0100nan[iday,:] = a - b
-
-
-    a = perClassErAll_aveS[iday,:] 
-    a[i0] = np.nan
-    a[i100] = np.nan
-    
-    
-    a = perClassErTestAll_aveS[iday,:] 
-    a[i0] = np.nan
-    a[i100] = np.nan
-    
-    
-#%% Set the null distribution for exc-inh comparison: For each day subtract random shuffles of exc (same for inh) from each other.
-
-import numpy.random as rng
-l = perActiveAll_exc.shape[1] # numSamples
-randAll_perActiveAll_exc_aveS = np.full(perActiveAll_exc.shape, np.nan) # days x numSamples x length(cvect_) # exc - exc
-randAll_perActiveAll_inh_aveS = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
-randAll_perActiveAll_ei_aveS = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
-randAll_wabs_exc_aveS = np.full(perActiveAll_exc.shape, np.nan) # exc - exc
-randAll_wabs_inh_aveS = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
-randAll_wabs_ei_aveS = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
-randAll_non0_wabs_exc_aveS = np.full(perActiveAll_exc.shape, np.nan) # exc - exc
-randAll_non0_wabs_inh_aveS = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
-randAll_non0_wabs_ei_aveS = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
-randAll_w_exc_aveS = np.full(perActiveAll_exc.shape, np.nan) # exc - exc
-randAll_w_inh_aveS = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
-randAll_w_ei_aveS = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
-randAll_non0_w_exc_aveS = np.full(perActiveAll_exc.shape, np.nan) # exc - exc
-randAll_non0_w_inh_aveS = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
-randAll_non0_w_ei_aveS = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
-
-randAll_perActiveAll_exc_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # days x numSamples x length(cvect_) # exc - exc
-randAll_perActiveAll_inh_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
-randAll_perActiveAll_ei_aveS_b0100nan = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
-randAll_wabs_exc_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # exc - exc
-randAll_wabs_inh_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
-randAll_wabs_ei_aveS_b0100nan = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
-randAll_non0_wabs_exc_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # exc - exc
-randAll_non0_wabs_inh_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
-randAll_non0_wabs_ei_aveS_b0100nan = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
-randAll_w_exc_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # exc - exc
-randAll_w_inh_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
-randAll_w_ei_aveS_b0100nan = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
-randAll_non0_w_exc_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # exc - exc
-randAll_non0_w_inh_aveS_b0100nan = np.full(perActiveAll_exc.shape, np.nan) # inh - inh
-randAll_non0_w_ei_aveS_b0100nan = np.full((perActiveAll_exc.shape[0],2*l,perActiveAll_exc.shape[2]), np.nan) # exc-exc and inh-inh
-
-for iday in range(len(days)):
-    
-    ################## perc non-zero ######################
-    # exc-exc
-    inds = rng.permutation(l) # random indeces of shuffles
-    inds1 = rng.permutation(l)
-    a = perActiveAll_exc[iday,inds1,:] - perActiveAll_exc[iday,inds,:]
-    randAll_perActiveAll_exc_aveS[iday,:,:] = a # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
-    aa = perActiveAll_exc[iday,inds1,:]# + 0 ... s
-    bb = perActiveAll_exc[iday,inds,:]# + 0
-    i0 = np.logical_and(aa==0, bb==0)
-    i100 = np.logical_and(aa==100, bb==100)
-    aa[i0] = np.nan
-    bb[i0] = np.nan    
-    aa[i100] = np.nan
-    bb[i100] = np.nan    
-    a2 = aa-bb
-    randAll_perActiveAll_exc_aveS_b0100nan[iday,:,:] = a2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    
-    # inh-inh
-    indsi = rng.permutation(l) # random indeces of shuffles
-    inds1i = rng.permutation(l)
-    b = perActiveAll_inh[iday,inds1i,:] - perActiveAll_inh[iday,indsi,:]
-    randAll_perActiveAll_inh_aveS[iday,:,:] = b # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
-    aa = perActiveAll_inh[iday,inds1i,:]# + 0
-    bb = perActiveAll_inh[iday,indsi,:]# + 0
-    i0i = np.logical_and(aa==0, bb==0)
-    i100i = np.logical_and(aa==100, bb==100)
-    aa[i0i] = np.nan
-    bb[i0i] = np.nan    
-    aa[i100i] = np.nan
-    bb[i100i] = np.nan    
-    b2 = aa-bb
-    randAll_perActiveAll_inh_aveS_b0100nan[iday,:,:] = b2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    
-    # pool exc - exc; inh - inh
-    randAll_perActiveAll_ei_aveS[iday,:,:] = np.concatenate((a, b))  
-#    plt.plot(np.mean(randAll_perActiveAll_exc_aveS[iday,:,:],axis=0))
-    randAll_perActiveAll_ei_aveS_b0100nan[iday,:,:] = np.concatenate((a2, b2))  
-    
-    
-    
-    ###################### w ######################
-    # exc-exc
-    # below uncommented, so %non-0 and ws are computed from the same set of shuffles.
-#    inds = rng.permutation(l) # random indeces of shuffles
-#    inds1 = rng.permutation(l)
-    a = wall_exc_aveN[iday,inds1,:] - wall_exc_aveN[iday,inds,:]
-    randAll_w_exc_aveS[iday,:,:] = a # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
-    aa = wall_exc_aveN[iday,inds1,:]
-    bb = wall_exc_aveN[iday,inds,:]
-    aa[i0] = np.nan
-    bb[i0] = np.nan    
-    aa[i100] = np.nan
-    bb[i100] = np.nan    
-    a2 = aa-bb
-    randAll_w_exc_aveS_b0100nan[iday,:,:] = a2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-
-    
-    # inh-inh
-#    inds = rng.permutation(l) # random indeces of shuffles
-#    inds1 = rng.permutation(l)
-    b = wall_inh_aveN[iday,inds1i,:] - wall_inh_aveN[iday,indsi,:]
-    randAll_w_inh_aveS[iday,:,:] = b # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
-    aa = wall_inh_aveN[iday,inds1i,:]
-    bb = wall_inh_aveN[iday,indsi,:]
-    aa[i0i] = np.nan
-    bb[i0i] = np.nan    
-    aa[i100i] = np.nan
-    bb[i100i] = np.nan    
-    b2 = aa-bb
-    randAll_w_inh_aveS_b0100nan[iday,:,:] = b2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    
-    
-    # pool exc - exc; inh - inh
-    randAll_w_ei_aveS[iday,:,:] = np.concatenate((a, b))  
-#    plt.plot(np.mean(randAll_perActiveAll_exc_aveS[iday,:,:],axis=0))
-    randAll_w_ei_aveS_b0100nan[iday,:,:] = np.concatenate((a2, b2))  
-
-    
-    ###################### non-0 w ######################
-    # exc-exc
-    # below uncommented, so %non-0 and ws are computed from the same set of shuffles.
-#    inds = rng.permutation(l) # random indeces of shuffles
-#    inds1 = rng.permutation(l)
-    a = wall_non0_exc_aveN[iday,inds1,:] - wall_non0_exc_aveN[iday,inds,:]
-    randAll_non0_w_exc_aveS[iday,:,:] = a # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
-    aa = wall_non0_exc_aveN[iday,inds1,:]
-    bb = wall_non0_exc_aveN[iday,inds,:]
-    aa[i0] = np.nan
-    bb[i0] = np.nan    
-    aa[i100] = np.nan
-    bb[i100] = np.nan    
-    a2 = aa-bb
-    randAll_non0_w_exc_aveS_b0100nan[iday,:,:] = a2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-
-    
-    # inh-inh
-#    inds = rng.permutation(l) # random indeces of shuffles
-#    inds1 = rng.permutation(l)
-    b = wall_non0_inh_aveN[iday,inds1i,:] - wall_non0_inh_aveN[iday,indsi,:]
-    randAll_non0_w_inh_aveS[iday,:,:] = b # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
-    aa = wall_non0_inh_aveN[iday,inds1i,:]
-    bb = wall_non0_inh_aveN[iday,indsi,:]
-    aa[i0i] = np.nan
-    bb[i0i] = np.nan    
-    aa[i100i] = np.nan
-    bb[i100i] = np.nan    
-    b2 = aa-bb
-    randAll_non0_w_inh_aveS_b0100nan[iday,:,:] = b2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    
-    
-    # pool exc - exc; inh - inh
-    randAll_non0_w_ei_aveS[iday,:,:] = np.concatenate((a, b))  
-#    plt.plot(np.mean(randAll_perActiveAll_exc_aveS[iday,:,:],axis=0))
-    randAll_non0_w_ei_aveS_b0100nan[iday,:,:] = np.concatenate((a2, b2))  
-
-
-    
-    ###################### abs w ######################
-    # exc-exc
-    # below uncommented, so %non-0 and ws are computed from the same set of shuffles.
-#    inds = rng.permutation(l) # random indeces of shuffles
-#    inds1 = rng.permutation(l)
-    a = wall_abs_exc_aveN[iday,inds1,:] - wall_abs_exc_aveN[iday,inds,:]
-    randAll_wabs_exc_aveS[iday,:,:] = a # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
-    aa = wall_abs_exc_aveN[iday,inds1,:]
-    bb = wall_abs_exc_aveN[iday,inds,:]
-    aa[i0] = np.nan
-    bb[i0] = np.nan    
-    aa[i100] = np.nan
-    bb[i100] = np.nan    
-    a2 = aa-bb
-    randAll_wabs_exc_aveS_b0100nan[iday,:,:] = a2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-
-    
-    # inh-inh
-#    inds = rng.permutation(l) # random indeces of shuffles
-#    inds1 = rng.permutation(l)
-    b = wall_abs_inh_aveN[iday,inds1i,:] - wall_abs_inh_aveN[iday,indsi,:]
-    randAll_wabs_inh_aveS[iday,:,:] = b # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
-    aa = wall_abs_inh_aveN[iday,inds1i,:]
-    bb = wall_abs_inh_aveN[iday,indsi,:]
-    aa[i0i] = np.nan
-    bb[i0i] = np.nan    
-    aa[i100i] = np.nan
-    bb[i100i] = np.nan    
-    b2 = aa-bb
-    randAll_wabs_inh_aveS_b0100nan[iday,:,:] = b2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    
-    
-    # pool exc - exc; inh - inh
-    randAll_wabs_ei_aveS[iday,:,:] = np.concatenate((a, b))  
-#    plt.plot(np.mean(randAll_perActiveAll_exc_aveS[iday,:,:],axis=0))
-    randAll_wabs_ei_aveS_b0100nan[iday,:,:] = np.concatenate((a2, b2))  
-    
-    
-    
-    ###################### abs non-0 w ######################
-    # exc-exc
-#    inds = rng.permutation(l) # random indeces of shuffles
-#    inds1 = rng.permutation(l)
-    a = wall_non0_abs_exc_aveN[iday,inds1,:] - wall_non0_abs_exc_aveN[iday,inds,:]
-    randAll_non0_wabs_exc_aveS[iday,:,:] = a # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
-    # you don't really need to do it for here, bc it is already non0 ws!
-    aa = wall_non0_abs_exc_aveN[iday,inds1,:]
-    bb = wall_non0_abs_exc_aveN[iday,inds,:]
-    aa[i0] = np.nan
-    bb[i0] = np.nan    
-    aa[i100] = np.nan
-    bb[i100] = np.nan    
-    a2 = aa-bb
-    randAll_non0_wabs_exc_aveS_b0100nan[iday,:,:] = a2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    
-
-    # inh-inh
-#    inds = rng.permutation(l) # random indeces of shuffles
-#    inds1 = rng.permutation(l)
-    b = wall_non0_abs_inh_aveN[iday,inds1i,:] - wall_non0_abs_inh_aveN[iday,indsi,:]
-    randAll_non0_wabs_inh_aveS[iday,:,:] = b # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    # exclude c values for which both exc shuffle %non-0 are 0 or 100.
-    aa = wall_non0_abs_inh_aveN[iday,inds1i,:]
-    bb = wall_non0_abs_inh_aveN[iday,indsi,:]
-    aa[i0i] = np.nan
-    bb[i0i] = np.nan    
-    aa[i100i] = np.nan
-    bb[i100i] = np.nan    
-    b2 = aa-bb
-    randAll_non0_wabs_inh_aveS_b0100nan[iday,:,:] = b2 # numSamples x length(cvect_) ; subtract random shuff of exc from each other.
-    
-    
-    # pool exc - exc; inh - inh
-    randAll_non0_wabs_ei_aveS[iday,:,:] = np.concatenate((a, b))  
-    randAll_non0_wabs_ei_aveS_b0100nan[iday,:,:] = np.concatenate((a2, b2))  
-    
-    
-
-
-#%%
-# BEST C
-
-##########################################################################################################################################################################
-################################## compare weights and fract non-0 of exc and inh at bestc of each day ##################################
-##########################################################################################################################################################################
-
-#%% Compute bestc for each day (for the exc_inh population decdoder)
-numSamples = np.shape(perClassErTestAll)[1]
-cbestAll = np.full((len(days)), np.nan)
-
-for iday in range(len(days)):
-
-    cvect = cvect_all[iday,:]
-
-    # Pick bestc from all range of c... it may end up a value at which all weights are 0. In the analysis below though you exclude shuffles with all0 weights.
-    meanPerClassErrorTest = np.mean(perClassErTestAll[iday,:,:], axis = 0) # perClassErTestAll_aveS[iday,:]
-    semPerClassErrorTest = np.std(perClassErTestAll[iday,:,:], axis = 0)/np.sqrt(numSamples) # perClassErTestAll_stdS[iday,:]/np.sqrt(np.shape(perClassErTestAll)[1])
-    ix = np.nanargmin(meanPerClassErrorTest)
-    cbest = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix])];
-    cbest = cbest[0]; # best regularization term based on minError+SE criteria
-    cbestAll[iday] = cbest
-    
-    
-    # Make sure at bestc at least one weight is non-zero (ie pick bestc from only those values of c that give non-0 average weights.)        
-    # compute percent non-zero w at each c
-    a = perActiveAll_exc[iday,:,:].squeeze()
-    b = perActiveAll_inh[iday,:,:].squeeze()    
-    c = np.mean((a,b), axis=0) # percent non-0 w for each shuffle at each c (including both exc and inh neurons. Remember SVM was trained on both so there is a single decoder including both exc and inh)
-    
-#    a = (wAllC!=0) # non-zero weights
-#    b = np.mean(a, axis=(0,2)) # Fraction of non-zero weights (averaged across shuffles)
-    b = np.mean(c, axis=(0)) # Fraction of non-zero weights (averaged across shuffles)
-    c1stnon0 = np.argwhere(b)[0].squeeze() # first element of c with at least 1 non-0 w in 1 shuffle
-    
-    cvectnow = cvect[c1stnon0:]
-    meanPerClassErrorTestnow = np.mean(perClassErTestAll[iday,:,c1stnon0:], axis = 0);
-    semPerClassErrorTestnow = np.std(perClassErTestAll[iday,:,c1stnon0:], axis = 0)/np.sqrt(numSamples);
-    ix = np.argmin(meanPerClassErrorTestnow)
-    cbest = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
-    cbest = cbest[0]; # best regularization term based on minError+SE criteria
-    cbestAll[iday] = cbest
-
-print cbestAll
-
-
-#%% Set %non0 and weights for exc and inh at bestc (across all shuffls) 
-# you also set shuffles with all0 w (for both exc and inh) to nan.
-# QUITE IMPORTANT NOTE: I think you should exclude days with chance testing-data decoding performance... bc it doesn't really make sense to compare their weight or fract-non0 of exc and inh neurons.
-# For this you will need to get shuffles (shuffle labels of each trial)
-
-perActiveExc = []
-perActiveInh = []
-wNon0AbsExc = []
-wNon0AbsInh = []    
-wAbsExc = []
-wAbsInh = []
-perClassErTest_bestc = np.full(len(days), np.nan)
-perClassErTest_bestc_sd = np.full(len(days), np.nan)
-
-for iday in range(len(days)):
-    
-    ibc = cvect_all[iday,:]==cbestAll[iday]
 
-    # class error for cv data at bestc
-    perClassErTest_bestc[iday] = perClassErTestAll_aveS[iday,ibc]
-    perClassErTest_bestc_sd[iday] = perClassErTestAll_stdS[iday,ibc]
+ 
     
-    
-    # percent non-zero w
-    a = perActiveAll_exc[iday,:,ibc].squeeze()
-    b = perActiveAll_inh[iday,:,ibc].squeeze()
-    c = np.mean((a,b), axis=0) #nShuffs x 1 # percent non-0 w for each shuffle (including both exc and inh neurons. Remember SVM was trained on both so there is a single decoder including both exc and inh)
-    i0 = (c==0) # shuffles at which all w (of both exc and inh) are 0, ie no decoder was identified for these shuffles.
-    a[i0] = np.nan # ignore shuffles with all-0 weights
-    b[i0] = np.nan # ignore shuffles with all-0 weights    
-#    a[a==0.] = np.nan # ignore shuffles with all-0 weights ... this is problematic bc u will exclude a shuffle if inh w are all 0 even if exc w are not.
-#    b[b==0.] = np.nan # ignore shuffles with all-0 weights
-    perActiveExc.append(a)
-    perActiveInh.append(b)
-
-    # abs non-zero w
-    a = wall_non0_abs_exc_aveN[iday,:,ibc].squeeze() # for some shuffles this will be nan bc all weights were 0 ... so automatically you are ignoring shuffles w all-0 weights
-    b = wall_non0_abs_inh_aveN[iday,:,ibc].squeeze()
-#    print np.argwhere(np.isnan(a))
-    wNon0AbsExc.append(a)
-    wNon0AbsInh.append(b)
-    
-    # abs w
-    a = wall_abs_exc_aveN[iday,:,ibc].squeeze() 
-    b = wall_abs_inh_aveN[iday,:,ibc].squeeze()
-    a[i0] = np.nan # ignore shuffles with all-0 weights
-    b[i0] = np.nan # ignore shuffles with all-0 weights    
-#    a[a==0.] = np.nan # ignore shuffles with all-0 weights
-#    b[b==0.] = np.nan # ignore shuffles with all-0 weights    
-    wAbsExc.append(a)
-    wAbsInh.append(b)
-    
-
-    
-perActiveExc = np.array(perActiveExc)
-perActiveInh = np.array(perActiveInh)
-wNon0AbsExc = np.array(wNon0AbsExc)
-wNon0AbsInh = np.array(wNon0AbsInh)    
-wAbsExc = np.array(wAbsExc)
-wAbsInh = np.array(wAbsInh) 
-
-
-#%%
-###################################### PLOTS ###################################### 
-dnow = '/excInh_afterSFN'
-if trialHistAnalysis:
-    dp = '/previousChoice'
-else:
-    dp = '/currentChoice'
-
-lab1 = 'exc'
-lab2 = 'inh'
+#%% PLOTS; define functions
 
-def histerrbar(a,b,binEvery,p):
+def histerrbar(a,b,binEvery,p,colors = ['g','k']):
 #    import matplotlib.gridspec as gridspec
     
 #    r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
@@ -946,6 +77,8 @@ def histerrbar(a,b,binEvery,p):
 
 #    lab1 = 'exc'
 #    lab2 = 'inh'
+
+#    colors = ['g','k']
     
     # set bins
     bn = np.arange(np.min(np.concatenate((a,b))), np.max(np.concatenate((a,b))), binEvery)
@@ -955,13 +88,13 @@ def histerrbar(a,b,binEvery,p):
     hist = hist/float(np.sum(hist))    
     # Plot hist of a
     ax1 = plt.subplot(h1) #(gs[0,0:2])
-    plt.bar(bin_edges[0:-1], hist, binEvery, color='k', alpha=.4, label=lab1)
+    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[0], alpha=.4, label=lab1)
     
     # set his of b
     hist, bin_edges = np.histogram(b, bins=bn)
     hist = hist/float(np.sum(hist));     #d = stats.mode(np.diff(bin_edges))[0]/float(2)
     # Plot hist of b
-    plt.bar(bin_edges[0:-1], hist, binEvery, color='r', alpha=.4, label=lab2)
+    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[1], alpha=.4, label=lab2)
     
     plt.legend(loc=0, frameon=False)
     plt.ylabel('Prob (all days & N shuffs at bestc)')
@@ -1023,46 +156,731 @@ def errbarAllDays(a,b,p):
     plt.subplots_adjust(wspace=1, hspace=.5)
 
     
+    
+
+
+#%%
+'''
+#####################################################################################################################################################    
+################# Excitatory vs inhibitory neurons:  c path #########################################################################################
+######## Fraction of non-zero weights vs. different values of c #####################################################################################
+#####################################################################################################################################################   
+'''    
+# Analysis done in svm_excInh_cPath.py:
+# 1. For numSamples times a different X is created, which includes different sets of exc neurons but same set of inh neurons.
+# 2. For each X, classifier is trained numShuffles_ei times (using different sets of training and testing datasets).
+# 3. The above procedure is done for each value of c.
+
+# Here:
+# We take average across cvTrial shuffles. For weights, we also take average weight of all neurons
+# Then (for plots) we take averages across neuron shuffles.
+# As a result for each value of c we get average w, b, %non-0 w, and classError across all shuffles of cv trials and neurons.
+
+
+wall_exc = []
+wall_inh = []
+wall_exc_abs = []
+wall_inh_abs = []
+wall_exc_abs_non0 = []
+wall_inh_abs_non0 = []
+wall_exc_non0 = []
+wall_inh_non0 = []
+perActiveAll_exc = []
+perActiveAll_inh = []
+cvect_all = []
+perClassErAll = []
+ball = []
+perClassErTestAll = []    
+
+# not averaged across trial shuffles
+perClassErAll2 = [] # not averaged across trial shuffles
+perClassErTestAll2 = [] # not averaged across trial shuffles
+perActiveAll2_exc = [] # not averaged across trial shuffles
+perActiveAll2_inh = [] # not averaged across trial shuffles
+ball2 = []
+wall2_exc = [] # average of neurons (but not averaged across trial or neuron shuffles)
+wall2_inh = []
+wall2_exc_abs = []
+wall2_inh_abs = []
+wall2_exc_abs_non0 = []
+wall2_inh_abs_non0 = []
+
+for iday in range(len(days)):
+
+    print '___________________'
+    imagingFolder = days[iday][0:6]; #'151013'
+    mdfFileNumber = map(int, (days[iday][7:]).split("-")); #[1,2] 
+        
+    #%% Set .mat file names
+    pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
+    signalCh = [2] # since gcamp is channel 2, should be always 2.
+    postNProvided = 1; # If your directory does not contain pnevFile and instead it contains postFile, set this to 1 to get pnevFileName
+    
+    # from setImagingAnalysisNamesP import *
+    
+    imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
+    
+    postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
+    moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
+    
+    print(os.path.basename(imfilename))
+    
+    # Load inhibitRois
+    Data = scio.loadmat(moreName, variable_names=['inhibitRois'])
+    inhibitRois = Data.pop('inhibitRois')[0,:]
+
+    
+    #%%     
+    svmName = setSVMname(pnevFileName, trialHistAnalysis, ntName, np.nan, itiName)    
+    print os.path.basename(svmName)
+        
+    ##%% Load vars
+    Data = scio.loadmat(svmName, variable_names=['perActive_exc', 'perActive_inh', 'wei_all', 'perClassEr', 'cvect_', 'bei_all', 'perClassErTest'])
+    perActive_exc = Data.pop('perActive_exc') # numSamples x numTrialShuff x length(cvect_)  # numSamples x length(cvect_)  # samples: shuffles of neurons
+    perActive_inh = Data.pop('perActive_inh') # numSamples x numTrialShuff x length(cvect_)  # numSamples x length(cvect_)        
+    wei_all = Data.pop('wei_all') # numSamples x numTrialShuff x length(cvect_) x numNeurons(inh+exc equal numbers) # numSamples x length(cvect_) x numNeurons(inh+exc equal numbers)  
+    perClassEr = Data.pop('perClassEr') # numSamples x numTrialShuff x length(cvect_)
+    cvect_ = Data.pop('cvect_').flatten() # length(cvect_)
+    bei_all = Data.pop('bei_all') # numSamples x numTrialShuff x length(cvect_)  # numTrialShuff is number of times you shuffled trials to do cross validation. (it is variable numShuffles_ei in function inh_exc_classContribution)
+    perClassErTest = Data.pop('perClassErTest') # numSamples x numTrialShuff x length(cvect_) 
+    
+    if abs(wei_all.sum()) < eps:
+        print '\tWeights of all c and all shuffles are 0' # ... not analyzing' # I dont think you should do this!!
+        
+#    else:            
+    ##%% Load vars (w, etc)
+    Data = scio.loadmat(svmName, variable_names=['NsExcluded', 'NsRand'])        
+    NsExcluded = Data.pop('NsExcluded')[0,:].astype('bool')
+    NsRand = Data.pop('NsRand')[0,:].astype('bool')
+
+    # Set inhRois which is same as inhibitRois but with non-active neurons excluded. (it has same size as X)        
+    inhRois = inhibitRois[~NsExcluded]        
+    inhRois = inhRois[NsRand]
+        
+    n = sum(inhRois==1)                
+    inhRois_ei = np.zeros((2*n));
+    inhRois_ei[n:2*n] = 1;
+
+
+    # keep %non-0 w and classError for all shuffles of cvTrials and neurons (for all c values for all days)
+    perActiveAll2_exc.append(perActive_exc) # numDays x numSamples x numTrialShuff x length(cvect_)        
+    perActiveAll2_inh.append(perActive_inh)  # numDays x numSamples x numTrialShuff x length(cvect_)               
+    perClassErAll2.append(perClassEr) # numDays x numSamples x numTrialShuff x length(cvect_)    
+    perClassErTestAll2.append(perClassErTest) # numDays x numSamples x numTrialShuff x length(cvect_)        
+    ball2.append(bei_all) # numDays x numSamples x numTrialShuff x length(cvect_) 
+         
+    wall2_exc.append(np.mean(wei_all[:,:,:,inhRois_ei==0], axis=-1)) #average across exc (inh) neurons # numDays (each day: numSamples x numTrialShuff x length(cvect_) x numNeurons(inh+exc equal numbers))     
+    wall2_inh.append(np.mean(wei_all[:,:,:,inhRois_ei==1], axis=-1))                
+    wall2_exc_abs.append(np.mean(abs(wei_all[:,:,:,inhRois_ei==0]), axis=-1)) #average across exc (inh) neurons # numDays (each day: numSamples x numTrialShuff x length(cvect_) x numNeurons(inh+exc equal numbers))     
+    wall2_inh_abs.append(np.mean(abs(wei_all[:,:,:,inhRois_ei==1]), axis=-1)) 
+    # non0
+    a = wei_all[:,:,:,inhRois_ei==0] + 0
+    a[a==0] = np.nan
+    wall2_exc_abs_non0.append(np.nanmean(abs(a), axis=-1)) # average across neurons   
+    
+    b = wei_all[:,:,:,inhRois_ei==1] + 0
+    b[b==0] = np.nan
+    wall2_inh_abs_non0.append(np.nanmean(abs(b), axis=-1))    
+       
+       
+    ######### Take averages across trialShuffles        
+    wall_exc.append(np.mean(wei_all[:,:,:,inhRois_ei==0], axis=1)) #average w across trialShfls # numDays (each day: numSamples x numTrialShuff x length(cvect_) x numNeurons(inh+exc equal numbers))     
+    wall_inh.append(np.mean(wei_all[:,:,:,inhRois_ei==1], axis=1))      
+    # I dont think this argument makes sense: for abs, I am not sure if you need to do the following... If you don't do it, the idea is that w of each neuron is represented by the average of its w across all trial shuffles... so we dont need to do abs!          
+    wall_exc_abs.append(np.mean(abs(wei_all[:,:,:,inhRois_ei==0]), axis=1)) #average abs w across trialShfls # numDays (each day: numSamples x numTrialShuff x length(cvect_) x numNeurons(inh+exc equal numbers))     
+    wall_inh_abs.append(np.mean(abs(wei_all[:,:,:,inhRois_ei==1]), axis=1))    
+    # take average of abs of non0 ws across tr shuffles.
+    wall_exc_abs_non0.append(np.nanmean(abs(a), axis=1))    
+    wall_inh_abs_non0.append(np.nanmean(abs(b), axis=1))        
+    # take average of non0 ws across tr shuffles.
+    wall_exc_non0.append(np.nanmean(a, axis=1))    
+    wall_inh_non0.append(np.nanmean(b, axis=1))            
+#    wall_exc.append(wei_all[:,:,inhRois_ei==0]) # numDays (each day: numSamples x length(cvect_) x numNeurons(inh+exc equal numbers))     
+#    wall_inh.append(wei_all[:,:,inhRois_ei==1])        
+    
+    ball.append(np.mean(bei_all, axis=1)) # numDays x numSamples x length(cvect_)   
+    
+    perActiveAll_exc.append(np.mean(perActive_exc, axis=1)) # numDays x numSamples x length(cvect_)        
+    perActiveAll_inh.append(np.mean(perActive_inh, axis=1))        
+
+    cvect_all.append(cvect_) # numDays x length(cvect_)
+    perClassErAll.append(np.mean(perClassEr, axis=1)) # numDays x numSamples x length(cvect_)     
+    perClassErTestAll.append(np.mean(perClassErTest, axis=1)) # numDays x numSamples x length(cvect_)     
+
+
+
+
+#%%    
+perActiveAll_exc = np.array(perActiveAll_exc)  # days x numSamples x length(cvect_) # percent non-zero weights
+perActiveAll_inh = np.array(perActiveAll_inh)  # days x numSamples x length(cvect_) # percent non-zero weights
+perClassErAll = np.array(perClassErAll)  # days x numSamples x length(cvect_) # classification error
+cvect_all = np.array(cvect_all) # days x length(cvect_)  # c values
+perClassErTestAll = np.array(perClassErTestAll)
+ball = np.array(ball)
+
+perClassErAll2 = np.array(perClassErAll2) # numDays x numSamples x numTrialShuff x length(cvect_) 
+perClassErTestAll2 = np.array(perClassErTestAll2) # numDays x numSamples x numTrialShuff x length(cvect_) 
+perActiveAll2_exc = np.array(perActiveAll2_exc)
+perActiveAll2_inh = np.array(perActiveAll2_inh)
+ball2 = np.array(ball2)
+wall2_exc = np.array(wall2_exc)
+wall2_inh = np.array(wall2_inh)
+wall2_exc_abs = np.array(wall2_exc_abs)
+wall2_inh_abs = np.array(wall2_inh_abs)
+wall2_exc_abs_non0 = np.array(wall2_exc_abs_non0)
+wall2_inh_abs_non0 = np.array(wall2_inh_abs_non0)
+
+
+#%% For each day average weights across neurons
+nax = 2 # dimension of neurons in wall_exc (since u're averaging across trialShuffles, it will be 2.) (if cross validation is performed, it will be 3, ie in excinhC2 mat files. Otherwise it will be 2.)
+wall_exc_aveN = []
+wall_inh_aveN = []
+wall_abs_exc_aveN = [] # average of abs values of weights
+wall_abs_inh_aveN = []
+wall_non0_exc_aveN = [] # average of abs values of weights
+wall_non0_inh_aveN = []
+wall_non0_abs_exc_aveN = [] # average of abs values of weights
+wall_non0_abs_inh_aveN = []
+
+for iday in range(len(days)):
+
+    wall_exc_aveN.append(np.mean(wall_exc[iday], axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons
+    wall_inh_aveN.append(np.mean(wall_inh[iday], axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons
+
+
+    # non0 w, exc
+    a = wall_exc_non0[iday] + 0
+    a[wall_exc_non0[iday]==0] = np.nan # only take non-0 weights
+    wall_non0_exc_aveN.append(np.nanmean(a, axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons
+    # non0 w, inh
+    a = wall_inh_non0[iday] + 0 
+    a[wall_inh_non0[iday]==0] = np.nan
+    wall_non0_inh_aveN.append(np.nanmean(a, axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons    
+
+    
+    # You fixed the following by using wall_exc_abs instead of wall_exc below (although if u think of average w of tr shufs as the representative of the neuron w you may not want use abs... i dont know...im confused); NOTE: wall_exc is average w of trial shuffles, not average of abs w... so I think all the abs values that you are computing below are wrong!    
+    # abs w
+    wall_abs_exc_aveN.append(np.mean(abs(wall_exc_abs[iday]), axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons
+    wall_abs_inh_aveN.append(np.mean(abs(wall_inh_abs[iday]), axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons
+    
+    
+    # non0 abs w, exc
+    a = wall_exc_abs_non0[iday] + 0
+    a[wall_exc_abs_non0[iday]==0] = np.nan # only take non-0 weights
+    wall_non0_abs_exc_aveN.append(np.nanmean(abs(a), axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons   
+    # non0 abs w, inh
+    a = wall_inh_abs_non0[iday] + 0 
+    a[wall_inh_abs_non0[iday]==0] = np.nan
+    wall_non0_abs_inh_aveN.append(np.nanmean(abs(a), axis=nax)) # days x numSamples x length(cvect_)  # ave w across neurons
+
+    
+wall_exc_aveN = np.array(wall_exc_aveN)
+wall_inh_aveN = np.array(wall_inh_aveN)
+wall_abs_exc_aveN = np.array(wall_abs_exc_aveN)
+wall_abs_inh_aveN = np.array(wall_abs_inh_aveN)
+wall_non0_exc_aveN = np.array(wall_non0_exc_aveN)
+wall_non0_inh_aveN = np.array(wall_non0_inh_aveN)
+wall_non0_abs_exc_aveN = np.array(wall_non0_abs_exc_aveN)
+wall_non0_abs_inh_aveN = np.array(wall_non0_abs_inh_aveN)
+
+
+#%% Average weights,etc across neuron shuffles for each day : numDays x length(cvect_) (by shuffles we mean neuron shuffles ... not trial shuffles... you alreade averaged that when loading vars above)
+# NOTE: you may want to exclude shuffles with all0 weights from averaging
+
+#avax = (0,1) # (0) # average across axis; use (0,1) if shuffles of trials (for cross validation) as well as neurons are available. Otherwise use (0) if no crossvalidation was performed
+
+wall_exc_aveNS = np.array([np.mean(wall_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
+wall_inh_aveNS = np.array([np.mean(wall_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
+wall_abs_exc_aveNS = np.array([np.mean(wall_abs_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
+wall_abs_inh_aveNS = np.array([np.mean(wall_abs_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
+wall_non0_exc_aveNS = np.array([np.nanmean(wall_non0_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
+wall_non0_inh_aveNS = np.array([np.nanmean(wall_non0_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
+wall_non0_abs_exc_aveNS = np.array([np.nanmean(wall_non0_abs_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
+wall_non0_abs_inh_aveNS = np.array([np.nanmean(wall_non0_abs_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
+perClassErAll_aveS = np.array([np.mean(perClassErAll[iday,:,:], axis=0) for iday in range(len(days))])
+perClassErTestAll_aveS = np.array([np.mean(perClassErTestAll[iday,:,:], axis=0) for iday in range(len(days))])
+perActiveAll_exc_aveS = np.array([np.mean(perActiveAll_exc[iday,:,:], axis=0) for iday in range(len(days))])
+perActiveAll_inh_aveS = np.array([np.mean(perActiveAll_inh[iday,:,:], axis=0) for iday in range(len(days))])
+
+# std
+wall_exc_stdNS = np.array([np.std(wall_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # std of w across shuffles for each day
+wall_inh_stdNS = np.array([np.std(wall_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
+wall_abs_exc_stdNS = np.array([np.std(wall_abs_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # std of w across shuffles for each day
+wall_abs_inh_stdNS = np.array([np.std(wall_abs_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
+wall_non0_exc_stdNS = np.array([np.nanstd(wall_non0_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
+wall_non0_inh_stdNS = np.array([np.nanstd(wall_non0_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
+wall_non0_abs_exc_stdNS = np.array([np.nanstd(wall_non0_abs_exc_aveN[iday,:,:], axis=0) for iday in range(len(days))]) # days x length(cvect_) # average w across shuffles for each day
+wall_non0_abs_inh_stdNS = np.array([np.nanstd(wall_non0_abs_inh_aveN[iday,:,:], axis=0) for iday in range(len(days))])
+perClassErAll_stdS = np.array([np.std(perClassErAll[iday,:,:], axis=0) for iday in range(len(days))])
+perClassErTestAll_stdS = np.array([np.std(perClassErTestAll[iday,:,:], axis=0) for iday in range(len(days))])
+perActiveAll_exc_stdS = np.array([np.std(perActiveAll_exc[iday,:,:], axis=0) for iday in range(len(days))])
+perActiveAll_inh_stdS = np.array([np.std(perActiveAll_inh[iday,:,:], axis=0) for iday in range(len(days))])
+
+
+
+#%%
+# BEST C
+
+##########################################################################################################################################################################
+################################## compare weights and fract non-0 of exc and inh at bestc of each day ##################################
+##########################################################################################################################################################################
+
+#%% Compute bestc for each day (for the exc_inh population decdoder) using average of classError across neuron shuffles and trial shuffles.
+
+# before anything take a look at cv class error vs c to make sure it has a legitimate shape! if it doesnt, finding bestc is meaningless!
+'''
+for iday in range(len(days)):
+    plt.plot(np.mean(perClassErTestAll2[iday,:,:,:], axis = (0,1))) # average across neuron and trial shuffles
+    plt.show()
+'''    
+    
+#######%%%%%%        
+numSamples = np.shape(perClassErTestAll)[1]
+
+'''
+for iday in range(len(days)):   
+    plt.figure()
+    plt.title(days[iday])
+    for ineurshfl in range(numSamples):
+        a = np.mean(perClassErTestAll2[iday,ineurshfl,:,:], axis = 0)
+        plt.plot(cvect_all[iday,:], a, color=[.6,.6,.6]) # average across neuron and trial shuffles        
+        plt.xscale('log')
+        
+    a = np.mean(perClassErTestAll2[iday,:,:,:], axis = (0,1))
+    plt.plot(cvect_all[iday,:], a, color='r')
+#    plt.plot(cbestAll[iday], a[cvect_all[iday,:]==cbestAll[iday]], 'ro')
+    plt.xlabel('c')
+    plt.ylabel('% CV Class error')
+#        plt.show()
+'''    
+    
+cbestAll = np.full((len(days)), np.nan)
+for iday in range(len(days)):
+
+    cvect = cvect_all[iday,:]
+
+    # Pick bestc from all range of c... it may end up a value at which all weights are 0. In the analysis below though you exclude shuffles with all0 weights.
+    meanPerClassErrorTest = np.mean(perClassErTestAll[iday,:,:], axis = 0) # perClassErTestAll_aveS[iday,:]
+    semPerClassErrorTest = np.std(perClassErTestAll[iday,:,:], axis = 0)/np.sqrt(numSamples) # perClassErTestAll_stdS[iday,:]/np.sqrt(np.shape(perClassErTestAll)[1])
+    ix = np.nanargmin(meanPerClassErrorTest)
+    cbest = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix])];
+    cbest = cbest[0]; # best regularization term based on minError+SE criteria
+    cbestAll[iday] = cbest
+    
+    
+    # Another method: Make sure at bestc at least one weight is non-zero (ie pick bestc from only those values of c that give non-0 average weights.)        
+    # compute percent non-zero w at each c
+    a = perActiveAll_exc[iday,:,:].squeeze()
+    b = perActiveAll_inh[iday,:,:].squeeze()    
+    c = np.mean((a,b), axis=0) # percent non-0 w for each shuffle at each c (including both exc and inh neurons. Remember SVM was trained on both so there is a single decoder including both exc and inh)
+    
+#    a = (wAllC!=0) # non-zero weights
+#    b = np.mean(a, axis=(0,2)) # Fraction of non-zero weights (averaged across shuffles)
+    b = np.mean(c, axis=(0)) # Fraction of non-zero weights (averaged across shuffles)
+    c1stnon0 = np.argwhere(b)[0].squeeze() # first element of c with at least 1 non-0 w in 1 shuffle
+    
+    cvectnow = cvect[c1stnon0:]
+    meanPerClassErrorTestnow = np.mean(perClassErTestAll[iday,:,c1stnon0:], axis = 0);
+    semPerClassErrorTestnow = np.std(perClassErTestAll[iday,:,c1stnon0:], axis = 0)/np.sqrt(numSamples);
+    ix = np.argmin(meanPerClassErrorTestnow)
+    cbest = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
+    cbest = cbest[0]; # best regularization term based on minError+SE criteria
+    cbestAll[iday] = cbest
+
+print cbestAll
+
+
+# show cbestAll
+'''
+for iday in range(len(days)):    
+    a = np.mean(perClassErTestAll2[iday,:,:,:], axis = (0,1))
+    plt.plot(cvect_all[iday,:], a) # average across neuron and trial shuffles    
+    plt.plot(cbestAll[iday], a[cvect_all[iday,:]==cbestAll[iday]], 'ro')
+    plt.xscale('log')
+    
+    plt.plot(cvect_all[iday,:], np.mean(perActiveAll2_exc[iday,:,:,:],axis=(0,1)), color='k')
+    plt.plot(cvect_all[iday,:], np.mean(perActiveAll2_inh[iday,:,:,:],axis=(0,1)), color='r')       
+#    a = perActiveAll2_exc[iday,:,:,cvect_all[iday,:]==cbestAll[iday]].squeeze()
+#    np.mean(a,axis=(0,1))   
+    plt.show()
+'''    
+
+plt.figure(figsize=(6,17))    
+for iday in range(len(days)):   
+#    plt.figure()
+    plt.subplot(np.ceil(len(days)/float(3)),3,iday+1)
+    plt.title(days[iday])
+    for ineurshfl in range(numSamples):
+        a = np.mean(perClassErTestAll2[iday,ineurshfl,:,:], axis = 0)
+        plt.plot(cvect_all[iday,:], a, color=[.6,.6,.6]) # average across neuron and trial shuffles        
+        plt.xscale('log')
+        
+    a = np.mean(perClassErTestAll2[iday,:,:,:], axis = (0,1))
+    plt.plot(cvect_all[iday,:], a, color='r')
+    plt.plot(cbestAll[iday], a[cvect_all[iday,:]==cbestAll[iday]], 'ro')
+    ax = plt.gca()
+    makeNicePlots(ax)
+    
+    if iday!=len(days)-1:
+        ax.xaxis.set_ticklabels([])
+    
+plt.xlabel('c')
+plt.subplot(np.ceil(len(days)/float(3)),3,iday+1)
+plt.ylabel('% CV Class error')
+plt.subplots_adjust(wspace=.8, hspace=.4)
+
+
+if savefigs:#% Save the figure
+    d = os.path.join(svmdir+dnow,mousename+dp+'/bestC')
+#    d = os.path.join(svmdir+dnow,mousename+'/bestC'+dp) #, dgc, dta)
+#    d = os.path.join(svmdir+dnow,mousename+'/bestC'+dp)
+#    d = os.path.join(svmdir+dnow+'/bestC',mousename+dp)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+    
+    fign = os.path.join(d, suffn[0:5]+'classErrVsC_eachDay.'+fmt[0])
+#    fign = os.path.join(d, suffn[0:5]+'classErrVsC_'+days[iday][0:6]+'.'+fmt[0])
+    plt.savefig(fign, bbox_inches='tight')
+        
+        
+
+
+
+########################################################################    
+# Another method: For each neuron shuffle compute bestc (not using the class error that is average neuron shuffles)
+    # you figured it is not a good method because bestc estimation is much better when u do it on neuron shuffle averages... some of the single neuron shuffles have bad c plots, which will result in bad estimated of bestc... 
+    # in brief, it is much better to find bestc on a nice and smooth c plot!
+numCVtrShfls = np.shape(perClassErTestAll)[1]
+"""
+numSamples = np.shape(perClassErTestAll)[1]
+cbestAll = np.full((len(days),numSamples), np.nan)
+
+for iday in range(len(days)):
+
+    cvect = cvect_all[iday,:]
+
+    for ineurshfl in range(numSamples):
+        # Pick bestc from all range of c... it may end up a value at which all weights are 0. In the analysis below though you exclude shuffles with all0 weights.
+        # set (for each neuron shuffle) average and sd of classError across trialShuffles.
+        meanPerClassErrorTest = np.mean(perClassErTestAll2[iday,ineurshfl,:,:], axis = 0) # perClassErTestAll_aveS[iday,:]
+        semPerClassErrorTest = np.std(perClassErTestAll2[iday,ineurshfl,:,:], axis = 0)/np.sqrt(numCVtrShfls) # perClassErTestAll_stdS[iday,:]/np.sqrt(np.shape(perClassErTestAll)[1])
+        ix = np.nanargmin(meanPerClassErrorTest)
+        cbest = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix])];
+        cbest = cbest[0]; # best regularization term based on minError+SE criteria
+        cbestAll[iday,ineurshfl] = cbest
+        
+        
+        # Another method: Make sure at bestc at least one weight is non-zero (ie pick bestc from only those values of c that give non-0 average weights.)        
+        # compute percent non-zero w at each c
+        a = perActiveAll2_exc[iday,ineurshfl,:,:].squeeze() # fraction of non0 exc neurons for all trial shuffles and c values of a particular day and neuron shuffle
+        b = perActiveAll2_inh[iday,ineurshfl,:,:].squeeze()    
+        c = np.mean((a,b), axis=0) #numTrialShuff x length(cvect_) # percent non-0 w for each shuffle at each c (including both exc and inh neurons. Remember SVM was trained on both so there is a single decoder including both exc and inh)
+        
+    #    a = (wAllC!=0) # non-zero weights
+    #    b = np.mean(a, axis=(0,2)) # Fraction of non-zero weights (averaged across shuffles)
+        b = np.mean(c, axis=(0)) # Fraction of non-zero weights (averaged across trial shuffles)
+        c1stnon0 = np.argwhere(b)[0].squeeze() # first element of c with at least 1 non-0 w in 1 shuffle
+        
+        cvectnow = cvect[c1stnon0:]
+        meanPerClassErrorTestnow = np.mean(perClassErTestAll2[iday,ineurshfl,:,c1stnon0:], axis = 0);
+        semPerClassErrorTestnow = np.std(perClassErTestAll2[iday,ineurshfl,:,c1stnon0:], axis = 0)/np.sqrt(numCVtrShfls);
+        ix = np.argmin(meanPerClassErrorTestnow)
+        cbest = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
+        cbest = cbest[0]; # best regularization term based on minError+SE criteria
+        cbestAll[iday,ineurshfl] = cbest
+        
+print cbestAll
+'''
+# show cbestAll
+for iday in range(len(days)):   
+    for ineurshfl in range(numSamples):
+        a = np.mean(perClassErTestAll2[iday,ineurshfl,:,:], axis = 0)
+        plt.plot(cvect_all[iday,:], a) # average across neuron and trial shuffles
+        plt.plot(cbestAll[iday,ineurshfl], a[cvect_all[iday,:]==cbestAll[iday,ineurshfl]], 'ro')
+        plt.xscale('log')
+        plt.show()
+'''        
+
+"""
+
+
+########################################################################        
+########################################################################        
+#%% given the figure above decide what days you want to exclude (days with bad shaped c plots!).. for now you are doing this manually... later u can use: days w shuffles for which %non0 at best c is 0 are always among bad days, but not all of the bad days... at best classErr must be less than classErr at the very low c... if you get the diff of c plot it must decrease at some point...
+
+if mousename=='fni16':
+    if trialHistAnalysis:
+        days2excl = ['1012','1027','1029', '1028','1023','1021'] # fni16, prev #1016
+    else:
+        days2excl = ['1016','1026','1027','1028','1029', '1012','1020'] # fni16, curr 
+elif mousename=='fni17':
+    if trialHistAnalysis:
+        days2excl = ['1007','1010','1013','1014','1019','1022','1023','1027','1028','1029','1101','1102'] # fni16, prev #1016
+    else:
+        days2excl = ['1102'] # fni16, curr         
+
+
+# identify the index of days to be excluded!
+#[x for x in days if '1012' in x]
+xall = []
+for i in range(len(days2excl)):
+    xall.append([x for x in range(len(days)) if days[x].find(days2excl[i])!=-1])
+xall = np.array(xall).squeeze()    
+
+print np.array(days)[xall]
+
+
+#%% Set the two vars below: 1) whether you want to exclude days with bad shape for c plot (identified above). 2) whether you want to pool or average trial shuffles.
+
+onlygoodc = 0 # if 1 only good c days will be plotted (for now u r manually choosing days to be excluded based on their cv class error vs c plot)
+trShflAve = 0 # if 1, %non0 and w will be computed on trial-shuffle averaged variales... if 0, they will be computed for all trial shuffles (and neuron shuffles) and plots in the next section will be made on the pooled shuffles (instead of tr shfl averages) 
+
+days2ana = np.array(range(len(days))) 
+
+
+if onlygoodc:    
+    dgc = 'onlyGoodcDays'
+else:
+    dgc = 'allDays'
+
+
+if trShflAve:
+    dta = 'trShfl_averaged'
+else:
+    dta = 'trShfl_notAveraged'
+
+
+#####
+if onlygoodc:
+    days2ana = np.delete(days2ana,xall)
+
+print days2ana
+print len(days2ana), 'days for analysis'
+    
+
+
+
+#%% Set %non0 and weights for exc and inh at bestc (across all shuffls) 
+# you also set shuffles with all0 w (for both exc and inh) to nan.
+# QUITE IMPORTANT NOTE: I think you should exclude days with poor c plot (or chance testing-data decoding performance)... bc it doesn't really make sense to compare their weight or fract-non0 of exc and inh neurons.
+# For this you will need to get shuffles (shuffle labels of each trial)
+
+#trShflAve = 1 # if 1, %non0 and w will be computed on trial-shuffle averaged variales... if 0, they will be computed for all trial shuffles (and neuron shuffles) and plots in the next section will be made on the pooled shuffles (instead of tr shfl averages) 
+
+if trShflAve==1: #
+    perActiveExc = []
+    perActiveInh = []
+    wNon0AbsExc = []
+    wNon0AbsInh = []    
+    wAbsExc = []
+    wAbsInh = []
+    wExc = []
+    wInh = []
+    perClassErTest_bestc = np.full(len(days), np.nan)
+    perClassErTest_bestc_sd = np.full(len(days), np.nan)
+    
+    for iday in days2ana: #range(len(days)): # days2ana (if you want to exclude days2excl)
+        
+        ibc = cvect_all[iday,:]==cbestAll[iday]
+        
+        # class error for cv data at bestc 
+        perClassErTest_bestc[iday] = perClassErTestAll_aveS[iday,ibc]
+        perClassErTest_bestc_sd[iday] = perClassErTestAll_stdS[iday,ibc]
+        
+        
+        # percent non-zero w
+        a = perActiveAll_exc[iday,:,ibc].squeeze() # perActiveAll_exc includes average across trial shuffles.
+        b = perActiveAll_inh[iday,:,ibc].squeeze()
+        c = np.mean((a,b), axis=0) #nShuffs x 1 # percent non-0 w for each shuffle (including both exc and inh neurons. Remember SVM was trained on both so there is a single decoder including both exc and inh)
+        i0 = (c==0) # shuffles at which all w (of both exc and inh) are 0, ie no decoder was identified for these shuffles.
+        a[i0] = np.nan # ignore shuffles with all-0 weights
+        b[i0] = np.nan # ignore shuffles with all-0 weights    
+        #    a[a==0.] = np.nan # ignore shuffles with all-0 weights ... this is problematic bc u will exclude a shuffle if inh w are all 0 even if exc w are not.
+        #    b[b==0.] = np.nan # ignore shuffles with all-0 weights
+        perActiveExc.append(a)
+        perActiveInh.append(b)
+        
+        # abs non-zero w
+        a = wall_non0_abs_exc_aveN[iday,:,ibc].squeeze() # for some shuffles this will be nan bc all weights were 0 ... so automatically you are ignoring shuffles w all-0 weights
+        b = wall_non0_abs_inh_aveN[iday,:,ibc].squeeze()
+        #    print np.argwhere(np.isnan(a))
+        wNon0AbsExc.append(a)
+        wNon0AbsInh.append(b)
+        
+        # abs w
+        a = wall_abs_exc_aveN[iday,:,ibc].squeeze() 
+        b = wall_abs_inh_aveN[iday,:,ibc].squeeze()
+        a[i0] = np.nan # ignore shuffles with all-0 weights
+        b[i0] = np.nan # ignore shuffles with all-0 weights    
+        #    a[a==0.] = np.nan # ignore shuffles with all-0 weights
+        #    b[b==0.] = np.nan # ignore shuffles with all-0 weights    
+        wAbsExc.append(a)
+        wAbsInh.append(b)
+        
+        
+        # w
+        a = wall_non0_exc_aveN[iday,:,ibc].squeeze() 
+        b = wall_non0_inh_aveN[iday,:,ibc].squeeze()
+        a[i0] = np.nan # ignore shuffles with all-0 weights
+        b[i0] = np.nan # ignore shuffles with all-0 weights    
+        #    a[a==0.] = np.nan # ignore shuffles with all-0 weights
+        #    b[b==0.] = np.nan # ignore shuffles with all-0 weights    
+        wExc.append(a)
+        wInh.append(b)
+    
+        
+    perActiveExc = np.array(perActiveExc)
+    perActiveInh = np.array(perActiveInh)
+    wNon0AbsExc = np.array(wNon0AbsExc)
+    wNon0AbsInh = np.array(wNon0AbsInh)    
+    wAbsExc = np.array(wAbsExc)
+    wAbsInh = np.array(wAbsInh) 
+    wExc = np.array(wExc)
+    wInh = np.array(wInh) 
+
+
+else:
+    ######## not averaged across trial shuffles
+    # we are using the bestc found on the average of neuron shuffles but we take % non-0 and abs w for each individual trial and neuron shuffle (unlike above which is done on the average of trial shuffles)
+    #np.shape(perActiveAll2_inh[iday,ineurshfl,:,])
+    
+    perActiveExc = np.full((len(days),numSamples,numCVtrShfls), np.nan)
+    perActiveInh = np.full((len(days),numSamples,numCVtrShfls), np.nan)
+    wNon0AbsExc = np.full((len(days),numSamples,numCVtrShfls), np.nan)
+    wNon0AbsInh = np.full((len(days),numSamples,numCVtrShfls), np.nan)    
+    wAbsExc = np.full((len(days),numSamples,numCVtrShfls), np.nan)
+    wAbsInh = np.full((len(days),numSamples,numCVtrShfls), np.nan)
+    perClassErTest_bestc = np.full((len(days),numSamples), np.nan)
+    perClassErTest_bestc_sd = np.full((len(days),numSamples), np.nan)
+    wExc = np.full((len(days),numSamples,numCVtrShfls), np.nan)
+    wInh = np.full((len(days),numSamples,numCVtrShfls), np.nan)
+    
+    for iday in days2ana: #range(len(days)):
+        
+        for ineurshfl in range(numSamples):
+    #        ibc = cvect_all[iday,:]==cbestAll[iday,ineurshfl]
+            ibc = cvect_all[iday,:]==cbestAll[iday]
+        
+            # class error of cv data for each neuron shuffle at bestc (averaged across trial shuffles)
+            perClassErTest_bestc[iday,ineurshfl] = np.mean(perClassErAll2[iday,ineurshfl,:,ibc]) #perClassErTestAll_aveS[iday,ibc]
+            perClassErTest_bestc_sd[iday,ineurshfl] = np.std(perClassErAll2[iday,ineurshfl,:,ibc]) #
+            
+            
+            # percent non-zero w for all trial shuffles (of each particular neuron shuffle) at bestc
+            a = perActiveAll2_exc[iday,ineurshfl,:,ibc].squeeze()
+            b = perActiveAll2_inh[iday,ineurshfl,:,ibc].squeeze()
+            # To find bestc u made sure in the average of trial shuffles at least 1 weight is non-0.... here u exclude each trial shuffle that has all 0 weights.... so it is not same as what you did for bestc.
+            c = np.mean((a,b), axis=0) #trialShfl x 1 # percent non-0 w for each trial shuffle (including both exc and inh neurons. Remember SVM was trained on both so there is a single decoder including both exc and inh)
+            if sum(c==0)>0: # these are bad days and u can exclude them! (automatic way of finding bad c plot days)
+                print iday,ineurshfl,sum(c==0)
+            i0 = (c==0) # trial shuffles at which all w (of both exc and inh) are 0, ie no decoder was identified for these shuffles.
+            a[i0] = np.nan # ignore trial shuffles with all-0 weights
+            b[i0] = np.nan # ignore trial shuffles with all-0 weights    
+        #    a[a==0.] = np.nan # ignore shuffles with all-0 weights ... this is problematic bc u will exclude a shuffle if inh w are all 0 even if exc w are not.
+        #    b[b==0.] = np.nan # ignore shuffles with all-0 weights
+            perActiveExc[iday,ineurshfl,:] = a # days x neuron shuffles x trial shuffles
+            perActiveInh[iday,ineurshfl,:] = b # days x neuron shuffles x trial shuffles
+    
+    
+            # abs non-zero w for all trial shuffles (of each particular neuron shuffle) at bestc
+            a = wall2_exc_abs_non0[iday,ineurshfl,:,ibc].squeeze() + 0
+            a[a==0] = np.nan # only take non-0 weights
+            wNon0AbsExc[iday,ineurshfl,:] = abs(a) # abs average w of exc neurons for all trial shuffles of a particular day and neuron shuffle at bestc # for some shuffles this will be nan bc all weights were 0 ... so automatically you are ignoring shuffles w all-0 weights
+            
+            b = wall2_inh_abs_non0[iday,ineurshfl,:,ibc].squeeze() + 0 # abs average w of inh neurons for all trial shuffles of a particular day and neuron shuffle at bestc
+            b[b==0] = np.nan # only take non-0 weights
+            wNon0AbsInh[iday,ineurshfl,:] = abs(b)
+            
+            
+            
+            # abs w
+            a = abs(wall2_exc_abs[iday,ineurshfl,:,ibc]).squeeze() # abs average w of exc neurons for all trial shuffles of a particular day and neuron shuffle at bestc
+            b = abs(wall2_inh_abs[iday,ineurshfl,:,ibc]).squeeze()
+            a[i0] = np.nan # ignore trial shuffles with all-0 weights
+            b[i0] = np.nan # ignore trial shuffles with all-0 weights    
+        #    a[a==0.] = np.nan # ignore shuffles with all-0 weights
+        #    b[b==0.] = np.nan # ignore shuffles with all-0 weights    
+            wAbsExc[iday,ineurshfl,:] = a
+            wAbsInh[iday,ineurshfl,:] = b
+        
+    
+    
+            # w
+            a = wall2_exc[iday,ineurshfl,:,ibc].squeeze() # abs average w of exc neurons for all trial shuffles of a particular day and neuron shuffle at bestc
+            b = wall2_inh[iday,ineurshfl,:,ibc].squeeze()
+            a[i0] = np.nan # ignore trial shuffles with all-0 weights
+            b[i0] = np.nan # ignore trial shuffles with all-0 weights    
+        #    a[a==0.] = np.nan # ignore shuffles with all-0 weights
+        #    b[b==0.] = np.nan # ignore shuffles with all-0 weights    
+            wExc[iday,ineurshfl,:] = a
+            wInh[iday,ineurshfl,:] = b
+            
+            
+    # average across trial shuffles
+    '''
+    perActiveExc = np.nanmean(perActiveExc, axis=-1)
+    perActiveInh = np.nanmean(perActiveInh, axis=-1)
+    
+    wNon0AbsExc = np.nanmean(wNon0AbsExc, axis=-1)
+    wNon0AbsInh = np.nanmean(wNon0AbsInh, axis=-1)
+    
+    wAbsExc = np.nanmean(wAbsExc, axis=-1)
+    wAbsInh = np.nanmean(wAbsInh, axis=-1)
+    '''
+
+#%%
+###################################### PLOTS ###################################### 
+
 #%%
 ###############%% classification accuracy of cv data at best c for each day ###############
 # for each day plot averages across shuffles (neuron shuffles)
-plt.figure(figsize=(5,2.5))    
-gs = gridspec.GridSpec(1, 10)#, width_ratios=[2, 1]) 
-h1 = gs[0,0:7]
-ax = plt.subplot(h1)
-plt.errorbar(np.arange(len(days)), 100-perClassErTest_bestc, perClassErTest_bestc_sd, color='k')
-plt.xlim([-1,len(days)+1])
-plt.xlabel('Days')
-plt.ylabel('% Class accuracy')
-ymin, ymax = ax.get_ylim()
-makeNicePlots(plt.gca())
+if trShflAve:
+    plt.figure(figsize=(5,2.5))    
+    gs = gridspec.GridSpec(1, 10)#, width_ratios=[2, 1]) 
+    h1 = gs[0,0:7]
+    ax = plt.subplot(h1)
+    plt.errorbar(np.arange(len(days)), 100-perClassErTest_bestc, perClassErTest_bestc_sd, color='k')
+    plt.xlim([-1,len(days)+1])
+    plt.xlabel('Days')
+    plt.ylabel('% Class accuracy')
+    ymin, ymax = ax.get_ylim()
+    makeNicePlots(plt.gca())
+    
+    # ave and std across days
+    h2 = gs[0,7:8]
+    ax = plt.subplot(h2)
+    plt.errorbar(0, np.nanmean(100-perClassErTest_bestc), np.nanstd(100-perClassErTest_bestc), marker='o', color='k')
+    plt.ylim([ymin,ymax])
+    #plt.xlim([-.01,.01])
+    plt.axis('off')
+    plt.subplots_adjust(wspace=0)
+    #makeNicePlots(ax)
+    
+    if savefigs:#% Save the figure
+        d = os.path.join(svmdir+dnow,mousename+dp+'/bestC', dgc, dta)
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+        fign = os.path.join(d, suffn[0:5]+'classAccur'+'.'+fmt[0])
+        plt.savefig(fign, bbox_inches='tight')
 
-# ave and std across days
-h2 = gs[0,7:8]
-ax = plt.subplot(h2)
-plt.errorbar(0, np.mean(100-perClassErTest_bestc), np.std(100-perClassErTest_bestc), marker='o', color='k')
-plt.ylim([ymin,ymax])
-#plt.xlim([-.01,.01])
-plt.axis('off')
-plt.subplots_adjust(wspace=0)
-#makeNicePlots(ax)
-
-if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow+'/bestC'+dp, suffn[0:5]+'classAccur'+'.'+fmt[0])
-    plt.savefig(fign, bbox_inches='tight')
 
 
-
-#%% 
+#%%  This is the only figure that will be affected by trShflAve (ie you have both trShfl averaged and not averaged variables for it)
 ######################################  All days pooled ###################################### 
 ### 1st row: pool all days and all neuron shuffles to get the histograms. Next to histograms plot the mean and st error of all shuffles of all days
 ### On the 2nd row plot ave and st error across shuffles for each day. Next to it plot the ave and st error across days (averages of shuffles)
+
+lab1 = 'exc'
+lab2 = 'inh'
+colors = ['k','r']
 
 
 ###############%% percent non-zero w ###############    
 ### hist and P val for all days pooled (exc vs inh)
 lab = '% non-0 w'
-binEvery = 5# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+binEvery = 2#5# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
 a = np.reshape(perActiveExc,(-1,))# perActiveExc includes average across neuron shuffles for each day.... 
 b = np.reshape(perActiveInh,(-1,))  
 a = a[~(np.isnan(a) + np.isinf(a))]
@@ -1077,12 +895,17 @@ plt.figure(figsize=(5,5))
 gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
 h1 = gs[0,0:2]
 h2 = gs[0,2:3]
-histerrbar(a,b,binEvery,p)
+histerrbar(a,b,binEvery,p,colors)
 #plt.xlabel(lab)
 
 ### show ave and std across shuffles for each day
-a = perActiveExc
+# if averaged across trial shuffles
+a = perActiveExc # numDays x numSamples x numTrialShuff
 b = perActiveInh
+# if no averaging across neuron or trial shuffles, pool neuron and trial shuffles
+if trShflAve==0:
+    a = np.reshape(perActiveExc, (len(days), numCVtrShfls*numSamples), order = 'F')
+    b = np.reshape(perActiveInh, (len(days), numCVtrShfls*numSamples), order = 'F')
 _,p = stats.ttest_ind(a.transpose(), b.transpose(), nan_policy='omit')    
 print p
 #plt.figure(); plot.subplot(221)
@@ -1093,7 +916,12 @@ errbarAllDays(a,b,p)
 
 #plt.savefig('cpath_all_absnon0w.svg', format='svg', dpi=300)
 if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow+'/bestC'+dp, suffn[0:5]+'excVSinh_allDays_percNon0W'+'.'+fmt[0])
+    d = os.path.join(svmdir+dnow,mousename+dp+'/bestC', dgc, dta)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+        
+    fign = os.path.join(d, suffn[0:5]+'excVSinh_allDays_percNon0W'+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight')
 
 
@@ -1117,14 +945,19 @@ plt.figure(figsize=(5,5))
 gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
 h1 = gs[0,0:2]
 h2 = gs[0,2:3]
-ax1,_ = histerrbar(a,b,binEvery,p)
+ax1,_ = histerrbar(a,b,binEvery,p,colors)
 #plt.xlabel(lab)
 #ax1.set_xlim([0, .06])
 #ax1.set_xlim([0, .1])
+ax1.set_xlim([0, .5])
 
 ### show individual days
 a = wNon0AbsExc
 b = wNon0AbsInh
+# if no averaging across neuron or trial shuffles, pool neuron and trial shuffles
+if trShflAve==0:
+    a = np.reshape(wNon0AbsExc, (len(days), numCVtrShfls*numSamples), order = 'F')
+    b = np.reshape(wNon0AbsInh, (len(days), numCVtrShfls*numSamples), order = 'F')
 _,p = stats.ttest_ind(a.transpose(), b.transpose(), nan_policy='omit')    
 print p
 #ax = plt.subplot(gs[1,0:3])
@@ -1133,7 +966,12 @@ errbarAllDays(a,b,p)
 
 
 if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow+'/bestC'+dp, suffn[0:5]+'excVSinh_allDays_absNon0W'+'.'+fmt[0])
+    d = os.path.join(svmdir+dnow,mousename+dp+'/bestC', dgc, dta)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+ 
+    fign = os.path.join(d, suffn[0:5]+'excVSinh_allDays_absNon0W'+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight')
     
     
@@ -1157,13 +995,17 @@ plt.figure(figsize=(5,5))
 gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
 h1 = gs[0,0:2]
 h2 = gs[0,2:3]
-ax1,_ = histerrbar(a,b,binEvery,p)
+ax1,_ = histerrbar(a,b,binEvery,p,colors)
 #plt.xlabel(lab)
-#ax1.set_xlim([0, .1])
+ax1.set_xlim([0, .15])
 
 ### show individual days
 a = wAbsExc
 b = wAbsInh
+# if no averaging across neuron or trial shuffles, pool neuron and trial shuffles
+if trShflAve==0:
+    a = np.reshape(wAbsExc, (len(days), numCVtrShfls*numSamples), order = 'F')
+    b = np.reshape(wAbsInh, (len(days), numCVtrShfls*numSamples), order = 'F')
 _,p = stats.ttest_ind(a.transpose(), b.transpose(), nan_policy='omit')    
 print p
 #ax = plt.subplot(gs[1,0:3])
@@ -1172,13 +1014,69 @@ errbarAllDays(a,b,p)
 
 
 if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow+'/bestC'+dp, suffn[0:5]+'excVSinh_allDays_absW'+'.'+fmt[0])
+    d = os.path.join(svmdir+dnow,mousename+dp+'/bestC', dgc, dta)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+ 
+    fign = os.path.join(d, suffn[0:5]+'excVSinh_allDays_absW'+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight')
 
 
 
 
+    
+###############%% w  ###############
+### hist and P val for all days pooled (exc vs inh)
+lab = 'w'
+binEvery = .001 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+a = np.reshape(wExc,(-1,)) 
+b = np.reshape(wInh,(-1,))
 
+a = a[~(np.isnan(a) + np.isinf(a))]
+b = b[~(np.isnan(b) + np.isinf(b))]
+print [len(a), len(b)]
+_, p = stats.ttest_ind(a, b, nan_policy='omit')
+'''
+print 'exc vs inh (bestc):p value= %.3f' %(p)
+print '\tmean: data: %.3f; null: %.3f' %(np.mean(a), np.mean(b))
+'''
+plt.figure(figsize=(5,5))    
+gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
+h1 = gs[0,0:2]
+h2 = gs[0,2:3]
+ax1,_ = histerrbar(a,b,binEvery,p,colors)
+#plt.xlabel(lab)
+ax1.set_xlim([-.05, .03])
+
+### show individual days
+a = wExc
+b = wInh
+# if no averaging across neuron or trial shuffles, pool neuron and trial shuffles
+if trShflAve==0:
+    a = np.reshape(wExc, (len(days), numCVtrShfls*numSamples), order = 'F')
+    b = np.reshape(wInh, (len(days), numCVtrShfls*numSamples), order = 'F')
+_,p = stats.ttest_ind(a.transpose(), b.transpose(), nan_policy='omit')    
+print p
+#ax = plt.subplot(gs[1,0:3])
+errbarAllDays(a,b,p)
+#plt.ylabel(lab)
+
+
+if savefigs:#% Save the figure
+    d = os.path.join(svmdir+dnow,mousename+dp+'/bestC', dgc, dta)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+ 
+    fign = os.path.join(d, suffn[0:5]+'excVSinh_allDays_w'+'.'+fmt[0])
+    plt.savefig(fign, bbox_inches='tight')
+    
+    
+
+
+#%%%% For all the analyses below you need to run the codes above with trShflAve = 1.
+    
 #%%
 ###################################### Plot each day separately ######################################
 for iday in range(len(days)):
@@ -1205,7 +1103,7 @@ for iday in range(len(days)):
     gs = gridspec.GridSpec(3, 3)#, width_ratios=[2, 1]) 
     h1 = gs[0,0:2]
     h2 = gs[0,2:3]
-    histerrbar(a,b,binEvery,p)    
+    histerrbar(a,b,binEvery,p,colors)    
     plt.title('cvClassEr= %.2f' %(perClassErTest_bestc[iday]))
 
     ###################
@@ -1226,7 +1124,7 @@ for iday in range(len(days)):
     h1 = gs[1,0:2]
     h2 = gs[1,2:3]
     if np.logical_and(b.shape[0], a.shape[0])!=0:
-        histerrbar(a,b,binEvery,p)
+        histerrbar(a,b,binEvery,p,colors)
 
 
     ###################
@@ -1246,16 +1144,27 @@ for iday in range(len(days)):
     '''
     h1 = gs[2,0:2]
     h2 = gs[2,2:3]
-    histerrbar(a,b,binEvery,p) 
+    histerrbar(a,b,binEvery,p,colors) 
     
     
     if savefigs:#% Save the figure
-        fign = os.path.join(svmdir+dnow+'/bestC'+dp, suffn[0:5]+'excVSinh_'+days[iday][0:6]+'.'+fmt[0])
+        d = os.path.join(svmdir+dnow,mousename+dp+'/bestC', dgc, dta)
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+     
+        fign = os.path.join(d, suffn[0:5]+'excVSinh_'+days[iday][0:6]+'.'+fmt[0])
         plt.savefig(fign, bbox_inches='tight')
 
 
     plt.show()
     
+
+
+
+#%% Run the following script to get vars related to exc - inh
+execfile("svm_excInh_cPath_excMinusInh.py")
+
 
 #%% exc minus inh at best c (average of shuffles) and null dist (subtraction of rand shuffles) at bestc... this is already done in computing b0100nan vars: you should perhaps exclude shuffles with all-0 weights bc they may mask the effects. (?)
 
@@ -1273,7 +1182,7 @@ r_non0_w_bestc = np.full((len(days),2*l), np.nan)
 p_perActive = np.full((len(days)), np.nan)
 p_wAbsNon0 = np.full((len(days)), np.nan)
 
-for iday in range(len(days)):
+for iday in days2ana: #range(len(days)):
     
     ibc = cvect_all[iday,:]==cbestAll[iday] # index of cbest
 #    print np.argwhere(ibc)
@@ -1317,6 +1226,7 @@ np.mean(p_wAbsNon0<=.05)
 ########################################### PLOTS ###########################################
 lab1 = 'exc - inh'
 lab2 = 'rand'
+bindiv = 10 #10
 
 ###############%% percent non-zero w: hist and P val for all days pooled (exc - inh)  ###############
 a = np.reshape(perActiveEmI_bestc,(-1,)) # pool across days x length(cvect_)  
@@ -1334,15 +1244,15 @@ print 'p value vs 0:diff c path (all c) = %.3f' %(pdiff)
 
 ### hist and P val for all days pooled (exc vs inh)
 lab = '% non-0 w'
-binEvery = 3 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+#binEvery = 3 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
 r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
-binEvery = r/float(10)
+binEvery = r/float(bindiv)
 plt.figure(figsize=(5,15))    
 gs = gridspec.GridSpec(5, 3)#, width_ratios=[2, 1]) 
 h1 = gs[0,0:2]
 h2 = gs[0,2:3]
 histerrbar(a,b,binEvery,p)
-plt.xlabel(lab)
+#plt.xlabel(lab)
 
 
 ###############%% abs non-0 w: hist and P val for all days pooled (exc - inh)  ###############
@@ -1360,15 +1270,15 @@ print 'p value vs 0:diff c path (all c) = %.3f' %(pdiff)
 
 
 lab = 'abs non-0 w'
-binEvery = .006# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+#binEvery = .006# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
 r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
-binEvery = r/float(10)
+binEvery = r/float(bindiv)
 #plt.figure(figsize=(5,5))    
 #gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
 h1 = gs[1,0:2]
 h2 = gs[1,2:3]
 histerrbar(a,b,binEvery,p)
-plt.xlabel(lab)
+#plt.xlabel(lab)
 
 
 ###############%% abs w: hist and P val for all days pooled (exc - inh)  ###############
@@ -1386,15 +1296,15 @@ print 'p value vs 0:diff c path (all c) = %.3f' %(pdiff)
 
 
 lab = 'abs w'
-binEvery = .002# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+#binEvery = .002# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
 r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
-binEvery = r/float(10)
+binEvery = r/float(bindiv)
 #plt.figure(figsize=(5,5))    
 #gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
 h1 = gs[2,0:2]
 h2 = gs[2,2:3]
 histerrbar(a,b,binEvery,p)
-plt.xlabel(lab)
+#plt.xlabel(lab)
 
 
 ###############%% w: hist and P val for all days pooled (exc - inh)  ###############
@@ -1412,15 +1322,15 @@ print 'p value vs 0:diff c path (all c) = %.3f' %(pdiff)
 
 
 lab = 'w'
-binEvery = .003 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+#binEvery = .003 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
 r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
-binEvery = r/float(10)
+binEvery = r/float(bindiv)
 #plt.figure(figsize=(5,5))    
 #gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
 h1 = gs[3,0:2]
 h2 = gs[3,2:3]
 histerrbar(a,b,binEvery,p)
-plt.xlabel(lab)
+#plt.xlabel(lab)
 
 
 ###############%% non0 w: hist and P val for all days pooled (exc - inh)  ###############
@@ -1438,21 +1348,27 @@ print 'p value vs 0:diff c path (all c) = %.3f' %(pdiff)
 
 
 lab = 'non-0 w'
-binEvery = .006# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+#binEvery = .006# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
 r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
-binEvery = r/float(10)
+binEvery = r/float(bindiv)
 #plt.figure(figsize=(5,5))    
 #gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
 h1 = gs[4,0:2]
 h2 = gs[4,2:3]
 histerrbar(a,b,binEvery,p)
-plt.xlabel(lab)
+#plt.xlabel(lab)
 
 
+plt.subplots_adjust(hspace=.8)
 
 #plt.savefig('cpath_all_absnon0w.svg', format='svg', dpi=300)
 if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow+'/bestC'+dp, suffn[0:5]+'excMinusInh_allDays'+'.'+fmt[0])
+    d = os.path.join(svmdir+dnow,mousename+dp+'/bestC', dgc, dta)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+ 
+    fign = os.path.join(d, suffn[0:5]+'excMinusInh_allDays'+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight')
 
 
@@ -1499,7 +1415,7 @@ hist = hist/float(np.sum(hist))
 
 plt.figure(figsize=(3,20))    
 plt.subplot(511)
-plt.bar(bin_edges[0:-1], hist, binEvery, color='r', alpha=.5, label='exc-inh')
+plt.bar(bin_edges[0:-1], hist, binEvery, color='g', alpha=.5, label='exc-inh')
 
 hist, bin_edges = np.histogram(b, bins=bn)
 hist = hist/float(np.sum(hist))
@@ -1539,7 +1455,7 @@ hist = hist/float(np.sum(hist))
 #d = stats.mode(np.diff(bin_edges))[0]/float(2)
 #plt.figure()    
 plt.subplot(512)
-plt.bar(bin_edges[0:-1], hist, binEvery, color='r', alpha=.5, label='exc-inh')
+plt.bar(bin_edges[0:-1], hist, binEvery, color='g', alpha=.5, label='exc-inh')
 
 hist, bin_edges = np.histogram(b, bins=bn)
 hist = hist/float(np.sum(hist))
@@ -1579,7 +1495,7 @@ hist = hist/float(np.sum(hist))
 #d = stats.mode(np.diff(bin_edges))[0]/float(2)
 #plt.figure()   
 plt.subplot(513) 
-plt.bar(bin_edges[0:-1], hist, binEvery, color='r', alpha=.5, label='exc-inh')
+plt.bar(bin_edges[0:-1], hist, binEvery, color='g', alpha=.5, label='exc-inh')
 
 hist, bin_edges = np.histogram(b, bins=bn)
 hist = hist/float(np.sum(hist))
@@ -1620,7 +1536,7 @@ hist = hist/float(np.sum(hist))
 #d = stats.mode(np.diff(bin_edges))[0]/float(2)
 #plt.figure()  
 plt.subplot(514)  
-plt.bar(bin_edges[0:-1], hist, binEvery, color='r', alpha=.5, label='exc-inh')
+plt.bar(bin_edges[0:-1], hist, binEvery, color='g', alpha=.5, label='exc-inh')
 
 hist, bin_edges = np.histogram(b, bins=bn)
 hist = hist/float(np.sum(hist))
@@ -1660,7 +1576,7 @@ hist = hist/float(np.sum(hist))
 #d = stats.mode(np.diff(bin_edges))[0]/float(2)
 #plt.figure()    
 plt.subplot(515)
-plt.bar(bin_edges[0:-1], hist, binEvery, color='r', alpha=.5, label='exc-inh')
+plt.bar(bin_edges[0:-1], hist, binEvery, color='g', alpha=.5, label='exc-inh')
 
 hist, bin_edges = np.histogram(b, bins=bn)
 hist = hist/float(np.sum(hist))
@@ -1677,7 +1593,12 @@ plt.subplots_adjust(hspace=.3)
 
 
 if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow+'/allC'+dp, suffn[0:5]+'excMinusInh_AllDays'+'.'+fmt[0])
+    d = os.path.join(svmdir+dnow,mousename+dp+'/allC', dgc, dta)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+ 
+    fign = os.path.join(d, suffn[0:5]+'excMinusInh_AllDays'+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight')
 
 
@@ -1798,7 +1719,12 @@ for iday in range(len(days)):
 #    plt.savefig('cpath'+days[iday]+'.svg', format='svg', dpi=300)    
       
     if savefigs:#% Save the figure
-        fign = os.path.join(svmdir+dnow+'/allC'+dp, suffn[0:5]+'excInh_'+days[iday][0:6]+'.'+fmt[0])
+        d = os.path.join(svmdir+dnow,mousename+dp+'/allC', dgc, dta)
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+    
+        fign = os.path.join(d, suffn[0:5]+'excInh_'+days[iday][0:6]+'.'+fmt[0])
         plt.savefig(fign, bbox_inches='tight')
 
    
@@ -2060,7 +1986,13 @@ plt.ylabel('abs non0 w')
 
 
 if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow+'/allC'+dp, suffn[0:5]+'excInh_aveAllDays'+'.'+fmt[0])
+    d = os.path.join(svmdir+dnow,mousename+dp+'/allC', 'allDays', dta)
+#    d = os.path.join(svmdir+dnow,mousename+dp+'/allC', dgc, dta)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+
+    fign = os.path.join(d, suffn[0:5]+'excInh_aveAllDays'+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight')
 
 
@@ -2090,7 +2022,7 @@ wall_inh_cerr = np.full((len(days), len(b)), np.nan)
 wall_non0_exc_cerr = np.full((len(days), len(b)), np.nan)
 wall_non0_inh_cerr = np.full((len(days), len(b)), np.nan)
 
-for iday in range(len(days)):
+for iday in days2ana: #range(len(days)):
     
     inds = np.digitize(perClassErAll_aveS[iday,:], bins=b)
     inds = np.digitize(perClassErTestAll_aveS[iday,:], bins=b)
@@ -2149,6 +2081,11 @@ plt.ylabel('non0 w')
 
 
 if savefigs:#% Save the figure
-    fign = os.path.join(svmdir+dnow+'/allC'+dp, suffn[0:5]+'excInh_vsClassErr_aveAllDays'+'.'+fmt[0])
+    d = os.path.join(svmdir+dnow,mousename+dp+'/allC', dgc, dta)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+
+    fign = os.path.join(d, suffn[0:5]+'excInh_vsClassErr_aveAllDays'+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight')
 
