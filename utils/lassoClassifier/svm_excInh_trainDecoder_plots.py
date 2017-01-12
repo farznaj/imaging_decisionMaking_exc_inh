@@ -12,29 +12,22 @@ execfile("svm_plots_setVars.py")
 
 
 #%%
-dnow = '/excInh_trainDecoder/setTo50ErrOfSampsWith0Weights'
 #dnow = '/l1_l2_subsel_comparison'
 thNon0Ws = 2 # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!
 thSamps = 10  # Days that have <thSamps samples that satisfy >=thNon0W non0 weights will be manually set to 50 (class error of all their samples) ... bc we think <5 samples will not give us an accurate measure of class error of a day.
 setToNaN = 1 # if 1, the above two jobs will be done.
-
-
+   
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
 def setSVMname(pnevFileName, trialHistAnalysis, ntName, roundi, itiName='all'):
     import glob
     
     if trialHistAnalysis:
-    #    ep_ms = np.round((ep-eventI)*frameLength)
-    #    th_stim_dur = []
-        if np.isnan(roundi): # set excInh name
-            svmn = 'excInh_SVMtrained_prevChoice_%sN_%sITIs_ep*-*ms_*' %(ntName, itiName) # C2 has test/trial shuffles as well. C doesn't have it.
-#        else:
-#            svmn = 'svmPrevChoice_%sN_%sITIs_ep*ms_r%d_*' %(ntName, itiName, roundi)
+        svmn = 'excInh_SVMtrained_prevChoice_%sN_%sITIs_ep*-*ms_*' %(ntName, itiName) # C2 has test/trial shuffles as well. C doesn't have it.
     else:
-        if np.isnan(roundi): # set excInh name
+        if pnevFileName.find('fni17')!=-1: # fni17: C2 has test/trial shuffles as well. C doesn't have it.
             svmn = 'excInh_SVMtrained_currChoice_%sN_ep%d-%dms_*' %(ntName, ep_ms[0], ep_ms[-1])   
-#        else:
-#            svmn = 'svmCurrChoice_%sN_ep*ms_r%d_*' %(ntName, roundi)   
+        else:
+            svmn = 'excInh_SVMtrained_currChoice_%sN_ep*-*ms_*' %(ntName)                             
     
     svmn = svmn + pnevFileName[-32:]    
     svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
@@ -192,7 +185,7 @@ for iday in range(len(days)):
     fractNon0_exc.append(np.ravel(np.mean(w_data_exc!=0,axis=-1), order='F'))
     fractNon0_allExc.append(np.mean(w_data_allExc!=0,axis=-1))
 
-    # mean of abs of non0 ws for each samples
+    # mean of abs of non0 ws for each sample
     a = w_data_inh+0
     a[w_data_inh==0] = np.nan # set 0 w to nan; so you only take non-0 weights
     absNon0_inh.append(np.nanmean(abs(a),axis=-1))
@@ -345,6 +338,12 @@ absNon0_allExc_sdS = np.nanstd(absNon0_allExc, axis=1)
 #%%
 ########################################## PLOTS ##########################################
 
+if setToNaN==1:
+    dnow = '/excInh_trainDecoder/'+mousename+'/setTo50ErrOfSampsWith0Weights'
+else:
+    dnow = '/excInh_trainDecoder/'+mousename+'/allSamps'
+    
+    
 #%% Fract non0 weights and abs of non0 w
 
 plt.figure(figsize=(6,5.5))
@@ -823,8 +822,3 @@ if savefigs:#% Save the figure
     plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')  
 
 
-
-
-
-
-   

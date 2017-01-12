@@ -633,7 +633,7 @@ print np.array(days)[xall]
 
 #%% Set the two vars below: 1) whether you want to exclude days with bad shape for c plot (identified above). 2) whether you want to pool or average trial shuffles.
 
-onlygoodc = 0 # if 1 only good c days will be plotted (for now u r manually choosing days to be excluded based on their cv class error vs c plot)
+onlygoodc = 1 # if 1 only good c days will be plotted (for now u r manually choosing days to be excluded based on their cv class error vs c plot)
 trShflAve = 0 # if 1, %non0 and w will be computed on trial-shuffle averaged variales... if 0, they will be computed for all trial shuffles (and neuron shuffles) and plots in the next section will be made on the pooled shuffles (instead of tr shfl averages) 
 
 days2ana = np.array(range(len(days))) 
@@ -649,7 +649,7 @@ if trShflAve:
     dta = 'trShfl_averaged'
 else:
     dta = 'trShfl_notAveraged'
-
+print dta
 
 #####
 if onlygoodc:
