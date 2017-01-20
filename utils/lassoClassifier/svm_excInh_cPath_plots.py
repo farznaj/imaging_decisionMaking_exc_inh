@@ -258,7 +258,7 @@ for iday in range(len(days)):
     inhRois = inhRois[NsRand]
         
     n = sum(inhRois==1)                
-    inhRois_ei = np.zeros((2*n));
+    inhRois_ei = np.zeros((2*n)); # first half is exc; 2nd half is inh
     inhRois_ei[n:2*n] = 1;
 
 
@@ -284,7 +284,7 @@ for iday in range(len(days)):
        
        
     ######### Take averages across trialShuffles        
-    wall_exc.append(np.mean(wei_all[:,:,:,inhRois_ei==0], axis=1)) #average w across trialShfls # numDays (each day: numSamples x numTrialShuff x length(cvect_) x numNeurons(inh+exc equal numbers))     
+    wall_exc.append(np.mean(wei_all[:,:,:,inhRois_ei==0], axis=1)) # wall_exc[iday].shape: numSamples x length(cvect_) x numNeurons(inh+exc equal numbers)  #average w across trialShfls # numDays (each day: numSamples x numTrialShuff x length(cvect_) x numNeurons(inh+exc equal numbers))     
     wall_inh.append(np.mean(wei_all[:,:,:,inhRois_ei==1], axis=1))      
     # I dont think this argument makes sense: for abs, I am not sure if you need to do the following... If you don't do it, the idea is that w of each neuron is represented by the average of its w across all trial shuffles... so we dont need to do abs!          
     wall_exc_abs.append(np.mean(abs(wei_all[:,:,:,inhRois_ei==0]), axis=1)) #average abs w across trialShfls # numDays (each day: numSamples x numTrialShuff x length(cvect_) x numNeurons(inh+exc equal numbers))     
@@ -634,7 +634,7 @@ print np.array(days)[xall]
 #%% Set the two vars below: 1) whether you want to exclude days with bad shape for c plot (identified above). 2) whether you want to pool or average trial shuffles.
 
 onlygoodc = 1 # if 1 only good c days will be plotted (for now u r manually choosing days to be excluded based on their cv class error vs c plot)
-trShflAve = 0 # if 1, %non0 and w will be computed on trial-shuffle averaged variales... if 0, they will be computed for all trial shuffles (and neuron shuffles) and plots in the next section will be made on the pooled shuffles (instead of tr shfl averages) 
+trShflAve = 1 # if 1, %non0 and w will be computed on trial-shuffle averaged variales... if 0, they will be computed for all trial shuffles (and neuron shuffles) and plots in the next section will be made on the pooled shuffles (instead of tr shfl averages) 
 
 days2ana = np.array(range(len(days))) 
 

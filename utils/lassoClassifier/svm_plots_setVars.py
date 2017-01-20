@@ -7,7 +7,7 @@ Created on Tue Dec 13 15:07:58 2016
 
 
 #%% 
-mousename = 'fni16' #'fni17'
+mousename = 'fni17' #'fni17'
 
 trialHistAnalysis = 1;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
@@ -114,7 +114,7 @@ if not os.path.exists(svmdir):
 
 daysOrig = days
 numDays = len(days);
-print 'Analyzing', len(days), 'days'
+print 'Analyzing mouse',mousename,'-', len(days), 'days'
     
 
 

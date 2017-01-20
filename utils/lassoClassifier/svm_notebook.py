@@ -51,12 +51,12 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     imagingFolder = '151001'
     mdfFileNumber = [1] 
 
-    trialHistAnalysis = 1;    
+    trialHistAnalysis = 0;    
     roundi = 1; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
 
     iTiFlg = 1; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
     setNsExcluded = 1; # if 1, NsExcluded will be set even if it is already saved.
-    numSamples = 100 #100; # number of iterations for finding the best c (inverse of regularization parameter)
+    numSamples = 10 #100; # number of iterations for finding the best c (inverse of regularization parameter)
     neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
     saveResults = 0; # save results in mat file.
 
