@@ -540,6 +540,9 @@ else:
 
 
 
+
+#%%
+###########################################################################################################################################
 ###########################################################################################################################################
 # ## Set X (trials x neurons) and Y (trials x 1) for training the SVM classifier.
 #     X matrix (size trials x neurons); steps include:
@@ -550,6 +553,7 @@ else:
 #        - center and normalize X (by meanX and stdX)
 
 #     Y choice of high rate (modeled as 1) and low rate (modeled as 0)
+
 
 # In[13]:
 
@@ -575,14 +579,16 @@ else: # set choice for the current trial
 # Set spikeAveEp0  (X: the predictor matrix (trials x neurons) that shows average of spikes for a particular epoch for each trial and neuron.)
 
 if trialHistAnalysis:
+    spikeAveEp0 = traces_al_stimAll
     # either of the two cases below should be fine (init-aligned traces or stim-aligned traces.)
-    spikeAveEp0 = np.transpose(np.nanmean(traces_al_stimAll[ep,:,:], axis=0)) # trials x neurons    
+#    spikeAveEp0 = np.transpose(np.nanmean(traces_al_stimAll[ep,:,:], axis=0)) # trials x neurons    
     # spikeAveEp0 = np.transpose(np.nanmean(traces_al_init[ep,:,:], axis=0)) # trials x neurons    
-else:    
-    spikeAveEp0 = np.transpose(np.nanmean(traces_al_stim[ep,:,:], axis=0)) # trials x neurons    
+else:
+    spikeAveEp0 = traces_al_stim    
+#    spikeAveEp0 = np.transpose(np.nanmean(traces_al_stim[ep,:,:], axis=0)) # trials x neurons    
 
 # X = spikeAveEp0;
-print 'Size of spikeAveEp0 (trs x neurons): ', spikeAveEp0.shape
+#print 'Size of spikeAveEp0 (trs x neurons): ', spikeAveEp0.shape
 
 
 # In[14]:
@@ -603,13 +609,17 @@ time_aligned_1stSide = np.squeeze(Data.pop('time_aligned_stim_1stSideTry')).asty
 '''
 
 # Identify nan trials
-trsExcluded = (np.sum(np.isnan(spikeAveEp0), axis = 1) + np.isnan(choiceVec0)) != 0 # NaN trials # trsExcluded
+#trsExcluded = (np.sum(np.isnan(spikeAveEp0), axis = 1) + np.isnan(choiceVec0)) != 0 # NaN trials # trsExcluded
+trsExcluded = (np.isnan(np.sum(spikeAveEp0, axis=(0,1))) + np.isnan(choiceVec0)) != 0
 # print sum(trsExcluded), 'NaN trials'
 
 # Exclude nan trials
-X = spikeAveEp0[~trsExcluded,:]; # trials x neurons
+X = spikeAveEp0[:,:,~trsExcluded] #spikeAveEp0[~trsExcluded,:]; # trials x neurons
 Y = choiceVec0[~trsExcluded];
 print '%d high-rate choices, and %d low-rate choices\n' %(np.sum(Y==1), np.sum(Y==0))
+
+Ysr = stimrate[~trsExcluded]
+#Ysr = (Ysr-cb) / np.ptp(stimrate) # not sure if we need this, also stimrate in some days did not span the entire range (4-28hz)
 
 
 # In[15]:
@@ -617,6 +627,7 @@ print '%d high-rate choices, and %d low-rate choices\n' %(np.sum(Y==1), np.sum(Y
 # Set NsExcluded : Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
 # thAct and thTrsWithSpike are parameters that you can play with.
 
+'''
 # If it is already saved, load it (the idea is to use the same NsExcluded for all the analyses of a session). Otherwise set it.
 if trialHistAnalysis==0:
     svmnowname = 'svmCurrChoice_allN' + '_*-' + pnevFileName[-32:]
@@ -639,45 +650,56 @@ if setNsExcluded==0 and np.shape(svmName)[0]!=0: # NsExcluded is already set and
 else:
     
     print 'NsExcluded not saved, so setting it here'
+'''    
+if trialHistAnalysis and iTiFlg!=2:
+    # set X for short-ITI and long-ITI cases (XS,XL).
+#        trsExcludedS = (np.sum(np.isnan(spikeAveEp0), axis = 1) + np.isnan(choiceVec0S)) != 0
+    trsExcludedS = (np.isnan(np.sum(spikeAveEp0, axis=(0,1))) + np.isnan(choiceVec0S)) != 0
+    XS = spikeAveEp0[:,:,~trsExcludedS]; # trials x neurons
+#        trsExcludedL = (np.sum(np.isnan(spikeAveEp0), axis = 1) + np.isnan(choiceVec0L)) != 0 
+    trsExcludedL = (np.isnan(np.sum(spikeAveEp0, axis=(0,1))) + np.isnan(choiceVec0L)) != 0
+    XL = spikeAveEp0[:,:,~trsExcludedL]; # trials x neurons
+
+    T, N, C = XS.shape
+    XS_N = np.reshape(XS.transpose(0 ,2 ,1), (T*C, N), order = 'F') # (frames x trials) x units
     
-    if trialHistAnalysis and iTiFlg!=2:
-        # set X for short-ITI and long-ITI cases (XS,XL).
-        trsExcludedS = (np.sum(np.isnan(spikeAveEp0), axis = 1) + np.isnan(choiceVec0S)) != 0 
-        XS = spikeAveEp0[~trsExcludedS,:]; # trials x neurons
-        trsExcludedL = (np.sum(np.isnan(spikeAveEp0), axis = 1) + np.isnan(choiceVec0L)) != 0 
-        XL = spikeAveEp0[~trsExcludedL,:]; # trials x neurons
-
-        # Define NsExcluded as neurons with low stdX for either short ITI or long ITI trials. 
-        # This is to make sure short and long ITI cases will include the same set of neurons.
-        stdXS = np.std(XS, axis = 0);
-        stdXL = np.std(XL, axis = 0);
-
-        NsExcluded = np.sum([stdXS < thAct, stdXL < thAct], axis=0)!=0 # if a neurons is non active for either short ITI or long ITI trials, exclude it.
+    T, N, C = XL.shape
+    XL_N = np.reshape(XL.transpose(0 ,2 ,1), (T*C, N), order = 'F') # (frames x trials) x units
     
-    else:
+    # Define NsExcluded as neurons with low stdX for either short ITI or long ITI trials. 
+    # This is to make sure short and long ITI cases will include the same set of neurons.
+    stdXS = np.std(XS, axis = 0);
+    stdXL = np.std(XL, axis = 0);
+
+    NsExcluded = np.sum([stdXS < thAct, stdXL < thAct], axis=0)!=0 # if a neurons is non active for either short ITI or long ITI trials, exclude it.
+
+else:
     
-        # Define NsExcluded as neurons with low stdX
-        stdX = np.std(X, axis = 0);
-        NsExcluded = stdX < thAct
-        # np.sum(stdX < thAct)
+    T, N, C = X.shape
+    X_N = np.reshape(X.transpose(0 ,2 ,1), (T*C, N), order = 'F') # (frames x trials) x units
+    
+    # Define NsExcluded as neurons with low stdX
+    stdX = np.std(X_N, axis = 0);
+    NsExcluded = stdX < thAct
+    # np.sum(stdX < thAct)
 
-        '''
-        # Set nonActiveNs, ie neurons whose average activity during ep is less than thAct.
-    #     spikeAveEpAveTrs = np.nanmean(spikeAveEp0, axis=0); # 1 x units % response of each neuron averaged across epoch ep and trials.
-        spikeAveEpAveTrs = np.nanmean(X, axis=0); # 1 x units % response of each neuron averaged across epoch ep and trials.
-        # thAct = 5e-4; # 1e-5 #quantile(spikeAveEpAveTrs, .1);
-        nonActiveNs = spikeAveEpAveTrs < thAct;
-        print '\t%d neurons with ave activity in ep < %.5f' %(np.sum(nonActiveNs), thAct)
-        np.sum(nonActiveNs)
+    '''
+    # Set nonActiveNs, ie neurons whose average activity during ep is less than thAct.
+#     spikeAveEpAveTrs = np.nanmean(spikeAveEp0, axis=0); # 1 x units % response of each neuron averaged across epoch ep and trials.
+    spikeAveEpAveTrs = np.nanmean(X, axis=0); # 1 x units % response of each neuron averaged across epoch ep and trials.
+    # thAct = 5e-4; # 1e-5 #quantile(spikeAveEpAveTrs, .1);
+    nonActiveNs = spikeAveEpAveTrs < thAct;
+    print '\t%d neurons with ave activity in ep < %.5f' %(np.sum(nonActiveNs), thAct)
+    np.sum(nonActiveNs)
 
-        # Set NsFewTrActiv, ie neurons that are active in very few trials (by active I mean average activity during epoch ep)
-        # thTrsWithSpike = 1; # 3; # ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
-        nTrsWithSpike = np.sum(X > thAct, axis=0) # 0 # shows for each neuron, in how many trials the activity was above 0.
-        NsFewTrActiv = (nTrsWithSpike < thTrsWithSpike) # identify neurons that were active fewer than thTrsWithSpike.
-        print '\t%d neurons are active in < %i trials' %(np.sum(NsFewTrActiv), thTrsWithSpike)
+    # Set NsFewTrActiv, ie neurons that are active in very few trials (by active I mean average activity during epoch ep)
+    # thTrsWithSpike = 1; # 3; # ceil(thMinFractTrs * size(spikeAveEp0,1)); % 30  % remove neurons with activity in <thSpTr trials.
+    nTrsWithSpike = np.sum(X > thAct, axis=0) # 0 # shows for each neuron, in how many trials the activity was above 0.
+    NsFewTrActiv = (nTrsWithSpike < thTrsWithSpike) # identify neurons that were active fewer than thTrsWithSpike.
+    print '\t%d neurons are active in < %i trials' %(np.sum(NsFewTrActiv), thTrsWithSpike)
 
-        # Now set the final NxExcluded: (neurons to exclude)
-        NsExcluded = (NsFewTrActiv + nonActiveNs)!=0
+    # Now set the final NxExcluded: (neurons to exclude)
+    NsExcluded = (NsFewTrActiv + nonActiveNs)!=0
         '''
 
 print '%d = Final # non-active neurons' %(sum(NsExcluded))
@@ -697,7 +719,7 @@ if neuronType==2:
 
 # Exclude non-active neurons from X and set inhRois (ie neurons that don't fire in any of the trials during ep)
 
-X = X[:,~NsExcluded]
+X = X[:,~NsExcluded,:]
 print np.shape(X)
     
 # Set inhRois which is same as inhibitRois but with non-active neurons excluded. (it has same size as X)
@@ -712,7 +734,7 @@ if neuronType==2:
 
 ##  If number of neurons is more than 95% of trial numbers, identify n random neurons, where n= 0.95 * number of trials. This is to make sure we have more observations (trials) than features (neurons)
 
-nTrs = np.shape(X)[0]
+nTrs = np.shape(X)[2]
 nNeuronsOrig = np.shape(X)[1]
 nNeuronsNow = np.int(np.floor(nTrs * .95))
 
@@ -777,28 +799,30 @@ elif nNeuronsNow >= nNeuronsOrig: # if number of neurons is already <= .95*numTr
 
 # Set X and inhRois only for the randomly selected set of neurons
 
-X = X[:,NsRand]
+X = X[:,NsRand,:]
 if neuronType==2:
     inhRois = inhRois[NsRand]
 
+# below needs checking
+'''
 if windowAvgFlg==0:
     a = np.transpose(traces_al_stim[ep,:,:][:,~NsExcluded,:][:,:,~trsExcluded], (0,2,1))  # ep_frames x trials x units
     a = a[:,:,neuronsNow]
     X = np.reshape(a, (ep.shape[0]*(~trsExcluded).sum(), (~NsExcluded).sum())) # (ep_frames x trials) x units
 
     Y = np.tile(np.reshape(choiceVec0[~trsExcluded], (1,-1)), (ep.shape[0], 1)).flatten()    
-
+'''
     
 # Handle imbalance in the number of trials:
 # unlike matlab, it doesn't seem to be a problem here... so we don't make trial numbers of HR and LR the same.
     
     
 # Print some numbers
-numDataPoints = X.shape[0] 
+numDataPoints = X.shape[2] 
 print '# data points = %d' %numDataPoints
 # numTrials = (~trsExcluded).sum()
 # numNeurons = (~NsExcluded).sum()
-numTrials, numNeurons = X.shape
+numTrials, numNeurons = X.shape[2], X.shape[1]
 print '%d trials; %d neurons' %(numTrials, numNeurons)
 # print ' The data has %d frames recorded from %d neurons at %d trials' %Xt.shape    
 
@@ -807,10 +831,14 @@ print '%d trials; %d neurons' %(numTrials, numNeurons)
 
 # Center and normalize X: feature normalization and scaling: to remove effects related to scaling and bias of each neuron, we need to zscore data (i.e., make data mean 0 and variance 1 for each neuron) 
 
-meanX = np.mean(X, axis = 0);
-stdX = np.std(X, axis = 0);
+T, N, C = X.shape
+X_N = np.reshape(X.transpose(0 ,2 ,1), (T*C, N), order = 'F') # (frames x trials) x units
+    
+meanX = np.mean(X_N, axis = 0);
+stdX = np.std(X_N, axis = 0);
 # normalize X
-X = (X-meanX)/stdX;
+X_N = (X_N-meanX)/stdX;
+X = np.reshape(X_N, (T, C, N), order = 'F').transpose(0 ,2 ,1)
 
 
 # In[23]:
@@ -833,6 +861,7 @@ if doPlots:
 
 
 
+#%%
 ########################################################################################################################################
 # ## Set the traces that will be used for projections and plotting 
 #     Traces are of size (frames x neurons x trials)
@@ -1190,27 +1219,186 @@ if doPlots:
     plt.tight_layout()
 
 
-# ## Train SVM model using the best regularization parameter
-#     All data in X are used for training.
-#     linear_svm is the trained SVM model that includes weights (w) and intercept (b).
 
-# In[38]:
 
-if regType == 'l1':
-    linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
-elif regType == 'l2':
-    linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
+#%% save a copy of X and Y (DO NOT run this after you run the parts below that redefine X and Y!)
 
-linear_svm.fit(X, Y)
+X0 = X+0
+Y0 = Y+0
+
+
+#%% start subselecting trials (for BAGGING)
+# choose n random trials (n = 80% of min of HR, LR)
+nrtr = int(np.ceil(.8 * min((Y0==0).sum(), (Y0==1).sum())))
+print 'selecting %d random trials' %(nrtr)
+
+
+#%% Train SVM on each frame using BAGGING (subselection of trials)
+
+nRandTrSamp = 10 #1000
+nShflSamp = 1
+# data
+w = np.full((np.shape(X)[0], X.shape[1], nRandTrSamp, nShflSamp), np.nan) # frames x neurons x nrandtr x nshfl
+b =  np.full((1, X.shape[0], nRandTrSamp, nShflSamp), np.nan).squeeze() # frames x nrandtr x nshfl
+trainE =  np.full((1, X.shape[0], nRandTrSamp, nShflSamp), np.nan).squeeze() # frames x nrandtr x nshfl
+# shuffle
+wsh = np.full((np.shape(X)[0], X.shape[1], nRandTrSamp, nShflSamp), np.nan) # frames x neurons x nrandtr x nshfl
+bsh =  np.full((1, X.shape[0], nRandTrSamp, nShflSamp), np.nan).squeeze() # frames x nrandtr x nshfl
+trainEsh =  np.full((1, X.shape[0], nRandTrSamp, nShflSamp), np.nan).squeeze() # frames x nrandtr x nshfl
+
     
-w = np.squeeze(linear_svm.coef_);
-b = linear_svm.intercept_;
+    for ir in range(nRandTrSamp):
+        print 'BAGGING iteration %d' %(ir)
+        randTrs = rng.permutation(len(Y0))[0:nrtr].flatten() # random trials
+        
+        X = X0[:,:,randTrs]
+        Y = Y0[randTrs]
+            
+        #%%
+        ########################################################################################################################################
+        ########################################################################################################################################
+        ########################################################################################################################################
+        # ## Train SVM model using the best regularization parameter
+        #     All data in X are used for training.
+        #     linear_svm is the trained SVM model that includes weights (w) and intercept (b).
+        
+        # In[38]:
+        '''
+        if regType == 'l1':
+            linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
+        elif regType == 'l2':
+            linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
+        '''
+        
+        linear_svm = svm.LinearSVC() # default c, also l2
+        
+        # train SVM on each frame
+        for ifr in range(np.shape(X)[0]):
+            
+            # data
+            linear_svm.fit(X[ifr,:,:].transpose(), Y)
+                
+            w[ifr,:, ir, ish] = np.squeeze(linear_svm.coef_);
+            b[ifr, ir, ish] = linear_svm.intercept_;        
+            trainE[ifr, ir, ish] = abs(linear_svm.predict(X[ifr,:,:].transpose())-Y.astype('float')).sum()/len(Y)*100;
+    
+        # keep a copy of linear_svm
+        '''
+        import copy
+        linear_svm_0 = copy.deepcopy(linear_svm) 
+        '''
 
-trainE = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100;
 
-# keep a copy of linear_svm
-import copy
-linear_svm_0 = copy.deepcopy(linear_svm) 
+#%% shuffle
+# shuffle so we have a null distribution of angles between weights at different times.
+# eg there will be nShflSamp decoders for each frame
+# so there will be nShflSamp angles between the decoder of frame f1 and the decoder of frame f2, 
+# this will give us a null distribution (of size  for the angle between decoders of frame f1 and f2.
+# we will later compare the angle between the decoders of these 2 frames in the actual data with this null distribution.
+for ish in range(nShflSamp):
+
+    # for each trial-label shuffle we find decoders at different time points (frames) (also we do subselection of trials so we can do Bagging later)    
+    permIxs = rng.permutation(len(randTrs));     #index of trials for shuffling Y.
+    
+    for ir in range(nRandTrSamp):
+        print 'BAGGING iteration %d' %(ir)
+        randTrs = rng.permutation(len(Y0))[0:nrtr].flatten() # random trials
+        
+        X = X0[:,:,randTrs]
+        Y = Y0[randTrs]
+        
+                
+        # In[38]:
+        '''
+        if regType == 'l1':
+            linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
+        elif regType == 'l2':
+            linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
+        '''
+        
+        linear_svm = svm.LinearSVC() # default c, also l2
+        
+        # train SVM on each frame
+        for ifr in range(np.shape(X)[0]):
+                
+            linear_svm.fit(X[ifr,:,:].transpose(), Y[permIxs])
+                
+            wsh[ifr,:, ir, ish] = np.squeeze(linear_svm.coef_);
+            bsh[ifr, ir, ish] = linear_svm.intercept_;        
+            trainEsh[ifr, ir, ish] = abs(linear_svm.predict(X[ifr,:,:].transpose())-Y[permIxs].astype('float')).sum()/len(Y[permIxs])*100;
+                
+                 
+                
+#%% normalize weights (ie the w vector at each frame must have length 1)
+
+eps = 2.2204e-16
+# data
+normw = np.linalg.norm(w, axis=1) # frames x nrandtr x nshfl; 2-norm of weights 
+w_normed = np.transpose(np.transpose(w,(1,0,2,3))/normw, (1,0,2,3)) # frames x neurons x nrandtr x nshfl; normalize weights so weights (of each frame) have length 1
+if sum(normw<=eps).sum()!=0:
+    print 'take care of this; you need to reshape w_normed first'
+#    w_normed[normw<=eps, :] = 0 # set the direction to zero if the magnitude of the vector is zero
+
+# shuffle
+normwsh = np.linalg.norm(wsh, axis=1) # frames x nrandtr x nshfl; 2-norm of weights 
+wsh_normed = np.transpose(np.transpose(wsh,(1,0,2,3))/normwsh, (1,0,2,3)) # frames x neurons x nrandtr x nshfl; normalize weights so weights (of each frame) have length 1
+if sum(normwsh<=eps).sum()!=0:
+    print 'take care of this'
+    wsh_normed[normwsh<=eps, :] = 0 # set the direction to zero if the magnitude of the vector is zero
+
+
+#%% average ws across all trial subselects and label shuffles, then again normalize them so they have length 1 (Bagging)
+
+# data
+w_nb = np.mean(w_normed, axis=(2,3)) # frames x neurons 
+nw = np.linalg.norm(w_nb, axis=1) # frames; 2-norm of weights 
+w_n2b = np.transpose(np.transpose(w_nb,(1,0))/nw, (1,0)) # frames x neurons
+
+# shuffle
+wsh_nb = np.mean(wsh_normed, axis=(2)) # frames x neurons x nshfl
+nwsh = np.linalg.norm(wsh_nb, axis=1) # frames x nshfl; 2-norm of weights 
+wsh_n2b = np.transpose(np.transpose(wsh_nb,(1,0,2))/nwsh, (1,0,2)) # frames x neurons x nshfl
+
+
+#%% compute angle between ws at different times (remember angles close to 0 indicate more aligned decoders at 2 different time points.)
+
+# we restrict angles to [0 90], so we don't care about direction of vectors, ie tunning reversal.
+angle_choice = np.arccos(abs(np.dot(w_n2b, w_n2b.transpose())))*180/np.pi # frames x frames; angle between ws at different times
+angle_choice_sh = np.arccos(abs(np.dot(wsh_n2b, wsh_n2b.transpose())))*180/np.pi # frames x frames; angle between ws at different times
+angle_choice_sh = np.arccos(abs(np.dot(wsh_n2b, wsh_n2b.transpose())))*180/np.pi
+
+# plot angle between decoders at different time points
+'''
+# data
+plt.figure()
+plt.imshow(angle_choice, cmap='jet_r')
+plt.colorbar()
+
+# shuffle
+plt.figure()
+plt.imshow(angle_choice_sh, cmap='jet_r')
+plt.colorbar()
+'''
+
+
+#%% Same thing as above but now decoding the stimulus
+
+linear_svm = svm.LinearSVC() # default c, also l2
+
+# train SVM on each frame
+w_sr = np.full((np.shape(X)[0], X.shape[1]), np.nan) # frames x neurons
+b_sr =  np.full((1, X.shape[0]), np.nan).squeeze() # frames
+trainE_sr =  np.full((1, X.shape[0]), np.nan).squeeze() # frames
+
+for ifr in range(np.shape(X)[0]):
+    
+    linear_svm.fit(X0[ifr,:,:].transpose(), Ysr)
+        
+    w_sr[ifr,:] = np.squeeze(linear_svm.coef_);
+    b_sr[ifr] = linear_svm.intercept_;
+    
+    trainE_sr[ifr] = abs(linear_svm.predict(X0[ifr,:,:].transpose())-Ysr.astype('float')).sum()/len(Ysr)*100;
+
 
 
 # In[39]:
