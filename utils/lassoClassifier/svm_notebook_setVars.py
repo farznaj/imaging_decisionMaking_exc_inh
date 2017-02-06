@@ -59,3 +59,4 @@ def svm_notebook_setVars(mousename, imagingFolder, mdfFileNumber, trialHistAnaly
 #    execfile("svm_excInh_cPath.py")
 #    execfile("svm_excInh_trainDecoder.py")
 #    execfile("svm_diffNumNeurons.py")    
+#    execfile("svm_stability.py")
