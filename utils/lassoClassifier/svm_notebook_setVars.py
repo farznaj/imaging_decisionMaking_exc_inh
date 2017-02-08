@@ -39,7 +39,8 @@ def svm_notebook_setVars(mousename, imagingFolder, mdfFileNumber, trialHistAnaly
         epEnd_rel2stimon_fr = 0 # 3; # -2 # epEnd = eventI + epEnd_rel2stimon_fr
     else:
         # not needed to set ep_ms here, later you define it as [choiceTime-300 choiceTime]ms # we also go 30ms back to make sure we are not right on the choice time!
-        ep_ms = [809, 1109] #[425, 725] # [1000, 1300]; #[700, 900]; # [500, 700]; # training epoch relative to stimOnset % we want to decode animal's upcoming choice by traninig SVM for neural average responses during ep ms after stimulus onset.
+        if mousename=='fni17':
+            ep_ms = [809, 1109] #[425, 725] # [1000, 1300]; #[700, 900]; # [500, 700]; # training epoch relative to stimOnset % we want to decode animal's upcoming choice by traninig SVM for neural average responses during ep ms after stimulus onset.
         # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.
         outcome2ana = 'corr' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials)
         strength2ana = 'all' # 'all', easy', 'medium', 'hard' % What stim strength to use for training?
@@ -55,8 +56,8 @@ def svm_notebook_setVars(mousename, imagingFolder, mdfFileNumber, trialHistAnaly
     pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
 
     #%% Run mainSVM_notebook
-    execfile("svm_notebook.py")
+#    execfile("svm_notebook.py")
 #    execfile("svm_excInh_cPath.py")
 #    execfile("svm_excInh_trainDecoder.py")
 #    execfile("svm_diffNumNeurons.py")    
-#    execfile("svm_stability.py")
+    execfile("svm_stability.py")

@@ -13,6 +13,18 @@
 #         if previous-choice, specify ITI flag
 #     - Trials that will be used for projections and class accuracy traces (corr, incorr, all, trained).
 
+
+#%%
+import numpy as np
+frameLength = 1000/30.9; # sec.
+
+regressBins = int(np.round(100/frameLength)) # 100ms # set to nan if you don't want to downsample.
+#regressBins = 2 # number of frames to average for downsampling X
+
+doData = 1 # whether to run the analysis on data (ie not shuffling trial labels)
+doShuffles = 0 # whether to run the analysis on trial-label shuffles to get null distributions
+
+
 # In[1]:
 
 # Add the option to toggle on/off the raw code. Copied from http://stackoverflow.com/questions/27934885/how-to-hide-code-from-cells-in-ipython-notebook-visualized-with-nbviewer
@@ -56,7 +68,7 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
 
     iTiFlg = 1; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
     setNsExcluded = 1; # if 1, NsExcluded will be set even if it is already saved.
-    numSamples = 10 #100; # number of iterations for finding the best c (inverse of regularization parameter)
+    numSamples = 2 #100; # number of iterations for finding the best c (inverse of regularization parameter)
     neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
     saveResults = 0; # save results in mat file.
 
@@ -318,7 +330,7 @@ print(moreName)
 # control for what happens there. But for trial-history analysis you average responses before stimOnset, so you 
 # don't care about when go tone happened or how long the stimulus was. 
 
-frameLength = 1000/30.9; # sec.
+#frameLength = 1000/30.9; # sec.
     
 # Load time of some trial events    
 Data = scio.loadmat(postName, variable_names=['timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'time1stSideTry'])
@@ -620,13 +632,71 @@ X = spikeAveEp0[:,:,~trsExcluded] #spikeAveEp0[~trsExcluded,:]; # trials x neuro
 Y = choiceVec0[~trsExcluded];
 print '%d high-rate choices, and %d low-rate choices\n' %(np.sum(Y==1), np.sum(Y==0))
 
-Ysr = stimrate[~trsExcluded]
+
+#trsExcludedSr = (np.isnan(np.sum(spikeAveEp0, axis=(0,1)))) != 0 # for the stimulus decoder we dont care if trial was correct or incorrect
+Ysr = stimrate[~trsExcluded] # we dont need to exclude trials that animal did not make a choice for the stimulus decoder analysis... unless you want to use the same set of trials for the choice and stimulus decoder...
+Ysr = (Ysr - Ysr.mean()) / np.ptp(stimrate) # when you did not do this, angle_stim_sh (ie stimulus shuffled) gave you weird results... during baseline (~15 frames at the beginning and almost ~15 frames at the end) you got alignment between population responses in the shuffled data!
+#Ysr = (Ysr - Ysr.mean()) / Ysr.std()
 #Ysr = (Ysr-cb) / np.ptp(stimrate) # not sure if we need this, also stimrate in some days did not span the entire range (4-28hz)
 
 
-# In[15]:
+#%% Set choice-aligned traces
 
-# Set NsExcluded : Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
+# Load 1stSideTry-aligned traces, frames, frame of event of interest
+# use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
+Data = scio.loadmat(postName, variable_names=['firstSideTryAl'],squeeze_me=True,struct_as_record=False)
+traces_al_1stSide = Data['firstSideTryAl'].traces.astype('float')
+time_aligned_1stSide = Data['firstSideTryAl'].time.astype('float')
+# print(np.shape(traces_al_1stSide))
+
+# determine trsExcluded for traces_al_1stSide
+# remember traces_al_1stSide can have some nan trials that are change-of-mind trials... and they wont be nan in choiceVec0
+trsExcluded_choice = (np.isnan(np.sum(traces_al_1stSide, axis=(0,1))) + np.isnan(choiceVec0)) != 0
+
+X_choice = traces_al_1stSide[:,:,~trsExcluded_choice]  
+Y_choice = choiceVec0[~trsExcluded_choice];
+
+
+#%% Downsample X: average across multiple times (downsampling, not a moving average. we only average every regressBins points.)
+
+#regressBins = 2 # number of frames to average for downsampling X
+#regressBins = int(np.round(100/frameLength)) # 100ms
+
+if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
+    print 'Downsampling traces ....'
+    # X
+    T1, N1, C1 = X.shape
+    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X
+    X = X[0:regressBins*tt,:,:]
+    #X_d.shape
+    
+    X = np.mean(np.reshape(X, (regressBins, tt, N1, C1), order = 'F'), axis=0)
+    print 'downsampled stim-aligned trace: ', X.shape
+        
+    time_aligned_stim = time_aligned_stim[0:regressBins*tt]
+    #time_aligned_stim.shape
+    time_aligned_stim = np.round(np.mean(np.reshape(time_aligned_stim, (regressBins, tt), order = 'F'), axis=0), 2)
+    #time_aligned_stim_d.shape
+    
+    
+    # X_choice
+    T1, N1, C1 = X_choice.shape
+    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X
+    X_choice = X_choice[0:regressBins*tt,:,:]
+    #X_choice_d.shape
+    
+    X_choice = np.mean(np.reshape(X_choice, (regressBins, tt, N1, C1), order = 'F'), axis=0)
+    print 'downsampled choice-aligned trace: ', X_choice.shape
+        
+    time_aligned_1stSide = time_aligned_1stSide[0:regressBins*tt]
+    #time_aligned_1stSide_d.shape
+    time_aligned_1stSide = np.round(np.mean(np.reshape(time_aligned_1stSide, (regressBins, tt), order = 'F'), axis=0), 2)
+    #time_aligned_1stSide_d.shape
+else:
+    print 'Now downsampling traces ....'
+
+
+#%% Set NsExcluded : Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
 # thAct and thTrsWithSpike are parameters that you can play with.
 
 '''
@@ -684,6 +754,17 @@ else:
     stdX = np.std(X_N, axis = 0);
     NsExcluded = stdX < thAct
     # np.sum(stdX < thAct)
+    
+    
+    # X_choice
+    T1, N1, C1 = X_choice.shape
+    X_choice_N = np.reshape(X_choice.transpose(0 ,2 ,1), (T1*C1, N1), order = 'F') # (frames x trials) x units
+    
+    # Define NsExcluded as neurons with low stdX
+    stdX_choice = np.std(X_choice_N, axis = 0);
+    NsExcluded_choice = stdX_choice < thAct
+    # np.sum(stdX < thAct)
+    
 
     '''
     # Set nonActiveNs, ie neurons whose average activity during ep is less than thAct.
@@ -717,12 +798,10 @@ if neuronType==2:
 
 
 
-# In[16]:
-
-# Exclude non-active neurons from X and set inhRois (ie neurons that don't fire in any of the trials during ep)
+#%% Exclude non-active neurons from X and set inhRois (ie neurons that don't fire in any of the trials during ep)
 
 X = X[:,~NsExcluded,:]
-print np.shape(X)
+print 'stim-aligned traces: ', np.shape(X)
     
 # Set inhRois which is same as inhibitRois but with non-active neurons excluded. (it has same size as X)
 if neuronType==2:
@@ -731,9 +810,11 @@ if neuronType==2:
     # print 'Fraction: inhibit = %.2f, excit = %.2f, unsure = %.2f' %(fractInh, fractExc, fractUn)
     
 
+X_choice = X_choice[:,~NsExcluded_choice,:]
+print 'choice-aligned traces: ', np.shape(X_choice)
 
-# In[499]:
 
+#%% Not doing the following anymore:
 ##  If number of neurons is more than 95% of trial numbers, identify n random neurons, where n= 0.95 * number of trials. This is to make sure we have more observations (trials) than features (neurons)
 
 nTrs = np.shape(X)[2]
@@ -839,6 +920,18 @@ X_N = (X_N-meanX)/stdX;
 X = np.reshape(X_N, (T, C, N), order = 'F').transpose(0 ,2 ,1)
 
 
+# X_choice
+T1, N1, C1 = X_choice.shape
+X_choice_N = np.reshape(X_choice.transpose(0 ,2 ,1), (T1*C1, N1), order = 'F') # (frames x trials) x units
+    
+meanX_choice = np.mean(X_choice_N, axis = 0);
+stdX_choice = np.std(X_choice_N, axis = 0);
+# normalize X
+X_choice_N = (X_choice_N - meanX_choice) / stdX_choice;
+X_choice = np.reshape(X_choice_N, (T1, C1, N1), order = 'F').transpose(0 ,2 ,1)
+
+
+
 # In[23]:
 
 if doPlots:
@@ -859,6 +952,88 @@ if doPlots:
 
 
 
+# classes: choices
+# Plot stim-aligned averages after centering and normalization
+if doPlots:
+    # Divide data into high-rate (modeled as 1) and low-rate (modeled as 0) trials
+    hr_trs = (Y==1)
+    lr_trs = (Y==0)
+
+    plt.figure()
+    plt.subplot(1,2,1)
+    a1 = np.nanmean(X[:, :, hr_trs],  axis=1) # frames x trials (average across neurons)
+    tr1 = np.nanmean(a1,  axis = 1)
+    tr1_se = np.nanstd(a1,  axis = 1) / np.sqrt(numTrials);
+    a0 = np.nanmean(X[:, :, lr_trs],  axis=1) # frames x trials (average across neurons)
+    tr0 = np.nanmean(a0,  axis = 1)
+    tr0_se = np.nanstd(a0,  axis = 1) / np.sqrt(numTrials);
+    mn = np.concatenate([tr1,tr0]).min()
+    mx = np.concatenate([tr1,tr0]).max()
+#    plt.plot([win[0], win[0]], [mn, mx], 'g-.') # mark the begining and end of training window
+#    plt.plot([win[-1], win[-1]], [mn, mx], 'g-.')
+    plt.fill_between(time_aligned_stim, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
+    plt.fill_between(time_aligned_stim, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
+    plt.plot(time_aligned_stim, tr1, 'b', label = 'high rate')
+    plt.plot(time_aligned_stim, tr0, 'r', label = 'low rate')
+    # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, lr_trs],  axis = (1, 2)), 'r', label = 'high rate')
+    # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, hr_trs],  axis = (1, 2)), 'b', label = 'low rate')
+    plt.xlabel('time aligned to stimulus onset (ms)')
+    plt.title('Population average - raw')
+    plt.legend()
+    
+    
+# classes: stimulus rates    
+if doPlots:    
+    
+    cmap = matplotlib.cm.get_cmap('seismic', 11)    
+    # stim-aligned projections and raw average
+    plt.figure()
+#    plt.subplot(1,2,1)
+    cnt=0
+    for i in np.unique(Ysr):
+        cnt = cnt+1
+#        tr1 = np.nanmean(X[:, Ysr==i],  axis = 1)
+#        tr1_se = np.nanstd(X[:, Ysr==i],  axis = 1) / np.sqrt(numTrials);
+        a1 = np.nanmean(X[:, :, Ysr==i],  axis=1) # frames x trials (average across neurons)
+        tr1 = np.nanmean(a1,  axis = 1)
+        tr1_se = np.nanstd(a1,  axis = 1) / np.sqrt(numTrials);
+        plt.fill_between(time_aligned_stim, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor=cmap(cnt)[:3], facecolor=cmap(cnt)[:3])
+    #    plt.fill_between(time_aligned_stim, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
+        plt.plot(time_aligned_stim, tr1, color=cmap(cnt)[:3], label = 'high rate')
+#    plt.legend()
+    
+    
+    
+# choice-aligned: classes: choices
+# Plot stim-aligned averages after centering and normalization
+if doPlots:
+    # Divide data into high-rate (modeled as 1) and low-rate (modeled as 0) trials
+    hr_trs = (Y_choice==1)
+    lr_trs = (Y_choice==0)
+
+    plt.figure()
+    plt.subplot(1,2,1)
+    a1 = np.nanmean(X_choice[:, :, hr_trs],  axis=1) # frames x trials (average across neurons)
+    tr1 = np.nanmean(a1,  axis = 1)
+    tr1_se = np.nanstd(a1,  axis = 1) / np.sqrt(numTrials);
+    a0 = np.nanmean(X_choice[:, :, lr_trs],  axis=1) # frames x trials (average across neurons)
+    tr0 = np.nanmean(a0,  axis = 1)
+    tr0_se = np.nanstd(a0,  axis = 1) / np.sqrt(numTrials);
+    mn = np.concatenate([tr1,tr0]).min()
+    mx = np.concatenate([tr1,tr0]).max()
+#    plt.plot([win[0], win[0]], [mn, mx], 'g-.') # mark the begining and end of training window
+#    plt.plot([win[-1], win[-1]], [mn, mx], 'g-.')
+    plt.fill_between(time_aligned_1stSide, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
+    plt.fill_between(time_aligned_1stSide, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
+    plt.plot(time_aligned_1stSide, tr1, 'b', label = 'high rate')
+    plt.plot(time_aligned_1stSide, tr0, 'r', label = 'low rate')
+    # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, lr_trs],  axis = (1, 2)), 'r', label = 'high rate')
+    # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, hr_trs],  axis = (1, 2)), 'b', label = 'low rate')
+    plt.xlabel('time aligned to stimulus onset (ms)')
+    plt.title('Population average - raw')
+    plt.legend()
+
+
 #%% save a copy of X and Y (DO NOT run this after you run the parts below that redefine X and Y!)
 
 X0 = X+0
@@ -876,6 +1051,8 @@ nRandTrSamp = numSamples #10 #1000 # number of times to subselect trials (for th
 nShflSamp = numSamples #10 # number of times for shuffling trial labels to get null distribution of angles between decoders at different time points
 
 
+########################## stimulus-aligned traces ############################
+
 #%% start subselecting trials (for BAGGING)
 # choose n random trials (n = 80% of min of HR, LR)
 nrtr = int(np.ceil(.8 * min((Y0==0).sum(), (Y0==1).sum())))
@@ -886,79 +1063,15 @@ print 'selecting %d random trials of each category' %(nrtr)
 
 #nRandTrSamp = 10 #1000 # number of times to subselect trials (for the BAGGING method)
 
-# data
-w = np.full((np.shape(X)[0], X.shape[1], nRandTrSamp), np.nan) # frames x neurons x nrandtr
-b =  np.full((1, X.shape[0], nRandTrSamp), np.nan).squeeze() # frames x nrandtr
-trainE =  np.full((1, X.shape[0], nRandTrSamp), np.nan).squeeze() # frames x nrandtr
-    
-for ir in range(nRandTrSamp): # subselect a group of trials
-    print 'BAGGING iteration %d' %(ir)
-    
-    # subselect nrtr random HR and nrtr random LR trials.
-    lrTrs = np.argwhere(Y0==0)
-    randLrTrs = rng.permutation(lrTrs)[0:nrtr].flatten() # random LR trials
-
-    hrTrs = np.argwhere(Y0==1)
-    randHrTrs = rng.permutation(hrTrs)[0:nrtr].flatten() # random HR trials
-    
-    randTrs = np.sort(np.concatenate((randLrTrs, randHrTrs)))
-    
-    
-    X = X0[:,:,randTrs]
-    Y = Y0[randTrs]
-
-
-    ##%% train SVM on each frame using the sebselect of trials
-    '''
-    if regType == 'l1':
-        linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
-    elif regType == 'l2':
-        linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
-    '''
-    
-    linear_svm = svm.LinearSVC(C=10.) # default c, also l2
-    
-    # train SVM on each frame
-    for ifr in range(np.shape(X)[0]):
+if doData:
+    # data
+    w = np.full((np.shape(X)[0], X.shape[1], nRandTrSamp), np.nan) # frames x neurons x nrandtr
+    b =  np.full((1, X.shape[0], nRandTrSamp), np.nan).squeeze() # frames x nrandtr
+    trainE =  np.full((1, X.shape[0], nRandTrSamp), np.nan).squeeze() # frames x nrandtr
         
-        # data
-        linear_svm.fit(X[ifr,:,:].transpose(), Y)
-            
-        w[ifr,:, ir] = np.squeeze(linear_svm.coef_);
-        b[ifr, ir] = linear_svm.intercept_;        
-        trainE[ifr, ir] = abs(linear_svm.predict(X[ifr,:,:].transpose())-Y.astype('float')).sum()/len(Y)*100;
-
-    # keep a copy of linear_svm
-    '''
-    import copy
-    linear_svm_0 = copy.deepcopy(linear_svm) 
-    '''
-
-
-#%% shuffle
-
-# shuffle so we have a null distribution of angles between decoders (weights) at different times.
-# eg there will be nShflSamp decoders for each frame
-# so there will be nShflSamp angles between the decoder of frame f1 and the decoder of frame f2, 
-# this will give us a null distribution (of size nShflSamp) for the angle between decoders of frame f1 and f2.
-# we will later compare the angle between the decoders of these 2 frames in the actual data with this null distribution.
-
-#nShflSamp = 10 # number of times for shuffling trial labels to get null distribution of angles between decoders at different time points
-
-# shuffle
-wsh = np.full((np.shape(X)[0], X.shape[1], nRandTrSamp, nShflSamp), np.nan) # frames x neurons x nrandtr x nshfl
-bsh =  np.full((1, X.shape[0], nRandTrSamp, nShflSamp), np.nan).squeeze() # frames x nrandtr x nshfl
-trainEsh =  np.full((1, X.shape[0], nRandTrSamp, nShflSamp), np.nan).squeeze() # frames x nrandtr x nshfl
-
-for ish in range(nShflSamp):
-    print 'Shuffle iteration %d' %(ish)
-
-    # for each trial-label shuffle we find decoders at different time points (frames) (also we do subselection of trials so we can do Bagging later)    
-    permIxs = rng.permutation(len(randTrs));     #index of trials for shuffling Y.
-    
-    for ir in range(nRandTrSamp):
-        print '\tBAGGING iteration %d' %(ir)
-#        randTrs = rng.permutation(len(Y0))[0:nrtr].flatten() # random trials
+    for ir in range(nRandTrSamp): # subselect a group of trials
+        print 'BAGGING iteration %d' %(ir)
+        
         # subselect nrtr random HR and nrtr random LR trials.
         lrTrs = np.argwhere(Y0==0)
         randLrTrs = rng.permutation(lrTrs)[0:nrtr].flatten() # random LR trials
@@ -971,28 +1084,96 @@ for ish in range(nShflSamp):
         
         X = X0[:,:,randTrs]
         Y = Y0[randTrs]
-        
-                
-        ## 
+    
+    
+        ##%% train SVM on each frame using the sebselect of trials
         '''
         if regType == 'l1':
             linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
         elif regType == 'l2':
             linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
-        '''        
+        '''
+        
         linear_svm = svm.LinearSVC(C=10.) # default c, also l2
         
         # train SVM on each frame
         for ifr in range(np.shape(X)[0]):
+            
+            # data
+            linear_svm.fit(X[ifr,:,:].transpose(), Y)
                 
-            linear_svm.fit(X[ifr,:,:].transpose(), Y[permIxs])
-                
-            wsh[ifr,:, ir, ish] = np.squeeze(linear_svm.coef_);
-            bsh[ifr, ir, ish] = linear_svm.intercept_;        
-            trainEsh[ifr, ir, ish] = abs(linear_svm.predict(X[ifr,:,:].transpose())-Y[permIxs].astype('float')).sum()/len(Y[permIxs])*100;
+            w[ifr,:, ir] = np.squeeze(linear_svm.coef_);
+            b[ifr, ir] = linear_svm.intercept_;        
+            trainE[ifr, ir] = abs(linear_svm.predict(X[ifr,:,:].transpose())-Y.astype('float')).sum()/len(Y)*100;
+    
+        # keep a copy of linear_svm
+        '''
+        import copy
+        linear_svm_0 = copy.deepcopy(linear_svm) 
+        '''
+
+
+#%% shuffle
+
+if doShuffles:
+    # shuffle so we have a null distribution of angles between decoders (weights) at different times.
+    # eg there will be nShflSamp decoders for each frame
+    # so there will be nShflSamp angles between the decoder of frame f1 and the decoder of frame f2, 
+    # this will give us a null distribution (of size nShflSamp) for the angle between decoders of frame f1 and f2.
+    # we will later compare the angle between the decoders of these 2 frames in the actual data with this null distribution.
+    
+    #nShflSamp = 10 # number of times for shuffling trial labels to get null distribution of angles between decoders at different time points
+    
+    # shuffle
+    wsh = np.full((np.shape(X)[0], X.shape[1], nRandTrSamp, nShflSamp), np.nan) # frames x neurons x nrandtr x nshfl
+    bsh =  np.full((1, X.shape[0], nRandTrSamp, nShflSamp), np.nan).squeeze() # frames x nrandtr x nshfl
+    trainEsh =  np.full((1, X.shape[0], nRandTrSamp, nShflSamp), np.nan).squeeze() # frames x nrandtr x nshfl
+    
+    for ish in range(nShflSamp):
+        print 'Shuffle iteration %d' %(ish)
+    
+        # for each trial-label shuffle we find decoders at different time points (frames) (also we do subselection of trials so we can do Bagging later)    
+        permIxs = rng.permutation(nrtr*2);     #index of trials for shuffling Y.
+        
+        for ir in range(nRandTrSamp):
+            print '\tBAGGING iteration %d' %(ir)
+    #        randTrs = rng.permutation(len(Y0))[0:nrtr].flatten() # random trials
+            # subselect nrtr random HR and nrtr random LR trials.
+            lrTrs = np.argwhere(Y0==0)
+            randLrTrs = rng.permutation(lrTrs)[0:nrtr].flatten() # random LR trials
+        
+            hrTrs = np.argwhere(Y0==1)
+            randHrTrs = rng.permutation(hrTrs)[0:nrtr].flatten() # random HR trials
+            
+            randTrs = np.sort(np.concatenate((randLrTrs, randHrTrs)))
+            
+            
+            X = X0[:,:,randTrs]
+            Y = Y0[randTrs]
+            
+                    
+            ## 
+            '''
+            if regType == 'l1':
+                linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
+            elif regType == 'l2':
+                linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
+            '''        
+            linear_svm = svm.LinearSVC(C=10.) # default c, also l2
+            
+            # train SVM on each frame
+            for ifr in range(np.shape(X)[0]):
+                    
+                linear_svm.fit(X[ifr,:,:].transpose(), Y[permIxs])
+                    
+                wsh[ifr,:, ir, ish] = np.squeeze(linear_svm.coef_);
+                bsh[ifr, ir, ish] = linear_svm.intercept_;        
+                trainEsh[ifr, ir, ish] = abs(linear_svm.predict(X[ifr,:,:].transpose())-Y[permIxs].astype('float')).sum()/len(Y[permIxs])*100;
                 
                  
-                
+###############################################################################
+###############################################################################
+"""         
 #%% normalize weights (ie the w vector at each frame must have length 1)
 
 eps = sys.float_info.epsilon #2.2204e-16
@@ -1031,7 +1212,7 @@ wsh_n2b = np.transpose(np.transpose(wsh_nb,(1,0,2))/nwsh, (1,0,2)) # frames x ne
 # we restrict angles to [0 90], so we don't care about direction of vectors, ie tunning reversal.
 angle_choice = np.arccos(abs(np.dot(w_n2b, w_n2b.transpose())))*180/np.pi # frames x frames; angle between ws at different times
 
-angle_choice_sh = np.full((np.shape(X)[0],np.shape(X)[0],nShflSamp), np.nan) # frames x frames x nshfl
+angle_choice_sh = np.full((w.shape[0],w.shape[0],nShflSamp), np.nan) # frames x frames x nshfl
 for ish in range(nShflSamp):
     angle_choice_sh[:,:,ish] = np.arccos(abs(np.dot(wsh_n2b[:,:,ish], wsh_n2b[:,:,ish].transpose())))*180/np.pi # frames x frames x nshfl
 
@@ -1054,7 +1235,9 @@ plt.figure()
 plt.imshow(np.nanmean(angle_choice_sh, axis=2), cmap='jet_r') # average across shuffles
 plt.colorbar()
 '''
-
+"""
+###############################################################################
+###############################################################################
 
 
 #%% SVR ; find stimulus decoder
@@ -1078,95 +1261,101 @@ yhat = svr.predict(X0[ifr,:,:].transpose()) # prediction of rate equivalent to n
 
 nrtr = int(np.ceil(.8*len(Y0))) # we will subselect 80% of trials
 
-# data
-w_sr = np.full((np.shape(X)[0], X.shape[1], nRandTrSamp), np.nan) # frames x neurons x nrandtr
-b_sr =  np.full((1, X.shape[0], nRandTrSamp), np.nan).squeeze() # frames x nrandtr
-trainE_sr =  np.full((1, X.shape[0], nRandTrSamp), np.nan).squeeze() # frames x nrandtr
-    
-for ir in range(nRandTrSamp): # subselect a group of trials
-    print 'BAGGING iteration %d' %(ir)
-    
-    # subselect nrtr random trials 
-    randTrs = rng.permutation(len(Y0))[0:nrtr].flatten() # random trials
-    
-    X = X0[:,:,randTrs]
-    Y = Ysr[randTrs] # now Y is the vector of stimulus rates
 
-
-    ##%% train SVM on each frame using the sebselect of trials
-    '''
-    if regType == 'l1':
-        linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
-    elif regType == 'l2':
-        linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
-    '''    
-#    linear_svm = svm.LinearSVC() # default c, also l2
-    svr = LinearSVR(C=10., epsilon=0.0, dual = True, tol = 1e-9, fit_intercept = True)
-    
-    # train SVR on each frame
-    for ifr in range(np.shape(X)[0]):
+if doData:
+    # data
+    w_sr = np.full((np.shape(X)[0], X.shape[1], nRandTrSamp), np.nan) # frames x neurons x nrandtr
+    b_sr =  np.full((1, X.shape[0], nRandTrSamp), np.nan).squeeze() # frames x nrandtr
+    trainE_sr =  np.full((1, X.shape[0], nRandTrSamp), np.nan).squeeze() # frames x nrandtr
         
-        # data
-        svr.fit(X[ifr,:,:].transpose(), Y)
-            
-        w_sr[ifr,:, ir] = np.squeeze(svr.coef_);
-        b_sr[ifr, ir] = svr.intercept_;        
-        trainE_sr[ifr, ir] = abs(svr.predict(X[ifr,:,:].transpose())-Y.astype('float')).sum()/len(Y)*100;
-
-
-
-#%% shuffle (SVR, stim decoder)
-
-# shuffle so we have a null distribution of angles between decoders (weights) at different times.
-# eg there will be nShflSamp decoders for each frame
-# so there will be nShflSamp angles between the decoder of frame f1 and the decoder of frame f2, 
-# this will give us a null distribution (of size nShflSamp) for the angle between decoders of frame f1 and f2.
-# we will later compare the angle between the decoders of these 2 frames in the actual data with this null distribution.
-
-
-# shuffle
-wsh_sr = np.full((np.shape(X)[0], X.shape[1], nRandTrSamp, nShflSamp), np.nan) # frames x neurons x nrandtr x nshfl
-bsh_sr =  np.full((1, X.shape[0], nRandTrSamp, nShflSamp), np.nan).squeeze() # frames x nrandtr x nshfl
-trainEsh_sr =  np.full((1, X.shape[0], nRandTrSamp, nShflSamp), np.nan).squeeze() # frames x nrandtr x nshfl
-
-for ish in range(nShflSamp):
-    print 'Shuffle iteration %d' %(ish)
-
-    # for each trial-label shuffle we find decoders at different time points (frames) (also we do subselection of trials so we can do Bagging later)    
-    permIxs = rng.permutation(len(randTrs));     #index of trials for shuffling Y.
-    
-    for ir in range(nRandTrSamp):
-        print '\tBAGGING iteration %d' %(ir)
+    for ir in range(nRandTrSamp): # subselect a group of trials
+        print 'BAGGING iteration %d' %(ir)
         
         # subselect nrtr random trials 
         randTrs = rng.permutation(len(Y0))[0:nrtr].flatten() # random trials
         
         X = X0[:,:,randTrs]
         Y = Ysr[randTrs] # now Y is the vector of stimulus rates
-        
-                
-        ##
+    
+    
+        ##%% train SVM on each frame using the sebselect of trials
         '''
         if regType == 'l1':
             linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
         elif regType == 'l2':
             linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
-        '''
-#                linear_svm = svm.LinearSVC() # default c, also l2
+        '''    
+    #    linear_svm = svm.LinearSVC() # default c, also l2
         svr = LinearSVR(C=10., epsilon=0.0, dual = True, tol = 1e-9, fit_intercept = True)
         
-        # train SVM on each frame
+        # train SVR on each frame
         for ifr in range(np.shape(X)[0]):
+            
+            # data
+            svr.fit(X[ifr,:,:].transpose(), Y)
                 
-            svr.fit(X[ifr,:,:].transpose(), Y[permIxs])
-                
-            wsh_sr[ifr,:, ir, ish] = np.squeeze(svr.coef_);
-            bsh_sr[ifr, ir, ish] = svr.intercept_;        
-            trainEsh_sr[ifr, ir, ish] = abs(svr.predict(X[ifr,:,:].transpose())-Y[permIxs].astype('float')).sum()/len(Y[permIxs])*100;
+            w_sr[ifr,:, ir] = np.squeeze(svr.coef_);
+            b_sr[ifr, ir] = svr.intercept_;        
+            trainE_sr[ifr, ir] = abs(svr.predict(X[ifr,:,:].transpose())-Y.astype('float')).sum()/len(Y)*100;
+
+
+
+#%% shuffle (SVR, stim decoder)
+
+if doShuffles:
+    # shuffle so we have a null distribution of angles between decoders (weights) at different times.
+    # eg there will be nShflSamp decoders for each frame
+    # so there will be nShflSamp angles between the decoder of frame f1 and the decoder of frame f2, 
+    # this will give us a null distribution (of size nShflSamp) for the angle between decoders of frame f1 and f2.
+    # we will later compare the angle between the decoders of these 2 frames in the actual data with this null distribution.
+    
+    
+    # shuffle
+    wsh_sr = np.full((np.shape(X)[0], X.shape[1], nRandTrSamp, nShflSamp), np.nan) # frames x neurons x nrandtr x nshfl
+    bsh_sr =  np.full((1, X.shape[0], nRandTrSamp, nShflSamp), np.nan).squeeze() # frames x nrandtr x nshfl
+    trainEsh_sr =  np.full((1, X.shape[0], nRandTrSamp, nShflSamp), np.nan).squeeze() # frames x nrandtr x nshfl
+    
+    for ish in range(nShflSamp):
+        print 'Shuffle iteration %d' %(ish)
+    
+        # for each trial-label shuffle we find decoders at different time points (frames) (also we do subselection of trials so we can do Bagging later)    
+        permIxs = rng.permutation(nrtr);     #index of trials for shuffling Y.
+        
+        for ir in range(nRandTrSamp):
+            print '\tBAGGING iteration %d' %(ir)
+            
+            # subselect nrtr random trials 
+            randTrs = rng.permutation(len(Y0))[0:nrtr].flatten() # random trials
+            
+            X = X0[:,:,randTrs]
+            Y = Ysr[randTrs] # now Y is the vector of stimulus rates
+            
+                    
+            ##
+            '''
+            if regType == 'l1':
+                linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
+            elif regType == 'l2':
+                linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
+            '''
+    #                linear_svm = svm.LinearSVC() # default c, also l2
+            svr = LinearSVR(C=10., epsilon=0.0, dual = True, tol = 1e-9, fit_intercept = True)
+            
+            # train SVM on each frame
+            for ifr in range(np.shape(X)[0]):
+                    
+                svr.fit(X[ifr,:,:].transpose(), Y[permIxs])
+                    
+                wsh_sr[ifr,:, ir, ish] = np.squeeze(svr.coef_);
+                bsh_sr[ifr, ir, ish] = svr.intercept_;        
+                trainEsh_sr[ifr, ir, ish] = abs(svr.predict(X[ifr,:,:].transpose())-Y[permIxs].astype('float')).sum()/len(Y[permIxs])*100;
                 
                 
 
-                
+#%%
+###############################################################################
+###############################################################################                
+"""
 #%% normalize weights (ie the w vector at each frame must have length 1)
 
 #eps = sys.float_info.epsilon #2.2204e-16
@@ -1205,7 +1394,7 @@ wsh_sr_n2b = np.transpose(np.transpose(wsh_sr_nb,(1,0,2))/nwsh, (1,0,2)) # frame
 # we restrict angles to [0 90], so we don't care about direction of vectors, ie tunning reversal.
 angle_stim = np.arccos(abs(np.dot(w_sr_n2b, w_sr_n2b.transpose())))*180/np.pi # frames x frames; angle between ws at different times
 
-angle_stim_sh = np.full((np.shape(X)[0],np.shape(X)[0],nShflSamp), np.nan) # frames x frames x nshfl
+angle_stim_sh = np.full((w_sr.shape[0],w_sr.shape[0],nShflSamp), np.nan) # frames x frames x nshfl
 for ish in range(nShflSamp):
     angle_stim_sh[:,:,ish] = np.arccos(abs(np.dot(wsh_sr_n2b[:,:,ish], wsh_sr_n2b[:,:,ish].transpose())))*180/np.pi # frames x frames x nshfl
 
@@ -1223,8 +1412,14 @@ plt.imshow(np.nanmean(angle_stim_sh, axis=2), cmap='jet_r') # average across shu
 plt.colorbar()
 '''
 
-
-                
+#avw = []
+#for ifr in range(np.shape(X)[0]):
+#    avw.append(wsh_sr_n2b[ifr,:,ish].mean())
+    
+#%%
+"""
+###############################################################################
+###############################################################################                
 #%% Same thing as above but now decoding the stimulus using svm
 # bc some stim rates have very few trials... u ended up not doing this
 """
@@ -1289,9 +1484,204 @@ for ir in range(nRandTrSamp): # subselect a group of trials
 
 
 
+#%%
+###############################################################################
+###############################################################################
+
+#%% SVM, choice decoder, but on choice-aligned traces (does movement cause stability in the population activity)
+
+########################## choice-aligned traces ############################
+
+#%% start subselecting trials (for BAGGING)
+# choose n random trials (n = 80% of min of HR, LR)
+nrtr = int(np.ceil(.8 * min((Y_choice==0).sum(), (Y_choice==1).sum())))
+print 'selecting %d random trials of each category' %(nrtr)
+
+
+#%% Train SVM on each frame using BAGGING (subselection of trials)
+
+#nRandTrSamp = 10 #1000 # number of times to subselect trials (for the BAGGING method)
+
+if doData:
+    # data
+    w_chAl = np.full((X_choice.shape[0], X_choice.shape[1], nRandTrSamp), np.nan) # frames x neurons x nrandtr
+    b_chAl =  np.full((X_choice.shape[0], nRandTrSamp), np.nan) # frames x nrandtr
+    trainE_chAl =  np.full((X_choice.shape[0], nRandTrSamp), np.nan) # frames x nrandtr
+        
+    for ir in range(nRandTrSamp): # subselect a group of trials
+        print 'BAGGING iteration %d' %(ir)
+        
+        # subselect nrtr random HR and nrtr random LR trials.
+        lrTrs = np.argwhere(Y_choice==0)
+        randLrTrs = rng.permutation(lrTrs)[0:nrtr].flatten() # random LR trials
+    
+        hrTrs = np.argwhere(Y_choice==1)
+        randHrTrs = rng.permutation(hrTrs)[0:nrtr].flatten() # random HR trials
+        
+        randTrs = np.sort(np.concatenate((randLrTrs, randHrTrs)))
+        
+        
+        X = X_choice[:,:,randTrs]
+        Y = Y_choice[randTrs]
+    
+    
+        ##%% train SVM on each frame using the sebselect of trials
+        '''
+        if regType == 'l1':
+            linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
+        elif regType == 'l2':
+            linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
+        '''
+        
+        linear_svm = svm.LinearSVC(C=10.) # default c, also l2
+        
+        # train SVM on each frame
+        for ifr in range(np.shape(X)[0]):
+            
+            # data
+            linear_svm.fit(X[ifr,:,:].transpose(), Y)
+                
+            w_chAl[ifr,:, ir] = np.squeeze(linear_svm.coef_);
+            b_chAl[ifr, ir] = linear_svm.intercept_;        
+            trainE_chAl[ifr, ir] = abs(linear_svm.predict(X[ifr,:,:].transpose())-Y.astype('float')).sum()/len(Y)*100;
+    
+        # keep a copy of linear_svm
+        '''
+        import copy
+        linear_svm_0 = copy.deepcopy(linear_svm) 
+        '''
+
+
+#%% shuffle
+
+if doShuffles:
+    # shuffle so we have a null distribution of angles between decoders (weights) at different times.
+    # eg there will be nShflSamp decoders for each frame
+    # so there will be nShflSamp angles between the decoder of frame f1 and the decoder of frame f2, 
+    # this will give us a null distribution (of size nShflSamp) for the angle between decoders of frame f1 and f2.
+    # we will later compare the angle between the decoders of these 2 frames in the actual data with this null distribution.
+    
+    #nShflSamp = 10 # number of times for shuffling trial labels to get null distribution of angles between decoders at different time points
+    
+    # shuffle
+    wsh_chAl = np.full((X_choice.shape[0], X_choice.shape[1], nRandTrSamp, nShflSamp), np.nan) # frames x neurons x nrandtr x nshfl
+    bsh_chAl =  np.full((X_choice.shape[0], nRandTrSamp, nShflSamp), np.nan) # frames x nrandtr x nshfl
+    trainEsh_chAl =  np.full((X_choice.shape[0], nRandTrSamp, nShflSamp), np.nan) # frames x nrandtr x nshfl
+    
+    for ish in range(nShflSamp):
+        print 'Shuffle iteration %d' %(ish)
+    
+        # for each trial-label shuffle we find decoders at different time points (frames) (also we do subselection of trials so we can do Bagging later)    
+        permIxs = rng.permutation(nrtr*2);     #index of trials for shuffling Y.
+        
+        for ir in range(nRandTrSamp):
+            print '\tBAGGING iteration %d' %(ir)
+    #        randTrs = rng.permutation(len(Y0))[0:nrtr].flatten() # random trials
+            # subselect nrtr random HR and nrtr random LR trials.
+            lrTrs = np.argwhere(Y_choice==0)
+            randLrTrs = rng.permutation(lrTrs)[0:nrtr].flatten() # random LR trials
+        
+            hrTrs = np.argwhere(Y_choice==1)
+            randHrTrs = rng.permutation(hrTrs)[0:nrtr].flatten() # random HR trials
+            
+            randTrs = np.sort(np.concatenate((randLrTrs, randHrTrs)))
+            
+            
+            X = X_choice[:,:,randTrs]
+            Y = Y_choice[randTrs]
+            
+                    
+            ## 
+            '''
+            if regType == 'l1':
+                linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
+            elif regType == 'l2':
+                linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
+            '''        
+            linear_svm = svm.LinearSVC(C=10.) # default c, also l2
+            
+            # train SVM on each frame
+            for ifr in range(np.shape(X)[0]):
+                    
+                linear_svm.fit(X[ifr,:,:].transpose(), Y[permIxs])
+                    
+                wsh_chAl[ifr,:, ir, ish] = np.squeeze(linear_svm.coef_);
+                bsh_chAl[ifr, ir, ish] = linear_svm.intercept_;        
+                trainEsh_chAl[ifr, ir, ish] = abs(linear_svm.predict(X[ifr,:,:].transpose())-Y[permIxs].astype('float')).sum()/len(Y[permIxs])*100;
+                
+                 
+###############################################################################
+###############################################################################
+    
+#%% normalize weights (ie the w vector at each frame must have length 1)
+"""
+eps = sys.float_info.epsilon #2.2204e-16
+# data
+normw = np.linalg.norm(w_chAl, axis=1) # frames x nrandtr; 2-norm of weights 
+w_normed_chAl = np.transpose(np.transpose(w_chAl,(1,0,2))/normw, (1,0,2)) # frames x neurons x nrandtr; normalize weights so weights (of each frame) have length 1
+if sum(normw<=eps).sum()!=0:
+    print 'take care of this; you need to reshape w_normed first'
+#    w_normed[normw<=eps, :] = 0 # set the direction to zero if the magnitude of the vector is zero
+
+# shuffle
+normwsh = np.linalg.norm(wsh_chAl, axis=1) # frames x nrandtr x nshfl; 2-norm of weights 
+wsh_normed_chAl = np.transpose(np.transpose(wsh_chAl,(1,0,2,3))/normwsh, (1,0,2,3)) # frames x neurons x nrandtr x nshfl; normalize weights so weights (of each frame) have length 1
+if sum(normwsh<=eps).sum()!=0:
+    print 'take care of this'
+    wsh_normed[normwsh<=eps, :] = 0 # set the direction to zero if the magnitude of the vector is zero
+
+
+#%% average ws across all trial subselects, then again normalize them so they have length 1 (Bagging)
+
+# data
+w_nb = np.mean(w_normed_chAl, axis=(2)) # frames x neurons 
+nw = np.linalg.norm(w_nb, axis=1) # frames; 2-norm of weights 
+w_n2b_chAl = np.transpose(np.transpose(w_nb,(1,0))/nw, (1,0)) # frames x neurons
+
+# shuffle
+wsh_nb = np.mean(wsh_normed_chAl, axis=(2)) # frames x neurons x nshfl
+nwsh = np.linalg.norm(wsh_nb, axis=1) # frames x nshfl; 2-norm of weights 
+wsh_n2b_chAl = np.transpose(np.transpose(wsh_nb,(1,0,2))/nwsh, (1,0,2)) # frames x neurons x nshfl
+
+
+#%% compute angle between ws at different times (remember angles close to 0 indicate more aligned decoders at 2 different time points.)
+
+# some of the angles are nan because the dot product is slightly above 1, so its arccos is nan!
+
+# we restrict angles to [0 90], so we don't care about direction of vectors, ie tunning reversal.
+angle_choice_chAl = np.arccos(abs(np.dot(w_n2b_chAl, w_n2b_chAl.transpose())))*180/np.pi # frames x frames; angle between ws at different times
+
+angle_choice_chAl_sh = np.full((w_chAl.shape[0],w_chAl.shape[0],nShflSamp), np.nan) # frames x frames x nshfl
+for ish in range(nShflSamp):
+    angle_choice_chAl_sh[:,:,ish] = np.arccos(abs(np.dot(wsh_n2b_chAl[:,:,ish], wsh_n2b_chAl[:,:,ish].transpose())))*180/np.pi # frames x frames x nshfl
+
+'''
+angle_choice_sh = np.arccos(abs(np.dot(wsh_n2b, wsh_n2b.transpose())))*180/np.pi # frames x frames; angle between ws at different times
+a = np.reshape(np.transpose(wsh_n2b, (0,2,1)),(np.shape(wsh_n2b)[0]*np.shape(wsh_n2b)[2], np.shape(wsh_n2b)[1]), order = 'F') # (frames x nshfl) x neurons
+b = np.arccos(abs(np.dot(a, a.transpose())))*180/np.pi # (frames x nshfl) x (frames x nshfl) 
+np.reshape(b, (np.shape(wsh_n2b)[0], np.shape(wsh_n2b)[2], np.shape(wsh_n2b)[0], np.shape(wsh_n2b)[2]))
+'''
+
+# plot angle between decoders at different time points
+'''
+# data
+plt.figure()
+plt.imshow(angle_choice_chAl, cmap='jet_r')
+plt.colorbar()
+
+# shuffle (average of angles across shuffles)
+plt.figure()
+plt.imshow(np.nanmean(angle_choice_chAl_sh, axis=2), cmap='jet_r') # average across shuffles
+plt.colorbar()
+'''
+"""
+###############################################################################
+###############################################################################
+
+
 
 # In[39]:
-
+"""
 # Plot weights
 if doPlots:
     plt.figure()
@@ -1311,7 +1701,7 @@ if doPlots:
     # print abs(((np.dot(X,w)+b)>0).astype('float')-Y.astype('float')).sum()/len(Y)*100 # this is the prediction formula
     print 'Fraction of non-zero weight neurons = %.2f' %(np.mean(w!=0))
     print 'Training error = %.2f%%' %trainE
-
+"""
 
 #%%
 ####################################################################################################################################
@@ -1321,17 +1711,18 @@ if doPlots:
 #     More specifically, project traces of all trials onto normalized w (ie SVM weights computed from fitting model using X and Y of all trials).
 ####################################################################################################################################
 ####################################################################################################################################
-
+'''
 if doPlots:
     # pick the decoder of one of the frames ... u r exercizing for now... this is not final
     w_normalized = w_sr_n2b[35,:] #w/sci.linalg.norm(w);
-
+#    w_normalized = w_sr[1,:,0]
+    
     # stim-aligned traces
     XtN_w = np.dot(X_N, w_normalized);
     Xt_w = np.reshape(XtN_w, (T,C), order='F');
     
     
-    cmap = cm.get_cmap('seismic', 11)    
+    cmap = plt.cm.get_cmap('seismic', 11)    
     # stim-aligned projections and raw average
     plt.figure()
 #    plt.subplot(1,2,1)
@@ -1346,7 +1737,7 @@ if doPlots:
     #    plt.fill_between(time_aligned_stim, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
         plt.plot(time_aligned_stim, tr1, color=cmap(cnt)[:3], label = 'high rate')
 #    plt.legend()
-    
+'''    
     
     
 
@@ -1363,13 +1754,21 @@ if doPlots:
 
 # In[526]:
 
+from datetime import datetime
+nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
+
 if trialHistAnalysis:
-#     ep_ms = np.round((ep-eventI)*frameLength)
-    th_stim_dur = []
-    svmn = 'svmPrevChoice_allN_allFrsTrained_' 
+    svmn = 'svmPrevChoice_allN_allFrsTrained_%s_' %(nowStr)
 else:
-    svmn = 'svmCurrChoice_allN_allFrsTrained_' 
+    if doData and doShuffles==0:
+        svmn = 'svmCurrChoice_allN_allFrsTrained_data_%s_' %(nowStr)
+    elif doData==0 and doShuffles:
+        svmn = 'svmCurrChoice_allN_allFrsTrained_shfl_%s_' %(nowStr)
+    else:
+        svmn = 'svmCurrChoice_allN_allFrsTrained_%s_' %(nowStr)
+        
 print '\n', svmn[:-1]
+
 
 if saveResults:
     print 'Saving .mat file'
@@ -1380,14 +1779,26 @@ if saveResults:
 
     svmName = os.path.join(d, svmn+os.path.basename(pnevFileName))
     print(svmName)
-    # scio.savemat(svmName, {'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'meanX':meanX, 'stdX':stdX, 'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 'th_stim_dur':th_stim_dur})
-#    if compExcInh and neuronType==2:
-    scio.savemat(svmName, {'w':w, 'b':b, 'trainE':trainE,
-                           'wsh':wsh, 'bsh':bsh, 'trainEsh':trainEsh,
-                           'w_sr':w_sr, 'b_sr':b_sr, 'trainE_sr':trainE_sr,
-                           'wsh_sr':wsh_sr, 'bsh_sr':bsh_sr, 'trainEsh_sr':trainEsh_sr,
-                           'NsExcluded':NsExcluded, 'trsExcluded':trsExcluded, 'meanX': meanX, 'stdX':stdX})
 
+    if doData and doShuffles:
+        scio.savemat(svmName, {'w':w, 'b':b, 'trainE':trainE,
+                               'wsh':wsh, 'bsh':bsh, 'trainEsh':trainEsh,
+                               'w_sr':w_sr, 'b_sr':b_sr, 'trainE_sr':trainE_sr,
+                               'wsh_sr':wsh_sr, 'bsh_sr':bsh_sr, 'trainEsh_sr':trainEsh_sr,
+    #                           'NsExcluded':NsExcluded, 'trsExcluded':trsExcluded, 'meanX': meanX, 'stdX':stdX, # not sure if you need any of these
+                               'w_chAl': w_chAl, 'b_chAl': b_chAl, 'trainE_chAl': trainE_chAl,
+                               'wsh_chAl': wsh_chAl, 'bsh_chAl': bsh_chAl, 'trainEsh_chAl': trainEsh_chAl})
+    elif doData:
+        scio.savemat(svmName, {'w':w, 'b':b, 'trainE':trainE,
+                               'w_sr':w_sr, 'b_sr':b_sr, 'trainE_sr':trainE_sr,
+                               'w_chAl': w_chAl, 'b_chAl': b_chAl, 'trainE_chAl': trainE_chAl})
+
+
+    elif doShuffles:
+        scio.savemat(svmName, {'wsh':wsh, 'bsh':bsh, 'trainEsh':trainEsh,                               
+                               'wsh_sr':wsh_sr, 'bsh_sr':bsh_sr, 'trainEsh_sr':trainEsh_sr,
+                               'wsh_chAl': wsh_chAl, 'bsh_chAl': bsh_chAl, 'trainEsh_chAl': trainEsh_chAl})
+                               
 else:
     print 'Not saving .mat file'
     
