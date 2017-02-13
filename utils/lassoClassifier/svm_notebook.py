@@ -612,9 +612,7 @@ Y = choiceVec0[~trsExcluded];
 print '%d high-rate choices, and %d low-rate choices\n' %(np.sum(Y==1), np.sum(Y==0))
 
 
-# In[15]:
-
-# Set NsExcluded : Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
+#%% Set NsExcluded : Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
 # thAct and thTrsWithSpike are parameters that you can play with.
 
 # If it is already saved, load it (the idea is to use the same NsExcluded for all the analyses of a session). Otherwise set it.
@@ -693,9 +691,7 @@ if neuronType==2:
 
 
 
-# In[16]:
-
-# Exclude non-active neurons from X and set inhRois (ie neurons that don't fire in any of the trials during ep)
+#%% Exclude non-active neurons from X and set inhRois (ie neurons that don't fire in any of the trials during ep)
 
 X = X[:,~NsExcluded]
 print np.shape(X)
@@ -803,9 +799,7 @@ print '%d trials; %d neurons' %(numTrials, numNeurons)
 # print ' The data has %d frames recorded from %d neurons at %d trials' %Xt.shape    
 
 
-# In[22]:
-
-# Center and normalize X: feature normalization and scaling: to remove effects related to scaling and bias of each neuron, we need to zscore data (i.e., make data mean 0 and variance 1 for each neuron) 
+#%% Center and normalize X: feature normalization and scaling: to remove effects related to scaling and bias of each neuron, we need to zscore data (i.e., make data mean 0 and variance 1 for each neuron) 
 
 meanX = np.mean(X, axis = 0);
 stdX = np.std(X, axis = 0);
@@ -1326,7 +1320,7 @@ if doPlots:
 
 # In[ ]:
 
-# Train SVM using different number of neurons, and compute training/testing error
+# Train SVM using different numbers of neurons, and compute training/testing error
 """
 # if you don't want to regularize, go with a very high cbest and don't run the section below.
 cbest = 10**6
