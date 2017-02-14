@@ -2,6 +2,10 @@
 # This script should be run on the cluster.
 
 
+#Remember in the svm stability codes you did not "shuffle trials to break any dependencies on the sequence of trails"....
+#could be a concern!
+
+
 # coding: utf-8
 
 # ## Specify variables for the analysis: 

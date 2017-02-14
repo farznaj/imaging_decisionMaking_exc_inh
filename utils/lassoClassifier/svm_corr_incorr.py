@@ -43,8 +43,9 @@ if 'ipykernel' in sys.modules:
     <form action="javascript:code_toggle()"><input type="submit" value="Click here to toggle on/off the raw code."></form>''')
 
 
-# In[3]:
+#%% Set vars
 
+eps = sys.float_info.epsilon #2.2204e-16
 import sys
 import os
 import numpy as np
@@ -55,9 +56,9 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni16'
-    imagingFolder = '151001'
-    mdfFileNumber = [1] 
+    mousename = 'fni17' #'fni16'
+    imagingFolder = '151028' #'151001'
+    mdfFileNumber = [1,2,3] #[1] 
 
     trialHistAnalysis = 0;    
     roundi = 1; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
@@ -70,7 +71,7 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
 
     
     doNsRand = 0; # if 1, a random set of neurons will be selected to make sure we have fewer neurons than trials. 
-    regType = 'l1' # 'l2' : regularization type
+    regType = 'l2' # 'l2' : regularization type
     kfold = 10;
     compExcInh = 0 # if 1, analyses will be run to compare exc inh neurons.
     
@@ -99,7 +100,7 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
 
 
-# In[4]:
+#%% Print vars
 
 if neuronType==0:
     ntName = 'excit'
@@ -131,7 +132,7 @@ print 'numSamples = %i' %(numSamples)
 
 # ## Import Libraries and Modules
 
-# In[5]:
+#%% Import libraries
 
 import scipy.io as scio
 import scipy as sci
@@ -158,7 +159,7 @@ sys.path.append('/home/farznaj/Documents/trial_history/imaging') # Gamal's dir n
 # print sys.path
 
 
-# In[7]:
+#%% Define ttest2
 
 # Extend the built in two tailed ttest function to one-tailed
 def ttest2(a, b, **tailOption):
@@ -177,7 +178,7 @@ def ttest2(a, b, **tailOption):
     return p
 
 
-# In[8]:
+#%% Define setImagingAnalysisNamesP
 
 
 """
@@ -206,7 +207,7 @@ imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, md
 
 """
 
-#%%
+##%%
 def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options):
 
     if options.get('signalCh'):
@@ -287,14 +288,29 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     return imfilename, pnevFileName
     
     
-#%%
+##%%
 #imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh, pnev2load)
 
 
+#%% Define perClassError: percent difference between Y and Yhat, ie classification error
 
-# ## Set mat-file names
+def perClassError(Y, Yhat):
+    import numpy as np
+    perClassEr = np.sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
+    return perClassEr
 
-# In[9]:
+
+#%% Function to predict class labels
+# Lets check how predict works.... Result: for both SVM and SVR, classfier.predict equals xw+b. For SVM, xw+b gives -1 and 1, that should be changed to 0 and 1 to match svm.predict.
+
+def predictMan(X,w,b):
+    yhat = np.dot(X, w.T) + b # it gives -1 and 1... change -1 to 0... so it matches svm.predict
+    yhat[yhat<0] = 0
+    yhat[yhat>0] = 1    
+    return yhat
+
+
+#%% Set mat-file names
 
 pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
 signalCh = [2] # since gcamp is channel 2, should be always 2.
@@ -313,11 +329,10 @@ print(postName)
 print(moreName)
 
 
-###########################################################################################################################################
-# ## Load matlab variables: event-aligned traces, inhibitRois, outcomes,  choice, etc
-#     - traces are set in set_aligned_traces.m matlab script.
 
-# In[10]:
+###########################################################################################################################################
+#%% Load matlab variables: event-aligned traces, inhibitRois, outcomes,  choice, etc
+#     - traces are set in set_aligned_traces.m matlab script.
 
 # Set traces_al_stim that is same as traces_al_stimAll except that in traces_al_stim some trials are set to nan, bc their stim duration is < 
 # th_stim_dur or bc their go tone happens before ep(end) or bc their choice happened before ep(end). 
@@ -404,9 +419,7 @@ if trialHistAnalysis==0:
 
 
 ###########################################################################################################################################
-# ## Set the time window for training SVM (ep) and traces_al_stim
-
-# In[11]:
+#%% Set the time window for training SVM (ep) and traces_al_stim
 
 if trialHistAnalysis==1:    
     # either of the two below (stimulus-aligned and initTone-aligned) would be fine
@@ -532,7 +545,7 @@ else:
 
 
 ###########################################################################################################################################
-# ## Set X (trials x neurons) and Y (trials x 1) for training the SVM classifier.
+#%% Set X (trials x neurons) and Y (trials x 1) for training the SVM classifier.
 #     X matrix (size trials x neurons); steps include:
 #        - average neural responses during ep for each trial.
 #        - remove nan trials (trsExcluded)
@@ -542,7 +555,8 @@ else:
 
 #     Y choice of high rate (modeled as 1) and low rate (modeled as 0)
 
-#%% Set choiceVec0  (Y: the response vector)
+
+##%% Set choiceVec0  (Y: the response vector)
 
 if trialHistAnalysis:
     choiceVec0 = choiceVec0All[:,iTiFlg] # choice on the previous trial for short (or long or all) ITIs
@@ -926,7 +940,7 @@ X_chAl_incorr = (X_chAl_incorr - meanX_choice_incorr) / stdX_choice_incorr;
 '''
 
 
-# In[23]:
+#%% Plot mean and std of X
 
 if doPlots:
     # correct trials
@@ -1000,7 +1014,7 @@ if doPlots:
 
 
 
-#%% Plot traces averaged for each choice
+#%% Plot traces averaged for each choice, for both correct and incorrect trials; aligned on both stimulus and choice.
 
 if doPlots:
 
@@ -1039,7 +1053,7 @@ if doPlots:
     # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, lr_trs],  axis = (1, 2)), 'r', label = 'high rate')
     # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, hr_trs],  axis = (1, 2)), 'b', label = 'low rate')
     plt.xlabel('time aligned to stimulus onset (ms)')
-    plt.title('Population average')
+    plt.title('Correct trials')
     
     
     #################### incorrect trials
@@ -1074,7 +1088,7 @@ if doPlots:
     # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, lr_trs],  axis = (1, 2)), 'r', label = 'high rate')
     # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, hr_trs],  axis = (1, 2)), 'b', label = 'low rate')
     plt.xlabel('time aligned to stimulus onset (ms)')
-    plt.title('Population average')
+    plt.title('Incorrect trials')
     
     
     
@@ -1115,7 +1129,7 @@ if doPlots:
     # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, lr_trs],  axis = (1, 2)), 'r', label = 'high rate')
     # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, hr_trs],  axis = (1, 2)), 'b', label = 'low rate')
     plt.xlabel('time aligned to choice onset (ms)')
-    plt.title('Population average')
+    plt.title('Correct trials')
     
     
     #################### incorrect trials
@@ -1150,9 +1164,7 @@ if doPlots:
     # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, lr_trs],  axis = (1, 2)), 'r', label = 'high rate')
     # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, hr_trs],  axis = (1, 2)), 'b', label = 'low rate')
     plt.xlabel('time aligned to choice onset (ms)')
-    plt.title('Population average')
-    
-
+    plt.title('Incorrect trials')
     
     
 '''
@@ -1180,355 +1192,291 @@ if doPlots:
     
 
 
-
-#%% SVM starts here:
-########################################################################################################################################
-########################################################################################################################################
-# ## Identify the best regularization parameter
-#     Perform 10-fold cross validation to obtain the best regularization parameter
-#         More specifically: "crossValidateModel" divides data into training and test datasets. It calls linearSVM.py, which does linear SVM using XTrain, and returns percent class loss for XTrain and XTest.
-#     This procedure gets repeated for numSamples (100 times) for each value of regulariazation parameter. 
-#     An average across all 100 samples is computed to find the minimum test class loss.
-#     Best regularization parameter is defined as the smallest regularization parameter whose test-dataset class loss is within mean+sem of minimum test class loss.
-########################################################################################################################################
-########################################################################################################################################
-
-def perClassError(Y, Yhat):
-    import numpy as np
-    perClassEr = np.sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
-    return perClassEr
-    
-    
-########## Training SVM to decode choice on stim-aligned traces ##########
-    
-# In[25]:
-
-# numSamples = 10; # number of iterations for finding the best c (inverse of regularization parameter)
-# if you don't want to regularize, go with a very high cbest and don't run the section below.
-# cbest = 10**6
-
-# regType = 'l1'
-# kfold = 10;
-if regType == 'l1':
-    print '\nRunning l1 svm classification\r' 
-    # cvect = 10**(np.arange(-4, 6,0.2))/numTrials;
-    cvect = 10**(np.arange(-4, 6,0.2))/numDataPoints;
-elif regType == 'l2':
-    print '\nRunning l2 svm classification\r' 
-    cvect = 10**(np.arange(-4, 6,0.2));
-
-print 'try the following regularization values: \n', cvect
-# formattedList = ['%.2f' % member for member in cvect]
-# print 'try the following regularization values = \n', formattedList
-
-perClassErrorTrain = np.ones((numSamples, len(cvect)))+np.nan;
-perClassErrorTest = np.ones((numSamples, len(cvect)))+np.nan;
-wAllC = np.ones((numSamples, len(cvect), X.shape[1]))+np.nan;
-bAllC = np.ones((numSamples, len(cvect)))+np.nan;
-perClassErrorTest_incorr = np.ones((numSamples, len(cvect)))+np.nan;
-
-for s in range(numSamples):
-    for i in range(len(cvect)):
-        if regType == 'l1':                       
-            summary =  crossValidateModel(X, Y, linearSVM, kfold = kfold, l1 = cvect[i])
-        elif regType == 'l2':
-            summary =  crossValidateModel(X, Y, linearSVM, kfold = kfold, l2 = cvect[i])
-
-        perClassErrorTrain[s, i] = summary.perClassErrorTrain;
-        perClassErrorTest[s, i] = summary.perClassErrorTest;        
-        wAllC[s,i,:] = np.squeeze(summary.model.coef_); # weights of all neurons for each value of c and each shuffle
-        bAllC[s,i] = np.squeeze(summary.model.intercept_);
-
-        # compute classError for incorrect trials (using the decoder trained on correct trials)
-        #linear_svm.fit(XTrain, np.squeeze(YTrain))    # # linear_svm is trained using Xtrain and Ytrain... #train using Xtrain_corr... test on Xtest_corr and X_incorr.
-        #summary.model = linear_svm;
-        perClassErrorTest_incorr[s, i] = perClassError(Y_incorr, summary.model.predict(X_incorr));
-
-
-meanPerClassErrorTest_incorr = np.mean(perClassErrorTest_incorr, axis = 0);
-semPerClassErrorTest_incorr = np.std(perClassErrorTest_incorr, axis = 0)/np.sqrt(numSamples);
-
-
-# compute averages across shuffles
-meanPerClassErrorTrain = np.mean(perClassErrorTrain, axis = 0);
-semPerClassErrorTrain = np.std(perClassErrorTrain, axis = 0)/np.sqrt(numSamples);
-
-# Pick bestc from all range of c... it may end up be a value at which all weights are 0.
-meanPerClassErrorTest = np.mean(perClassErrorTest, axis = 0);
-semPerClassErrorTest = np.std(perClassErrorTest, axis = 0)/np.sqrt(numSamples);
-ix = np.argmin(meanPerClassErrorTest)
-cbest = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix])];
-cbest = cbest[0]; # best regularization term based on minError+SE criteria
-cbestAll = cbest
-
-# Make sure at bestc at least one weight is non-zero (ie pick bestc from only those values of c that give non-0 average weights.)
-a = (wAllC!=0) # non-zero weights
-b = np.mean(a, axis=(0,2)) # Fraction of non-zero weights (averaged across shuffles)
-c1stnon0 = np.argwhere(b)[0].squeeze() # first element of c with at least 1 non-0 w in 1 shuffle
-
-cvectnow = cvect[c1stnon0:]
-meanPerClassErrorTestnow = np.mean(perClassErrorTest[:,c1stnon0:], axis = 0);
-semPerClassErrorTestnow = np.std(perClassErrorTest[:,c1stnon0:], axis = 0)/np.sqrt(numSamples);
-ix = np.argmin(meanPerClassErrorTestnow)
-cbest = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
-cbest = cbest[0]; # best regularization term based on minError+SE criteria
-
-
-#%% plot C path
-
-if doPlots:
-    print 'Best c (inverse of regularization parameter) = %.2f' %cbest
-    plt.figure('cross validation')
-    plt.subplot(1,2,1)
-    plt.fill_between(cvect, meanPerClassErrorTrain-semPerClassErrorTrain, meanPerClassErrorTrain+ semPerClassErrorTrain, alpha=0.5, edgecolor='k', facecolor='k')
-    plt.fill_between(cvect, meanPerClassErrorTest-semPerClassErrorTest, meanPerClassErrorTest+ semPerClassErrorTest, alpha=0.5, edgecolor='r', facecolor='r')
-    plt.fill_between(cvect, meanPerClassErrorTest_incorr-semPerClassErrorTest_incorr, meanPerClassErrorTest_incorr+ semPerClassErrorTest_incorr, alpha=0.5, edgecolor='g', facecolor='g')
-    plt.plot(cvect, meanPerClassErrorTrain, 'k', label = 'training')
-    plt.plot(cvect, meanPerClassErrorTest, 'r', label = 'validation')
-    plt.plot(cvect, meanPerClassErrorTest_incorr, 'g', label = 'incorr')        
-    plt.plot(cvect[cvect==cbest], meanPerClassErrorTest[cvect==cbest], 'bo')
-    plt.xlim([cvect[1], cvect[-1]])
-    plt.xscale('log')
-    plt.xlabel('c (inverse of regularization parameter)')
-    plt.ylabel('classification error (%)')
-    plt.legend(loc='center left', bbox_to_anchor=(1, .7))
-    plt.tight_layout()
-
-
-# ## Train SVM model using the best regularization parameter
-#     All data in X are used for training.
-#     linear_svm is the trained SVM model that includes weights (w) and intercept (b).
-
-#%% I don't think you need the following
-'''
-if regType == 'l1':
-    linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
-elif regType == 'l2':
-    linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
-
-linear_svm.fit(X, Y)
-    
-w = np.squeeze(linear_svm.coef_);
-b = linear_svm.intercept_;
-
-trainE = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100;
-
-# keep a copy of linear_svm
-import copy
-linear_svm_0 = copy.deepcopy(linear_svm) 
-
-
-#%% Plot weights
-
-if doPlots:
-    plt.figure()
-    plt.subplot(1,2,1)
-    plt.plot(w[np.argsort(abs(w))[::-1]], 'k.', label = 'weights')
-    plt.plot(np.ones(len(w))*b, 'k--', label = 'bias')
-    plt.xlabel('sorted neurons')
-    plt.legend()
-    plt.title(('Training error: %.2f %%' %(trainE)))
-
-    plt.subplot(1,2,2)
-    plt.hist(w, 20,orientation='horizontal', color = 'k')
-    plt.ylabel('weights')
-    plt.xlabel('count')
-    plt.tight_layout()
-
-    # print abs(((np.dot(X,w)+b)>0).astype('float')-Y.astype('float')).sum()/len(Y)*100 # this is the prediction formula
-    print 'Fraction of non-zero weight neurons = %.2f' %(np.mean(w!=0))
-    print 'Training error = %.2f%%' %trainE
-'''
-
-
-#%%
-####################################################################################################################################
-# ## Do cross-validation and set null distributions for classification error by shuffling trial labels
-#     Compute distritbutions of class loss for train and test datasets by fitting SVM for 100 times.
-#     Do this for both actual data and shuffled data (ie data in which Y is shuffled but X is not to serve as null distribution.)
-# 
-# Below we call function crossValidateModel.py; It does the following:
-#1. shuffles trials to break any dependencies on the sequence of trails 
-#2. divides data to training and testin sets
-#3. calls linearSVM.py which does the following:
-#3.1. Create a SVM classifier using cbest as the regularization paramter.
-#3.2. Computes classficiation error on the training and testing datasets.
-####################################################################################################################################
-
-
-#%% Set class errors for data (at bestc)
-
-# you don't need to again train classifier on data bc you already got it above when you found bestc. You just need to do it for shuffled. ... [you already have access to test/train error as well as b and w of training SVM with bestc.)]
-# we just get the values of perClassErrorTrain and perClassErrorTest at cbest (we already computed these values above when training on all values of c)
-indBestC = np.in1d(cvect, cbest)
-perClassErrorTrain_data = perClassErrorTrain[:,indBestC].squeeze()
-perClassErrorTest_data = perClassErrorTest[:,indBestC].squeeze()
-w_data = wAllC[:,indBestC,:].squeeze()
-b_data = bAllC[:,indBestC]
-perClassErrorTest_data_incorr = perClassErrorTest_incorr[:,indBestC].squeeze()
-
-
-#%% Set shuffled (null) distributions of class error by shuffling trial label of correct trials to train.
-
-numShuffles = numSamples #100
-#summary_data = [];
-#perClassErrorTrain_data = [];
-#perClassErrorTest_data = []
-#w_data = []
-#b_data = []
-summary_shfl = [];
-perClassErrorTrain_shfl = [];
-perClassErrorTest_shfl = [];
-w_shfl = []
-b_shfl = []
-permIxsList = [];
-for i in range(numShuffles):
-    # permIxs = rng.permutation(numTrials);
-    permIxs = rng.permutation(numDataPoints);
-    permIxsList.append(permIxs);
-    if regType == 'l1':
-#        summary_data.append(crossValidateModel(X, Y, linearSVM, kfold = kfold, l1 = cbest))
-        summary_shfl.append(crossValidateModel(X, Y[permIxs], linearSVM, kfold = kfold, l1 = cbest))
-    elif regType == 'l2':
-#        summary_data.append(crossValidateModel(X, Y, linearSVM, kfold = kfold, l2 = cbest))
-        summary_shfl.append(crossValidateModel(X, Y[permIxs], linearSVM, kfold = kfold, l2 = cbest))
-        
-#    perClassErrorTrain_data.append(summary_data[i].perClassErrorTrain);
-#    perClassErrorTest_data.append(summary_data[i].perClassErrorTest);
-#    w_data.append(np.squeeze(summary_data[i].model.coef_));
-#    b_data.append(summary_data[i].model.intercept_);
-        
-    perClassErrorTrain_shfl.append(summary_shfl[i].perClassErrorTrain);
-    perClassErrorTest_shfl.append(summary_shfl[i].perClassErrorTest);
-    w_shfl.append(np.squeeze(summary_shfl[i].model.coef_));
-    b_shfl.append(summary_shfl[i].model.intercept_);
-
-    
-#%% Plot class error for data and shuffled (for corr trained, corr cv, incorr cv)
-
-pvalueTrain = ttest2(perClassErrorTrain_data, perClassErrorTrain_shfl, tail = 'left');
-pvalueTest = ttest2(perClassErrorTest_data, perClassErrorTest_shfl, tail = 'left');
-pvalueTest_incorr = ttest2(perClassErrorTest_data_incorr, perClassErrorTest_shfl, tail = 'left');
-
-print 'Training error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(perClassErrorTrain_data), np.mean(perClassErrorTrain_shfl), pvalueTrain)
-print 'Testing error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(perClassErrorTest_data), np.mean(perClassErrorTest_shfl), pvalueTest)
-print 'Incorr trials: error: Mean actual: %.2f%%, Mean shuffled (corr): %.2f%%, p-value = %.2f' %(np.mean(perClassErrorTest_data_incorr), np.mean(perClassErrorTest_shfl), pvalueTest)
-
-
-# Plot the histograms
-if doPlots:
-    binEvery = 3; # bin width
-    
-    plt.figure()
-    plt.subplot(1,2,1)
-    plt.hist(perClassErrorTrain_data, np.arange(0,100,binEvery), color = 'k', label = 'data');
-    plt.hist(perClassErrorTrain_shfl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
-    plt.xlabel('Training classification error (%)')
-    plt.ylabel('count')
-    plt.title('Mean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(perClassErrorTrain_data), np.mean(perClassErrorTrain_shfl), pvalueTrain), fontsize = 10)
-    plt.legend()
-
-    plt.subplot(1,2,2)
-    plt.hist(perClassErrorTest_data, np.arange(0,100,binEvery), color = 'k', label = 'data');
-    plt.hist(perClassErrorTest_shfl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
-    plt.legend()
-    plt.xlabel('Testing classification error (%)')
-    plt.title('Mean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(perClassErrorTest_data), np.mean(perClassErrorTest_shfl), pvalueTest), fontsize = 10)
-    plt.ylabel('count')
-    plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
-
-    plt.figure()
-    plt.subplot(1,2,1)
-    plt.hist(perClassErrorTest_data_incorr, np.arange(0,100,binEvery), color = 'k', label = 'data');
-    plt.hist(perClassErrorTest_shfl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
-    plt.legend()
-    plt.xlabel('Testing classification error (%)')
-    plt.title('Mean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(perClassErrorTest_data_incorr), np.mean(perClassErrorTest_shfl), pvalueTest), fontsize = 10)
-    plt.ylabel('count')
-    plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
-
-
-
+########################################################################################################################################################################
+########################################################################################################################################################################
+########################################################################################################################################################################
+########################################################################################################################################################################
 #%%
 ####################################################################################
 ########## Training SVM to decode choice on choice-aligned traces ##########
 ####################################################################################
     
-#%% lets try bagging too
-nRandTrSamp = 10
+
+#%%     
+##############################  BAGGING    ####################################
+###############################################################################    
+
+nRandTrSamp = 10 #nRandTrSamp = 10 #1000 # number of times to subselect trials (for the BAGGING method)
+doData = 1
+
+w_chAl_all = []
+b_chAl_all = []
+XTest_all = []
+XTrain_all = []
+YTest_all = []
+YTrain_all = []
+
+for i in range(numSamples): # multiple iterations to choose training/testing datasets, so we have numSamples BAGGED decoders to test, so we have numSamps of testing class error.
+    print 'Subselect XTrain and XTest, iteration %d' %(i)
+    
+    #%% Set aside a group of trials as testing dataset and never use them for training the decoders (which will be later used for BAGGING)    
+    #"shuffle trials to break any dependencies on the sequence of trails"....
+    
+    numObservations, numFeatures = X_chAl.shape
+    ## %%%%%% shuffle trials to break any dependencies on the sequence of trails 
+    shfl = rng.permutation(np.arange(0, numObservations));
+    Ys = Y_chAl[shfl];
+    Xs = X_chAl[shfl, :]; 
+    ## %%%%% divide data to training and testin sets
+    YTrain = Ys[np.arange(0, int((kfold-1.)/kfold*numObservations))]; # Take the first 90% of trials as training set
+    YTest = Ys[np.arange(int((kfold-1.)/kfold*numObservations), numObservations)]; # Take the last 10% of trials as testing set
+    
+    XTrain = Xs[np.arange(0, int((kfold-1.)/kfold*numObservations)), :];
+    XTest = Xs[np.arange(int((kfold-1.)/kfold*numObservations), numObservations), :];
+    
+    XTest_all.append(XTest)
+    XTrain_all.append(XTrain)
+    YTest_all.append(YTest)
+    YTrain_all.append(YTrain)
+       
+       
+    #%% Choose n random trials (n = 80% of min of HR, LR in YTrain)
+       
+    nrtr = int(np.ceil(.8 * min((YTrain==0).sum(), (YTrain==1).sum())))
+    print 'selecting %d random trials of each category' %(nrtr)
     
     
-
-#%% start subselecting trials (for BAGGING)
-# choose n random trials (n = 80% of min of HR, LR)
-nrtr = int(np.ceil(.8 * min((Y_chAl==0).sum(), (Y_chAl==1).sum())))
-print 'selecting %d random trials of each category' %(nrtr)
-
-
-#%% Train SVM on each frame using BAGGING (subselection of trials)
-
-#nRandTrSamp = 10 #1000 # number of times to subselect trials (for the BAGGING method)
-
-if doData:
-    # data
-    w_chAl = np.full((X_chAl.shape[0], X_chAl.shape[1], nRandTrSamp), np.nan) # frames x neurons x nrandtr
-    b_chAl =  np.full((X_chAl.shape[0], nRandTrSamp), np.nan) # frames x nrandtr
-    trainE_chAl =  np.full((X_chAl.shape[0], nRandTrSamp), np.nan) # frames x nrandtr
-        
-    for ir in range(nRandTrSamp): # subselect a group of trials
-        print 'BAGGING iteration %d' %(ir)
-        
-        # subselect nrtr random HR and nrtr random LR trials.
-        lrTrs = np.argwhere(Y_chAl==0)
-        randLrTrs = rng.permutation(lrTrs)[0:nrtr].flatten() # random LR trials
+    #%% Train SVM on XTrain using BAGGING (subselection of trials on XTrain)
     
-        hrTrs = np.argwhere(Y_chAl==1)
-        randHrTrs = rng.permutation(hrTrs)[0:nrtr].flatten() # random HR trials
+    if doData:
+        # data
+        w_chAl = np.full((XTrain.shape[1], nRandTrSamp), np.nan) # neurons x nrandtr
+        b_chAl =  np.full((nRandTrSamp), np.nan) # nrandtr
+        trainE_chAl =  np.full((nRandTrSamp), np.nan) # nrandtr
+            
+        for ir in range(nRandTrSamp): # subselect a group of trials
+            print '\tBAGGING iteration %d' %(ir) # Subselect out of XTrain
+            
+            # subselect nrtr random HR and nrtr random LR trials.
+            lrTrs = np.argwhere(YTrain==0)
+            randLrTrs = rng.permutation(lrTrs)[0:nrtr].flatten() # random LR trials
         
-        randTrs = np.sort(np.concatenate((randLrTrs, randHrTrs)))
+            hrTrs = np.argwhere(YTrain==1)
+            randHrTrs = rng.permutation(hrTrs)[0:nrtr].flatten() # random HR trials
+            
+            randTrs = np.sort(np.concatenate((randLrTrs, randHrTrs)))
+            
+            
+            X = XTrain[randTrs,:]
+            Y = YTrain[randTrs]
         
         
-        X = X_chAl[:,:,randTrs]
-        Y = Y_chAl[randTrs]
-    
-    
-        ##%% train SVM on each frame using the sebselect of trials
-        '''
-        if regType == 'l1':
-            linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
-        elif regType == 'l2':
-            linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
-        '''
-        
-        linear_svm = svm.LinearSVC(C=10.) # default c, also l2
-        
-        # train SVM on each frame
-        for ifr in range(np.shape(X)[0]):
+            ##%% train SVM on each frame using the sebselect of trials        
+            linear_svm = svm.LinearSVC(C=10.) # default c, also l2    # linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)   
             
             # data
-            linear_svm.fit(X[ifr,:,:].transpose(), Y)
+            linear_svm.fit(X, Y)
                 
-            w_chAl[ifr,:, ir] = np.squeeze(linear_svm.coef_);
-            b_chAl[ifr, ir] = linear_svm.intercept_;        
-            trainE_chAl[ifr, ir] = abs(linear_svm.predict(X[ifr,:,:].transpose())-Y.astype('float')).sum()/len(Y)*100;
+            w_chAl[:, ir] = np.squeeze(linear_svm.coef_);
+            b_chAl[ir] = linear_svm.intercept_;        
+            trainE_chAl[ir] = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100;
+    
+        w_chAl_all.append(w_chAl)
+        b_chAl_all.append(b_chAl)
+        
+    
+w_chAl_all = np.array(w_chAl_all) #numSamps x neurons x nRandTrSamp
+b_chAl_all = np.array(b_chAl_all)
+XTest_all = np.array(XTest_all) #numSamps x testingTrs x neurons
+XTrain_all = np.array(XTrain_all) #numSamps x trainingTrs x neurons
+YTest_all = np.array(YTest_all) #numSamps x testingTrs
+YTrain_all = np.array(YTrain_all) #numSamps x trainingTrs
 
 
-#%%
+
+#%% Now find the final BAGGED decoder for each round of training/testing trial subselection you performed above. And compute class error on different datasets (testing, training, incorrect, shuffled incorrect)
+
+classErr_corrTrain_all = np.full((numSamples), np.nan)
+classErr_corrTrainTest_all = np.full((numSamples), np.nan)
+classErr_corrTest_all = np.full((numSamples), np.nan)
+classErr_incorrTest_all = np.full((numSamples), np.nan)
+classErr_incorrTest_sh_all = []
+classErr_incorrTest_chance_all = []
+
+for i in range(numSamples):
+    
+    w_chAl = w_chAl_all[i,:,:]
+        
+    #%% Normalize weights (ie the w vector at each frame must have length 1)
+    
+    normw = np.linalg.norm(w_chAl, axis=0) # nrandtr; 2-norm of weights 
+    w_chAl_normed = w_chAl/normw # neurons x nrandtr; normalize weights so weights (of each frame) have length 1
+    if sum(normw<=eps).sum()!=0:
+        print 'take care of this; you need to reshape w_normed first'
+                    #    w_normed[normw<=eps, :] = 0 # set the direction to zero if the magnitude of the vector is zero
+    
+    
+    #%% Set the final decoder by aggregating decoders across trial subselects (ie average ws across all trial subselects), then again normalize them so they have length 1 (Bagging)
+    
+    w_chAl_nb = np.mean(w_chAl_normed, axis=(1)) # neurons 
+    nw = np.linalg.norm(w_chAl_nb, axis=0) # scalar; 2-norm of weights 
+    w_bag = w_chAl_nb/nw # neurons
+    # not sure what to do with the intercept term in the BAGGED method... lets go with the average of b across trials subselects for now:
+    b_bag = b_chAl.mean()
+    
+    
+    #%% Now make predictions on different datasets using the BAGGED decodcer
+    
+    XTest = XTest_all[i,:,:]
+    XTrain = XTrain_all[i,:,:]
+    YTest = YTest_all[i,:]
+    YTrain = YTrain_all[i,:]
+    
+    # training data
+    yhat_corrTrain = predictMan(XTrain, w_bag, b_bag)
+    a = abs(yhat_corrTrain - YTrain).mean() * 100
+    print a, '= % class error on training dataset (correct trials)'
+    classErr_corrTrain_all[i] = a
+    
+    
+    # all correct data
+    yhat_corrAll = predictMan(X_chAl, w_bag, b_bag)
+    a = abs(yhat_corrAll - Y_chAl).mean() * 100
+    print np.round(a, 2), '= % class error on all correct trials'
+    classErr_corrTrainTest_all[i] = a
+    
+    
+    # testing correct
+    yhat0 = predictMan(XTest, w_bag, b_bag)
+    #perClassError(YTest, yhat0)
+    classErr_corrTest = abs(yhat0 - YTest).mean() * 100
+    print np.round(classErr_corrTest, 2), '= % class error on correct trials (testing dataset)'
+    classErr_corrTest_all[i] = classErr_corrTest
+    
+    # incorrect trials
+    yhat_incorr = predictMan(X_chAl_incorr, w_bag, b_bag)
+    classErr_incorrTest = abs(yhat_incorr - Y_chAl_incorr).mean() * 100
+    print np.round(classErr_incorrTest, 2), '= % class error on incorrect trials'
+    classErr_incorrTest_all[i] = classErr_incorrTest
+    
+    
+    # shuffled incorrect: compare yhat_incorr with shuffled labels
+    classErr_incorrTest_sh = []
+    classErr_incorrTest_chance = []
+    for i in range(numSamples):
+        # generate chance trial labels, half for each choice
+        Y_incorr_chance = np.zeros(Y_chAl_incorr.shape[0])
+        i = rng.permutation(Y_chAl_incorr.shape[0])[0:Y_chAl_incorr.shape[0]/2]
+        Y_incorr_chance[i] = 1
+        classErr_incorrTest_chance.append(abs(yhat_incorr - Y_incorr_chance).mean() * 100)
+        
+        # just shuffle Y_incorr
+        permIx = rng.permutation(Y_chAl_incorr.shape[0])
+        classErr_incorrTest_sh.append(abs(yhat_incorr - Y_chAl_incorr[permIx]).mean() * 100)    
+        #print np.round(classErr_incorrTest_chance, 2), '= % class error on incorrect trials'
+    
+    classErr_incorrTest_sh = np.array(classErr_incorrTest_sh)
+    classErr_incorrTest_chance = np.array(classErr_incorrTest_chance)
+    
+    classErr_incorrTest_sh_all.append(classErr_incorrTest_sh)
+    classErr_incorrTest_chance_all.append(classErr_incorrTest_chance)
+    
+    print np.round(classErr_incorrTest_chance.mean(), 2), '= % class error on incorrect trials with random labels (equal number for the 2 choices)'
+    print np.round(classErr_incorrTest_sh.mean(), 2), '= % class error on incorrect trials with shuffled labels'
+    if (Y_chAl_incorr==0).sum() > (Y_chAl_incorr==1).sum():
+        print np.round(50 - (classErr_incorrTest * (1 - .5/(Y_chAl_incorr==0).mean())), 2), ' = my measure of class error on shuffled data, should be close to value above'
+    elif (Y_chAl_incorr==0).sum() < (Y_chAl_incorr==1).sum():
+        print np.round(50 - (classErr_incorrTest * (1 - .5/(Y_chAl_incorr==1).mean())), 2), ' = my measure of class error on shuffled data, should be close to value above'
+
+
+classErr_incorrTest_sh_all = np.array(classErr_incorrTest_sh_all)
+classErr_incorrTest_chance_all = np.array(classErr_incorrTest_chance_all)
+
+classErr_corrTrain_all.mean()
+classErr_corrTrainTest_all.mean()
+classErr_corrTest_all.mean()
+classErr_incorrTest_all.mean()
+classErr_incorrTest_chance_all.mean()
+classErr_incorrTest_sh_all.mean()
+
+
+#%% Below is why I am using a faked shuffled data (classErr_incorrTest_chance) which has equal number of trials from each class to set the null distribution:
+'''
+# my own understanding for why and how much classErr_incorrTest_sh may deviate from 50:
+# if there is an imbalance is hr vs lr, then y_shfl will ratain same labels as y
+# for a fraction of trials. Therefore classErr_shfl will be biased to classErr by a degree
+# that is determined by the fraction of trials which retain the same label.
+# We can quanity this in the following way:
+50 - (classErr_incorrTest * (1 - .5/(Y_chAl_incorr==0).mean()))
+# lets break it down:
+a = (1 - .5/(Y_chAl_incorr==0).mean()) # a is the degree by which the original labels are retained in the shuffled data... if fully shuffled it will be 0.
+b = classErr_incorrTest * a # b is the degree by which classErr will bias the chance performance
+c = 50 - b # c is the final chance performance
+'''
+
+
+#%% Lets check how svm.predict and svr.predict work.... Result: for both SVM and SVR, classfier.predict equals xw+b. For SVM, xw+b gives -1 and 1, that should be changed to 0 and 1 to match svm.predict.
+'''
+# check SVR prediction
+# from Gamal:
+#X features matrix (ie matrix of neural data of size trials x neurons);
+#y observations array (ie array of stimulus rate of size trials)
+from sklearn.svm import LinearSVR
+svr = LinearSVR(C=10., epsilon=0.0, dual = True, tol = 1e-9, fit_intercept = True)
+svr.fit(X,Y)
+w = svr.coef_; # weights vector
+b = svr.intercept_; # bias term
+print abs(np.dot(X, w.T)+b - svr.predict(X)).sum() # this should be 0
+
+
+# check SVM prediction
+#from sklearn.svm import LinearSVR
+linear_svm = svm.LinearSVC(C=10.)
+linear_svm.fit(X,Y)
+w = linear_svm.coef_.squeeze() # weights vector
+b = linear_svm.intercept_.squeeze() # bias term
+yhat0 = np.dot(X, w.T)+b # it gives -1 and 1... we need to compare it to threshold (0):
+yhat0[yhat0<0] = 0
+yhat0[yhat0>0] = 1
+print abs(yhat0 - linear_svm.predict(X)).sum() # this should be 0
+''''
+
+
+#%%     
+##############################   L1/L2 penalty  ##################################
+###############################################################################   
+
+#%% Find the optimal regularization parameter:
+# Rrain SVM on a range of c, using training and testing dataset ... 
+#    make class predictions for testing dataset and incorrect trials. 
+#    Also shuffle labels for correct and incorrect trials and make predictions (to set null distributions)
+# Repeat the above procedure for numSamples times.
+
 
 # numSamples = 10; # number of iterations for finding the best c (inverse of regularization parameter)
 # if you don't want to regularize, go with a very high cbest and don't run the section below.
 # cbest = 10**6
+
+
+# important vars below:
+#perClassErrorTest_chAl : classErr on testing correct
+#perClassErrorTest_chAl_shfl : classErr on shuffled testing correct
+#perClassErrorTest_incorr_chAl : classErr on testing incorrect
+#perClassErrorTest_incorr_chAl_chance : classErr on shuffled testing incorrect
+
+
 
 # regType = 'l1'
 # kfold = 10;
 if regType == 'l1':
     print '\nRunning l1 svm classification\r' 
     # cvect = 10**(np.arange(-4, 6,0.2))/numTrials;
-#    cvect = 10**(np.arange(-4, 6,0.2))/X_chAl.shape[0];
-    cvect = 10**(np.arange(-4, 3.11e2,10.5))/X_chAl.shape[0];
+    cvect = 10**(np.arange(-4, 6,0.2))/X_chAl.shape[0];
+#    cvect = 10**(np.arange(-4, 3.11e2,10.5))/X_chAl.shape[0];
 elif regType == 'l2':
     print '\nRunning l2 svm classification\r' 
-    cvect = 10**(np.arange(-4, 6,0.2));
+    cvect = 10**(np.arange(-4, 6,0.2))/X_chAl.shape[0]
+#    cvect = 10**(np.arange(-6, 6,0.2));
 
 print 'try the following regularization values: \n', cvect
 # formattedList = ['%.2f' % member for member in cvect]
@@ -1538,23 +1486,22 @@ perClassErrorTrain_chAl = np.ones((numSamples, len(cvect)))+np.nan;
 perClassErrorTest_chAl = np.ones((numSamples, len(cvect)))+np.nan;
 wAllC_chAl = np.ones((numSamples, len(cvect), X_chAl.shape[1]))+np.nan;
 bAllC_chAl = np.ones((numSamples, len(cvect)))+np.nan;
+
 perClassErrorTest_incorr_chAl = np.ones((numSamples, len(cvect)))+np.nan;
 perClassErrorTest_incorr_chAl_shfl = np.ones((numSamples, len(cvect)))+np.nan;
-
-perClassErrorTrain_shfl_chAl = np.ones((numSamples, len(cvect)))+np.nan;
-perClassErrorTest_shfl_chAl = np.ones((numSamples, len(cvect)))+np.nan;
-
-perClassErrorTest_corr_shfl_chAl = np.ones((numSamples, len(cvect)))+np.nan;
-
+perClassErrorTest_incorr_chAl_chance = np.ones((numSamples, len(cvect)))+np.nan;
+#perClassErrorTrain_shfl_chAl = np.ones((numSamples, len(cvect)))+np.nan;
+#perClassErrorTest_shfl_chAl = np.ones((numSamples, len(cvect)))+np.nan;
+perClassErrorTest_chAl_shfl = np.ones((numSamples, len(cvect)))+np.nan;
 
 for s in range(numSamples):
     print 'iteration %d' %(s)
     permIxs_incorr = rng.permutation(X_chAl_incorr.shape[0]);
     permIxs = rng.permutation(X_chAl.shape[0]);
 
-#    a = np.zeros(Y_chAl_incorr.shape[0])
-#    b = rng.permutation(Y_chAl_incorr.shape[0])[0:Y_chAl_incorr.shape[0]/2]
-#    a[b] = 1
+    a = np.zeros(Y_chAl_incorr.shape[0])
+    b = rng.permutation(Y_chAl_incorr.shape[0])[0:Y_chAl_incorr.shape[0]/2]
+    a[b] = 1
     
     for i in range(len(cvect)):
         
@@ -1562,16 +1509,26 @@ for s in range(numSamples):
             summary =  crossValidateModel(X_chAl, Y_chAl, linearSVM, kfold = kfold, l1 = cvect[i])
         elif regType == 'l2':
             summary =  crossValidateModel(X_chAl, Y_chAl, linearSVM, kfold = kfold, l2 = cvect[i])
-
-#        perClassErrorTest_corr_shfl_chAl[s, i] = perClassError(Y_chAl[permIxs], summary.model.predict(X_chAl));
-        
-        
-        perClassErrorTrain_chAl[s, i] = summary.perClassErrorTrain;
-        perClassErrorTest_chAl[s, i] = summary.perClassErrorTest;        
+                    
         wAllC_chAl[s,i,:] = np.squeeze(summary.model.coef_); # weights of all neurons for each value of c and each shuffle
         bAllC_chAl[s,i] = np.squeeze(summary.model.intercept_);
 
-        # compute classError for incorrect trials (using the decoder trained on correct trials)
+        # classification errors                    
+        perClassErrorTrain_chAl[s, i] = summary.perClassErrorTrain;
+        perClassErrorTest_chAl[s, i] = summary.perClassErrorTest;                
+        # Correct shuffled data: 
+        # same decoder trained on correct trials, make predictions on correct with shuffled labels.
+        perClassErrorTest_chAl_shfl[s, i] = perClassError(Y_chAl[permIxs], summary.model.predict(X_chAl));
+
+        # this time refit the classifier on correct trials using shuffled labels (and doing testing, training datasets)
+        '''
+#        summary_shfl = crossValidateModel(X_chAl_incorr, Y_chAl_incorr[permIxs], linearSVM, kfold = kfold, l1 = cvect[i])
+        summary_shfl = crossValidateModel(X_chAl, Y_chAl[permIxs], linearSVM, kfold = kfold, l1 = cvect[i])
+        perClassErrorTrain_shfl_chAl[s, i] = summary_shfl.perClassErrorTrain;
+        perClassErrorTest_shfl_chAl[s, i] = summary_shfl.perClassErrorTest;
+        '''
+
+        # Incorrect trials (using the decoder trained on correct trials)
         #linear_svm.fit(XTrain, np.squeeze(YTrain))    # # linear_svm is trained using Xtrain and Ytrain... #train using Xtrain_corr... test on Xtest_corr and X_incorr.
         #summary.model = linear_svm;
         perClassErrorTest_incorr_chAl[s, i] = perClassError(Y_chAl_incorr, summary.model.predict(X_chAl_incorr));
@@ -1579,34 +1536,28 @@ for s in range(numSamples):
         # Null distribution for class error on incorr trials: 
         # We want to use the same decoder (trained on correct trials) to predict the choice on incorrect trials with shuffled class labels.             
         perClassErrorTest_incorr_chAl_shfl[s, i] = perClassError(Y_chAl_incorr[permIxs_incorr], summary.model.predict(X_chAl_incorr));
-#        perClassErrorTest_incorr_chAl_shfl[s, i] = perClassError(a, summary.model.predict(X_chAl_incorr));
-        
+        perClassErrorTest_incorr_chAl_chance[s, i] = perClassError(a, summary.model.predict(X_chAl_incorr)); # half of the trials assigned randomly to one choice and the other half to the other choice
 
 
-#        summary_shfl = crossValidateModel(X_chAl_incorr, Y_chAl_incorr[permIxs], linearSVM, kfold = kfold, l1 = cvect[i])
-        summary_shfl = crossValidateModel(X_chAl, Y_chAl[permIxs], linearSVM, kfold = kfold, l1 = cvect[i])
-        perClassErrorTrain_shfl_chAl[s, i] = summary_shfl.perClassErrorTrain;
-        perClassErrorTest_shfl_chAl[s, i] = summary_shfl.perClassErrorTest;
-        
+#%% Compute average of class errors across numSamples
 
-meanPerClassErrorTest_corr_shfl = np.mean(perClassErrorTest_corr_shfl_chAl, axis = 0);
-semPerClassErrorTest_corr_shfl = np.std(perClassErrorTest_corr_shfl_chAl, axis = 0)/np.sqrt(numSamples);
+meanPerClassErrorTest_corr_shfl = np.mean(perClassErrorTest_chAl_shfl, axis = 0);
+semPerClassErrorTest_corr_shfl = np.std(perClassErrorTest_chAl_shfl, axis = 0)/np.sqrt(numSamples);
 
+#meanPerClassErrorTest_shfl = np.mean(perClassErrorTest_shfl_chAl, axis = 0);
+#semPerClassErrorTest_shfl = np.std(perClassErrorTest_shfl_chAl, axis = 0)/np.sqrt(numSamples);
 
-meanPerClassErrorTest_shfl = np.mean(perClassErrorTest_shfl_chAl, axis = 0);
-semPerClassErrorTest_shfl = np.std(perClassErrorTest_shfl_chAl, axis = 0)/np.sqrt(numSamples);
+#meanPerClassErrorTrain_shfl = np.mean(perClassErrorTrain_shfl_chAl, axis = 0);
+#semPerClassErrorTrain_shfl = np.std(perClassErrorTrain_shfl_chAl, axis = 0)/np.sqrt(numSamples);
 
-meanPerClassErrorTrain_shfl = np.mean(perClassErrorTrain_shfl_chAl, axis = 0);
-semPerClassErrorTrain_shfl = np.std(perClassErrorTrain_shfl_chAl, axis = 0)/np.sqrt(numSamples);
-
-
-# compute averages across shuffles        
 meanPerClassErrorTest_incorr = np.mean(perClassErrorTest_incorr_chAl, axis = 0);
 semPerClassErrorTest_incorr = np.std(perClassErrorTest_incorr_chAl, axis = 0)/np.sqrt(numSamples);
 
 meanPerClassErrorTest_incorr_shfl = np.mean(perClassErrorTest_incorr_chAl_shfl, axis = 0);
 semPerClassErrorTest_incorr_shfl = np.std(perClassErrorTest_incorr_chAl_shfl, axis = 0)/np.sqrt(numSamples);
 
+meanPerClassErrorTest_incorr_chance = np.mean(perClassErrorTest_incorr_chAl_chance, axis = 0);
+semPerClassErrorTest_incorr_chance = np.std(perClassErrorTest_incorr_chAl_chance, axis = 0)/np.sqrt(numSamples);
 
 meanPerClassErrorTrain = np.mean(perClassErrorTrain_chAl, axis = 0);
 semPerClassErrorTrain = np.std(perClassErrorTrain_chAl, axis = 0)/np.sqrt(numSamples);
@@ -1614,27 +1565,105 @@ semPerClassErrorTrain = np.std(perClassErrorTrain_chAl, axis = 0)/np.sqrt(numSam
 meanPerClassErrorTest = np.mean(perClassErrorTest_chAl, axis = 0);
 semPerClassErrorTest = np.std(perClassErrorTest_chAl, axis = 0)/np.sqrt(numSamples);
 
-# Identify best c : smallest c whose CV error falls below 1 se of min CV error
+
+#%% Identify best c : 
+
+smallestC = 0 # if 1: smallest c whose CV error falls below 1 se of min CV error will be used as optimal C; if 0: c that gives min CV error will be used as optimal c.
+if smallestC==1:
+    print 'bestc = smallest c whose cv error is less than 1se of min cv error'
+else:
+    print 'bestc = c that gives min cv error'
+#I think we should go with min c as the bestc... at least we know it gives the best cv error... and it seems like it has nothing to do with whether the decoder generalizes to other data or not.
+
+
 # Use all range of c... it may end up a value at which all weights are 0.
 ix = np.argmin(meanPerClassErrorTest)
-cbest_chAl = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix])];
-cbest_chAl = cbest_chAl[0]; # best regularization term based on minError+SE criteria
-cbestAll_chAl = cbest_chAl
+if smallestC==1:
+    cbest_chAl = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix])];
+    cbest_chAl = cbest_chAl[0]; # best regularization term based on minError+SE criteria
+    cbestAll_chAl = cbest_chAl
+else:
+    cbestAll_chAl = cvect[ix]
+print 'best c = ', cbestAll_chAl
+
+
 
 # Make sure at bestc at least one weight is non-zero (ie pick bestc from only those values of c that give non-0 average weights.)
 a = (wAllC_chAl!=0) # non-zero weights
 b = np.mean(a, axis=(0,2)) # Fraction of non-zero weights (averaged across shuffles)
 c1stnon0 = np.argwhere(b)[0].squeeze() # first element of c with at least 1 non-0 w in 1 shuffle
-
 cvectnow = cvect[c1stnon0:]
+
 meanPerClassErrorTestnow = np.mean(perClassErrorTest_chAl[:,c1stnon0:], axis = 0);
 semPerClassErrorTestnow = np.std(perClassErrorTest_chAl[:,c1stnon0:], axis = 0)/np.sqrt(numSamples);
 ix = np.argmin(meanPerClassErrorTestnow)
-cbest_chAl = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
-cbest_chAl = cbest_chAl[0]; # best regularization term based on minError+SE criteria
+if smallestC==1:
+    cbest_chAl = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
+    cbest_chAl = cbest_chAl[0]; # best regularization term based on minError+SE criteria    
+else:
+    cbest_chAl = cvectnow[ix]
+
+print 'best c (at least 1 non-0 weight) = ', cbest_chAl
+
+
+# find bestc based on incorr trial class error
+meanPerClassErrorTestnow = np.mean(perClassErrorTest_incorr_chAl[:,c1stnon0:], axis = 0);
+semPerClassErrorTestnow = np.std(perClassErrorTest_incorr_chAl[:,c1stnon0:], axis = 0)/np.sqrt(numSamples);
+ix = np.argmin(meanPerClassErrorTestnow)
+if smallestC==1:    
+    cbest_chAl_incorr = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
+    cbest_chAl_incorr = cbest_chAl_incorr[0]; # best regularization term based on minError+SE criteria
+else:   
+    cbest_chAl_incorr = cvectnow[ix]
+    
+print 'incorr: best c (at least 1 non-0 weight) = ', cbest_chAl_incorr
+
+
+
+#%% Set the decoder and class errors at best c (for data)
+
+# you don't need to again train classifier on data bc you already got it above when you found bestc. You just need to do it for shuffled. ... [you already have access to test/train error as well as b and w of training SVM with bestc.)]
+# we just get the values of perClassErrorTrain and perClassErrorTest at cbest (we already computed these values above when training on all values of c)
+indBestC = np.in1d(cvect, cbest_chAl)
+
+w_bestc_data_chAl = wAllC_chAl[:,indBestC,:].squeeze() # numSamps x neurons
+b_bestc_data_chAl = bAllC_chAl[:,indBestC]
+
+classErr_bestC_test_data_chAl = perClassErrorTest_chAl[:,indBestC].squeeze()
+classErr_bestC_test_shfl_chAl = perClassErrorTest_chAl_shfl[:,indBestC].squeeze()
+classErr_bestC_incorr_data_chAl = perClassErrorTest_incorr_chAl[:,indBestC].squeeze()
+classErr_bestC_incorr_chance_chAl = perClassErrorTest_incorr_chAl_chance[:,indBestC].squeeze()
+#classErr_bestC_train_data_chAl = perClassErrorTrain_chAl[:,indBestC].squeeze()
+#perClassErrorTest_shfl_incorr_chAl = perClassErrorTest_incorr_chAl_shfl[:,indBestC].squeeze()
 
 
 #%% plot C path
+       
+if doPlots:
+    print 'Best c (inverse of regularization parameter) = %.2f' %cbest_chAl
+    plt.figure('cross validation')
+    plt.subplot(1,2,1)
+    plt.fill_between(cvect, meanPerClassErrorTrain-semPerClassErrorTrain, meanPerClassErrorTrain+ semPerClassErrorTrain, alpha=0.5, edgecolor='k', facecolor='k')
+    plt.fill_between(cvect, meanPerClassErrorTest-semPerClassErrorTest, meanPerClassErrorTest+ semPerClassErrorTest, alpha=0.5, edgecolor='r', facecolor='r')
+    plt.fill_between(cvect, meanPerClassErrorTest_incorr-semPerClassErrorTest_incorr, meanPerClassErrorTest_incorr+ semPerClassErrorTest_incorr, alpha=0.5, edgecolor='g', facecolor='g')        
+    plt.fill_between(cvect, meanPerClassErrorTest_incorr_chance-semPerClassErrorTest_incorr_chance, meanPerClassErrorTest_incorr_chance+ semPerClassErrorTest_incorr_chance, alpha=0.5, edgecolor='m', facecolor='m')        
+    plt.fill_between(cvect, meanPerClassErrorTest_incorr_shfl-semPerClassErrorTest_incorr_shfl, meanPerClassErrorTest_incorr_shfl+ semPerClassErrorTest_incorr_shfl, alpha=0.5, edgecolor='c', facecolor='c')        
+    plt.fill_between(cvect, meanPerClassErrorTest_corr_shfl-semPerClassErrorTest_corr_shfl, meanPerClassErrorTest_corr_shfl+ semPerClassErrorTest_corr_shfl, alpha=0.5, edgecolor='y', facecolor='y')        
+    plt.plot(cvect, meanPerClassErrorTrain, 'k', label = 'training')
+    plt.plot(cvect, meanPerClassErrorTest, 'r', label = 'validation')
+    plt.plot(cvect, meanPerClassErrorTest_incorr, 'g', label = 'incorr')        
+    plt.plot(cvect, meanPerClassErrorTest_incorr_chance, 'm', label = 'incorr-chance')            
+    plt.plot(cvect, meanPerClassErrorTest_incorr_shfl, 'c', label = 'incorr-shfl')            
+    plt.plot(cvect, meanPerClassErrorTest_corr_shfl, 'y', label = 'corr-shfl')            
+    plt.plot(cvect[cvect==cbest_chAl], meanPerClassErrorTest[cvect==cbest_chAl], 'bo')
+    plt.xlim([cvect[1], cvect[-1]])
+    plt.xscale('log')
+    plt.xlabel('c (inverse of regularization parameter)')
+    plt.ylabel('classification error (%)')
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7))
+    plt.tight_layout()
+
+'''
 if doPlots:
     print 'Best c (inverse of regularization parameter) = %.2f' %cbest_chAl
     plt.figure('cross validation')
@@ -1653,7 +1682,7 @@ if doPlots:
     plt.ylabel('classification error (%)')
     plt.legend(loc='center left', bbox_to_anchor=(1, .7))
     plt.tight_layout()
-    
+'''
 '''
 if doPlots:
     print 'Best c (inverse of regularization parameter) = %.2f' %cbest_chAl
@@ -1672,8 +1701,657 @@ if doPlots:
     plt.legend(loc='center left', bbox_to_anchor=(1, .7))
     plt.tight_layout()
 '''
+
+
+#%% Compare angle between decoders at different values of c
+# just curious how decoders change during c path
+
+# Normalize wAllC_chAl
+nw = np.linalg.norm(wAllC_chAl, axis=2) # numSamps x len(cvect); 2-norm of weights 
+wAllC_chAl_n = np.transpose(np.transpose(wAllC_chAl,(2,0,1))/nw, (1,2,0)) # numSamps x len(cvect) x neurons
+
+# Take average decoder across shuffles and normalize it
+wAv = np.mean(wAllC_chAl_n,axis=0) # len(cvect) x neurons
+nw = np.linalg.norm(wAv, axis=1) # len(cvect); 2-norm of weights 
+wAv_n = np.transpose(np.transpose(wAv)/nw) # len(cvect) x neurons
+
+angc = np.full((len(cvect),len(cvect)), np.nan)
+angcAv = np.full((len(cvect),len(cvect)), np.nan)
+s = rng.permutation(numSamples)[0]
+for i in range(len(cvect)):
+    for j in range(len(cvect)):
+        angc[i,j] = np.arccos(abs(np.dot(wAllC_chAl_n[s,i,:], wAllC_chAl_n[s,j,:].transpose())))*180/np.pi
+        angcAv[i,j] = np.arccos(abs(np.dot(wAv_n[i,:], wAv_n[j,:])))*180/np.pi
+
+# decoders at smaller values of c are all 0 weight, so their angles are nan
+'''
+# decoders of one of the shuffles
+plt.figure()
+#plt.subplot(121)
+plt.imshow(angc, cmap='jet_r')
+plt.colorbar()
+'''
+# average decoder across shuffles
+plt.figure()
+#plt.subplot(121)
+plt.imshow(angcAv, cmap='jet_r')
+plt.colorbar()
+
+plt.figure()
+#plt.subplot(122)
+plt.plot(meanPerClassErrorTrain, 'k', label = 'training')
+plt.plot(meanPerClassErrorTest, 'r', label = 'validation')
+plt.plot(meanPerClassErrorTest_incorr, 'g', label = 'incorr')        
+plt.plot(meanPerClassErrorTest_incorr_shfl, 'c', label = 'incorr-shfl')            
+plt.plot(meanPerClassErrorTest_corr_shfl, 'y', label = 'corr-shfl')   
+#plt.axis('equal')
+#plt.gca().set_aspect('equal', adjustable='box')
+
+
+#%%
+################ Compare BAGGED decoder and L1/L2 decoder ##############
+#%% Compute angle between optimal L1 decoders (of all numSamps); and between BAGGED decoder and L1 decoder... we want to see how similar they are
+
+# Normalize w_bestc_data_chAl
+nw = np.linalg.norm(w_bestc_data_chAl, axis=1) # numSamps; 2-norm of weights 
+w_data_chAl_n = (w_bestc_data_chAl.T/nw).T # numSamps x neurons
+
+# average (across numSamps) decoders at best c
+wNow = np.mean(w_data_chAl_n, axis=0) # neurons
+# again normalize it
+nw = np.linalg.norm(wNow) # numSamps; 2-norm of weights 
+wNow_n = wNow/nw # neurons
+
+
+# train svm on all data using best c
+linear_svm = svm.LinearSVC(C = cbest_chAl, loss='squared_hinge', penalty=regType, dual=False)
+linear_svm.fit(X_chAl, Y_chAl)   
+w = np.squeeze(linear_svm.coef_);
+b = linear_svm.intercept_;
+#trainE = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100;
+
+# normalize w
+nw = np.linalg.norm(w) # numSamps; 2-norm of weights 
+w_n = w/nw # neurons
+
+
+# compute angle between the averaged across samples decoder and the one trained using all data (without testing and training)
+print np.arccos(abs(np.dot(wNow_n, w_n.transpose())))*180/np.pi
+
+#s = 20
+#np.arccos(abs(np.dot(w_data_chAl_n[s,:].squeeze(), w_n.transpose())))*180/np.pi
+
+
+# angle between bestc decoders of different shuffles
+ang_samps = np.full((numSamples,numSamples), np.nan)
+for s in range(numSamples):
+    for ss in range(numSamples):
+        ang_samps[s,ss] = np.arccos(abs(np.dot(w_data_chAl_n[s,:].squeeze(), w_data_chAl_n[ss,:].squeeze())))*180/np.pi
+
+# average angle between decoders of different samples
+# first set diag elements to nan (because we know their angle is 0)
+np.fill_diagonal(ang_samps, np.nan)
+
+plt.figure()
+plt.imshow(ang_samps, cmap='jet_r')
+plt.colorbar()
+
+print 'Average angle btwn optimal decoders of all shuffles = ', np.nanmean(ang_samps)
+
+
+########## now compare angle between bagged decoder and l1 optimal decoder
+print np.arccos(abs(np.dot(w_n, w_bag)))*180/np.pi
+
+# with average l1 decoder
+print np.arccos(abs(np.dot(wNow_n, w_bag)))*180/np.pi
+
+# with each l1 decoder
+angs = []
+for s in range(numSamples):
+    angs.append(np.arccos(abs(np.dot(w_data_chAl_n[s,:].squeeze(), w_bag)))*180/np.pi)
+
+angs = np.array(angs)
+plt.figure()
+plt.plot(angs)
+print 'Angle between BAGGED decoder and optimal L1 decoder = ', angs.mean()
+
+
+#%% predictions on incorr and testing corr, using l1 decoder vs bagged decoder
+
+# bagged decoder
+print 'BAGGED'
+# testing corr
+yhat0 = predictMan(XTest, w_bag, b_bag)
+print 'corr: ', np.round(perClassError(yhat0, YTest), 2)
+yhat0 = predictMan(X_chAl_incorr, w_bag, b_bag)
+print 'incorr: ', np.round(perClassError(yhat0, Y_chAl_incorr), 2)
+
+
+# L1 decocer
+print 'L1 decocer'
+print 'corr: ', np.round(perClassErrorTest_data_chAl.mean(), 2)
+print 'incorr: ', np.round(perClassErrorTest_data_incorr_chAl.mean(), 2), '\n'
+'''
+# decoder found using all data (without doing testing and training)
+yhat0 = predictMan(X_chAl_incorr, w_n, b)
+print perClassError(yhat0, Y_chAl_incorr)
+
+# averaged decoder across samples
+yhat0 = predictMan(X_chAl_incorr, wNow_n, b_bestc_data_chAl.mean())
+print perClassError(yhat0, Y_chAl_incorr)
+'''
+print 'L1 decoder, (bestc found separately for incorr and testing corr)'
+# min err on testing corr for Bagged decoders (with any c valur larger than bestc)
+print 'corr: ', np.round(np.mean(perClassErrorTest_chAl[:,np.argwhere(indBestC).squeeze():], axis=0).min(), 2)
+# min err on incorr for Bagged decoders (with any c valur larger than bestc)
+print 'incorr: ', np.round(np.mean(perClassErrorTest_incorr_chAl[:,np.argwhere(np.in1d(cvect, cbest_chAl_incorr)).squeeze():], axis=0).min(), 2), '\n'
+
+
+###############################################################################
+   
+#%% Plot class error for data and shuffled (for corr trained, corr cv, incorr cv)
+
+pvalueTest_corr = ttest2(classErr_bestC_test_shfl_chAl, classErr_bestC_test_data_chAl, tail = 'left');
+pvalueTest_incorr = ttest2(classErr_bestC_incorr_data_chAl, classErr_bestC_incorr_chance_chAl, tail = 'left');
+pvalueTest_incorr_corr = ttest2(classErr_bestC_incorr_data_chAl, classErr_bestC_test_shfl_chAl, tail = 'left');
+
+#print 'Training error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(perClassErrorTrain_data_chAl), np.mean(perClassErrorTrain_shfl_chAl), pvalueTrain)
+print 'Testing error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(classErr_bestC_test_data_chAl), np.mean(classErr_bestC_test_shfl_chAl), pvalueTest_corr)
+print 'Incorr trials: error: Mean actual: %.2f%%, Mean shuffled (corr): %.2f%%, p-value = %.2f' %(np.mean(classErr_bestC_incorr_data_chAl), np.mean(classErr_bestC_incorr_chance_chAl), pvalueTest_incorr)
+
+
+# Plot the histograms
+if doPlots:
+    binEvery = 3; # bin width
+    
+    plt.figure()
+#    plt.subplot(1,2,1)
+#    plt.hist(perClassErrorTrain_data_chAl, np.arange(0,100,binEvery), color = 'k', label = 'data');
+#    plt.hist(perClassErrorTrain_shfl_chAl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
+#    plt.xlabel('Training classification error (%)')
+#    plt.ylabel('count')
+#    plt.title('Mean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(perClassErrorTrain_data_chAl), np.mean(perClassErrorTrain_shfl_chAl), pvalueTrain), fontsize = 10)
+#    plt.legend()
+
+    plt.subplot(1,2,1)
+    plt.hist(classErr_bestC_test_data_chAl, np.arange(0,100,binEvery), color = 'k', label = 'data');
+    plt.hist(classErr_bestC_test_shfl_chAl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
+    plt.legend()
+    plt.xlabel('Testing classification error (%)')
+    plt.title('Testing correct\nMean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(classErr_bestC_test_data_chAl), np.mean(classErr_bestC_test_shfl_chAl), pvalueTest_corr), fontsize = 10)
+    plt.ylabel('count')
+    plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
+
+#    plt.figure()
+    plt.subplot(1,2,2)
+    plt.hist(classErr_bestC_incorr_data_chAl, np.arange(0,100,binEvery), color = 'k', label = 'data');
+    plt.hist(classErr_bestC_incorr_chance_chAl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
+    plt.legend()
+    plt.xlabel('Incorrect classification error (%)')
+    plt.title('Incorrect\nMean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(classErr_bestC_incorr_data_chAl), np.mean(classErr_bestC_incorr_chance_chAl), pvalueTest_incorr), fontsize = 10)
+    plt.ylabel('count')
+    plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
+
+
+    plt.figure()
+    plt.subplot(1,2,1)
+    plt.hist(classErr_bestC_test_data_chAl, np.arange(0,100,binEvery), color = 'k', label = 'testing corr');
+    plt.hist(classErr_bestC_incorr_data_chAl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'incorr');
+    plt.legend()
+    plt.xlabel('Classification error (%)')
+    plt.title('Testing correct vs incorr\nMean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(classErr_bestC_test_data_chAl), np.mean(classErr_bestC_incorr_data_chAl), pvalueTest_incorr_corr), fontsize = 10)
+    plt.ylabel('count')
+    plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
+
+
+
+########################################################################################################################################################################
+########################################################################################################################################################################
+########################################################################################################################################################################
+########################################################################################################################################################################
+#%%
+####################################################################################
+########## Training SVR to decode stimulus on choice-aligned traces ##########
+####################################################################################
+    
+
+#%%     
+##############################  BAGGING    ####################################
+###############################################################################    
+
+nRandTrSamp = 10 #nRandTrSamp = 10 #1000 # number of times to subselect trials (for the BAGGING method)
+doData = 1
+
+w_chAl_all = []
+b_chAl_all = []
+XTest_all = []
+XTrain_all = []
+YTest_all = []
+YTrain_all = []
+
+for i in range(numSamples): # multiple iterations to choose training/testing datasets, so we have numSamples BAGGED decoders to test, so we have numSamps of testing class error.
+    print 'Subselect XTrain and XTest, iteration %d' %(i)
+    
+    #%% Set aside a group of trials as testing dataset and never use them for training the decoders (which will be later used for BAGGING)    
+    #"shuffle trials to break any dependencies on the sequence of trails"....
+    
+    numObservations, numFeatures = X_chAl.shape
+    ## %%%%%% shuffle trials to break any dependencies on the sequence of trails 
+    shfl = rng.permutation(np.arange(0, numObservations));
+    Ys = Y_chAl[shfl];
+    Xs = X_chAl[shfl, :]; 
+    ## %%%%% divide data to training and testin sets
+    YTrain = Ys[np.arange(0, int((kfold-1.)/kfold*numObservations))]; # Take the first 90% of trials as training set
+    YTest = Ys[np.arange(int((kfold-1.)/kfold*numObservations), numObservations)]; # Take the last 10% of trials as testing set
+    
+    XTrain = Xs[np.arange(0, int((kfold-1.)/kfold*numObservations)), :];
+    XTest = Xs[np.arange(int((kfold-1.)/kfold*numObservations), numObservations), :];
+    
+    XTest_all.append(XTest)
+    XTrain_all.append(XTrain)
+    YTest_all.append(YTest)
+    YTrain_all.append(YTrain)
+       
+       
+    #%% Choose n random trials (n = 80% of min of HR, LR in YTrain)
+       
+    nrtr = int(np.ceil(.8 * min((YTrain==0).sum(), (YTrain==1).sum())))
+    print 'selecting %d random trials of each category' %(nrtr)
     
     
+    #%% Train SVM on XTrain using BAGGING (subselection of trials on XTrain)
+    
+    if doData:
+        # data
+        w_chAl = np.full((XTrain.shape[1], nRandTrSamp), np.nan) # neurons x nrandtr
+        b_chAl =  np.full((nRandTrSamp), np.nan) # nrandtr
+        trainE_chAl =  np.full((nRandTrSamp), np.nan) # nrandtr
+            
+        for ir in range(nRandTrSamp): # subselect a group of trials
+            print '\tBAGGING iteration %d' %(ir) # Subselect out of XTrain
+            
+            # subselect nrtr random HR and nrtr random LR trials.
+            lrTrs = np.argwhere(YTrain==0)
+            randLrTrs = rng.permutation(lrTrs)[0:nrtr].flatten() # random LR trials
+        
+            hrTrs = np.argwhere(YTrain==1)
+            randHrTrs = rng.permutation(hrTrs)[0:nrtr].flatten() # random HR trials
+            
+            randTrs = np.sort(np.concatenate((randLrTrs, randHrTrs)))
+            
+            
+            X = XTrain[randTrs,:]
+            Y = YTrain[randTrs]
+        
+        
+            ##%% train SVM on each frame using the sebselect of trials        
+            linear_svm = svm.LinearSVC(C=10.) # default c, also l2    # linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)   
+            
+            # data
+            linear_svm.fit(X, Y)
+                
+            w_chAl[:, ir] = np.squeeze(linear_svm.coef_);
+            b_chAl[ir] = linear_svm.intercept_;        
+            trainE_chAl[ir] = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100;
+    
+        w_chAl_all.append(w_chAl)
+        b_chAl_all.append(b_chAl)
+        
+    
+w_chAl_all = np.array(w_chAl_all) #numSamps x neurons x nRandTrSamp
+b_chAl_all = np.array(b_chAl_all)
+XTest_all = np.array(XTest_all) #numSamps x testingTrs x neurons
+XTrain_all = np.array(XTrain_all) #numSamps x trainingTrs x neurons
+YTest_all = np.array(YTest_all) #numSamps x testingTrs
+YTrain_all = np.array(YTrain_all) #numSamps x trainingTrs
+
+
+
+#%% Now find the final BAGGED decoder for each round of training/testing trial subselection you performed above. And compute class error on different datasets (testing, training, incorrect, shuffled incorrect)
+
+classErr_corrTrain_all = np.full((numSamples), np.nan)
+classErr_corrTrainTest_all = np.full((numSamples), np.nan)
+classErr_corrTest_all = np.full((numSamples), np.nan)
+classErr_incorrTest_all = np.full((numSamples), np.nan)
+classErr_incorrTest_sh_all = []
+classErr_incorrTest_chance_all = []
+
+for i in range(numSamples):
+    
+    w_chAl = w_chAl_all[i,:,:]
+        
+    #%% Normalize weights (ie the w vector at each frame must have length 1)
+    
+    normw = np.linalg.norm(w_chAl, axis=0) # nrandtr; 2-norm of weights 
+    w_chAl_normed = w_chAl/normw # neurons x nrandtr; normalize weights so weights (of each frame) have length 1
+    if sum(normw<=eps).sum()!=0:
+        print 'take care of this; you need to reshape w_normed first'
+                    #    w_normed[normw<=eps, :] = 0 # set the direction to zero if the magnitude of the vector is zero
+    
+    
+    #%% Set the final decoder by aggregating decoders across trial subselects (ie average ws across all trial subselects), then again normalize them so they have length 1 (Bagging)
+    
+    w_chAl_nb = np.mean(w_chAl_normed, axis=(1)) # neurons 
+    nw = np.linalg.norm(w_chAl_nb, axis=0) # scalar; 2-norm of weights 
+    w_bag = w_chAl_nb/nw # neurons
+    # not sure what to do with the intercept term in the BAGGED method... lets go with the average of b across trials subselects for now:
+    b_bag = b_chAl.mean()
+    
+    
+    #%% Now make predictions on different datasets using the BAGGED decodcer
+    
+    XTest = XTest_all[i,:,:]
+    XTrain = XTrain_all[i,:,:]
+    YTest = YTest_all[i,:]
+    YTrain = YTrain_all[i,:]
+    
+    # training data
+    yhat_corrTrain = predictMan(XTrain, w_bag, b_bag)
+    a = abs(yhat_corrTrain - YTrain).mean() * 100
+    print a, '= % class error on training dataset (correct trials)'
+    classErr_corrTrain_all[i] = a
+    
+    
+    # all correct data
+    yhat_corrAll = predictMan(X_chAl, w_bag, b_bag)
+    a = abs(yhat_corrAll - Y_chAl).mean() * 100
+    print np.round(a, 2), '= % class error on all correct trials'
+    classErr_corrTrainTest_all[i] = a
+    
+    
+    # testing correct
+    yhat0 = predictMan(XTest, w_bag, b_bag)
+    #perClassError(YTest, yhat0)
+    classErr_corrTest = abs(yhat0 - YTest).mean() * 100
+    print np.round(classErr_corrTest, 2), '= % class error on correct trials (testing dataset)'
+    classErr_corrTest_all[i] = classErr_corrTest
+    
+    # incorrect trials
+    yhat_incorr = predictMan(X_chAl_incorr, w_bag, b_bag)
+    classErr_incorrTest = abs(yhat_incorr - Y_chAl_incorr).mean() * 100
+    print np.round(classErr_incorrTest, 2), '= % class error on incorrect trials'
+    classErr_incorrTest_all[i] = classErr_incorrTest
+    
+    
+    # shuffled incorrect: compare yhat_incorr with shuffled labels
+    classErr_incorrTest_sh = []
+    classErr_incorrTest_chance = []
+    for i in range(numSamples):
+        # generate chance trial labels, half for each choice
+        Y_incorr_chance = np.zeros(Y_chAl_incorr.shape[0])
+        i = rng.permutation(Y_chAl_incorr.shape[0])[0:Y_chAl_incorr.shape[0]/2]
+        Y_incorr_chance[i] = 1
+        classErr_incorrTest_chance.append(abs(yhat_incorr - Y_incorr_chance).mean() * 100)
+        
+        # just shuffle Y_incorr
+        permIx = rng.permutation(Y_chAl_incorr.shape[0])
+        classErr_incorrTest_sh.append(abs(yhat_incorr - Y_chAl_incorr[permIx]).mean() * 100)    
+        #print np.round(classErr_incorrTest_chance, 2), '= % class error on incorrect trials'
+    
+    classErr_incorrTest_sh = np.array(classErr_incorrTest_sh)
+    classErr_incorrTest_chance = np.array(classErr_incorrTest_chance)
+    
+    classErr_incorrTest_sh_all.append(classErr_incorrTest_sh)
+    classErr_incorrTest_chance_all.append(classErr_incorrTest_chance)
+    
+    print np.round(classErr_incorrTest_chance.mean(), 2), '= % class error on incorrect trials with random labels (equal number for the 2 choices)'
+    print np.round(classErr_incorrTest_sh.mean(), 2), '= % class error on incorrect trials with shuffled labels'
+    if (Y_chAl_incorr==0).sum() > (Y_chAl_incorr==1).sum():
+        print np.round(50 - (classErr_incorrTest * (1 - .5/(Y_chAl_incorr==0).mean())), 2), ' = my measure of class error on shuffled data, should be close to value above'
+    elif (Y_chAl_incorr==0).sum() < (Y_chAl_incorr==1).sum():
+        print np.round(50 - (classErr_incorrTest * (1 - .5/(Y_chAl_incorr==1).mean())), 2), ' = my measure of class error on shuffled data, should be close to value above'
+
+
+classErr_incorrTest_sh_all = np.array(classErr_incorrTest_sh_all)
+classErr_incorrTest_chance_all = np.array(classErr_incorrTest_chance_all)
+
+classErr_corrTrain_all.mean()
+classErr_corrTrainTest_all.mean()
+classErr_corrTest_all.mean()
+classErr_incorrTest_all.mean()
+classErr_incorrTest_chance_all.mean()
+classErr_incorrTest_sh_all.mean()
+
+
+#%% Below is why I am using a faked shuffled data (classErr_incorrTest_chance) which has equal number of trials from each class to set the null distribution:
+'''
+# my own understanding for why and how much classErr_incorrTest_sh may deviate from 50:
+# if there is an imbalance is hr vs lr, then y_shfl will ratain same labels as y
+# for a fraction of trials. Therefore classErr_shfl will be biased to classErr by a degree
+# that is determined by the fraction of trials which retain the same label.
+# We can quanity this in the following way:
+50 - (classErr_incorrTest * (1 - .5/(Y_chAl_incorr==0).mean()))
+# lets break it down:
+a = (1 - .5/(Y_chAl_incorr==0).mean()) # a is the degree by which the original labels are retained in the shuffled data... if fully shuffled it will be 0.
+b = classErr_incorrTest * a # b is the degree by which classErr will bias the chance performance
+c = 50 - b # c is the final chance performance
+'''
+
+
+#%% Lets check how svm.predict and svr.predict work.... Result: for both SVM and SVR, classfier.predict equals xw+b. For SVM, xw+b gives -1 and 1, that should be changed to 0 and 1 to match svm.predict.
+'''
+# check SVR prediction
+# from Gamal:
+#X features matrix (ie matrix of neural data of size trials x neurons);
+#y observations array (ie array of stimulus rate of size trials)
+from sklearn.svm import LinearSVR
+svr = LinearSVR(C=10., epsilon=0.0, dual = True, tol = 1e-9, fit_intercept = True)
+svr.fit(X,Y)
+w = svr.coef_; # weights vector
+b = svr.intercept_; # bias term
+print abs(np.dot(X, w.T)+b - svr.predict(X)).sum() # this should be 0
+
+
+# check SVM prediction
+#from sklearn.svm import LinearSVR
+linear_svm = svm.LinearSVC(C=10.)
+linear_svm.fit(X,Y)
+w = linear_svm.coef_.squeeze() # weights vector
+b = linear_svm.intercept_.squeeze() # bias term
+yhat0 = np.dot(X, w.T)+b # it gives -1 and 1... we need to compare it to threshold (0):
+yhat0[yhat0<0] = 0
+yhat0[yhat0>0] = 1
+print abs(yhat0 - linear_svm.predict(X)).sum() # this should be 0
+''''
+
+
+#%%     
+##############################   L1/L2 penalty  ##################################
+###############################################################################   
+
+#%% Find the optimal regularization parameter:
+# Rrain SVM on a range of c, using training and testing dataset ... 
+#    make class predictions for testing dataset and incorrect trials. 
+#    Also shuffle labels for correct and incorrect trials and make predictions (to set null distributions)
+# Repeat the above procedure for numSamples times.
+
+
+# numSamples = 10; # number of iterations for finding the best c (inverse of regularization parameter)
+# if you don't want to regularize, go with a very high cbest and don't run the section below.
+# cbest = 10**6
+
+
+# important vars below:
+#perClassErrorTest_chAl : classErr on testing correct
+#perClassErrorTest_chAl_shfl : classErr on shuffled testing correct
+#perClassErrorTest_incorr_chAl : classErr on testing incorrect
+#perClassErrorTest_incorr_chAl_chance : classErr on shuffled testing incorrect
+
+
+
+# regType = 'l1'
+# kfold = 10;
+if regType == 'l1':
+    print '\nRunning l1 svm classification\r' 
+    # cvect = 10**(np.arange(-4, 6,0.2))/numTrials;
+    cvect = 10**(np.arange(-4, 6,0.2))/X_chAl.shape[0];
+#    cvect = 10**(np.arange(-4, 3.11e2,10.5))/X_chAl.shape[0];
+elif regType == 'l2':
+    print '\nRunning l2 svm classification\r' 
+    cvect = 10**(np.arange(-4, 6,0.2))/X_chAl.shape[0]
+#    cvect = 10**(np.arange(-6, 6,0.2));
+
+print 'try the following regularization values: \n', cvect
+# formattedList = ['%.2f' % member for member in cvect]
+# print 'try the following regularization values = \n', formattedList
+
+perClassErrorTrain_chAl = np.ones((numSamples, len(cvect)))+np.nan;
+perClassErrorTest_chAl = np.ones((numSamples, len(cvect)))+np.nan;
+wAllC_chAl = np.ones((numSamples, len(cvect), X_chAl.shape[1]))+np.nan;
+bAllC_chAl = np.ones((numSamples, len(cvect)))+np.nan;
+
+perClassErrorTest_incorr_chAl = np.ones((numSamples, len(cvect)))+np.nan;
+perClassErrorTest_incorr_chAl_shfl = np.ones((numSamples, len(cvect)))+np.nan;
+perClassErrorTest_incorr_chAl_chance = np.ones((numSamples, len(cvect)))+np.nan;
+#perClassErrorTrain_shfl_chAl = np.ones((numSamples, len(cvect)))+np.nan;
+#perClassErrorTest_shfl_chAl = np.ones((numSamples, len(cvect)))+np.nan;
+perClassErrorTest_chAl_shfl = np.ones((numSamples, len(cvect)))+np.nan;
+
+for s in range(numSamples):
+    print 'iteration %d' %(s)
+    permIxs_incorr = rng.permutation(X_chAl_incorr.shape[0]);
+    permIxs = rng.permutation(X_chAl.shape[0]);
+
+    a = np.zeros(Y_chAl_incorr.shape[0])
+    b = rng.permutation(Y_chAl_incorr.shape[0])[0:Y_chAl_incorr.shape[0]/2]
+    a[b] = 1
+    
+    for i in range(len(cvect)):
+        
+        if regType == 'l1':                       
+            summary =  crossValidateModel(X_chAl, Y_chAl, linearSVM, kfold = kfold, l1 = cvect[i])
+        elif regType == 'l2':
+            summary =  crossValidateModel(X_chAl, Y_chAl, linearSVM, kfold = kfold, l2 = cvect[i])
+                    
+        wAllC_chAl[s,i,:] = np.squeeze(summary.model.coef_); # weights of all neurons for each value of c and each shuffle
+        bAllC_chAl[s,i] = np.squeeze(summary.model.intercept_);
+
+        # classification errors                    
+        perClassErrorTrain_chAl[s, i] = summary.perClassErrorTrain;
+        perClassErrorTest_chAl[s, i] = summary.perClassErrorTest;                
+        # Correct shuffled data: 
+        # same decoder trained on correct trials, make predictions on correct with shuffled labels.
+        perClassErrorTest_chAl_shfl[s, i] = perClassError(Y_chAl[permIxs], summary.model.predict(X_chAl));
+
+        # this time refit the classifier on correct trials using shuffled labels (and doing testing, training datasets)
+        '''
+#        summary_shfl = crossValidateModel(X_chAl_incorr, Y_chAl_incorr[permIxs], linearSVM, kfold = kfold, l1 = cvect[i])
+        summary_shfl = crossValidateModel(X_chAl, Y_chAl[permIxs], linearSVM, kfold = kfold, l1 = cvect[i])
+        perClassErrorTrain_shfl_chAl[s, i] = summary_shfl.perClassErrorTrain;
+        perClassErrorTest_shfl_chAl[s, i] = summary_shfl.perClassErrorTest;
+        '''
+
+        # Incorrect trials (using the decoder trained on correct trials)
+        #linear_svm.fit(XTrain, np.squeeze(YTrain))    # # linear_svm is trained using Xtrain and Ytrain... #train using Xtrain_corr... test on Xtest_corr and X_incorr.
+        #summary.model = linear_svm;
+        perClassErrorTest_incorr_chAl[s, i] = perClassError(Y_chAl_incorr, summary.model.predict(X_chAl_incorr));
+        
+        # Null distribution for class error on incorr trials: 
+        # We want to use the same decoder (trained on correct trials) to predict the choice on incorrect trials with shuffled class labels.             
+        perClassErrorTest_incorr_chAl_shfl[s, i] = perClassError(Y_chAl_incorr[permIxs_incorr], summary.model.predict(X_chAl_incorr));
+        perClassErrorTest_incorr_chAl_chance[s, i] = perClassError(a, summary.model.predict(X_chAl_incorr)); # half of the trials assigned randomly to one choice and the other half to the other choice
+
+
+#%% Compute average of class errors across numSamples
+
+meanPerClassErrorTest_corr_shfl = np.mean(perClassErrorTest_chAl_shfl, axis = 0);
+semPerClassErrorTest_corr_shfl = np.std(perClassErrorTest_chAl_shfl, axis = 0)/np.sqrt(numSamples);
+
+#meanPerClassErrorTest_shfl = np.mean(perClassErrorTest_shfl_chAl, axis = 0);
+#semPerClassErrorTest_shfl = np.std(perClassErrorTest_shfl_chAl, axis = 0)/np.sqrt(numSamples);
+
+#meanPerClassErrorTrain_shfl = np.mean(perClassErrorTrain_shfl_chAl, axis = 0);
+#semPerClassErrorTrain_shfl = np.std(perClassErrorTrain_shfl_chAl, axis = 0)/np.sqrt(numSamples);
+
+meanPerClassErrorTest_incorr = np.mean(perClassErrorTest_incorr_chAl, axis = 0);
+semPerClassErrorTest_incorr = np.std(perClassErrorTest_incorr_chAl, axis = 0)/np.sqrt(numSamples);
+
+meanPerClassErrorTest_incorr_shfl = np.mean(perClassErrorTest_incorr_chAl_shfl, axis = 0);
+semPerClassErrorTest_incorr_shfl = np.std(perClassErrorTest_incorr_chAl_shfl, axis = 0)/np.sqrt(numSamples);
+
+meanPerClassErrorTest_incorr_chance = np.mean(perClassErrorTest_incorr_chAl_chance, axis = 0);
+semPerClassErrorTest_incorr_chance = np.std(perClassErrorTest_incorr_chAl_chance, axis = 0)/np.sqrt(numSamples);
+
+meanPerClassErrorTrain = np.mean(perClassErrorTrain_chAl, axis = 0);
+semPerClassErrorTrain = np.std(perClassErrorTrain_chAl, axis = 0)/np.sqrt(numSamples);
+
+meanPerClassErrorTest = np.mean(perClassErrorTest_chAl, axis = 0);
+semPerClassErrorTest = np.std(perClassErrorTest_chAl, axis = 0)/np.sqrt(numSamples);
+
+
+#%% Identify best c : 
+
+smallestC = 0 # if 1: smallest c whose CV error falls below 1 se of min CV error will be used as optimal C; if 0: c that gives min CV error will be used as optimal c.
+if smallestC==1:
+    print 'bestc = smallest c whose cv error is less than 1se of min cv error'
+else:
+    print 'bestc = c that gives min cv error'
+#I think we should go with min c as the bestc... at least we know it gives the best cv error... and it seems like it has nothing to do with whether the decoder generalizes to other data or not.
+
+
+# Use all range of c... it may end up a value at which all weights are 0.
+ix = np.argmin(meanPerClassErrorTest)
+if smallestC==1:
+    cbest_chAl = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix])];
+    cbest_chAl = cbest_chAl[0]; # best regularization term based on minError+SE criteria
+    cbestAll_chAl = cbest_chAl
+else:
+    cbestAll_chAl = cvect[ix]
+print 'best c = ', cbestAll_chAl
+
+
+
+# Make sure at bestc at least one weight is non-zero (ie pick bestc from only those values of c that give non-0 average weights.)
+a = (wAllC_chAl!=0) # non-zero weights
+b = np.mean(a, axis=(0,2)) # Fraction of non-zero weights (averaged across shuffles)
+c1stnon0 = np.argwhere(b)[0].squeeze() # first element of c with at least 1 non-0 w in 1 shuffle
+cvectnow = cvect[c1stnon0:]
+
+meanPerClassErrorTestnow = np.mean(perClassErrorTest_chAl[:,c1stnon0:], axis = 0);
+semPerClassErrorTestnow = np.std(perClassErrorTest_chAl[:,c1stnon0:], axis = 0)/np.sqrt(numSamples);
+ix = np.argmin(meanPerClassErrorTestnow)
+if smallestC==1:
+    cbest_chAl = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
+    cbest_chAl = cbest_chAl[0]; # best regularization term based on minError+SE criteria    
+else:
+    cbest_chAl = cvectnow[ix]
+
+print 'best c (at least 1 non-0 weight) = ', cbest_chAl
+
+
+# find bestc based on incorr trial class error
+meanPerClassErrorTestnow = np.mean(perClassErrorTest_incorr_chAl[:,c1stnon0:], axis = 0);
+semPerClassErrorTestnow = np.std(perClassErrorTest_incorr_chAl[:,c1stnon0:], axis = 0)/np.sqrt(numSamples);
+ix = np.argmin(meanPerClassErrorTestnow)
+if smallestC==1:    
+    cbest_chAl_incorr = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
+    cbest_chAl_incorr = cbest_chAl_incorr[0]; # best regularization term based on minError+SE criteria
+else:   
+    cbest_chAl_incorr = cvectnow[ix]
+    
+print 'incorr: best c (at least 1 non-0 weight) = ', cbest_chAl_incorr
+
+
+
+#%% Set the decoder and class errors at best c (for data)
+
+# you don't need to again train classifier on data bc you already got it above when you found bestc. You just need to do it for shuffled. ... [you already have access to test/train error as well as b and w of training SVM with bestc.)]
+# we just get the values of perClassErrorTrain and perClassErrorTest at cbest (we already computed these values above when training on all values of c)
+indBestC = np.in1d(cvect, cbest_chAl)
+
+w_bestc_data_chAl = wAllC_chAl[:,indBestC,:].squeeze() # numSamps x neurons
+b_bestc_data_chAl = bAllC_chAl[:,indBestC]
+
+classErr_bestC_test_data_chAl = perClassErrorTest_chAl[:,indBestC].squeeze()
+classErr_bestC_test_shfl_chAl = perClassErrorTest_chAl_shfl[:,indBestC].squeeze()
+classErr_bestC_incorr_data_chAl = perClassErrorTest_incorr_chAl[:,indBestC].squeeze()
+classErr_bestC_incorr_chance_chAl = perClassErrorTest_incorr_chAl_chance[:,indBestC].squeeze()
+#classErr_bestC_train_data_chAl = perClassErrorTrain_chAl[:,indBestC].squeeze()
+#perClassErrorTest_shfl_incorr_chAl = perClassErrorTest_incorr_chAl_shfl[:,indBestC].squeeze()
+
+
+#%% plot C path
+       
 if doPlots:
     print 'Best c (inverse of regularization parameter) = %.2f' %cbest_chAl
     plt.figure('cross validation')
@@ -1681,11 +2359,15 @@ if doPlots:
     plt.fill_between(cvect, meanPerClassErrorTrain-semPerClassErrorTrain, meanPerClassErrorTrain+ semPerClassErrorTrain, alpha=0.5, edgecolor='k', facecolor='k')
     plt.fill_between(cvect, meanPerClassErrorTest-semPerClassErrorTest, meanPerClassErrorTest+ semPerClassErrorTest, alpha=0.5, edgecolor='r', facecolor='r')
     plt.fill_between(cvect, meanPerClassErrorTest_incorr-semPerClassErrorTest_incorr, meanPerClassErrorTest_incorr+ semPerClassErrorTest_incorr, alpha=0.5, edgecolor='g', facecolor='g')        
+    plt.fill_between(cvect, meanPerClassErrorTest_incorr_chance-semPerClassErrorTest_incorr_chance, meanPerClassErrorTest_incorr_chance+ semPerClassErrorTest_incorr_chance, alpha=0.5, edgecolor='m', facecolor='m')        
     plt.fill_between(cvect, meanPerClassErrorTest_incorr_shfl-semPerClassErrorTest_incorr_shfl, meanPerClassErrorTest_incorr_shfl+ semPerClassErrorTest_incorr_shfl, alpha=0.5, edgecolor='c', facecolor='c')        
+    plt.fill_between(cvect, meanPerClassErrorTest_corr_shfl-semPerClassErrorTest_corr_shfl, meanPerClassErrorTest_corr_shfl+ semPerClassErrorTest_corr_shfl, alpha=0.5, edgecolor='y', facecolor='y')        
     plt.plot(cvect, meanPerClassErrorTrain, 'k', label = 'training')
     plt.plot(cvect, meanPerClassErrorTest, 'r', label = 'validation')
     plt.plot(cvect, meanPerClassErrorTest_incorr, 'g', label = 'incorr')        
+    plt.plot(cvect, meanPerClassErrorTest_incorr_chance, 'm', label = 'incorr-chance')            
     plt.plot(cvect, meanPerClassErrorTest_incorr_shfl, 'c', label = 'incorr-shfl')            
+    plt.plot(cvect, meanPerClassErrorTest_corr_shfl, 'y', label = 'corr-shfl')            
     plt.plot(cvect[cvect==cbest_chAl], meanPerClassErrorTest[cvect==cbest_chAl], 'bo')
     plt.xlim([cvect[1], cvect[-1]])
     plt.xscale('log')
@@ -1694,138 +2376,201 @@ if doPlots:
     plt.legend(loc='center left', bbox_to_anchor=(1, .7))
     plt.tight_layout()
 
-
-# ## Train SVM model using the best regularization parameter
-#     All data in X are used for training.
-#     linear_svm is the trained SVM model that includes weights (w) and intercept (b).
-
-
-#%% I don't think you need the following
 '''
-if regType == 'l1':
-    linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l1', dual=False)
-elif regType == 'l2':
-    linear_svm = svm.LinearSVC(C = cbest, loss='squared_hinge', penalty='l2', dual=True)
-
-linear_svm.fit(X, Y)
-    
-w = np.squeeze(linear_svm.coef_);
-b = linear_svm.intercept_;
-
-trainE = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100;
-
-# keep a copy of linear_svm
-import copy
-linear_svm_0 = copy.deepcopy(linear_svm) 
-
-
-#%% Plot weights
-
 if doPlots:
-    plt.figure()
+    print 'Best c (inverse of regularization parameter) = %.2f' %cbest_chAl
+    plt.figure('cross validation')
     plt.subplot(1,2,1)
-    plt.plot(w[np.argsort(abs(w))[::-1]], 'k.', label = 'weights')
-    plt.plot(np.ones(len(w))*b, 'k--', label = 'bias')
-    plt.xlabel('sorted neurons')
-    plt.legend()
-    plt.title(('Training error: %.2f %%' %(trainE)))
+#    plt.fill_between(cvect, meanPerClassErrorTrain_shfl-semPerClassErrorTrain_shfl, meanPerClassErrorTrain_shfl+ semPerClassErrorTrain_shfl, alpha=0.5, edgecolor='k', facecolor='k')
+#    plt.fill_between(cvect, meanPerClassErrorTest_corr_shfl-semPerClassErrorTest_corr_shfl, meanPerClassErrorTest_corr_shfl+ semPerClassErrorTest_corr_shfl, alpha=0.5, edgecolor='r', facecolor='r')
+    plt.fill_between(cvect, meanPerClassErrorTest_incorr_shfl-semPerClassErrorTest_incorr_shfl, meanPerClassErrorTest_incorr_shfl+ semPerClassErrorTest_incorr_shfl, alpha=0.5, edgecolor='c', facecolor='c')        
 
-    plt.subplot(1,2,2)
-    plt.hist(w, 20,orientation='horizontal', color = 'k')
-    plt.ylabel('weights')
-    plt.xlabel('count')
+#    plt.plot(cvect, meanPerClassErrorTrain_shfl, 'k', label = 'training')
+#    plt.plot(cvect, meanPerClassErrorTest_corr_shfl, 'r', label = 'validation')
+    plt.plot(cvect, meanPerClassErrorTest_incorr_shfl, 'c', label = 'incorr-shfl')            
+
+    plt.xlim([cvect[1], cvect[-1]])
+    plt.xscale('log')
+    plt.xlabel('c (inverse of regularization parameter)')
+    plt.ylabel('classification error (%)')
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7))
     plt.tight_layout()
-
-    # print abs(((np.dot(X,w)+b)>0).astype('float')-Y.astype('float')).sum()/len(Y)*100 # this is the prediction formula
-    print 'Fraction of non-zero weight neurons = %.2f' %(np.mean(w!=0))
-    print 'Training error = %.2f%%' %trainE
 '''
+'''
+if doPlots:
+    print 'Best c (inverse of regularization parameter) = %.2f' %cbest_chAl
+    plt.figure('cross validation')
+    plt.subplot(1,2,1)
+    plt.fill_between(cvect, meanPerClassErrorTrain_shfl-semPerClassErrorTrain_shfl, meanPerClassErrorTrain_shfl+ semPerClassErrorTrain_shfl, alpha=0.5, edgecolor='k', facecolor='k')
+    plt.fill_between(cvect, meanPerClassErrorTest_shfl-semPerClassErrorTest_shfl, meanPerClassErrorTest_shfl+ semPerClassErrorTest_shfl, alpha=0.5, edgecolor='r', facecolor='r')
+    
+    plt.plot(cvect, meanPerClassErrorTrain_shfl, 'k', label = 'training')
+    plt.plot(cvect, meanPerClassErrorTest_shfl, 'r', label = 'validation')
+
+    plt.xlim([cvect[1], cvect[-1]])
+    plt.xscale('log')
+    plt.xlabel('c (inverse of regularization parameter)')
+    plt.ylabel('classification error (%)')
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7))
+    plt.tight_layout()
+'''
+
+
+#%% Compare angle between decoders at different values of c
+# just curious how decoders change during c path
+
+# Normalize wAllC_chAl
+nw = np.linalg.norm(wAllC_chAl, axis=2) # numSamps x len(cvect); 2-norm of weights 
+wAllC_chAl_n = np.transpose(np.transpose(wAllC_chAl,(2,0,1))/nw, (1,2,0)) # numSamps x len(cvect) x neurons
+
+# Take average decoder across shuffles and normalize it
+wAv = np.mean(wAllC_chAl_n,axis=0) # len(cvect) x neurons
+nw = np.linalg.norm(wAv, axis=1) # len(cvect); 2-norm of weights 
+wAv_n = np.transpose(np.transpose(wAv)/nw) # len(cvect) x neurons
+
+angc = np.full((len(cvect),len(cvect)), np.nan)
+angcAv = np.full((len(cvect),len(cvect)), np.nan)
+s = rng.permutation(numSamples)[0]
+for i in range(len(cvect)):
+    for j in range(len(cvect)):
+        angc[i,j] = np.arccos(abs(np.dot(wAllC_chAl_n[s,i,:], wAllC_chAl_n[s,j,:].transpose())))*180/np.pi
+        angcAv[i,j] = np.arccos(abs(np.dot(wAv_n[i,:], wAv_n[j,:])))*180/np.pi
+
+# decoders at smaller values of c are all 0 weight, so their angles are nan
+'''
+# decoders of one of the shuffles
+plt.figure()
+#plt.subplot(121)
+plt.imshow(angc, cmap='jet_r')
+plt.colorbar()
+'''
+# average decoder across shuffles
+plt.figure()
+#plt.subplot(121)
+plt.imshow(angcAv, cmap='jet_r')
+plt.colorbar()
+
+plt.figure()
+#plt.subplot(122)
+plt.plot(meanPerClassErrorTrain, 'k', label = 'training')
+plt.plot(meanPerClassErrorTest, 'r', label = 'validation')
+plt.plot(meanPerClassErrorTest_incorr, 'g', label = 'incorr')        
+plt.plot(meanPerClassErrorTest_incorr_shfl, 'c', label = 'incorr-shfl')            
+plt.plot(meanPerClassErrorTest_corr_shfl, 'y', label = 'corr-shfl')   
+#plt.axis('equal')
+#plt.gca().set_aspect('equal', adjustable='box')
 
 
 #%%
-####################################################################################################################################
-# ## Do cross-validation and set null distributions for classification error by shuffling trial labels
-#     Compute distritbutions of class loss for train and test datasets by fitting SVM for 100 times.
-#     Do this for both actual data and shuffled data (ie data in which Y is shuffled but X is not to serve as null distribution.)
-# 
-# Below we call function crossValidateModel.py; It does the following:
-#1. shuffles trials to break any dependencies on the sequence of trails 
-#2. divides data to training and testin sets
-#3. calls linearSVM.py which does the following:
-#3.1. Create a SVM classifier using cbest as the regularization paramter.
-#3.2. Computes classficiation error on the training and testing datasets.
+################ Compare BAGGED decoder and L1/L2 decoder ##############
+#%% Compute angle between optimal L1 decoders (of all numSamps); and between BAGGED decoder and L1 decoder... we want to see how similar they are
 
-####################################################################################################################################
+# Normalize w_bestc_data_chAl
+nw = np.linalg.norm(w_bestc_data_chAl, axis=1) # numSamps; 2-norm of weights 
+w_data_chAl_n = (w_bestc_data_chAl.T/nw).T # numSamps x neurons
 
-
-#%% Set class errors for data (at bestc)
-
-# you don't need to again train classifier on data bc you already got it above when you found bestc. You just need to do it for shuffled. ... [you already have access to test/train error as well as b and w of training SVM with bestc.)]
-# we just get the values of perClassErrorTrain and perClassErrorTest at cbest (we already computed these values above when training on all values of c)
-indBestC = np.in1d(cvect, cbest_chAl)
-perClassErrorTrain_data_chAl = perClassErrorTrain_chAl[:,indBestC].squeeze()
-perClassErrorTest_data_chAl = perClassErrorTest_chAl[:,indBestC].squeeze()
-w_data_chAl = wAllC_chAl[:,indBestC,:].squeeze()
-b_data_chAl = bAllC_chAl[:,indBestC]
-perClassErrorTest_data_incorr_chAl = perClassErrorTest_incorr_chAl[:,indBestC].squeeze()
-perClassErrorTest_shfl_incorr_chAl = perClassErrorTest_incorr_chAl_shfl[:,indBestC].squeeze()
-
-pvalueTest_incorr = ttest2(perClassErrorTest_data_incorr_chAl, perClassErrorTest_shfl_incorr_chAl, tail = 'left');
+# average (across numSamps) decoders at best c
+wNow = np.mean(w_data_chAl_n, axis=0) # neurons
+# again normalize it
+nw = np.linalg.norm(wNow) # numSamps; 2-norm of weights 
+wNow_n = wNow/nw # neurons
 
 
-#%% Set shuffled (null) distributions of class error by shuffling trial label of correct trials to train.
+# train svm on all data using best c
+linear_svm = svm.LinearSVC(C = cbest_chAl, loss='squared_hinge', penalty=regType, dual=False)
+linear_svm.fit(X_chAl, Y_chAl)   
+w = np.squeeze(linear_svm.coef_);
+b = linear_svm.intercept_;
+#trainE = abs(linear_svm.predict(X)-Y.astype('float')).sum()/len(Y)*100;
 
-# We want to use the same decoder (trained on correct trials) to predict the choice on incorrect trials with shuffled class labels.
+# normalize w
+nw = np.linalg.norm(w) # numSamps; 2-norm of weights 
+w_n = w/nw # neurons
 
-# Gamal:
-# Our question is: given a known decoder (the decoder we obtain from the correct trials), does this decoder 
-#perform well on incorrect trials? My definition of performing well is relative to some random data 
-#that have the same firing rates pattern as incorrect data but with arbitrary relation to the class labels. 
-#According to that question, we should compare to shuffled incorrect trials without refitting the decoder as our question is specific to the decoder trained on the correct data.
 
-numShuffles = numSamples #100
-#summary_data = [];
-#perClassErrorTrain_data = [];
-#perClassErrorTest_data = []
-#w_data = []
-#b_data = []
-summary_shfl = [];
-perClassErrorTrain_shfl_chAl = [];
-perClassErrorTest_shfl_chAl = [];
-w_shfl_chAl = []
-b_shfl_chAl = []
-permIxsList = [];
-for i in range(numShuffles):
-    # permIxs = rng.permutation(numTrials);
-    permIxs = rng.permutation(X_chAl.shape[0]);
-    permIxsList.append(permIxs);
-    if regType == 'l1':
-#        summary_data.append(crossValidateModel(X, Y, linearSVM, kfold = kfold, l1 = cbest))
-        summary_shfl.append(crossValidateModel(X_chAl, Y_chAl[permIxs], linearSVM, kfold = kfold, l1 = cbest))
-    elif regType == 'l2':
-#        summary_data.append(crossValidateModel(X, Y, linearSVM, kfold = kfold, l2 = cbest))
-        summary_shfl.append(crossValidateModel(X_chAl, Y_chAl[permIxs], linearSVM, kfold = kfold, l2 = cbest))
-        
-#    perClassErrorTrain_data.append(summary_data[i].perClassErrorTrain);
-#    perClassErrorTest_data.append(summary_data[i].perClassErrorTest);
-#    w_data.append(np.squeeze(summary_data[i].model.coef_));
-#    b_data.append(summary_data[i].model.intercept_);
-        
-    perClassErrorTrain_shfl_chAl.append(summary_shfl[i].perClassErrorTrain);
-    perClassErrorTest_shfl_chAl.append(summary_shfl[i].perClassErrorTest);
-    w_shfl_chAl.append(np.squeeze(summary_shfl[i].model.coef_));
-    b_shfl_chAl.append(summary_shfl[i].model.intercept_);
+# compute angle between the averaged across samples decoder and the one trained using all data (without testing and training)
+print np.arccos(abs(np.dot(wNow_n, w_n.transpose())))*180/np.pi
 
-    
+#s = 20
+#np.arccos(abs(np.dot(w_data_chAl_n[s,:].squeeze(), w_n.transpose())))*180/np.pi
+
+
+# angle between bestc decoders of different shuffles
+ang_samps = np.full((numSamples,numSamples), np.nan)
+for s in range(numSamples):
+    for ss in range(numSamples):
+        ang_samps[s,ss] = np.arccos(abs(np.dot(w_data_chAl_n[s,:].squeeze(), w_data_chAl_n[ss,:].squeeze())))*180/np.pi
+
+# average angle between decoders of different samples
+# first set diag elements to nan (because we know their angle is 0)
+np.fill_diagonal(ang_samps, np.nan)
+
+plt.figure()
+plt.imshow(ang_samps, cmap='jet_r')
+plt.colorbar()
+
+print 'Average angle btwn optimal decoders of all shuffles = ', np.nanmean(ang_samps)
+
+
+########## now compare angle between bagged decoder and l1 optimal decoder
+print np.arccos(abs(np.dot(w_n, w_bag)))*180/np.pi
+
+# with average l1 decoder
+print np.arccos(abs(np.dot(wNow_n, w_bag)))*180/np.pi
+
+# with each l1 decoder
+angs = []
+for s in range(numSamples):
+    angs.append(np.arccos(abs(np.dot(w_data_chAl_n[s,:].squeeze(), w_bag)))*180/np.pi)
+
+angs = np.array(angs)
+plt.figure()
+plt.plot(angs)
+print 'Angle between BAGGED decoder and optimal L1 decoder = ', angs.mean()
+
+
+#%% predictions on incorr and testing corr, using l1 decoder vs bagged decoder
+
+# bagged decoder
+print 'BAGGED'
+# testing corr
+yhat0 = predictMan(XTest, w_bag, b_bag)
+print 'corr: ', np.round(perClassError(yhat0, YTest), 2)
+yhat0 = predictMan(X_chAl_incorr, w_bag, b_bag)
+print 'incorr: ', np.round(perClassError(yhat0, Y_chAl_incorr), 2)
+
+
+# L1 decocer
+print 'L1 decocer'
+print 'corr: ', np.round(perClassErrorTest_data_chAl.mean(), 2)
+print 'incorr: ', np.round(perClassErrorTest_data_incorr_chAl.mean(), 2), '\n'
+'''
+# decoder found using all data (without doing testing and training)
+yhat0 = predictMan(X_chAl_incorr, w_n, b)
+print perClassError(yhat0, Y_chAl_incorr)
+
+# averaged decoder across samples
+yhat0 = predictMan(X_chAl_incorr, wNow_n, b_bestc_data_chAl.mean())
+print perClassError(yhat0, Y_chAl_incorr)
+'''
+print 'L1 decoder, (bestc found separately for incorr and testing corr)'
+# min err on testing corr for Bagged decoders (with any c valur larger than bestc)
+print 'corr: ', np.round(np.mean(perClassErrorTest_chAl[:,np.argwhere(indBestC).squeeze():], axis=0).min(), 2)
+# min err on incorr for Bagged decoders (with any c valur larger than bestc)
+print 'incorr: ', np.round(np.mean(perClassErrorTest_incorr_chAl[:,np.argwhere(np.in1d(cvect, cbest_chAl_incorr)).squeeze():], axis=0).min(), 2), '\n'
+
+
+###############################################################################
+   
 #%% Plot class error for data and shuffled (for corr trained, corr cv, incorr cv)
 
-pvalueTrain = ttest2(perClassErrorTrain_data_chAl, perClassErrorTrain_shfl_chAl, tail = 'left');
-pvalueTest = ttest2(perClassErrorTest_data_chAl, perClassErrorTest_shfl_chAl, tail = 'left');
-pvalueTest_incorr = ttest2(perClassErrorTest_data_incorr_chAl, perClassErrorTest_shfl_chAl, tail = 'left');
+pvalueTest_corr = ttest2(classErr_bestC_test_shfl_chAl, classErr_bestC_test_data_chAl, tail = 'left');
+pvalueTest_incorr = ttest2(classErr_bestC_incorr_data_chAl, classErr_bestC_incorr_chance_chAl, tail = 'left');
+pvalueTest_incorr_corr = ttest2(classErr_bestC_incorr_data_chAl, classErr_bestC_test_shfl_chAl, tail = 'left');
 
-print 'Training error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(perClassErrorTrain_data_chAl), np.mean(perClassErrorTrain_shfl_chAl), pvalueTrain)
-print 'Testing error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(perClassErrorTest_data_chAl), np.mean(perClassErrorTest_shfl_chAl), pvalueTest)
-print 'Incorr trials: error: Mean actual: %.2f%%, Mean shuffled (corr): %.2f%%, p-value = %.2f' %(np.mean(perClassErrorTest_data_incorr_chAl), np.mean(perClassErrorTest_shfl_chAl), pvalueTest)
+#print 'Training error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(perClassErrorTrain_data_chAl), np.mean(perClassErrorTrain_shfl_chAl), pvalueTrain)
+print 'Testing error: Mean actual: %.2f%%, Mean shuffled: %.2f%%, p-value = %.2f' %(np.mean(classErr_bestC_test_data_chAl), np.mean(classErr_bestC_test_shfl_chAl), pvalueTest_corr)
+print 'Incorr trials: error: Mean actual: %.2f%%, Mean shuffled (corr): %.2f%%, p-value = %.2f' %(np.mean(classErr_bestC_incorr_data_chAl), np.mean(classErr_bestC_incorr_chance_chAl), pvalueTest_incorr)
 
 
 # Plot the histograms
@@ -1833,31 +2578,41 @@ if doPlots:
     binEvery = 3; # bin width
     
     plt.figure()
-    plt.subplot(1,2,1)
-    plt.hist(perClassErrorTrain_data_chAl, np.arange(0,100,binEvery), color = 'k', label = 'data');
-    plt.hist(perClassErrorTrain_shfl_chAl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
-    plt.xlabel('Training classification error (%)')
-    plt.ylabel('count')
-    plt.title('Mean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(perClassErrorTrain_data_chAl), np.mean(perClassErrorTrain_shfl_chAl), pvalueTrain), fontsize = 10)
-    plt.legend()
+#    plt.subplot(1,2,1)
+#    plt.hist(perClassErrorTrain_data_chAl, np.arange(0,100,binEvery), color = 'k', label = 'data');
+#    plt.hist(perClassErrorTrain_shfl_chAl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
+#    plt.xlabel('Training classification error (%)')
+#    plt.ylabel('count')
+#    plt.title('Mean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(perClassErrorTrain_data_chAl), np.mean(perClassErrorTrain_shfl_chAl), pvalueTrain), fontsize = 10)
+#    plt.legend()
 
-    plt.subplot(1,2,2)
-    plt.hist(perClassErrorTest_data_chAl, np.arange(0,100,binEvery), color = 'k', label = 'data');
-    plt.hist(perClassErrorTest_shfl_chAl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
+    plt.subplot(1,2,1)
+    plt.hist(classErr_bestC_test_data_chAl, np.arange(0,100,binEvery), color = 'k', label = 'data');
+    plt.hist(classErr_bestC_test_shfl_chAl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
     plt.legend()
     plt.xlabel('Testing classification error (%)')
-    plt.title('Mean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(perClassErrorTest_data_chAl), np.mean(perClassErrorTest_shfl_chAl), pvalueTest), fontsize = 10)
+    plt.title('Testing correct\nMean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(classErr_bestC_test_data_chAl), np.mean(classErr_bestC_test_shfl_chAl), pvalueTest_corr), fontsize = 10)
     plt.ylabel('count')
     plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
 
+#    plt.figure()
+    plt.subplot(1,2,2)
+    plt.hist(classErr_bestC_incorr_data_chAl, np.arange(0,100,binEvery), color = 'k', label = 'data');
+    plt.hist(classErr_bestC_incorr_chance_chAl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
+    plt.legend()
+    plt.xlabel('Incorrect classification error (%)')
+    plt.title('Incorrect\nMean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(classErr_bestC_incorr_data_chAl), np.mean(classErr_bestC_incorr_chance_chAl), pvalueTest_incorr), fontsize = 10)
+    plt.ylabel('count')
+    plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
+
+
     plt.figure()
     plt.subplot(1,2,1)
-    plt.hist(perClassErrorTest_data_incorr_chAl, np.arange(0,100,binEvery), color = 'k', label = 'data');
-    plt.hist(perClassErrorTest_shfl_chAl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'shuffled');
+    plt.hist(classErr_bestC_test_data_chAl, np.arange(0,100,binEvery), color = 'k', label = 'testing corr');
+    plt.hist(classErr_bestC_incorr_data_chAl, np.arange(0,100,binEvery), color = 'k', alpha=.5, label = 'incorr');
     plt.legend()
-    plt.xlabel('Testing classification error (%)')
-    plt.title('Mean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(perClassErrorTest_data_incorr_chAl), np.mean(perClassErrorTest_shfl_chAl), pvalueTest), fontsize = 10)
-
+    plt.xlabel('Classification error (%)')
+    plt.title('Testing correct vs incorr\nMean data: %.2f %%, Mean shuffled: %.2f %%\n p-value = %.2f' %(np.mean(classErr_bestC_test_data_chAl), np.mean(classErr_bestC_incorr_data_chAl), pvalueTest_incorr_corr), fontsize = 10)
     plt.ylabel('count')
     plt.tight_layout(pad=0.4, w_pad=1.5, h_pad=1.0)
 
@@ -1872,11 +2627,9 @@ if doPlots:
 #%% Save results
 
 if trialHistAnalysis:
-#     ep_ms = np.round((ep-eventI)*frameLength)
-    th_stim_dur = []
-    svmn = 'svmPrevChoice_%sN_%sITIs_ep%d-%dms_%s' %(ntName, itiName, ep_ms[0], ep_ms[-1], rt)
+    svmn = 'svmPrevChoice_corrIncorr_%s_' %(nowStr)
 else:
-    svmn = 'svmCurrChoice_%sN_ep%d-%dms_%s' %(ntName, ep_ms[0], ep_ms[-1], rt)   
+    svmn = 'svmCurrChoice_corrIncorr_%s_' %(nowStr)
 print '\n', svmn[:-1]
 
 if saveResults:
@@ -1889,98 +2642,20 @@ if saveResults:
     svmName = os.path.join(d, svmn+os.path.basename(pnevFileName))
     print(svmName)
     
-    scio.savemat(svmName, {'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 
-                           'th_stim_dur':th_stim_dur, 'numSamples':numSamples, 
-                           'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 
-                           'NsRand':NsRand, 'meanX':meanX, 'stdX':stdX, 
-                           'regType':regType, 'cvect':cvect, 'cbest':cbest, 'cbestAll':cbestAll,
-                           'perClassErrorTest':perClassErrorTest, 'perClassErrorTrain':perClassErrorTrain, 'wAllC':wAllC, 'bAllC':bAllC,
-                           'w':w, 'b':b, 'trainE':trainE, 
-                           'corrClass':corrClass, 'corrClassShfl':corrClassShfl,
-                           'perClassErrorTrain_data':perClassErrorTrain_data, 
-                           'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 
-                           'perClassErrorTest_data':perClassErrorTest_data, 
-                           'perClassErrorTest_shfl':perClassErrorTest_shfl,  
-                           'w_data':w_data,'b_data':b_data,'w_shfl':w_shfl,'b_shfl':b_shfl,
-                           'perActive_inh':perActive_inh, 'perActive_exc':perActive_exc, # vars related to exc, inh start from this line.
-                           'wei_all':wei_all, 'perClassEr':perClassEr, 
-                           'perActive_inh_allExc':perActive_inh_allExc, 'perActive_exc_allExc':perActive_exc_allExc, 
-                           'perClassEr_allExc':perClassEr_allExc, 'wei_all_allExc':wei_all_allExc, 'cvect_':cvect_,
-                           'train_err_exc0':train_err_exc0, 'train_err_inh0':train_err_inh0, 
-                           'corrClass_exc0':corrClass_exc0, 'corrClass_inh0':corrClass_inh0, 
-                           'train_err_allExc0':train_err_allExc0, 'corrClass_allExc0':corrClass_allExc0, 
-                           'perClassErrorTrain_data_inh':perClassErrorTrain_data_inh, 
-                           'perClassErrorTest_data_inh':perClassErrorTest_data_inh, 
-                           'perClassErrorTrain_shfl_inh':perClassErrorTrain_shfl_inh, 
-                           'perClassErrorTest_shfl_inh':perClassErrorTest_shfl_inh, 
-                           'perClassErrorTrain_data_allExc':perClassErrorTrain_data_allExc, 
-                           'perClassErrorTest_data_allExc':perClassErrorTest_data_allExc, 
-                           'perClassErrorTrain_shfl_allExc':perClassErrorTrain_shfl_allExc, 
-                           'perClassErrorTest_shfl_allExc':perClassErrorTest_shfl_allExc, 
-                           'perClassErrorTrain_data_exc':perClassErrorTrain_data_exc, 
-                           'perClassErrorTest_data_exc':perClassErrorTest_data_exc, 
-                           'perClassErrorTrain_shfl_exc':perClassErrorTrain_shfl_exc, 
-                           'perClassErrorTest_shfl_exc':perClassErrorTest_shfl_exc, 
-                           'corrClass_allExc':corrClass_allExc, 'corrClass_exc':corrClass_exc, 'corrClass_inh':corrClass_inh,
-                           'w_data_inh':w_data_inh,'b_data_inh':b_data_inh,'w_shfl_inh':w_shfl_inh,'b_shfl_inh':b_shfl_inh,
-                           'w_data_allExc':w_data_allExc,'b_data_allExc':b_data_allExc,'w_shfl_allExc':w_shfl_allExc,'b_shfl_allExc':b_shfl_allExc,
-                           'w_data_exc':w_data_exc,'b_data_exc':b_data_exc,'w_shfl_exc':w_shfl_exc,'b_shfl_exc':b_shfl_exc}) 
+    scio.savemat(svmName, {'thAct':thAct, 'thTrsWithSpike':thTrsWithSpike, 'ep_ms':ep_ms, 'ep_ch':ep_ch,
+                           'th_stim_dur':th_stim_dur, 'numSamples':numSamples, 'nRandTrSamp':nRandTrSamp,
+                           'trsExcluded':trsExcluded, 'trsExcluded_chAl':trsExcluded_chAl, 'trsExcluded_incorr':trsExcluded_incorr, 'trsExcluded_incorr_chAl':trsExcluded_incorr_chAl,
+                           'NsExcluded':NsExcluded, 'NsExcluded_chAl':NsExcluded_chAl,
+                           'regType':regType, 'cvect':cvect,
+                           'wAllC_chAl':wAllC_chAl,
+                           'bAllC_chAl':bAllC_chAl,
+                           'perClassErrorTrain_chAl':perClassErrorTrain_chAl,
+                           'perClassErrorTest_chAl':perClassErrorTest_chAl,
+                           'perClassErrorTest_chAl_shfl':perClassErrorTest_chAl_shfl,
+                           'perClassErrorTest_incorr_chAl':perClassErrorTest_incorr_chAl,
+                           'perClassErrorTest_incorr_chAl_shfl':perClassErrorTest_incorr_chAl_shfl,
+                           'perClassErrorTest_incorr_chAl_chance':perClassErrorTest_incorr_chAl_chance}) 
 
-
-    # save normalized traces as well                       
-    # scio.savemat(svmName, {w':w, 'b':b, 'cbest':cbest, 'corrClass':corrClass, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'meanX':meanX, 'stdX':stdX, 'X':X, 'Y':Y, 'Xt':Xt, 'Xtg':Xtg, 'Xtc':Xtc, 'Xtr':Xtr, 'Xtp':Xtp})
-    # 'linear_svm':linear_svm, 
-
-    # append : doesn't quite work
-    # if os.path.isfile(svmName): 
-    #     with open(svmName,'ab') as f:
-    #         sci.io.savemat(f, {'perClassErrorTrain_data':perClassErrorTrain_data, 'perClassErrorTrain_shfl':perClassErrorTrain_shfl, 'perClassErrorTest_data':perClassErrorTest_data, 'perClassErrorTest_shfl':perClassErrorTest_shfl}) # append
-    # else:
 else:
     print 'Not saving .mat file'
     
-    
-# If you want to save the linear_svm objects as mat file, you need to take care of 
-# None values and set to them []:
-
-# import inspect
-# inspect.getmembers(summary_shfl_exc[0])
-
-# for i in range(np.shape(summary_shfl_exc)[0]):
-#     summary_shfl_exc[i].model.random_state = []
-#     summary_shfl_exc[i].model.class_weight = []
-# [summary_shfl_exc[i].model.random_state for i in range(np.shape(summary_shfl_exc)[0])]
-# [summary_shfl_exc[i].model.class_weight for i in range(np.shape(summary_shfl_exc)[0])]
-
-# scio.savemat(svmName, {'summary_shfl_exc':summary_shfl_exc})
-
-# Data = scio.loadmat(svmName, variable_names=['summary_shfl_exc'] ,squeeze_me=True,struct_as_record=False)
-# summary_shfl_exc = Data.pop('summary_shfl_exc')
-# summary_shfl_exc[0].model.intercept_
-    
-
-
-# ## Move the autosaved .html file to a folder named "figs"
-#     Notebook html file will be autosaved in the notebook directory if jupyter_notebook_config.py exists in ~/.jupyter and includes the function script_post_save. Below we move the html to a directory named figs inside the root directory which contains moreFile, etc.
-
-# In[45]:
-
-# make sure autosave is done so you move the most recent html file to figs directory.
-if 'ipykernel' in sys.modules and saveHTML:
-    get_ipython().magic(u'autosave 1')
-    # import time    
-    # time.sleep(2) 
-    
-    d = os.path.join(os.path.dirname(pnevFileName),'figs')
-    if not os.path.exists(d):
-        print 'creating figs folder'
-        os.makedirs(d)
-
-    htmlName = os.path.join(d, svmn[:-1]+'.html')
-    print htmlName
-    import shutil
-    shutil.move(os.path.join(os.getcwd(), 'mainSVM_notebook.html'), htmlName)
-
-    # go back to default autosave interval
-    get_ipython().magic(u'autosave 120')
-
