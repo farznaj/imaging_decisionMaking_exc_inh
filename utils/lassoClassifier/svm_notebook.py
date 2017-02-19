@@ -1101,6 +1101,10 @@ if doPlots:
 ########################################################################################################################################
 ########################################################################################################################################
 
+# About bestc, from Gamal:
+#When we were performing L1, I wanted to get the most sparse solution with good cross validation error. So, I used the one standard error criteria (see slide 7 in http://www.stat.cmu.edu/~ryantibs/datamining/lectures/19-val2.pdf). Alternatively, you can use the minimum error criteria:
+
+
 #if numTrials <= kfold # we will get only 1 test trial!
 # In[25]:
 

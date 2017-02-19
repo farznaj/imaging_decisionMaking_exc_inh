@@ -1,8 +1,9 @@
 """
-Fits SVM using XTrain, and returns percnet class loss for XTrain and XTest
+Fits SVM using XTrain, and returns percent class loss for XTrain and XTest
 """
 #%%
-def linearSVM(XTrain, YTrain, XTest, YTest, options):
+def linearSVM(XTrain, YTrain, XTest, YTest, **options):
+    
     import numpy as np
     from sklearn import svm
     linear_svm = [];
@@ -18,6 +19,7 @@ def linearSVM(XTrain, YTrain, XTest, YTest, options):
         
     linear_svm.fit(XTrain, np.squeeze(YTrain))    
 
+    #%%
     def perClassError(Y, Yhat):
         import numpy as np
         perClassEr = np.sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
@@ -26,14 +28,25 @@ def linearSVM(XTrain, YTrain, XTest, YTest, options):
     perClassErrorTest = perClassError(YTest, linear_svm.predict(XTest));
     perClassErrorTrain = perClassError(YTrain, linear_svm.predict(XTrain));
     
+    #%%
     class summaryClass:
         perClassErrorTrain = [];
         perClassErrorTest = [];
         model = [];
+        XTest = []
+        XTrain = []
+        YTest = []
+        YTrain = []
+        
     summary = summaryClass();
     summary.perClassErrorTrain = perClassErrorTrain;
     summary.perClassErrorTest = perClassErrorTest;
     summary.model = linear_svm;
+    summary.XTest = XTest
+    summary.XTrain = XTrain
+    summary.YTest = YTest
+    summary.YTrain = YTrain
+    
     return summary
 
-    np.mean()
+#    np.mean()
