@@ -1,11 +1,15 @@
 function [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
-    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, timeStimOnsetAll] = ...
+    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, timeStimOnsetAll, timeSingleStimOffset] = ...
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams, outcomes)
 % Set the time of events that happen during each trial.
 %
 % By default all times (ms) are relative to when bcontrol sent scope ttl. 
 % unless scopeTTLOrigTime is set to false, in which case all times will be
 % relative to the begining of the trials in bcontrol.
+%
+% outcomes:
+%    1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation,
+%   -4: no center commit, -5: no side commit
 
 if ~exist('scopeTTLOrigTime', 'var')
     scopeTTLOrigTime = true;
@@ -59,6 +63,7 @@ timeStop = NaN(size(alldata));
 centerLicks = cell(size(alldata)); centerLicks(:) = {NaN};
 leftLicks = cell(size(alldata)); leftLicks(:) = {NaN};
 rightLicks = cell(size(alldata)); rightLicks(:) = {NaN};
+timeSingleStimOffset = NaN(size(alldata));
 
 
 %% By default: all times (ms) are relative to when bcontrol sent scope ttl. (this makes more sense than timeStartScan_abs, since alldata.frameTimes is also relative to bcontrol ttl time.)
@@ -197,7 +202,7 @@ for tr = 1:length(alldata)
         rightLicks{tr} = alldata(tr).parsedEvents.pokes.R(:,1) * 1000 - t0;
         
         
-        %% stimulus offset
+        %% stimulus offset : 
         
         if ~ismember(outcomes(tr), -3)            
             % end of the stim if stim was not aborted due to mouse going to one of the states written below.
@@ -232,7 +237,20 @@ for tr = 1:length(alldata)
             % stimEndIfNoAbort, stimAbortTime
             
             stimEndActual = min(stimEndIfNoAbort, stimAbortTime);
-            timeStimOffset(tr) = stimEndActual - t0;            
+            timeStimOffset(tr) = stimEndActual - t0;     
+            
+            
+            %%%%%%% stimOffset corresponding to one single repetition of the stimulus (ie stimulus without extraStim,etc),
+            error('Double check below is correct... newly added!')
+            if alldata(tr).stimDur_diff % if it is non zero, then use this value instead of waitDur to generate the stimulus.
+                stimdur = round(alldata(tr).stimDur_diff*1000); % ms
+            else % if StimDur_diff is zero, use waitDur to generate the stimulus. 
+                stimdur = round(alldata(tr).waitDuration*1000); % ms
+            end
+            singleStimEndIfNoAbort = (alldata(tr).parsedEvents.states.wait_stim(1) * 1000) + stimdur;
+
+            stimEndActual = min(singleStimEndIfNoAbort, stimAbortTime);
+            timeSingleStimOffset(tr) = stimEndActual - t0;     
         end
 %         % stimulus offset
 %         if ~ismember(outcomes(tr), -3)

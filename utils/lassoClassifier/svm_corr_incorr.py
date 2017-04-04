@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# NOTE: add for saving meanX, stdX and _chAl mean and std.
+
 """
 Train SVM and SVR on correct trials and test its classification accuracy on incorrect trials.
 [Also as usual we test it on correct trials (both training and testing datasets) 
@@ -44,9 +46,9 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni16' #'fni16'
-    imagingFolder = '150930' #'151001'
-    mdfFileNumber = [1,2] #[1] 
+    mousename = 'fni17' #'fni16'
+    imagingFolder = '151023' #'151001'
+    mdfFileNumber = [1] #[1] 
 
     choiceAligned = 0 # use choice-aligned traces for analyses?
     stimAligned = 1 # use stimulus-aligned traces for analyses?
@@ -368,14 +370,6 @@ print(moreName)
 
 frameLength = 1000/30.9; # sec.
     
-# Load time of some trial events    
-Data = scio.loadmat(postName, variable_names=['timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'time1stSideTry'])
-timeCommitCL_CR_Gotone = np.array(Data.pop('timeCommitCL_CR_Gotone')).flatten().astype('float')
-timeStimOnset = np.array(Data.pop('timeStimOnset')).flatten().astype('float')
-timeStimOffset = np.array(Data.pop('timeStimOffset')).flatten().astype('float')
-time1stSideTry = np.array(Data.pop('time1stSideTry')).flatten().astype('float')
-
-
 # Load stim-aligned_allTrials traces, frames, frame of event of interest
 if trialHistAnalysis==0:
     Data = scio.loadmat(postName, variable_names=['stimAl_noEarlyDec'],squeeze_me=True,struct_as_record=False)
@@ -444,7 +438,15 @@ if trialHistAnalysis==0:
 
 
 ###########################################################################################################################################
-#%% Set the time window for training SVM (ep) and traces_al_stim
+#%% Set the time window for training SVM (ep) also remove some trials from traces_al_stim (if their choice is too early or their stim duration is too short)
+
+# Load time of some trial events    
+Data = scio.loadmat(postName, variable_names=['timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'time1stSideTry'])
+timeCommitCL_CR_Gotone = np.array(Data.pop('timeCommitCL_CR_Gotone')).flatten().astype('float')
+timeStimOnset = np.array(Data.pop('timeStimOnset')).flatten().astype('float')
+timeStimOffset = np.array(Data.pop('timeStimOffset')).flatten().astype('float')
+time1stSideTry = np.array(Data.pop('time1stSideTry')).flatten().astype('float')
+
 
 if trialHistAnalysis==1:    
     # either of the two below (stimulus-aligned and initTone-aligned) would be fine
@@ -5801,15 +5803,15 @@ if stimAligned:
                                        'perClassErrorTest_incorr':perClassErrorTest_incorr,
                                        'perClassErrorTest_incorr_shfl':perClassErrorTest_incorr_shfl,
                                        'perClassErrorTest_incorr_chance':perClassErrorTest_incorr_chance,
-                                        'cbeg':cbeg, 'w_all':w_all, 'b_all':b_all, # starting from here are BAGGING vars.
-                                        'classErr_corrTest_all':classErr_corrTest_all,
-                                        'classErr_incorrTest_all':classErr_incorrTest_all,
-                                        'classErr_corrTrain_all':classErr_corrTrain_all,
-                                        'classErr_corrTrainTest_all':classErr_corrTrainTest_all,
-                                        'classErr_corrTest_chance_all':classErr_corrTest_chance_all,
-                                        'classErr_corrTest_sh_all':classErr_corrTest_sh_all,
-                                        'classErr_incorrTest_chance_all':classErr_incorrTest_chance_all,
-                                        'classErr_incorrTest_sh_all':classErr_incorrTest_sh_all})         
+                                       'cbeg':cbeg, 'w_all':w_all, 'b_all':b_all, # starting from here are BAGGING vars.
+                                       'classErr_corrTest_all':classErr_corrTest_all,
+                                       'classErr_incorrTest_all':classErr_incorrTest_all,
+                                       'classErr_corrTrain_all':classErr_corrTrain_all,
+                                       'classErr_corrTrainTest_all':classErr_corrTrainTest_all,
+                                       'classErr_corrTest_chance_all':classErr_corrTest_chance_all,
+                                       'classErr_corrTest_sh_all':classErr_corrTest_sh_all,
+                                       'classErr_incorrTest_chance_all':classErr_incorrTest_chance_all,
+                                       'classErr_incorrTest_sh_all':classErr_incorrTest_sh_all})         
                 
             
         else:

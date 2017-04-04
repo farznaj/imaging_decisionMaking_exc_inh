@@ -7,10 +7,10 @@ Created on Tue Dec 13 15:07:58 2016
 
 
 #%% 
-mousename = 'fni17' #'fni17'
+#mousename = 'fni16' #'fni17'
+#trialHistAnalysis = 0;
+#iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
 
-trialHistAnalysis = 0;
-iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.    
 if mousename=='fni17':  
     ep_ms = [809, 1109]
 elif mousename=='fni16':
@@ -34,7 +34,8 @@ savefigs = False
 fmt = ['pdf', 'svg', 'eps'] #'png', 'pdf': preserve transparency # Format of figures for saving
 figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/' # Directory for saving figures.
 neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
-eps = 10**-10 # tiny number below which weight is considered 0
+import sys
+eps = sys.float_info.epsilon #10**-10 # tiny number below which weight is considered 0
 palpha = .05 # p <= palpha is significant
 thR = 2 # Exclude days with only <=thR rounds with non-0 weights
 numRounds = 10; # number of times svm analysis was ran for the same dataset but sampling different sets of neurons.    
@@ -43,6 +44,7 @@ numRounds = 10; # number of times svm analysis was ran for the same dataset but 
 import os
 #import glob
 import numpy as np   
+import numpy.random as rng
 import scipy as sci
 import scipy.io as scio
 import scipy.stats as stats
@@ -113,7 +115,7 @@ if not os.path.exists(svmdir):
 
 
 daysOrig = days
-numDays = len(days);
+numDays = len(days)
 print 'Analyzing mouse',mousename,'-', len(days), 'days'
     
 

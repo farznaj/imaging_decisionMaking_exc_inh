@@ -76,7 +76,7 @@ stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_
 % stimAftGoToneParams = []; % {0,0,0};
 
 [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
-    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, timeStimOnsetAll] = ...
+    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, timeStimOnsetAll, timeSingleStimOffset] = ...
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams, outcomes);
 
 
@@ -89,7 +89,7 @@ timeCommitIncorrResp0 = timeCommitIncorrResp;
 set_change_of_mind_trs % set change-of-mind trials. output will be trs_com.
 
 if save_aligned_traces
-    save(postName, '-append', 'cb', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOnsetAll', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp')
+    save(postName, '-append', 'cb', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOnsetAll', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp', 'timeSingleStimOffset')
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -242,6 +242,7 @@ lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.25), frameon=False)
 #leg.get_frame().set_linewidth(0.0)
 makeNicePlots(ax)
 ymin, ymax = ax.get_ylim()
+plt.ylim([40,100])
 
 ##%% Average across days
 x =[0,1]
@@ -257,16 +258,18 @@ plt.xticks(x, labels, rotation='vertical', fontsize=13)
 #av_l1_test_s = 100-np.nanmean(l1_err_test_shfl0, axis=0) 
 _,p = stats.ttest_ind(av_l1_test_d, av_l1_test_s)
 plt.title('p= %.3f' %(p))
+plt.ylim([40,100])
 
 plt.subplots_adjust(wspace=1)
 makeNicePlots(ax)
-
+#plt.savefig('fni17_prev_l1.pdf', bbox_extra_artists=(lgd,), bbox_inches='tight')
 if savefigs:#% Save the figure
     fign = os.path.join(svmdir+dnow, suffn+'test_L1'+'.'+fmt[0])
     plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')  
 
 
 
+#%%
 if doL2All:
     #%% L2;
     plt.figure(figsize=(6,2.5))
