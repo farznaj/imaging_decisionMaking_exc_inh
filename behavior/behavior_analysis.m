@@ -264,7 +264,7 @@ for imodality = 1:3 % {'multi', 'onlyvis', 'onlyaud'}
                 xs = (rates(1) : 0.1 : rates(end))';
                 % GLM
                 switch sigmoid
-                    case 'invgauss'
+                    case 'invgauss' % norminv(µ) = Xb
                         [b, junk, stats] = glmfit(rates', pmf', 'binomial', 'link', 'probit');
                         bs(c) = 1/b(2);
                         b_ses(c) = stats.se(2);
@@ -274,8 +274,8 @@ for imodality = 1:3 % {'multi', 'onlyvis', 'onlyaud'}
                         % (norminv(0.5) - b(1)) / b(2)
                         pses(c) = (norminv(0.5, 0, 1) - b(1)) / b(2);
                         
-                    case 'logistic'
-                        [b, junk, stats] = glmfit(rates', [pmf'.*ns' ns'], 'binomial');
+                    case 'logistic' % log(µ/(1 – µ)) = Xb
+                        [b, junk, stats] = glmfit(rates', [pmf'.*ns' ns'], 'binomial'); % default link: logit
                         bs(c) = 1/b(2);
                         b_ses(c) = stats.se(2);
                         yfit = glmval(b, xs, 'logit');

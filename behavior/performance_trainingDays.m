@@ -45,10 +45,18 @@ for imouse = 1:length(miceNames)
         (alldata, trials_per_session, uncommittedResp, allowCorrectResp, ...
         excludeExtraStim, excludeShortWaitDur, mouse);
     
+    % to get pmf:
+    %{
+    [stimrate, y, HRchoicePerc, vec_rates, up, lo, nSamples] = stimrate_choice_set...
+        (alldata, trials_per_session, uncommittedResp, allowCorrectResp, ...
+        excludeExtraStim, excludeShortWaitDur, mouse);
+    %}
+    
     
     %%    
     cs = [0 cumsum(trials_per_session)];
-    HRchoicePerc_allSess = NaN(length(cs)-1, length(vecr)-1);
+%     HRchoicePerc_allSess = NaN(length(cs)-1, length(vecr)-1);
+    HRchoicePerc_allSess = NaN(length(cs)-1, length(vecr));
     
     for isess = 1:length(cs)-1
         

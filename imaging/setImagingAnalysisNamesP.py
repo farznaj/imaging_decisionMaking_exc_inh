@@ -43,6 +43,12 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     else:
         postNProvided = 0
         
+    if options.get('nOuts'):
+        nOuts = options.get('nOuts');    
+    else:
+		  nOuts = 2
+
+
     #%%
     import numpy as np
     import platform
@@ -103,7 +109,10 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         pnevFileName = ''
     
     #%%
-    return imfilename, pnevFileName
+    if nOuts==2:
+        return imfilename, pnevFileName
+    else:
+        return imfilename, pnevFileName, dataPath
     
     
 #%%

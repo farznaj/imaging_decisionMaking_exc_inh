@@ -618,7 +618,7 @@ if len(sdur)>1:
 if sdur==0: # waitDur was used to generate stimulus
     waitDuration_all = []
     for ii in range(len(bFileName)):
-        sys.exit('Aborting ... needs work... u started saving timeSingleStimOffset... if not saved, below needs work for days with multiple sessions!')
+        sys.exit('Aborting ... needs work... u added timeSingleStimOffset to setEventTimesRelBcontrolScopeTTL.m... if not saved for a day, below needs work for days with multiple sessions!')
 #        bnow = bFileName[0]       
 #        Data = scio.loadmat(bnow, variable_names=['all_data'],squeeze_me=True,struct_as_record=False)
 #        waitDuration_all.append(np.array([Data['all_data'][i].waitDuration for i in range(len(Data['all_data']))])) # remember difference indexing in matlab and python!

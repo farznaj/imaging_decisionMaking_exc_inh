@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Plots of outputs of file svm_eachFrame.py
-Plot class accuracy for each frame .. .svm trained to decode choice on choice-aligned traces... bestc found for each frame separately.
-
+Plots class accuracy for svm trained on non-overlapping time windows  (outputs of file svm_eachFrame.py)
+ ... svm trained to decode choice on choice-aligned or stimulus-aligned traces.
+ 
 Created on Sun Mar 12 15:12:29 2017
 @author: farznaj
 """
 
 
-mousename = 'fni16' #'fni17'
+#%% Change the following vars:
+
+mousename = 'fni17' #'fni17'
 
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
@@ -16,23 +18,38 @@ execfile("svm_plots_setVars.py")
 
 savefigs = 0
 doPlots = 0 #1 # plot c path of each day 
+chAl = 0 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 
+
+#%% 
 import numpy as np
 frameLength = 1000/30.9; # sec.
-regressBins = int(np.round(100/frameLength)) # 100ms # set to nan if you don't want to downsample.
+regressBins = int(np.round(100/frameLength)) # must be same regressBins used in svm_eachFrame. 100ms # set to nan if you don't want to downsample.
 
 dnow = '/classAccurTraces_eachFrame/'+mousename+'/'
+
+smallestC = 0 # Identify best c: if 1: smallest c whose CV error falls below 1 se of min CV error will be used as optimal C; if 0: c that gives min CV error will be used as optimal c.
+if smallestC==1:
+    print 'bestc = smallest c whose cv error is less than 1se of min cv error'
+else:
+    print 'bestc = c that gives min cv error'
+#I think we should go with min c as the bestc... at least we know it gives the best cv error... and it seems like it has nothing to do with whether the decoder generalizes to other data or not.
 
 
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
 
-def setSVMname(pnevFileName, trialHistAnalysis, regressBins=3):
+def setSVMname(pnevFileName, trialHistAnalysis, chAl, regressBins=3):
     import glob
 
-    if trialHistAnalysis:
-        svmn = 'svmPrevChoice_eachFrame_chAl_ds%d_*' %(regressBins)
+    if chAl==1:
+        al = 'chAl'
     else:
-        svmn = 'svmCurrChoice_eachFrame_chAl_ds%d_*' %(regressBins)
+        al = 'stAl'
+
+    if trialHistAnalysis:
+        svmn = 'svmPrevChoice_eachFrame_%s_ds%d_*' %(al,regressBins)
+    else:
+        svmn = 'svmCurrChoice_eachFrame_%s_ds%d_*' %(al,regressBins)
     
     svmn = svmn + os.path.basename(pnevFileName) #pnevFileName[-32:]    
     svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
@@ -86,48 +103,62 @@ for iday in range(len(days)):
 
 
     #%%
-    svmName = setSVMname(pnevFileName, trialHistAnalysis, regressBins) # latest file is with soft norm; earlier file is 
+    svmName = setSVMname(pnevFileName, trialHistAnalysis, chAl, regressBins) # for chAl: the latest file is with soft norm; earlier file is 
 
-    if len(svmName)<2:
-        sys.exit('<2 mat files; needs work!')            
-    else:
-        svmName = svmName[0]
-        print os.path.basename(svmName)    
-
+    svmName = svmName[0]
+    print os.path.basename(svmName)    
 
 
     #%% Set eventI
     
-    # Load 1stSideTry-aligned traces, frames, frame of event of interest
-    # use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
-    Data = scio.loadmat(postName, variable_names=['firstSideTryAl'],squeeze_me=True,struct_as_record=False)
-#    traces_al_1stSide = Data['firstSideTryAl'].traces.astype('float')
-    time_aligned_1stSide = Data['firstSideTryAl'].time.astype('float')
-    
-    print(np.shape(time_aligned_1stSide))
+    if chAl==1:    #%% Use choice-aligned traces 
+        # Load 1stSideTry-aligned traces, frames, frame of event of interest
+        # use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
+        Data = scio.loadmat(postName, variable_names=['firstSideTryAl'],squeeze_me=True,struct_as_record=False)
+    #    traces_al_1stSide = Data['firstSideTryAl'].traces.astype('float')
+        time_aligned_1stSide = Data['firstSideTryAl'].time.astype('float')
+        time_trace = time_aligned_1stSide
+        
+    else:   #%% Use stimulus-aligned traces           
+        # Load stim-aligned_allTrials traces, frames, frame of event of interest
+        if trialHistAnalysis==0:
+            Data = scio.loadmat(postName, variable_names=['stimAl_noEarlyDec'],squeeze_me=True,struct_as_record=False)
+#            eventI = Data['stimAl_noEarlyDec'].eventI - 1 # remember difference indexing in matlab and python!
+#            traces_al_stimAll = Data['stimAl_noEarlyDec'].traces.astype('float')
+            time_aligned_stim = Data['stimAl_noEarlyDec'].time.astype('float')        
+        else:
+            Data = scio.loadmat(postName, variable_names=['stimAl_allTrs'],squeeze_me=True,struct_as_record=False)
+#            eventI = Data['stimAl_allTrs'].eventI - 1 # remember difference indexing in matlab and python!
+#            traces_al_stimAll = Data['stimAl_allTrs'].traces.astype('float')
+            time_aligned_stim = Data['stimAl_allTrs'].time.astype('float')
+            # time_aligned_stimAll = Data['stimAl_allTrs'].time.astype('float') # same as time_aligned_stim        
+        
+        time_trace = time_aligned_stim
+        
+    print(np.shape(time_trace))
       
     
-    #%% Downsample traces: average across multiple times (downsampling, not a moving average. we only average every regressBins points.)
+    ##%% Downsample traces: average across multiple times (downsampling, not a moving average. we only average every regressBins points.)
     
     if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
         print 'Downsampling traces ....'    
             
-        T1 = time_aligned_1stSide.shape[0]
+        T1 = time_trace.shape[0]
         tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X            
-        time_aligned_1stSide = time_aligned_1stSide[0:regressBins*tt]
-    #    print time_aligned_1stSide_d.shape
-        time_aligned_1stSide = np.round(np.mean(np.reshape(time_aligned_1stSide, (regressBins, tt), order = 'F'), axis=0), 2)
-        print time_aligned_1stSide.shape
+
+        time_trace = time_trace[0:regressBins*tt]
+        time_trace = np.round(np.mean(np.reshape(time_trace, (regressBins, tt), order = 'F'), axis=0), 2)
+        print time_trace.shape
     
-        eventI_ch_ds = np.argwhere(np.sign(time_aligned_1stSide)>0)[0] # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
+        eventI_ds = np.argwhere(np.sign(time_trace)>0)[0] # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
     
     else:
-        print 'Now downsampling traces ....'
+        print 'Not downsampling traces ....'
         
-        eventI_ch = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
-        eventI_ch_ds = eventI_ch
+#        eventI_ch = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+#        eventI_ds = eventI_ch
     
-    eventI_allDays[iday] = eventI_ch_ds
+    eventI_allDays[iday] = eventI_ds
     
     
     #%% Load SVM vars
@@ -180,15 +211,7 @@ for iday in range(len(days)):
         semPerClassErrorTest_chance = np.std(perClassErrorTest_chance[:,:,ifr], axis = 0)/np.sqrt(numSamples);
         
         
-        #%% Identify best c
-        
-        smallestC = 0 # if 1: smallest c whose CV error falls below 1 se of min CV error will be used as optimal C; if 0: c that gives min CV error will be used as optimal c.
-        if smallestC==1:
-            print 'bestc = smallest c whose cv error is less than 1se of min cv error'
-        else:
-            print 'bestc = c that gives min cv error'
-        #I think we should go with min c as the bestc... at least we know it gives the best cv error... and it seems like it has nothing to do with whether the decoder generalizes to other data or not.
-        
+        #%% Identify best c       
         
         # Use all range of c... it may end up a value at which all weights are 0.
         ix = np.argmin(meanPerClassErrorTest)
@@ -198,7 +221,7 @@ for iday in range(len(days)):
             cbestAll = cbest
         else:
             cbestAll = cvect[ix]
-        print 'best c = ', cbestAll
+        print 'best c = %.10f' %cbestAll
         
         
         
@@ -246,7 +269,7 @@ for iday in range(len(days)):
         #%% Plot C path           
         
         if doPlots:
-            print 'Best c (inverse of regularization parameter) = %.2f' %cbest
+#            print 'Best c (inverse of regularization parameter) = %.2f' %cbest
             plt.figure()
             plt.subplot(1,2,1)
             plt.fill_between(cvect, meanPerClassErrorTrain-semPerClassErrorTrain, meanPerClassErrorTrain+ semPerClassErrorTrain, alpha=0.5, edgecolor='k', facecolor='k')
@@ -267,12 +290,16 @@ for iday in range(len(days)):
             plt.ylabel('classification error (%)')
             plt.legend(loc='center left', bbox_to_anchor=(1, .7))
             
-            plt.title('Frame %d' %(ifr))
+            cl = 'r' if ifr==eventI_ds else 'k' # show frame number of eventI in red :)
+            plt.title('Frame %d' %(ifr), color=cl)
             plt.tight_layout()
-            
-            
+          
+           
     #%% Once done with all frames, save vars for all days
-    
+           
+    # Delete vars before starting the next day           
+    del perClassErrorTrain, perClassErrorTest, perClassErrorTest_shfl, perClassErrorTest_chance
+        
     classErr_bestC_train_data_all.append(classErr_bestC_train_data) # each day: samps x numFrs
     classErr_bestC_test_data_all.append(classErr_bestC_test_data)
     classErr_bestC_test_shfl_all.append(classErr_bestC_test_shfl)
@@ -293,9 +320,9 @@ cbestFrs_all = np.array(cbestFrs_all)
 ######################################################################################################################################################    
 ######################################################################################################################################################          
 
-#%% Average and std across shuffles ... for each day
+#%% Average and std of class accuracies across samples (all CV samples) ... for each day
 
-av_l2_train_d = np.array([100-np.nanmean(classErr_bestC_train_data_all[iday], axis=0) for iday in range(len(days))]) # numDays
+av_l2_train_d = np.array([100-np.nanmean(classErr_bestC_train_data_all[iday], axis=0) for iday in range(len(days))]) # numDays; each day has size numFrs
 sd_l2_train_d = np.array([np.nanstd(classErr_bestC_train_data_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(len(days))])  
 
 av_l2_test_d = np.array([100-np.nanmean(classErr_bestC_test_data_all[iday], axis=0) for iday in range(len(days))]) # numDays
@@ -311,23 +338,221 @@ sd_l2_test_c = np.array([np.nanstd(classErr_bestC_test_chance_all[iday], axis=0)
 #p
 
 
+#%% Keep vars for chAl and stAl
+
+if chAl==1:
+    
+    eventI_allDays_ch = eventI_allDays + 0
+    
+    av_l2_train_d_ch = av_l2_train_d + 0
+    sd_l2_train_d_ch = sd_l2_train_d + 0
+    
+    av_l2_test_d_ch = av_l2_test_d + 0
+    sd_l2_test_d_ch = sd_l2_test_d + 0
+    
+    av_l2_test_s_ch = av_l2_test_s + 0
+    sd_l2_test_s_ch = sd_l2_test_s + 0
+    
+    av_l2_test_c_ch = av_l2_test_c + 0
+    sd_l2_test_c_ch = sd_l2_test_c + 0
+    
+else:    
+    
+    eventI_allDays_st = eventI_allDays + 0
+    
+    av_l2_train_d_st = av_l2_train_d + 0
+    sd_l2_train_d_st = sd_l2_train_d + 0
+    
+    av_l2_test_d_st = av_l2_test_d + 0
+    sd_l2_test_d_st = sd_l2_test_d + 0
+    
+    av_l2_test_s_st = av_l2_test_s + 0
+    sd_l2_test_s_st = sd_l2_test_s + 0
+    
+    av_l2_test_c_st = av_l2_test_c + 0
+    sd_l2_test_c_st = sd_l2_test_c + 0
+    
+
+
+#%% For each day plot class accur and match it with dist of event times. Do it for both stim-aligned and choice-aligned data
+# for this plot you need to run the codes above once with chAl=0 and once with chAl=1; also run eventTimes_dist
+
+for iday in range(len(days)):    
+
+    #%%
+    # relative to stim onset
+    timeStimOffset0_all_relOn = np.nanmean(timeStimOffset0_all[iday] - timeStimOnset_all[iday])
+    timeStimOffset_all_relOn = np.nanmean(timeStimOffset_all[iday] - timeStimOnset_all[iday])
+    timeCommitCL_CR_Gotone_all_relOn = np.nanmean(timeCommitCL_CR_Gotone_all[iday] - timeStimOnset_all[iday])
+    time1stSideTry_all_relOn = np.nanmean(time1stSideTry_all[iday] - timeStimOnset_all[iday])
+
+    # relative to choice onset
+    timeStimOnset_all_relCh = np.nanmean(timeStimOnset_all[iday] - time1stSideTry_all[iday])    
+    timeStimOffset0_all_relCh = np.nanmean(timeStimOffset0_all[iday] - time1stSideTry_all[iday])
+    timeStimOffset_all_relCh = np.nanmean(timeStimOffset_all[iday] - time1stSideTry_all[iday])
+    timeCommitCL_CR_Gotone_all_relCh = np.nanmean(timeCommitCL_CR_Gotone_all[iday] - time1stSideTry_all[iday])
+    
+    
+    #%% Plot class accur trace for each day
+    
+    plt.figure()
+    
+    ######## stAl
+    colors = 'k','r','b','m'
+    nPre = eventI_allDays_st[iday] # number of frames before the common eventI, also the index of common eventI. 
+    nPost = (len(av_l2_test_d_st[iday]) - eventI_allDays_st[iday] - 1)
+    
+    a = -(np.asarray(frameLength*regressBins) * range(nPre+1)[::-1])
+    b = (np.asarray(frameLength*regressBins) * range(1, nPost+1))
+    time_al = np.concatenate((a,b))
+    
+    plt.subplot(223)
+    plt.errorbar(time_al, av_l2_test_d_st[iday], yerr = sd_l2_test_d_st[iday])    
+#    plt.title(days[iday])
+    #plt.errorbar(range(len(av_l2_test_d[iday])), av_l2_test_d[iday], yerr = sd_l2_test_d[iday])
+
+    # mark event times relative to stim onset
+    plt.plot([0, 0], [50, 100], color='g')
+    plt.plot([timeStimOffset0_all_relOn, timeStimOffset0_all_relOn], [50, 100], color=colors[0])
+    plt.plot([timeStimOffset_all_relOn, timeStimOffset_all_relOn], [50, 100], color=colors[1])
+    plt.plot([timeCommitCL_CR_Gotone_all_relOn, timeCommitCL_CR_Gotone_all_relOn], [50, 100], color=colors[2])
+    plt.plot([time1stSideTry_all_relOn, time1stSideTry_all_relOn], [50, 100], color=colors[3])
+    plt.xlabel('Time relative to stim onset (ms)')
+    plt.ylabel('Classification accuracy (%)') #, fontsize=13)
+    
+    ax = plt.gca(); xl = ax.get_xlim(); makeNicePlots(ax,1)
+    
+    
+    ###### Plot hist of event times
+    stimOffset0_st = timeStimOffset0_all[iday] - timeStimOnset_all[iday]
+    stimOffset_st = timeStimOffset_all[iday] - timeStimOnset_all[iday]
+    goTone_st = timeCommitCL_CR_Gotone_all[iday] - timeStimOnset_all[iday]
+    sideTry_st = time1stSideTry_all[iday] - timeStimOnset_all[iday]
+
+    stimOffset0_st = stimOffset0_st[~np.isnan(stimOffset0_st)]
+    stimOffset_st = stimOffset_st[~np.isnan(stimOffset_st)]
+    goTone_st = goTone_st[~np.isnan(goTone_st)]
+    sideTry_st = sideTry_st[~np.isnan(sideTry_st)]
+    
+    labs = 'stimOffset_1rep', 'stimOffset', 'goTone', '1stSideTry'
+    a = stimOffset0_st, stimOffset_st, goTone_st, sideTry_st
+    binEvery = 100
+    
+    bn = np.arange(np.min(np.concatenate((a))), np.max(np.concatenate((a))), binEvery)
+    bn[-1] = np.max(a) # unlike digitize, histogram doesn't count the right most value
+    
+    plt.subplot(221)
+    # set hists
+    for i in range(len(a)):
+        hist, bin_edges = np.histogram(a[i], bins=bn)
+    #    hist = hist/float(np.sum(hist))     # use this if you want to get fraction of trials instead of number of trials
+        hb = plt.bar(bin_edges[0:-1], hist, binEvery, alpha=.4, color=colors[i], label=labs[i]) 
+    
+#    plt.xlabel('Time relative to stim onset (ms)')
+    plt.ylabel('Number of trials')
+    plt.legend(handles=[hb], loc='center left', bbox_to_anchor=(.7, .7)) 
+    
+    plt.title(days[iday])
+    plt.xlim(xl)    
+    ax = plt.gca(); makeNicePlots(ax,1)
+
+
+
+    #%% chAl
+    colors = 'g','k','r','b'
+    nPre = eventI_allDays_ch[iday] # number of frames before the common eventI, also the index of common eventI. 
+    nPost = (len(av_l2_test_d_ch[iday]) - eventI_allDays_ch[iday] - 1)
+    
+    a = -(np.asarray(frameLength*regressBins) * range(nPre+1)[::-1])
+    b = (np.asarray(frameLength*regressBins) * range(1, nPost+1))
+    time_al = np.concatenate((a,b))
+    
+    plt.subplot(224)
+    plt.errorbar(time_al, av_l2_test_d_ch[iday], yerr = sd_l2_test_d_ch[iday])    
+#    plt.title(days[iday])
+
+    # mark event times relative to choice onset
+    plt.plot([timeStimOnset_all_relCh, timeStimOnset_all_relCh], [50, 100], color=colors[0])    
+    plt.plot([timeStimOffset0_all_relCh, timeStimOffset0_all_relCh], [50, 100], color=colors[1])
+    plt.plot([timeStimOffset_all_relCh, timeStimOffset_all_relCh], [50, 100], color=colors[2])
+    plt.plot([timeCommitCL_CR_Gotone_all_relCh, timeCommitCL_CR_Gotone_all_relCh], [50, 100], color=colors[3])
+    plt.plot([0, 0], [50, 100], color='m')
+    plt.xlabel('Time relative to choice onset (ms)')
+    ax = plt.gca(); xl = ax.get_xlim(); makeNicePlots(ax,1)
+    
+    
+    ###### Plot hist of event times
+    stimOnset_ch = timeStimOnset_all[iday] - time1stSideTry_all[iday]
+    stimOffset0_ch = timeStimOffset0_all[iday] - time1stSideTry_all[iday]
+    stimOffset_ch = timeStimOffset_all[iday] - time1stSideTry_all[iday]
+    goTone_ch = timeCommitCL_CR_Gotone_all[iday] - time1stSideTry_all[iday]
+    
+    stimOnset_ch = stimOnset_ch[~np.isnan(stimOnset_ch)]
+    stimOffset0_ch = stimOffset0_ch[~np.isnan(stimOffset0_ch)]
+    stimOffset_ch = stimOffset_ch[~np.isnan(stimOffset_ch)]
+    goTone_ch = goTone_ch[~np.isnan(goTone_ch)]    
+    
+    labs = 'stimOnset','stimOffset_1rep', 'stimOffset', 'goTone'
+    a = stimOnset_ch, stimOffset0_ch, stimOffset_ch, goTone_ch
+    binEvery = 100
+    
+    bn = np.arange(np.min(np.concatenate((a))), np.max(np.concatenate((a))), binEvery)
+    bn[-1] = np.max(a) # unlike digitize, histogram doesn't count the right most value
+    
+    plt.subplot(222)
+    # set hists
+    for i in range(len(a)):
+        hist, bin_edges = np.histogram(a[i], bins=bn)
+    #    hist = hist/float(np.sum(hist))     # use this if you want to get fraction of trials instead of number of trials
+        plt.bar(bin_edges[0:-1], hist, binEvery, alpha=.4, color=colors[i], label=labs[i]) 
+    
+#    plt.xlabel('Time relative to choice onset (ms)')
+#    plt.ylabel('Number of trials')
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
+    
+    plt.xlim(xl)    
+    ax = plt.gca(); makeNicePlots(ax,1)
+    
+    plt.subplots_adjust(wspace=1, hspace=.5)
+    
+    
+    """
+    plt.subplot(223)
+    a = timeStimOffset0_all[iday] - timeStimOnset_all[iday]
+    plt.hist(a[~np.isnan(a)], color='b')
+    
+    a = timeStimOffset_all[iday] - timeStimOnset_all[iday]
+    plt.hist(a[~np.isnan(a)], color='r')
+
+    a = timeCommitCL_CR_Gotone_all[iday] - timeStimOnset_all[iday]
+    plt.hist(a[~np.isnan(a)], color='k')
+
+    a = time1stSideTry_all[iday] - timeStimOnset_all[iday]
+    plt.hist(a[~np.isnan(a)], color='m')
+    
+    plt.xlabel('Time relative to stim onset (ms)')
+    plt.ylabel('# trials')   
+    """
+
+    
 #%%
 ######################## PLOTS ########################
 
-#%% Plot class accur for each day
+# Plot class accur trace for each day
 
-for iday in range(len(days)):
-    
+plt.figure()
+for iday in range(len(days)):    
+#    plt.figure()
     nPre = eventI_allDays[iday] # number of frames before the common eventI, also the index of common eventI. 
     nPost = (len(av_l2_test_d[iday]) - eventI_allDays[iday] - 1)
     
-    a = -(np.asarray(frameLength) * range(nPre+1)[::-1])
-    b = (np.asarray(frameLength) * range(1, nPost+1))
+    a = -(np.asarray(frameLength*regressBins) * range(nPre+1)[::-1])
+    b = (np.asarray(frameLength*regressBins) * range(1, nPost+1))
     time_al = np.concatenate((a,b))
     
     plt.subplot(221)
     plt.errorbar(time_al, av_l2_test_d[iday], yerr = sd_l2_test_d[iday])    
-#    plt.title(days[iday])
+    plt.title(days[iday])
     #plt.errorbar(range(len(av_l2_test_d[iday])), av_l2_test_d[iday], yerr = sd_l2_test_d[iday])
 
     plt.subplot(222)
@@ -337,23 +562,63 @@ for iday in range(len(days)):
     plt.errorbar(time_al, av_l2_train_d[iday], yerr = sd_l2_train_d[iday])
 
     plt.subplot(224)
-    plt.errorbar(time_al, av_l2_test_c[iday], yerr = sd_l2_test_c[iday])
+    plt.errorbar(time_al, av_l2_test_c[iday], yerr = sd_l2_test_c[iday])    
+#    plt.show()
+   
 
-
+##%%
 plt.subplot(221)
-plt.title('test')
+plt.title('Test')
+if chAl==1:
+    plt.xlabel('Time since choice onset (ms)', fontsize=13)
+else:
+    plt.xlabel('Time since stim onset (ms)', fontsize=13)
+plt.ylabel('Classification accuracy (%)', fontsize=13)
+ax = plt.gca()
+makeNicePlots(ax,1)
+
 plt.subplot(222)
-plt.title('test-shfl')
+plt.title('Test-shfl')
+ax = plt.gca()
+makeNicePlots(ax,1)
+
 plt.subplot(223)
-plt.title('train')
+plt.title('Train')
+ax = plt.gca()
+makeNicePlots(ax,1)
+
 plt.subplot(224)
-plt.title('test-chance')
+plt.title('Test-chance')
+ax = plt.gca()
+makeNicePlots(ax,1)
 
-plt.subplots_adjust(hspace=0.5)
+plt.subplots_adjust(hspace=0.65)
+
+
+##%% Save the figure    
+if savefigs:#% Save the figure
+    if chAl==1:
+        dd = 'chAl_allDays'
+    else:
+        dd = 'stAl_allDays'
+        
+    d = os.path.join(svmdir+dnow)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+            
+    fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
+    plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+    
+    
 
 
 
 
+
+#%%
+############## Align class accur traces of all days to make a final average trace ##############
+ 
 #%% Find the common eventI, number of frames before and after the common eventI for the alignment of traces of all days.
 # By common eventI, we  mean the index on which all traces will be aligned.
         
@@ -368,8 +633,8 @@ print 'Number of frames before = %d, and after = %d the common eventI' %(nPreMin
 
 #%% Set the time array for the across-day aligned traces
 
-a = -(np.asarray(frameLength) * range(nPreMin+1)[::-1])
-b = (np.asarray(frameLength) * range(1, nPostMin+1))
+a = -(np.asarray(frameLength*regressBins) * range(nPreMin+1)[::-1])
+b = (np.asarray(frameLength*regressBins) * range(1, nPostMin+1))
 time_aligned = np.concatenate((a,b))
 
 
@@ -386,9 +651,8 @@ for iday in range(numDays):
     av_l2_test_s_aligned[:, iday] = av_l2_test_s[iday][eventI_allDays[iday] - nPreMin  :  eventI_allDays[iday] + nPostMin + 1]
     av_l2_test_c_aligned[:, iday] = av_l2_test_c[iday][eventI_allDays[iday] - nPreMin  :  eventI_allDays[iday] + nPostMin + 1]
     
-
         
-#%% Average across days
+#%% Average and STD across days (each day includes the average class accuracy across samples.)
 
 av_l2_train_d_aligned_ave = np.mean(av_l2_train_d_aligned, axis=1)
 av_l2_train_d_aligned_std = np.std(av_l2_train_d_aligned, axis=1)
@@ -408,7 +672,7 @@ _,pcorrtrace0 = stats.ttest_1samp(av_l2_test_d_aligned.transpose(), 50) # p valu
 _,pcorrtrace = stats.ttest_ind(av_l2_test_d_aligned.transpose(), av_l2_test_s_aligned.transpose()) # p value of class accuracy being different from 50
         
        
-#%% Plot the average traces across all days
+#%% Plot the average of aligned traces across all days
 
 plt.figure(figsize=(4.5,3))
 
@@ -442,9 +706,9 @@ plt.plot(time_aligned, pp, color='k')
 ##%% Save the figure    
 if savefigs:#% Save the figure
     if chAl==1:
-        dd = 'chAl_eachFr'
+        dd = 'chAl_aveDays'
     else:
-        dd = 'stAl_eachFr'
+        dd = 'stAl_aveDays'
         
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
@@ -459,68 +723,3 @@ if savefigs:#% Save the figure
 
 
 
-
-
-
-#%%
-#################################################################
-#################### Testing data: corr, inorr #########################
-#################################################################
-#%% Plot average across samples for each day
-
-# L2;
-plt.figure(figsize=(6,2.5))
-gs = gridspec.GridSpec(1,10)#, width_ratios=[2, 1]) 
-
-ax = plt.subplot(gs[0:-5])
-#ax = plt.subplot(121)
-#plt.errorbar(range(numDays), av_l2_test_d, yerr = sd_l2_test_d, color='g', label='CV')
-#plt.errorbar(range(numDays), av_l2_remCorr_d, yerr = sd_l2_remCorr_d, color='c', label='remCorr')
-plt.errorbar(range(numDays), av_l2_both_d, yerr = sd_l2_both_d, color='c', label='Data')
-plt.errorbar(range(numDays), av_l2_both_s, yerr = sd_l2_both_s, color='k', label='Chance')
-plt.errorbar(range(numDays), av_l2_both_sh, yerr = sd_l2_both_sh, color=[.5,.5,.5], label='Shuffled')
-plt.xlabel('Days', fontsize=13, labelpad=10)
-plt.ylabel('Classification accuracy (%)\n(cross-validated)', fontsize=13, labelpad=10)   
-plt.xlim([-1, len(days)])
-lgd = plt.legend(loc='upper left', bbox_to_anchor=(-.05,1.45), frameon=False)
-#leg.get_frame().set_linewidth(0.0)
-makeNicePlots(ax)
-ymin, ymax = ax.get_ylim()
-
-##%% Average across days
-ax = plt.subplot(gs[-5:-3])
-x =[0,1]
-labels = ['Data', 'Shfl']
-plt.errorbar(x, [np.nanmean(av_l2_test_d), np.nanmean(av_l2_test_s)], yerr = [np.nanstd(av_l2_test_d), np.nanstd(av_l2_test_s)], marker='o', fmt=' ', color='k')
-#x =[0,1,2]
-#labels = ['Corr', 'Incorr', 'Shfl']
-#plt.errorbar(x, [np.mean(av_l2_test_d), np.mean(av_l2_both_d), np.mean(np.concatenate((av_l2_test_s,av_l2_both_s)))], yerr = [np.std(av_l2_test_d), np.std(av_l2_both_d), np.std(np.concatenate((av_l2_test_s,av_l2_both_s)))], marker='o', fmt=' ', color='k')
-plt.xlim([x[0]-1, x[-1]+1])
-plt.ylim([ymin, ymax])
-#plt.ylabel('Classification error (%) - testing data')
-plt.xticks(x, labels, rotation='vertical', fontsize=13)    
-#plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)    
-ax.axes.get_yaxis().set_visible(False)
-#ax.yaxis.label.set_color('white')
-ax.spines['left'].set_color('white')
-#ax.set_axis_off()
-plt.subplots_adjust(wspace=1)
-makeNicePlots(ax)
-    
-if savefigs:#% Save the figure
-    if chAl==1:
-        dd = 'chAl_eachFr'
-    else:
-        dd = 'stAl_eachFr'
-        
-    d = os.path.join(svmdir+dnow)
-    if not os.path.exists(d):
-        print 'creating folder'
-        os.makedirs(d)
-            
-    fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
-    plt.savefig(fign, bbox_extra_artists=(lgd,), bbox_inches='tight')
-    
-    
-
-    

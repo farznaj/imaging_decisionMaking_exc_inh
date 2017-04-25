@@ -1,4 +1,4 @@
-function [stimrate, y, HRchoicePerc] = stimrate_choice_set...
+function [stimrate, y, HRchoicePerc, vec_rates, up, lo, nSamples] = stimrate_choice_set...
     (alldata, trials_per_session, uncommittedResp, allowCorrectResp, ...
     excludeExtraStim, excludeShortWaitDur, mouse)
 % set stimrate and choice (allResp) for pooled trials of a mouse.
@@ -89,11 +89,13 @@ stimrate(isnan(y)) = nan;
 %%
 % if doplots
 
-plotPMF = false;
-shownumtrs = false; %true;
+if nargout>2
+    plotPMF = false;
+    shownumtrs = false; %true;
 
-HRchoicePerc = PMF_set_plot(stimrate, y, cb, [], plotPMF, shownumtrs);
-
+%     HRchoicePerc = PMF_set_plot(stimrate, y, cb, [], plotPMF, shownumtrs);
+    [HRchoicePerc, vec_rates, up, lo, nSamples] = PMF_set_plot(stimrate, y, cb, [], plotPMF, shownumtrs);
+end
 
 % end
 

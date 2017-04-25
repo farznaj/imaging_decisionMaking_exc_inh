@@ -309,7 +309,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         pnevFileName = ''
     
     ##%%
-    return imfilename, pnevFileName
+    return imfilename, pnevFileName, dataPath
     
     
 ##%%
@@ -363,7 +363,7 @@ postNProvided = 1; # If your directory does not contain pnevFile and instead it 
 
 # from setImagingAnalysisNamesP import *
 
-imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
+imfilename, pnevFileName, dataPath = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
 
 postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
 moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
@@ -427,7 +427,7 @@ if trialHistAnalysis==0:
     '''
 
 
-#%% Load vars including event times
+#%% Load go tone, stim, choice times and look at their distribution (all trials, some might be excluded from SVM)
 
 # Load time of some trial events    
 Data = scio.loadmat(postName, variable_names=['timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'time1stSideTry'])
@@ -436,21 +436,43 @@ timeStimOnset = np.array(Data.pop('timeStimOnset')).flatten().astype('float')
 timeStimOffset = np.array(Data.pop('timeStimOffset')).flatten().astype('float')
 time1stSideTry = np.array(Data.pop('time1stSideTry')).flatten().astype('float')
 
-if doPlots:
-    plt.figure
-    plt.subplot(1,2,1)
-    plt.plot(timeCommitCL_CR_Gotone - timeStimOnset, label = 'goTone')
-    plt.plot(timeStimOffset - timeStimOnset, 'r', label = 'stimOffset')
-    plt.plot(time1stSideTry - timeStimOnset, 'm', label = '1stSideTry')
-    plt.plot([1, np.shape(timeCommitCL_CR_Gotone)[0]],[th_stim_dur, th_stim_dur], 'g:', label = 'th_stim_dur')
-#    plt.plot([1, np.shape(timeCommitCL_CR_Gotone)[0]],[ep_ms[-1], ep_ms[-1]], 'k:', label = 'epoch end')
-    plt.xlabel('Trial')
-    plt.ylabel('Time relative to stim onset (ms)')
-    plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
-    # minStimDurNoGoTone = np.nanmin(timeCommitCL_CR_Gotone - timeStimOnset); # this is the duration after stim onset during which no go tone occurred for any of the trials.
-    # print 'minStimDurNoGoTone = %.2f ms' %minStimDurNoGoTone
+# we need to know the time of stimOffset for a single repetition of the stim (without extra stim, etc)
+# timeStimOffset includes extra stim, etc... so we set timeStimeOffset0 (which is stimOffset after 1 repetition) here
+import datetime
+import glob
+bFold = os.path.join(dataPath+mousename,'behavior')
+# from imagingFolder get month name (as Oct for example).
+y = 2000+int(imagingFolder[0:2])
+mname = ((datetime.datetime(y,int(imagingFolder[2:4]), int(imagingFolder[4:]))).strftime("%B"))[0:3]
+bFileName = mousename+'_'+imagingFolder[4:]+'-'+mname+'-'+str(y)+'_*.mat'
+
+bFileName = glob.glob(os.path.join(bFold,bFileName))   
+# sort pnevFileNames by date (descending)
+bFileName = sorted(bFileName, key=os.path.getmtime)
+bFileName = bFileName[::-1]
+ 
+stimDur_diff_all = []
+for ii in range(len(bFileName)):
+    bnow = bFileName[0]       
+    Data = scio.loadmat(bnow, variable_names=['all_data'],squeeze_me=True,struct_as_record=False)
+    stimDur_diff_all.append(np.array([Data['all_data'][i].stimDur_diff for i in range(len(Data['all_data']))])) # remember difference indexing in matlab and python!
+sdur = np.unique(stimDur_diff_all) * 1000 # ms
+print sdur
+if len(sdur)>1:
+    sys.exit('Aborting ... trials have different stimDur_diff values')
+if sdur==0: # waitDur was used to generate stimulus
+    waitDuration_all = []
+    for ii in range(len(bFileName)):
+        sys.exit('Aborting ... needs work... u added timeSingleStimOffset to setEventTimesRelBcontrolScopeTTL.m... if not saved for a day, below needs work for days with multiple sessions!')
+#        bnow = bFileName[0]       
+#        Data = scio.loadmat(bnow, variable_names=['all_data'],squeeze_me=True,struct_as_record=False)
+#        waitDuration_all.append(np.array([Data['all_data'][i].waitDuration for i in range(len(Data['all_data']))])) # remember difference indexing in matlab and python!
+#    sdur = timeStimOnset + waitDuration_all
+timeStimOffset0 = timeStimOnset + sdur
 
 
+
+# Print some values
 minStimDur = np.floor(np.nanmin(timeStimOffset-timeStimOnset))
 maxStimDur = np.floor(np.nanmax(timeStimOffset-timeStimOnset))
 minChoiceTime = np.floor(np.nanmin(time1stSideTry-timeStimOnset))
@@ -461,6 +483,34 @@ print 'maxStimOffset= ', maxStimDur
 print 'minChoiceTime= ', minChoiceTime
 print 'minGoToneTime= ', minGoToneTime
 #ep_svr = np.arange(eventI+1, eventI + np.round(minStimDur/frameLength) + 1).astype(int) # frames on stimAl.traces that will be used for trainning SVM.   
+
+
+if doPlots:
+    plt.figure
+    plt.subplot(2,1,1)
+    plt.plot(timeCommitCL_CR_Gotone - timeStimOnset, 'b', label = 'goTone')
+    plt.plot(timeStimOffset - timeStimOnset, 'r', label = 'stimOffset')
+    plt.plot(timeStimOffset0 - timeStimOnset, 'k', label = 'stimOffset_1rep')
+    plt.plot(time1stSideTry - timeStimOnset, 'm', label = '1stSideTry')
+    plt.plot([1, np.shape(timeCommitCL_CR_Gotone)[0]],[th_stim_dur, th_stim_dur], 'g:', label = 'th_stim_dur')
+#    plt.plot([1, np.shape(timeCommitCL_CR_Gotone)[0]],[ep_ms[-1], ep_ms[-1]], 'k:', label = 'epoch end')
+    plt.xlabel('Trial')
+    plt.ylabel('Time relative to stim onset (ms)')
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
+    # minStimDurNoGoTone = np.nanmin(timeCommitCL_CR_Gotone - timeStimOnset); # this is the duration after stim onset during which no go tone occurred for any of the trials.
+    # print 'minStimDurNoGoTone = %.2f ms' %minStimDurNoGoTone
+
+    plt.subplot(2,1,2)
+    a = timeCommitCL_CR_Gotone - timeStimOnset
+    plt.hist(a[~np.isnan(a)], color='b')
+    a = timeStimOffset - timeStimOnset
+    plt.hist(a[~np.isnan(a)], color='r')
+    a = timeStimOffset0 - timeStimOnset
+    plt.hist(a[~np.isnan(a)], color='k')
+    a = time1stSideTry - timeStimOnset
+    plt.hist(a[~np.isnan(a)], color='m')
+    plt.xlabel('Time relative to stim onset (ms)')
+    plt.ylabel('# trials')
 
 
 #%% Load inhibitRois and set traces for specific neuron types: inhibitory, excitatory or all neurons
@@ -526,8 +576,33 @@ if chAl==1:    #%% Use choice-aligned traces
     
     time_trace = time_aligned_1stSide
 
+
 #%%
-else:   #%% Use stimulus-aligned traces
+elif goToneAl==1:   # Use go-tone-aligned traces
+    
+    if noStimAft: # only analyze trials that dont have stim after go tone (more conservative)
+        Data = scio.loadmat(postName, variable_names=['goToneAl_noStimAft'],squeeze_me=True,struct_as_record=False)
+        traces_al_goTone = Data['goToneAl_noStimAft'].traces.astype('float')
+        time_aligned_goTone = Data['goToneAl_noStimAft'].time.astype('float')
+        #eventI_ch = Data['goToneAl_noStimAft'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+        # print(np.shape(traces_al_1stSide))
+        
+        trsExcluded = (np.isnan(np.sum(traces_al_goTone, axis=(0,1))) + np.isnan(choiceVec0)) != 0
+        
+        X_svm = traces_al_goTone[:,:,~trsExcluded]  
+    #    Y_svm = choiceVec0[~trsExcluded];
+    #    print 'frs x units x trials', X_svm.shape
+    #    print Y_svm.shape
+        
+        time_trace = time_aligned_goTone
+
+    else:
+        
+
+    
+    
+#%%
+elif stAl==1:   #%% Use stimulus-aligned traces
     
     # Set traces_al_stim that is same as traces_al_stimAll except that in traces_al_stim some trials are set to nan, bc their stim duration is < 
     # th_stim_dur or bc their go tone happens before ep(end) or bc their choice happened before ep(end). 
@@ -647,7 +722,7 @@ if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
     eventI_ds = np.argwhere(np.sign(time_trace)>0)[0] # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
 
 else:
-    print 'Now downsampling traces ....'
+    print 'Not downsampling traces ....'
 
 
 #%% Set NsExcluded : Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
