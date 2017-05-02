@@ -18,7 +18,7 @@ if trialHistAnalysis==1 % more parameters are specified in popClassifier_trialHi
     epEnd_rel2stimon_fr = 0; % 3; % -2 % epEnd = eventI + epEnd_rel2stimon_fr
 else
     % not needed to set ep_ms here, later you define it as [choiceTime-300 choiceTime]ms % we also go 30ms back to make sure we are not right on the choice time!
-    ep_ms = [809, 1109]; %[425, 725] % optional, it will be set according to min choice time if not provided.% training epoch relative to stimOnset % we want to decode animal's upcoming choice by traninig SVM for neural average responses during ep ms after stimulus onset. [1000, 1300]; %[700, 900]; % [500, 700];
+    ep_ms = []; %[809, 1109]; %[425, 725] % optional, it will be set according to min choice time if not provided.% training epoch relative to stimOnset % we want to decode animal's upcoming choice by traninig SVM for neural average responses during ep ms after stimulus onset. [1000, 1300]; %[700, 900]; % [500, 700];
     % outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.
     outcome2ana = 'corr'; % '', corr', 'incorr' % trials to use for SVM training (all, correct or incorrect trials)
     strength2ana = 'all'; % 'all', easy', 'medium', 'hard' % What stim strength to use for training?

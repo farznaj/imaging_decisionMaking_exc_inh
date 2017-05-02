@@ -241,7 +241,7 @@ for tr = 1:length(alldata)
             
             
             %%%%%%% stimOffset corresponding to one single repetition of the stimulus (ie stimulus without extraStim,etc),
-            error('Double check below is correct... newly added!')
+%             error('Double check below is correct... newly added!')
             if alldata(tr).stimDur_diff % if it is non zero, then use this value instead of waitDur to generate the stimulus.
                 stimdur = round(alldata(tr).stimDur_diff*1000); % ms
             else % if StimDur_diff is zero, use waitDur to generate the stimulus. 

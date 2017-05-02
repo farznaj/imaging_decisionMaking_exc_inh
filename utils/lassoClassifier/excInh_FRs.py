@@ -7,7 +7,7 @@ Created on Tue Mar 14 18:27:36 2017
 @author: farznaj
 """
 
-mousename = 'fni17' #'fni17'
+mousename = 'fni16' #'fni17'
 
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
@@ -90,7 +90,7 @@ def histerrbar(a,b,binEvery,p,colors = ['g','k'],dosd=0):
     plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[1], alpha=.4, label=lab2)
     
     plt.legend(loc=0, frameon=False)
-    plt.ylabel('Prob (all days & N shuffs at bestc)')
+    plt.ylabel(ylab)
 #    plt.title('mean diff= %.3f, p=%.3f' %(np.mean(a)-np.mean(b), p))
     plt.title('mean diff= %.3f' %(np.mean(a)-np.mean(b)))
     #plt.xlim([-.5,.5])
@@ -317,6 +317,7 @@ colors = ['k','r']
 #############################################################
 ### hist and P val for all days pooled (exc vs inh)
 lab = 'FR'
+ylab = 'Fraction of neurons x trials'
 
 a = np.concatenate(X_chAl_exc_all) 
 b = np.concatenate(X_chAl_inh_all)
@@ -329,7 +330,7 @@ _, p = stats.ttest_ind(a, b, nan_policy='omit')
 mx = max(a.max(),b.max())
 mn = min(a.min(),b.min())
 #mx = .005
-binEvery = (mx - mn)/100 #.001# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+binEvery = (mx - mn)/500 #.001# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
 
 
 plt.figure(figsize=(5,5))    
@@ -338,10 +339,10 @@ h1 = gs[0,0:2]
 h2 = gs[0,2:3]
 ax1,_ = histerrbar(a,b,binEvery,p,colors)
 #plt.xlabel(lab)
-if normX:
-    ax1.set_xlim([-1, 2])
-else:
-    ax1.set_xlim([-.001, .05])
+#if normX:
+#    ax1.set_xlim([-1, 2])
+#else:
+#    ax1.set_xlim([-.001, .05])
 ymx = ax1.get_ylim()
 if normX:
     ax1.set_ylim([-.01, ymx[1]])
@@ -380,6 +381,7 @@ if savefigs:#% Save the figure
 #############################################################
 ### hist and P val for all days pooled (exc vs inh)
 lab = 'FR'
+ylab = 'Fraction of neurons'
 
 a = np.concatenate(meanX_chAl_exc_all) 
 b = np.concatenate(meanX_chAl_inh_all)
@@ -402,6 +404,7 @@ h2 = gs[0,2:3]
 ax1,_ = histerrbar(a,b,binEvery,p,colors)
 #plt.xlabel(lab)
 #ax1.set_xlim([mn, .023])
+makeNicePlots(ax1,1)
 
 
 ############ show individual days

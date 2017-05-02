@@ -14,7 +14,7 @@ plot([0 length(f)],[th th],'m')
 %%
 th = mean(f)-3*std(f);
 flfrs = [find(f<th,1), find(f<th,1,'last')];
-cprintf('blue', '1st and last frame of pmt off: %d %d\n', flfrs)
+% cprintf('blue', '1st and last frame of pmt off: %d %d\n', flfrs)
 
 % figure; plot(f<th)
 
@@ -23,6 +23,18 @@ for ch = 1:2
 end
 pmtOffFrames
 fprintf('sum of pmtOffFrames = %d\n', sum(pmtOffFrames{1}))
+
+
+%% Save pmtOffFrame
+
+cprintf('blue', '1st and last frame of pmt off: %d %d\n', flfrs)
+q = input('Happy with the identified first and last frame of pmt off? ');
+
+if isempty(q) || q==1    
+    save(imfilename, '-append', 'pmtOffFrames')
+else
+    input('Then identify pmtOffFrames and save it!')
+end
 
 
 %% Identify the trials during which pmt was off

@@ -7,9 +7,9 @@ Created on Tue Aug 23 09:52:25 2016
 
 #%% Specify the file you want to analyze
 '''
-mousename = 'fni16'
-imagingFolder = '151029'
-mdfFileNumber = [1,2] 
+mousename = 'fni18'
+imagingFolder = '151209'
+mdfFileNumber = [1] 
 '''
 #%% Set pnevFileName 
 pnev2load = []; #[3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.

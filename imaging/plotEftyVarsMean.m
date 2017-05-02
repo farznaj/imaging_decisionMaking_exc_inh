@@ -12,15 +12,15 @@
 % - plotEftyVarsMean (if needed follow by setPmtOffFrames to set pmtOffFrames and by findTrsWithMissingFrames to set frame-dropped trials. In this latter case you will need to rerun CNMF!): for a quick evaluation of the traces and spotting any potential frame drops, etc
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
 % - set_mask_CC
-% - find_badROIs
+% - findBadROIs
 % - inhibit_excit_prep
 % - imaging_prep_analysis (calls set_aligned_traces... you will need its outputs)
 %
 % Required inputs:
 %{
-mouse = 'fni17';
-imagingFolder = '151028';
-mdfFileNumber = [1,2,3]; 
+mouse = 'fni19';
+imagingFolder = '150930';
+mdfFileNumber = [1]; 
 
 
 signalCh = 2; % because you get A from channel 2, I think this should be always 2.

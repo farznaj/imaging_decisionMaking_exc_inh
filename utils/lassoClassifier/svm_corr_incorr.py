@@ -50,10 +50,10 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     imagingFolder = '151023' #'151001'
     mdfFileNumber = [1] #[1] 
 
-    choiceAligned = 0 # use choice-aligned traces for analyses?
-    stimAligned = 1 # use stimulus-aligned traces for analyses?
-    doSVM = 0 # decode choice?
-    doSVR = 1 # decode stimulus?
+    choiceAligned = 1 # use choice-aligned traces for analyses?
+    stimAligned = 0 # use stimulus-aligned traces for analyses?
+    doSVM = 1 # decode choice?
+    doSVR = 0 # decode stimulus?
     epAllStim = 1 # when doing svr on stim-aligned traces, if 1, svr will computed on X_svr (ave pop activity during the entire stim presentation); Otherwise it will be computed on X0 (ave pop activity during ep)
     doBagging = 0 # BAGGING will be performed (in addition to l2) for svm/svr
 

@@ -138,7 +138,7 @@ else
         cprintf('blue', 'Analyzing both correct and incorrect trials.\n')        
     end
     
-    if ~exist('ep_ms', 'var')
+    if isempty(ep_ms) %~exist('ep_ms', 'var')
         ep_ms = [floor(nanmin(time1stSideTry-timeStimOnset))-30-300, floor(nanmin(time1stSideTry-timeStimOnset))-30];
         fprintf('Training window: [%d %d] ms\n', ep_ms(1), ep_ms(2))
     end
