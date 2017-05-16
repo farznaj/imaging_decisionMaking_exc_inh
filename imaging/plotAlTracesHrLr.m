@@ -23,7 +23,7 @@ else
     outcome2ana = 'corr'; % '', corr', 'incorr' % trials to use for SVM training (all, correct or incorrect trials)
     strength2ana = 'all'; % 'all', easy', 'medium', 'hard' % What stim strength to use for training?
     thStimStrength = 3; % 2; % threshold of stim strength for defining hard, medium and easy trials.
-    th_stim_dur = 800; % min stim duration to include a trial in timeStimOnset
+    th_stim_dur = 0; % for fni18 u had to set it to 0! for fni16, fni17 it was 800; % min stim duration to include a trial in timeStimOnset
 end
 trs4project = 'trained'; % 'trained', 'all', 'corr', 'incorr' % trials that will be used for projections and the class accuracy trace; if 'trained', same trials that were used for SVM training will be used. "corr" and "incorr" refer to current trial's outcome, so they don't mean much if trialHistAnalysis=1.
 

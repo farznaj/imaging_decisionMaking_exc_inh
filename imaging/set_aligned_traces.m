@@ -15,7 +15,7 @@
 % NOTE: Because you are using timeStimOnsetAll instad of timeStimOnset, stimAl_allTrs that you compute here will include early-decision trials (outcomes=-1). So you may need to remove them later.
 
 % postFile is created in imaging_prep_analysis, here you append vars to it.
-save_aligned_traces = 1; %1; % if 1, the following structures will be appended to postName: 'stimAl', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl'
+% save_aligned_traces = 1; %1; % if 1, the following structures will be appended to postName: 'stimAl', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl'
 
 % If you want to use trials of only one of the sessions:
 %{

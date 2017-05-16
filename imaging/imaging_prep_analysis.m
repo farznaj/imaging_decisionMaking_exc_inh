@@ -1,7 +1,7 @@
 function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, good_inhibit, outcomes, allResp, allResp_HR_LR, ...
         trs2rmv, stimdur, stimrate, stimtype, cb, timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, ...
         timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename, pnevFileName] = ....
-   imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength);
+   imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength, save_aligned_traces);
 % Right after you are done with preproc on the cluster, run the following scripts:
 % - plotEftyVarsMean (if needed follow by setPmtOffFrames to set pmtOffFrames and by findTrsWithMissingFrames to set frame-dropped trials. In this latter case you will need to rerun CNMF!): for a quick evaluation of the traces and spotting any potential frame drops, etc
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
@@ -38,8 +38,8 @@ normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by i
 % set the following vars to 1 when first evaluating a session.
 evaluateEftyOuts = 0; 
 compareManual = 0; % compare results with manual ROI extraction
-
 plot_ave_noTrGroup = 0; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
+save_aligned_traces = 1;
 
 setInhibitExcit = 0; % if 1, inhibitory and excitatory neurons will be set unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 plotEftyAC1by1 = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
@@ -258,28 +258,23 @@ end
 
 %% Assess pixel shifts (ie output of motion correction), pmtOffFrames and badFrames (frames with too much motion)
 
-load(imfilename, 'outputsDFT')
-figure(fhand), subplot(223)
+load(imfilename, 'outputsDFT', 'badFrames', 'pmtOffFrames')
+
+figure(fhand), subplot(223); hold on;
 plot(outputsDFT{1}(:,3:4))
-legend('row shift', 'column shift')
+yax = get(gca,'ylim');
+plot(badFrames{1}*range(yax))
+plot(pmtOffFrames{1}*range(yax))
+
 xlabel('Frame')
 ylabel('Pixel shift')
-
-
-load(imfilename, 'pmtOffFrames')
+set(gcf, 'name', ['+X : brain moved left(lateral) ;+Y : brain moved up(posterior bc of 2p I think)'])
+legend('Y (row) shift', 'X (column) shift', 'badFrames', 'pmtOffFrames')
 pof = cellfun(@sum, pmtOffFrames);
-if any(pof)
-    cprintf('red', 'Number of pmtOffFrames on each channel = %d %d\n', pof)
-    warning('Take care of pmtOffFrames!')
-end
-
-
-load(imfilename, 'badFrames')
 bf = cellfun(@sum, badFrames);
-if any(bf)
-    cprintf('red', 'Number of badFrames on each channel = %d %d\n', bf)
-    warning('Take care of badFrames!')
-end
+t1 = sprintf('%d pmtOffFrames', pof(1));
+t2 =  sprintf('%d badFrames', bf(1));
+title({t1,t2})
 
 pmtOffFrames0 = pmtOffFrames;
 badFrames0 = badFrames;
@@ -370,18 +365,26 @@ if evaluateEftyOuts
     figure; imagesc(reshape(mean(A,2), imHeight, imWidth))  %     figure; imagesc(reshape(mean(P.psdx,2), imHeight, imWidth))
 
     % Plot COMs
-    im = medImage{2};
-    im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt        
+    im = normImage(medImage{2});
+%     im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt        
+    %{
     contour_threshold = .95;
     plotCOMs = 1;
     [CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(A, imHeight, imWidth, contour_threshold, im, plotCOMs);
-
+    %}
+    figure;
+    imagesc(im); hold on; % imagesc(log(im));   %     colormap gray     
+    for rr = 1:length(CC) % find(~badROIs01)'         
+        COMs = fastCOMsA(A, [imHeight, imWidth]);
+        plot(COMs(rr,2), COMs(rr,1), 'r.')
+    end
+    
 
     %% plot C, f, manual activity
     
     load(imfilename, 'cs_frtrs')    
     
-    plotEftyVarsMean
+    plotEftyVarsMean(mouse, imagingFolder, mdfFileNumber, {C, S, f, activity_man_eftMask_ch2, cs_frtrs})
     
     savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons'))  
     
@@ -426,7 +429,7 @@ if evaluateEftyOuts
     
     linkaxes([a1, a2, a3], 'x')    
     
-%     savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons'))  
+    savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons_sup'))  
     
     
     %% Assess tau and noise for each neuron
@@ -610,6 +613,12 @@ subplot(222)
 plot(outcomes), xlabel('Trials'), ylabel('Outcome'), %  1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
 subplot(224)
 plot(allResp_HR_LR), ylim([-.5 1.5]), xlabel('Trials'), ylabel('Response (HR:1 , LR: 0)')
+savefig(fullfile(pd, 'figs','behav_motCorr_sum')) 
+
+
+
+alldata_frameTimes = {alldata.frameTimes};
+save(postName, '-append', 'alldata_frameTimes')
 
 
 %% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.

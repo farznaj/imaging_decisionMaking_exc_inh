@@ -1,4 +1,4 @@
-function [badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB] = findBadROIs(mouse, imagingFolder, mdfFileNumber, fixed_th_srt_val, savebadROIs01, exclude_badHighlightCorr,evalBadRes, th_AG, th_srt_val, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr);
+function [badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB, val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB, th_EP_AG_size_tau_tempCorr_hiLight_hiLightDB] = findBadROIs(mouse, imagingFolder, mdfFileNumber, fixed_th_srt_val, savebadROIs01, exclude_badHighlightCorr,evalBadRes, th_AG, th_srt_val, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr);
 % Find bad ROI outputs of the CNMF algorithm
 % You need to run this after preproc is done. Python eval_comp is run, and Set_mask_CC is run.
 %
@@ -13,7 +13,7 @@ mdfFileNumber = [1,2];  % 3; %1; % or tif major
 savebadROIs01 = 1; % if 1, badROIs01 will be appended to more_pnevFile
 evalBadRes = 1; % plot figures to evaluate the results
 
-fixed_th_srt_val = 1; % if fixed 4150 will be used as the threshold on srt_val, if not, we will find the srt_val threshold by employing Andrea's measure
+fixed_th_srt_val = 0; % it was 1 for ni16,fni17; changed to 0 for fn18. % if fixed 4150 will be used as the threshold on srt_val, if not, we will find the srt_val threshold by employing Andrea's measure
 exclude_badHighlightCorr = 1;
 
 th_AG = -20; % you can change it to -30 to exclude more of the poor quality ROIs.
@@ -23,7 +23,7 @@ th_shortDecayTau = 200;
 th_badTempCorr = .4;
 th_badHighlightCorr = .4; % .5;
 
-[badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB] = findBadROIs(mouse, imagingFolder, mdfFileNumber, fixed_th_srt_val, savebadROIs01, exclude_badHighlightCorr,evalBadRes, th_AG, th_srt_val, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr);
+[badROIs01, bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB, val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB, th_EP_AG_size_tau_tempCorr_hiLight_hiLightDB] = findBadROIs(mouse, imagingFolder, mdfFileNumber, fixed_th_srt_val, savebadROIs01, exclude_badHighlightCorr,evalBadRes, th_AG, th_srt_val, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr);
 
 
 % If you don't exclude badHighlightCorr, still most of the neurons will
@@ -179,11 +179,16 @@ subplot(616), plot(mask_numpix), title('mask # pixels')
 
 badAG = fitnessNow >= th_AG;
 
-numbad = sum(fitnessNow >= th_AG);
-ss = sort(srt_val);
-fprintf('\tThreshold of Efty based on Andrea measure = %.2f. Fixed th=%.1f\n', ss(numbad), th_srt_val)
 if ~fixed_th_srt_val
-    th_srt_val = ss(numbad); % you are trying to find a good threshold for srt_val (below which ROIs are bad).
+    numbad = sum(fitnessNow >= th_AG);
+    ss = sort(srt_val);
+    if ~numbad
+        th_srt_val = 0;
+    %     disp('There are no')
+    else
+        th_srt_val = ss(numbad); % you are trying to find a good threshold for srt_val (below which ROIs are bad).
+        fprintf('\tThreshold of Efty based on Andrea measure = %.2f. Fixed th=%.1f\n', ss(numbad), th_srt_val)
+    end
 end
 % fprintf('Threshold for Efty srt_val= %.2f\n', full(th_srt_val))
 badEP = srt_val < th_srt_val;
@@ -221,8 +226,15 @@ badROIs01 = (badAll ~= 0); % any of the above measure is bad.
 cprintf('blue', 'Total number of good, bad ROIs= %d %d, mean(bad)=%.2f\n', sum(~badROIs01), sum(badROIs01), mean(badROIs01))
 
 
+val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB = [srt_val,fitnessNow,mask_numpix,tau(:,2),temp_corr,rval_space,highlightCorrROI'];
+% Below, for th_AG you are saving -th_AG, so if fitnessNow < 20,
+% ROI is bad (instead of fitnessNow > -20). This is easier, because
+% for all other thresholds too, values less than them will indicate a
+% bad ROI.
+th_EP_AG_size_tau_tempCorr_hiLight_hiLightDB = [th_srt_val, -th_AG, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr, th_badHighlightCorr];
+
 if savebadROIs01
-    save(fname, '-append', 'bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB', 'badROIs01')
+    save(fname, '-append', 'bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB', 'badROIs01','th_EP_AG_size_tau_tempCorr_hiLight_hiLightDB','val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB')
 end
 
 
@@ -259,7 +271,8 @@ hold on
 for rr = find(badROIs01')
     plot(COMs(rr,2), COMs(rr,1), 'r.')
 end
-title('bad components')
+% title('bad components')
+title(sprintf('%d bad ROIs, fraction bad=%.2f', sum(badROIs01), mean(badROIs01)))
 
 % good components
 figure(fh2); subplot(212)
@@ -268,7 +281,8 @@ hold on
 for rr = find(~badROIs01')
     plot(COMs(rr,2), COMs(rr,1), 'r.')
 end
-title('good components')
+% title('good components')
+title(sprintf('%d good ROIs, fraction good=%.2f', sum(~badROIs01), mean(~badROIs01)))
 
 
 %%
@@ -379,11 +393,27 @@ if evalBadRes
             plotCorr_FN(roiPatch, highlightPatchAvg, rval_space, A, CC, COMs, [imHeight, imWidth], i, [3,6,14], [3,6,15])
             h4 = subplot(3,6,14);
             h5 = subplot(3,6,15);
-            subplot(3,6,15), title(sprintf('raw, our corr = %.2f', highlightCorrROI(i)))
+            subplot(3,6,14), title('A')
+            subplot(3,6,15), title('Raw movie (ave top spike frames)')
+            % compare corr(raw,A) between our method (DB) and Efty's method (EP)
+            subplot(3,6,16), title({sprintf('corr(raw,A): EP=%.2f; DB=%.2f', rval_space(i), highlightCorrROI(i))})
+            if ismember(i, badROIs) % indicate which measures were low!
+%                 subplot(3,6,17), title()                
+                ff = find(val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB(i,:) < th_EP_AG_size_tau_tempCorr_hiLight_hiLightDB);
+                badvals = val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB(i,ff);
+                st = {'EP'    'AG'    'size'    'tau'    'tempCorr'    'hiLightEP'    'hiLightDB'};
+                a0 = text(1.5,.5, st(ff));
+                a1 = text(2,.42, sprintf('%.1f\n', badvals));
+            end
             
             pause
             delete([h0,h1,h2,h3,h4,h5])
+            if ismember(i, badROIs)
+                delete(a0)
+                delete(a1)
+            end            
         end
+        close
     end
     
 end

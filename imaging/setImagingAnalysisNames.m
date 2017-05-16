@@ -20,7 +20,7 @@ if isempty(strfind(pwd, 'gamalamin')) % Farzaneh
     if ismac
         dataPath = '/Users/Farzaneh/Desktop/Farzaneh/data'; % macbook
     elseif isunix
-        if isempty(strfind(pwd, 'sonas')) % Unix in the office
+        if isempty(strfind(pwd, 'grid')) % 'sonas')) % Unix in the office
             dataPath = '~/Shares/Churchland/data';
         else % server
             dataPath = '/sonas-hs/churchland/nlsas/data/data';

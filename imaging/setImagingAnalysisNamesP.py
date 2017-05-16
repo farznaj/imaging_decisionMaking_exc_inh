@@ -70,7 +70,11 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         
     #%%        
     tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
-    r = '%03d-'*len(mdfFileNumber)
+#    print mdfFileNumber, type(mdfFileNumber)
+#    mdfFileNumber = np.array(mdfFileNumber).astype('int')
+#    print mdfFileNumber, type(mdfFileNumber), np.shape(mdfFileNumber)
+#    print np.shape(mdfFileNumber)[0]
+    r = '%03d-'*np.shape(mdfFileNumber)[0] #len(mdfFileNumber)
     r = r[:-1]
     rr = r % (tuple(mdfFileNumber))
     

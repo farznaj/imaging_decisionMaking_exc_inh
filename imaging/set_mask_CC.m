@@ -72,6 +72,7 @@ if exist('im', 'var') && ~isempty(im)
     
     for rr = 1:length(CC) % find(~badROIs01)' 
         if plotCOMs
+            COMs = fastCOMsA(A, [imHeight, imWidth]);
             plot(COMs(rr,2), COMs(rr,1), 'r.')
             
         else

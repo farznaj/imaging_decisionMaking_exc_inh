@@ -1,3 +1,4 @@
+function plotEftyVarsMean(mouse, imagingFolder, mdfFileNumber, setvars)
 % If needed follow this script by codes setPmtOffFrames to set pmtOffFrames
 % and by findTrsWithMissingFrames to set frame-dropped trials. In this
 % latter case you will need to rerun CNMF (bc frames were dropped and
@@ -9,6 +10,7 @@
 % to set them and save them to imfilename.
 %
 % Right after you are done with preproc on the cluster, run the following scripts:
+% - plotMotionCorrOuts
 % - plotEftyVarsMean (if needed follow by setPmtOffFrames to set pmtOffFrames and by findTrsWithMissingFrames to set frame-dropped trials. In this latter case you will need to rerun CNMF!): for a quick evaluation of the traces and spotting any potential frame drops, etc
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
 % - set_mask_CC
@@ -21,28 +23,35 @@
 mouse = 'fni19';
 imagingFolder = '150930';
 mdfFileNumber = [1]; 
-
-
-signalCh = 2; % because you get A from channel 2, I think this should be always 2.
-pnev2load = [];
-[imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
-[pd, pnev_n] = fileparts(pnevFileName);
-disp(pnev_n)
-cd(fileparts(imfilename))
-
-normalizeSpikes = 1;
-load(pnevFileName, 'activity_man_eftMask_ch2')
-load(imfilename, 'cs_frtrs')
-
-fprintf('Loading Eftys vars...')
-load(pnevFileName, 'C', 'C_df', 'S', 'f')
-% load(pnevFileName, 'A', 'P')
-fprintf('...done\n')
-
-load(imfilename, 'Nnan_nanBeg_nanEnd')
-[C, S, C_df] = processEftyOuts(C, S, C_df, Nnan_nanBeg_nanEnd, normalizeSpikes);    % S(:, [32672       32333       32439       32547]) = nan; % sharp spikes due to frame missing (their trials will be excluded... you are just doing this so they dont affect the normalization.)
-
 %}
+
+
+if isnumeric(setvars) && setvars==1
+    signalCh = 2; % because you get A from channel 2, I think this should be always 2.
+    pnev2load = [];
+    [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
+    [pd, pnev_n] = fileparts(pnevFileName);
+    disp(pnev_n)
+    cd(fileparts(imfilename))
+
+    normalizeSpikes = 1;
+    load(pnevFileName, 'activity_man_eftMask_ch2')
+    load(imfilename, 'cs_frtrs')
+
+    fprintf('Loading Eftys vars...')
+    load(pnevFileName, 'C', 'C_df', 'S', 'f')
+    % load(pnevFileName, 'A', 'P')
+    fprintf('...done\n')
+
+    load(imfilename, 'Nnan_nanBeg_nanEnd')
+    [C, S, C_df] = processEftyOuts(C, S, C_df, Nnan_nanBeg_nanEnd, normalizeSpikes);    % S(:, [32672       32333       32439       32547]) = nan; % sharp spikes due to frame missing (their trials will be excluded... you are just doing this so they dont affect the normalization.)
+else
+    C = setvars{1};
+    S = setvars{2};
+    f = setvars{3};
+    activity_man_eftMask_ch2 = setvars{4};
+    cs_frtrs = setvars{5};
+end
 
 
 %%

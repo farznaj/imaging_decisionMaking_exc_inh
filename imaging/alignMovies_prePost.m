@@ -25,23 +25,39 @@ for t = 1:length(tifList)
     fprintf('Reading tif file %s\n', tifList{t})
     Y = cat(3, Y, bigread2(tifList{t}));
 end
-
 % if ~isa(Y,'double');    Y = double(Y);  end         % convert to double
 
 
 %% Set imfilename and load a few vars from it (framesPerTrial, etc).
-
+%{
 if isunix
-    dataPath = '/sonas-hs/churchland/nlsas/data/data';
+    if isempty(strfind(pwd, 'grid')) %isempty(strfind(pwd, 'sonas')) % Farzaneh's Unix in the office
+        dataPath = '~/Shares/Churchland/data';
+    else
+        dataPath = '/sonas-hs/churchland/nlsas/data/data';        
+    end
 elseif ispc
     dataPath = '\\sonas-hs.cshl.edu\churchland\data'; % FN
 end
 tifFold = fullfile(dataPath, mouse, 'imaging', imagingFolder);
 date_major = sprintf('%s_%03d', imagingFolder, mdfFileNumber);
 imfilename = fullfile(tifFold, date_major);
+%}
 
+signalCh = 2; % because you get A from channel 2, I think this should be always 2.
+pnev2load = [];
+[imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
+[pd, pnev_n] = fileparts(pnevFileName);
+% disp(pnev_n)
+% cd(fileparts(imfilename))
+% moreName = fullfile(pd, sprintf('more_%s.mat', pnev_n));
+postName = fullfile(pd, sprintf('post_%s.mat', pnev_n));
+
+
+%%
 % load(fullfile(tifFold, date_major), 'framesPerTrial', 'alldata', 'frameLength', 'trs2rmv')
-load(imfilename, 'framesPerTrial', 'alldata_frameTimes', 'timeStop', 'trialCodeMissing', 'outcomes')
+load(imfilename, 'framesPerTrial', 'trialCodeMissing') %, 'alldata_frameTimes'
+load(postName, 'timeStimOnset', 'alldata_frameTimes')%, 'outcomes') % 'timeStop', 
 
 
 %% Set movie_trials: cell array, each cell contains movie for a trial, size pix x pix x frames
@@ -67,10 +83,19 @@ end
 % of trs_notScanned).
 % trs_notScanned = find([alldata.hasActivity]==0);
 
+%%%%%%%%%%%%%%%%% you need to take care of the following (trialCodeMissing)
+%%%%%%%%%%%%%%%%% but for now:
+if sum(trialCodeMissing)>0
+    error('take care of trialCodeMissing')
+end
+
+alignedEvent = timeStimOnset;
+
+%{
 % exclude from alignedEvent and alldata_frameTimes trials that were not triggered in mscan. 
 alignedEvent = timeStop(trialCodeMissing==0);
 alldata_frameTimes = alldata_frameTimes(trialCodeMissing==0);
-
+%}
 if length(alignedEvent) ~= size(movie_trials,2)
     error('Length of alignedEvent does not match the size of movie_trials! Perhaps something wrong with excluding non-triggered trials!')
 end
@@ -85,6 +110,9 @@ eventInds_f = eventTimeToIdx(alignedEvent, traceTimeVec);
 [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost...
     (movie_trials, eventInds_f, nPreFrames, nPostFrames,  shiftTime, scaleTime, flag_traces);
 
+movieAligned_stimOnset = nanmean(traces_aligned_fut, 4); 
+
+%{
 outcomes = outcomes(trialCodeMissing==0);
 % movieAligned_timeStop : double, pix x pix x frames: average movies of event-aligned movies across all trials
 movieAligned_timeStop_outcome_0 = nanmean(traces_aligned_fut(:,:,:,outcomes==0), 4); 
@@ -93,11 +121,14 @@ movieAligned_timeStop_outcome_n1 = nanmean(traces_aligned_fut(:,:,:,outcomes==-1
 % implay(movieAligned_timeStop/max(movieAligned_timeStop(:)))
 
 eventI_timeStop = eventI;
-
+%}
 
 %% Save average movie of event-aligned trial movies (pix x pix x frames)
 
-save([imfilename, '_movieAligned'], 'movieAligned_timeStop_outcome_0', 'movieAligned_timeStop_outcome_1', 'movieAligned_timeStop_outcome_n1', 'eventI_timeStop')
+% save([imfilename, '_movieAligned'], 'movieAligned_timeStop_outcome_0', 'movieAligned_timeStop_outcome_1', 'movieAligned_timeStop_outcome_n1', 'eventI_timeStop')
+save([imfilename, '_movieAligned'], 'movieAligned_stimOnset', 'eventI')
+
+
 % if exist([imfilename, '_movieAligned.mat'], 'file')==2
 %     save([imfilename, '_movieAligned'], '-append', 'movieAligned_timeStop', 'eventI_timeStop')
 % else

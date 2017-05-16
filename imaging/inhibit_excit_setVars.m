@@ -13,6 +13,13 @@ save_common_slope = 1; % if 1, results will be appended to pnevFile
 moreName = fullfile(pd, sprintf('more_%s.mat', pnev_n));
 
 load(moreName, 'mask', 'CC', 'badROIs01')
+a = load(moreName, 'val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB'); 
+if isempty(fieldnames(a))
+    val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB = [];
+else
+    val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB = a.val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB(~badROIs01,:);
+end
+
 load(imfilename, 'imHeight', 'imWidth', 'sdImage', 'aveImage')
 load(pnevFileName, 'A') % pnevFileName should contain Eft results after merging-again has been performed.
 
@@ -69,30 +76,43 @@ end
 
 a = matfile(moreName);
 
-if isprop(a, 'slope_common') % exist([finame, '.mat'], 'file')
+if isprop(a, 'slope_common_pix') %'slope_common') % exist([finame, '.mat'], 'file')
     
     fprintf('Loading slope_common and offsets_ch1...\n')
-    load(moreName, 'slope_common', 'offsets_ch1')
+    load(moreName, 'slope_common_pix', 'offsets_ch1_pix')
+%     load(moreName, 'slope_common', 'offsets_ch1')    
     
 else
     fprintf('Setting slope_common and offsets_ch1...\n')
     
+    %{
     load(pnevFileName, 'activity_man_eftMask_ch1', 'activity_man_eftMask_ch2')
     load(imfilename, 'pmtOffFrames')
     activity_man_eftMask_ch1 = activity_man_eftMask_ch1(~pmtOffFrames{1}, ~badROIs01);
     activity_man_eftMask_ch2 = activity_man_eftMask_ch2(~pmtOffFrames{2}, ~badROIs01);
     
-    inhibit_remove_bleedthrough
+    [slope_common, offsets_ch1] = inhibit_remove_bleedthrough(activity_man_eftMask_ch1, activity_man_eftMask_ch2);
+    %}
+    
+    % New method: to find bleedthrough fraction use pixels (averaged over
+    % frames) of the 2 channel, instead of activity traces (ie averaged
+    % pixels in each frame).
+    [ch1Pixs, ch2Pixs] = inhibit_remove_bleedthrough_setVars(A, imHeight, imWidth, aveImage);
+    
+%     inhibit_remove_bleedthrough
+    [slope_common, offsets_ch1] = inhibit_remove_bleedthrough(ch1Pixs, ch2Pixs);
+    slope_common_pix = slope_common;
+    offsets_ch1_pix = offsets_ch1;
     
     % Save the slope and the offset
     if save_common_slope
         fprintf('Saving slope_common and offsets_ch1...\n')
-        
-        save(moreName, '-append', 'slope_common', 'offsets_ch1') % save to more_pnevFile...
+        save(moreName, '-append', 'slope_common_pix', 'offsets_ch1_pix') % save to more_pnevFile...        
+%         save(moreName, '-append', 'slope_common', 'offsets_ch1') % save to more_pnevFile...
         %         save(pnevFileName, '-append', 'slope_common', 'offsets_ch1')
-    end
-    
+    end    
 end
+slope_common = slope_common_pix;
 
 
 %% Create the bleedthrough-corrected image; model: red_ch1 = offset + slope * green_ch2
@@ -100,9 +120,13 @@ end
 origImage = aveImage; % medImage;
 
 inhibitImage = origImage{1} - slope_common*origImage{2};
-if ~isprop(a, 'inhibitImageCorrcted')
-    inhibitImageCorrcted = inhibitImage;
-    save(moreName, '-append', 'inhibitImageCorrcted')
+% inhibitImage = origImage{1}; % use this if you dont want to correct for bleedthrough
+
+a = matfile(moreName);
+if ~isprop(a, 'inhibitImageCorrcted_pix') %'inhibitImageCorrcted')
+    inhibitImageCorrcted_pix = inhibitImage;
+    save(moreName, '-append', 'inhibitImageCorrcted_pix')
+%     save(moreName, '-append', 'inhibitImageCorrcted')   
 end
 
 
@@ -150,8 +174,6 @@ linkaxes(ax1)
 %% Identify inhibitory neurons.
 
 if identifInh
-    
-    fprintf('Identifying inhibitory neurons....\n')
     %{
 % load(imfilename, 'medImage'), workingImage = medImage;
 load(imfilename, 'aveImage'), workingImage = aveImage;
@@ -172,8 +194,8 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     
     
     %%
-    
-    [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibitROIselection(mask, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CC, ch2Image, COMs, C, A, do2dGauss); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
+    fprintf('Identifying inhibitory neurons....\n')    
+    [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibitROIselection(mask, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CC, ch2Image, COMs, C, A, do2dGauss, val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
     
     
     %% Show the results
@@ -181,12 +203,17 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     % if showResults
     
     % plot inhibitory and excitatory ROIs on the image of inhibit channel.
-    im2p = normImage(sdImage{1});
+    
+%     im2p = normImage(sdImage{1}); % original inh
+%     fn = 'Normalized sdImage of inhibit channel';
+    im2p = normImage(inhibitImage); % corrected inh
+    fn = 'Normalized bCorrected image of inhibit channel';
+    
     colors = hot(2*length(CC));
     colors = colors(end:-1:1,:);
     
     % plot inhibitory ROIs on the image of inhibit channel.
-    figure('name', 'Normalized sdImage of inhibit channel', 'position', [288          75        1083         898]);
+    figure('name', fn, 'position', [288          75        1083         898]);
     subplot(221)
     imagesc(im2p)
     colormap gray
@@ -194,7 +221,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     for rr = find(inhibitRois==1)
         plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
     end
-    title('gcamp ROIs idenetified as inhibitory');
+    title(sprintf('gcamp ROIs idenetified as inhibitory (n=%d)', sum(inhibitRois==1)));
     
     % plot excitatory ROIs on the image of inhibit channel.
     subplot(222)
@@ -204,7 +231,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     for rr = find(inhibitRois==0)
         plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
     end
-    title('gcamp ROIs identified as excitatory');
+    title(sprintf('gcamp ROIs idenetified as excitatory (n=%d)', sum(inhibitRois==0)));
     
 
     % plot unsure ROIs on the image of inhibit channel.
@@ -215,7 +242,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     for rr = find(isnan(inhibitRois))
         plot(CC{rr}(2,:), CC{rr}(1,:), 'color', colors(rr, :))
     end
-    title('gcamp ROIs identified as unsure');
+    title(sprintf('gcamp ROIs idenetified as unsure (n=%d)', sum(isnan(inhibitRois))));    
 
    
     %% Compare spike rates

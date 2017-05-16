@@ -241,8 +241,11 @@ end
 
  
 %% Load inhibitRois and set traces for specific neuron types: inhibitory, excitatory or all neurons
-
-load(moreName, 'inhibitRois')
+%
+load(moreName, 'inhibitRois_pix')
+inhibitRois = inhibitRois_pix;
+%
+% load(moreName, 'inhibitRois')
 % fprintf('%d inhibitory, %d excitatory; %d unsure class' %(sum(inhibitRois==1), sum(inhibitRois==0), sum(isnan(inhibitRois)))
 
     

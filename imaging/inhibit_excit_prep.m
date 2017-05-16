@@ -45,9 +45,10 @@ a = matfile(moreName);
 %% Load inhibitRois if it already exists, otherwise set it.
 
 % If assessInhibit is 0 and the inhibitROI vars are already saved, we will load the results and wont perform inhibit identification anymore.
-if ~(sum(assessClass_unsure_inh_excit)) && exist(moreName, 'file') && isprop(a, 'inhibitRois')
+if ~(sum(assessClass_unsure_inh_excit)) && exist(moreName, 'file') && isprop(a, 'inhibitRois_pix') %'inhibitRois')
     fprintf('Loading inhibitRois...\n')    
-    load(imfilename, 'inhibitRois')
+    load(moreName, 'inhibitRois_pix')
+%     load(moreName, 'inhibitRois')    
     
 else
     % inhibitRois will be :
@@ -56,14 +57,18 @@ else
     % nan for ROIs that could not be classified as inhibit or excit.
     
     % calls inhibitROIselection to set inhibitRois
-    [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss);
+    [inhibitRois_pix, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss);
+    inhibitRois = inhibitRois_pix;
+%     [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss);
     
     if saveInhibitRois
         fprintf('Appending inhibitRois to more_pnevFile...\n')
         if ~isempty(x_all)
-            save(moreName, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh_IE', 'x_all', 'cost_all')
+            save(moreName, '-append', 'inhibitRois_pix', 'roi2surr_sig', 'sigTh_IE', 'x_all', 'cost_all')
+%             save(moreName, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh_IE', 'x_all', 'cost_all')
         else
-            save(moreName, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh_IE')
+            save(moreName, '-append', 'inhibitRois_pix', 'roi2surr_sig', 'sigTh_IE')
+%             save(moreName, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh_IE')
         end
         %             save(imfilename, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
     end
