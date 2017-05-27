@@ -128,7 +128,12 @@ cs_alldata = cumsum([0 len_alldata_eachsess]);
 
 framesPerTrial = NaN(1, sum(len_alldata_eachsess));
 for ise = 1:length(mdfFileNumber)
-    framesPerTrial(trialNumbers_sess{ise} + cs_alldata(ise)) = framesPerTrial_sess{ise};
+    ii = trialNumbers_sess{ise};
+    if sum(isnan(ii))>0
+        error('the very unusual case that trialCode is missing but still some frames are recorded. trialNumbers was set to nan')
+        ii(isnan(ii)) = ii(find(isnan(ii))+1) - 1;
+    end
+    framesPerTrial(ii + cs_alldata(ise)) = framesPerTrial_sess{ise};
 end
 
 

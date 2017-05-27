@@ -27,11 +27,15 @@ allResp_HR_LR = allResp_HR_LR(1:length(all_data_sess{1}));
 %}
 
 %%
+% varsAlreadySet = 0; % set to 0 if not calling from imaging_prep_analysis
 [pd, pnev_n] = fileparts(pnevFileName);
 postName = fullfile(pd, sprintf('post_%s.mat', pnev_n));
 
 
-traces = alldataSpikesGood; % alldataSpikesGoodExc; % alldataSpikesGoodInh; % alldataSpikesGood;  % traces to be aligned.
+% traces = alldataSpikesGood; % alldataSpikesGoodExc; % alldataSpikesGoodInh; % alldataSpikesGood;  % traces to be aligned.
+% traces = alldataDfofGood;
+% traces = alldataActivityGood;
+
 dofilter = false;
 traceTimeVec = {alldata.frameTimes}; % time vector of the trace that you want to realign.
 % set nPre and nPost to nan if you want to go with the numbers that are based on eventBef and eventAft.
@@ -48,36 +52,46 @@ nPostFrames = []; % nan;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Set outcomes
 
-allowCorrectResp = 'change'; % 'change'; 'remove'; 'nothing'; % if 'change': on trials that mouse corrected his choice, go with the original response.
-uncommittedResp = 'nothing'; % 'change'; 'remove'; 'nothing'; % what to do on trials that mouse made a response (licked the side port) but did not lick again to commit it.
+if ~varsAlreadySet
+    
+    allowCorrectResp = 'change'; % 'change'; 'remove'; 'nothing'; % if 'change': on trials that mouse corrected his choice, go with the original response.
+    uncommittedResp = 'nothing'; % 'change'; 'remove'; 'nothing'; % what to do on trials that mouse made a response (licked the side port) but did not lick again to commit it.
 
-[outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp);
+    [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp);
 
-% set trs2rmv to nan
-outcomes(trs2rmv) = NaN;
-allResp(trs2rmv) = NaN;
-allResp_HR_LR(trs2rmv) = NaN;
+    % set trs2rmv to nan
+    outcomes(trs2rmv) = NaN;
+    allResp(trs2rmv) = NaN;
+    allResp_HR_LR(trs2rmv) = NaN;
 
 
-%% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
+    %% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
 
-% remember if you change outcomes for allowCorrEntered trials, then time of
-% events will reflect that.
+    % remember if you change outcomes for allowCorrEntered trials, then time of
+    % events will reflect that.
 
-% setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
-scopeTTLOrigTime = 1;
+    % setNaN_goToneEarlierThanStimOffset = 0; % if 1, set to nan eventTimes of trials that had go tone earlier than stim offset... if 0, only goTone time will be set to nan.
+    scopeTTLOrigTime = 1;
 
-% I set all to 0 bc I want to get all times. but later I will take care of them.
-rmv_timeGoTone_if_stimOffset_aft_goTone = 0; 
-rmv_time1stSide_if_stimOffset_aft_1stSide = 0; 
-setNaN_goToneEarlierThanStimOffset = 0;
+    % I set all to 0 bc I want to get all times. but later I will take care of them.
+    rmv_timeGoTone_if_stimOffset_aft_goTone = 0; 
+    rmv_time1stSide_if_stimOffset_aft_1stSide = 0; 
+    setNaN_goToneEarlierThanStimOffset = 0;
 
-stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, setNaN_goToneEarlierThanStimOffset};
-% stimAftGoToneParams = []; % {0,0,0};
+    stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, setNaN_goToneEarlierThanStimOffset};
+    % stimAftGoToneParams = []; % {0,0,0};
 
-[timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
-    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, timeStimOnsetAll, timeSingleStimOffset] = ...
-    setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams, outcomes);
+    [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
+        time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, timeStimOnsetAll, timeSingleStimOffset] = ...
+        setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams, outcomes);
+      
+    if save_aligned_traces
+        save(postName, '-append', 'cb', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOnsetAll', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp', 'timeSingleStimOffset')
+    end
+
+else
+    load(postName, 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOnsetAll', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp', 'timeSingleStimOffset')
+end
 
 
 % keep a copy of original time events before changing them.
@@ -87,10 +101,7 @@ time1stSideTry0 = time1stSideTry;
 timeCommitIncorrResp0 = timeCommitIncorrResp;
 
 set_change_of_mind_trs % set change-of-mind trials. output will be trs_com.
-
-if save_aligned_traces
-    save(postName, '-append', 'cb', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOnsetAll', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp', 'timeSingleStimOffset')
-end
+    
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -294,7 +305,8 @@ fprintf('#isnan(time1stSideTry0)= %i; #isnan(time1stSideTry)= %i\n', sum(isnan(t
 
 % look at goTone to 1stSideTry time:
 a = time1stSideTry - timeCommitCL_CR_Gotone;
-figure; plot(a)
+fannoy = figure; 
+subplot(211), plot(a)
 xlabel('Trial')
 ylabel('Time btwn goTone & 1stSideTry (ms)')
 
@@ -366,7 +378,8 @@ numTrsGoToneBefStimOffset = sum(timeCommitCL_CR_Gotone <= timeStimOffset);
 
 % what is the time interval between stim offset and go tone?
 a = timeCommitCL_CR_Gotone - timeStimOffset;
-figure; plot(a)
+figure(fannoy); 
+subplot(212), plot(a)
 xlabel('Trial')
 ylabel('Time btwn stimeOffset & goTone(ms)')
 title(['# trs with stim after go tone = ', num2str(numTrsGoToneBefStimOffset)])
@@ -501,16 +514,6 @@ commitIncorrAl
 
 
 
-
-%%
-
-if save_aligned_traces
-    save(postName, '-append', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs', 'stimAl_noEarlyDec')
-end
-
-
-
-
 %% Set choiceVec0 for the previous trial (ie for the trial-history case).
 % You will need this when doing SVM decoding of the previous choice.
 
@@ -523,7 +526,12 @@ prevSuccessFlg = trialHistory.prevSuccessFlg;
 vec_iti = trialHistory.vec_iti;
 
 for iTiFlg = 0:2; % 0: short ITI, 1: long ITI, 2: all ITIs.
+    
+    % in the script below outcomes will be computed based on the final
+    % choice of the animal... so outcomes after this script is different
+    % from the one saved inpostName (ie based on animal's 1st choice)
     popClassifier_trialHistory % computes choiceVec0; % trials x 1;  1 for HR choice, 0 for LR prev choice.
+    
     trialHistory.choiceVec0(:, iTiFlg+1) = choiceVec0; 
 end
 % Remember number of short ITI + long ITI trials can be fewer than all ITI
@@ -538,11 +546,13 @@ end
 % epEnd = eventI;
 % ep = epStart : epEnd;
 
-if save_aligned_traces
-    save(postName, '-append', 'trialHistory')    
-end
 
 
+
+%%
+% if save_aligned_traces
+%     save(postName, '-append', 'trialHistory', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs', 'stimAl_noEarlyDec')
+% end
    
 % Do this for now (choiceVec0 for prev trials does not anymore include nans
 % where current trial's outcome is other than corr or incorr. stimAl_alltrs

@@ -130,6 +130,22 @@ if ~isprop(a, 'inhibitImageCorrcted_pix') %'inhibitImageCorrcted')
 end
 
 
+%% Does the correction make the actCh1 channel become constant!
+
+load(pnevFileName, 'activity_man_eftMask_ch1', 'activity_man_eftMask_ch2')
+load(imfilename, 'pmtOffFrames')
+activity_man_eftMask_ch1 = activity_man_eftMask_ch1(~pmtOffFrames{1}, ~badROIs01);
+activity_man_eftMask_ch2 = activity_man_eftMask_ch2(~pmtOffFrames{2}, ~badROIs01);
+
+actCh1Corr = activity_man_eftMask_ch1 - slope_common*activity_man_eftMask_ch2;
+
+figure; 
+subplot(211),plot(mean(activity_man_eftMask_ch1,2)); a1=gca; title('ch1 activity')
+subplot(212),plot(mean(actCh1Corr,2)); a2=gca; title('ch1 activity corrected using slopeCommon')
+linkaxes([a1,a2],'x')
+
+
+
 %% Show images : ch1, ch2, ch1 - commonSlope*ch2
 
 normims = 0;

@@ -15,6 +15,11 @@ def crossValidateModel(X, Y, modelFn, **options):
         kfold = options.get('kfold');
     else:
         kfold = 10;
+
+    if options.get('shflTrs'):
+        shflTrs = options.get('shflTrs');
+    else:
+        shflTrs = True
         
 #    Y = np.squeeze(np.array(Y).astype(int)); # commented so it works for svr too.
         
@@ -26,12 +31,18 @@ def crossValidateModel(X, Y, modelFn, **options):
     numObservations, numFeatures = X.shape;
     
     
-    ## %%%%%% shuffle trials to break any dependencies on the sequence of trails 
+    ## %%%%%
     cls = [0]
     while len(cls)<2: # make sure both classes exist in YTrain
-        shfl = rng.permutation(np.arange(0, numObservations));
-        Ys = Y[shfl];
-        Xs = X[shfl, :]; 
+    
+        if shflTrs: # shuffle trials to break any dependencies on the sequence of trails 
+            shfl = rng.permutation(np.arange(0, numObservations));
+            Ys = Y[shfl];
+            Xs = X[shfl, :]; 
+        else:
+            Ys = Y
+            Xs = X
+            
         
         ## %%%%% divide data to training and testing sets
         YTrain = Ys[np.arange(0, int((kfold-1.)/kfold*numObservations))]; # Take the first 90% of trials as training set       

@@ -1,4 +1,8 @@
 % you need the following vars.
+
+% loadPostNameVars = 1; % set to 1 if not calling this script from
+% imaging_prep_analysis
+
 %{
 trialHistAnalysis = 0;
 iTiFlg = 2; % Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
@@ -36,32 +40,35 @@ frameLength = 1000/30.9; % sec.
 %% Set the names of imaging-related .mat file names.
 % remember the last saved pnev mat file will be the pnevFileName
 
-signalCh = 2; % because you get A from channel 2, I think this should be always 2.
-% pnev2load = [];
-[imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
-[pd, pnev_n] = fileparts(pnevFileName);
-disp(pnev_n)
-cd(fileparts(imfilename))
+if loadPostNameVars
+    signalCh = 2; % because you get A from channel 2, I think this should be always 2.
+    % pnev2load = [];
+    [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
+    [pd, pnev_n] = fileparts(pnevFileName);
+    disp(pnev_n)
+    cd(fileparts(imfilename))
 
-moreName = fullfile(pd, sprintf('more_%s.mat', pnev_n));
+    moreName = fullfile(pd, sprintf('more_%s.mat', pnev_n));
 
-[pd, pnev_n] = fileparts(pnevFileName);
-postName = fullfile(pd, sprintf('post_%s.mat', pnev_n));
-
+    [pd, pnev_n] = fileparts(pnevFileName);
+    postName = fullfile(pd, sprintf('post_%s.mat', pnev_n));
+end
 
 
 %% Load matlab variables: event-aligned traces, inhibitRois, outcomes,  choice, etc
 %     - traces are set in set_aligned_traces.m matlab script.
 % Load time of some trial events
-load(postName, 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'time1stSideTry')
+if loadPostNameVars
+    load(postName, 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'time1stSideTry')
 
 
-% Load stim-aligned_allTrials traces, frames, frame of event of interest
-if trialHistAnalysis==0
-    load(postName, 'stimAl_noEarlyDec')
-    stimAl_allTrs = stimAl_noEarlyDec;
-else
-    load(postName, 'stimAl_allTrs')
+    % Load stim-aligned_allTrials traces, frames, frame of event of interest
+    if trialHistAnalysis==0
+        load(postName, 'stimAl_noEarlyDec')
+        stimAl_allTrs = stimAl_noEarlyDec;
+    else
+        load(postName, 'stimAl_allTrs')
+    end
 end
 eventI = stimAl_allTrs.eventI;
 traces_al_stimAll = stimAl_allTrs.traces;
@@ -72,7 +79,9 @@ traces_al_stim = traces_al_stimAll;
 
 
 % Load outcomes and choice (allResp_HR_LR) for the current trial
-load(postName, 'outcomes', 'allResp_HR_LR')
+if loadPostNameVars
+    load(postName, 'outcomes', 'allResp_HR_LR')
+end
 %{
 outcomes = outcomes(1:length(all_data_sess{1}));
 allResp_HR_LR = allResp_HR_LR(1:length(all_data_sess{1}));
@@ -82,14 +91,18 @@ fprintf('Current outcome: %d correct choices; %d incorrect choices\n', sum(outco
 
 if trialHistAnalysis
     % Load trialHistory structure to get choice vector of the previous trial
-    load(postName, 'trialHistory')
+    if loadPostNameVars
+        load(postName, 'trialHistory')
+    end
     choiceVec0All = trialHistory.choiceVec0;
 end
 
 
 % Set trials strength and identify trials with stim strength of interest
 if trialHistAnalysis==0
-    load(postName, 'stimrate', 'cb')
+    if loadPostNameVars
+        load(postName, 'stimrate', 'cb')
+    end
     
     s = stimrate-cb; % how far is the stimulus rate from the category boundary?
     if strcmp(strength2ana, 'easy')
@@ -183,7 +196,9 @@ if trialHistAnalysis==0
     % th_stim_dur = 800; % min stim duration to include a trial in timeStimOnset
     
     if doPlots
-        load(postName, 'timeReward', 'timeCommitIncorrResp')
+        if loadPostNameVars
+            load(postName, 'timeReward', 'timeCommitIncorrResp')
+        end
         
         figure; hold on
 %         subplot(1,2,1); 

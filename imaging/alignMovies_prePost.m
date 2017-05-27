@@ -126,7 +126,7 @@ eventI_timeStop = eventI;
 %% Save average movie of event-aligned trial movies (pix x pix x frames)
 
 % save([imfilename, '_movieAligned'], 'movieAligned_timeStop_outcome_0', 'movieAligned_timeStop_outcome_1', 'movieAligned_timeStop_outcome_n1', 'eventI_timeStop')
-save([imfilename, '_movieAligned'], 'movieAligned_stimOnset', 'eventI')
+save([imfilename, '_movieAligned_ch', num2str(ch2read)], 'movieAligned_stimOnset', 'eventI')
 
 
 % if exist([imfilename, '_movieAligned.mat'], 'file')==2
@@ -134,6 +134,42 @@ save([imfilename, '_movieAligned'], 'movieAligned_stimOnset', 'eventI')
 % else
 %     save([imfilename, '_movieAligned'], 'movieAligned_timeStop', 'eventI_timeStop')
 % end
+
+
+%% See the movie
+%{
+movie_play(movieAligned_stimOnset)
+
+%%%
+a = movieAligned_stimOnset_ch1;
+figure;
+for i=1:size(a,3)
+    imagesc(a(:,:,i))
+    set(gcf, 'name', num2str(i))
+    pause
+end
+
+%%%
+aa = a/max(a(:));
+writeTif(aa, 'movieAligned_stimOnset_ch1.TIF', 1)
+
+aa = nan(size(a));
+softImMax = quantile(a(:), 0.995);
+aa = a/softImMax;
+mn = min(a(:));
+
+for i=1:size(a,3)
+    im = a(:,:,i);
+    im = im - mn;
+    im = im / softImMax;
+    im(im > 1) = 1; 
+    
+    aa(:,:,i) = im;
+end
+
+writeTif(aa, 'movieAligned_stimOnset_ch1_softmax.TIF', 1)
+
+%}
 
 
 %% Use below if you want to align on all trial events. Read the note below

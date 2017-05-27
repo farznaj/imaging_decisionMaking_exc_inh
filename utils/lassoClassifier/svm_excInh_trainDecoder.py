@@ -80,14 +80,16 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni17'
-    imagingFolder = '151020'
-    mdfFileNumber = [1,2] 
+    mousename = 'fni18'
+    imagingFolder = '151210'
+    mdfFileNumber = [1] 
 
     trialHistAnalysis = 0;    
-    roundi = 1; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
-
+#    roundi = 1; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
     iTiFlg = 1; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
+
+    softNorm = 1 # if 1, no neurons will be excluded, bc we do soft normalization of FRs, so non-active neurons wont be problematic. if softNorm = 0, NsExcluded will be found
+
     setNsExcluded = 1; # if 1, NsExcluded will be set even if it is already saved.
     numSamples = 2 #100; # number of iterations for finding the best c (inverse of regularization parameter)
     neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
@@ -95,7 +97,7 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
 
     
     doNsRand = 0; # if 1, a random set of neurons will be selected to make sure we have fewer neurons than trials. 
-    regType = 'l1' # 'l2' : regularization type
+    regType = 'l2' # 'l1' : regularization type
     kfold = 10;
     compExcInh = 1 # if 1, analyses will be run to compare exc inh neurons.
     
@@ -207,7 +209,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         postNProvided = 0
         
     ##%%
-    import numpy as np
+#    import numpy as np
     import platform
     import glob
     import os.path
@@ -218,14 +220,14 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     ##%%
     dataPath = []
     if platform.system()=='Linux':
-        if os.getcwd().find('sonas')==1: # server
+        if os.getcwd().find('grid')!=-1: # server # sonas
             dataPath = '/sonas-hs/churchland/nlsas/data/data/'
         else: # office linux
             dataPath = '/home/farznaj/Shares/Churchland/data/'
     else:
         dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data/'
         
-    #%%        
+    ##%%        
     tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
     r = '%03d-'*len(mdfFileNumber)
     r = r[:-1]
@@ -244,7 +246,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         pnevFileName = glob.glob(os.path.join(tifFold,pnevFileName))   
         # sort pnevFileNames by date (descending)
         pnevFileName = sorted(pnevFileName, key=os.path.getmtime)
-        pnevFileName = pnevFileName[::-1] # so the latest file is the 1st one.
+        pnevFileName = pnevFileName[::-1]
         '''
         array = []
         for idx in range(0, len(pnevFileName)):
@@ -266,10 +268,9 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         pnevFileName = ''
     
     ##%%
-    return imfilename, pnevFileName
+    return imfilename, pnevFileName, dataPath
     
-    
-    
+       
     
     
 # In[7]:
@@ -304,7 +305,7 @@ postNProvided = 1; # If your directory does not contain pnevFile and instead it 
 
 # from setImagingAnalysisNamesP import *
 
-imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
+imfilename, pnevFileName, dataPath = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
 
 postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
 moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
@@ -1279,7 +1280,7 @@ b_data_inh = bAllC_inh[:,indBestC]
 ###### allExc
 perClassErrorTrain_allExc, perClassErrorTest_allExc, wAllC_allExc, bAllC_allExc, cbestAll_allExc, cbest_allExc, cvect = setbesc(XallExc,Y,regType,kfold,numDataPoints,numSamples,doPlots)
 # data: take the values at bestc that you computed above
-indBestC = np.in1d(cvect, cbest_inh)
+indBestC = np.in1d(cvect, cbest_allExc)
 perClassErrorTrain_data_allExc = perClassErrorTrain_allExc[:,indBestC].squeeze()
 perClassErrorTest_data_allExc = perClassErrorTest_allExc[:,indBestC].squeeze()
 w_data_allExc = wAllC_allExc[:,indBestC,:].squeeze()

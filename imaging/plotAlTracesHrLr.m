@@ -1,6 +1,11 @@
 %% Set vars for plotting (for popClassifier_setXYall)
 
-savefigs = 1;
+% savefigs = 0;
+% loadPostNameVars = 1; % set to 1 if this script is not called from imaging_prep_analysis 
+% traceType = '_'; % whether traces are S, C, or df/f 
+% traceType = '_C_';
+% traceType = '_S_';
+% traceType = '_dfof_';
 
 trialHistAnalysis = 0;
 iTiFlg = 2; % Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
@@ -45,6 +50,7 @@ for io = 1:length(o)
     
     % set vars
     popClassifier_setXYall
+    close % close that stupid figure
     
     
     %%
@@ -54,7 +60,9 @@ for io = 1:length(o)
     
     % Load 1stSideTry-aligned traces, frames, frame of event of interest
     % use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
-    load(postName, 'firstSideTryAl')
+    if loadPostNameVars
+        load(postName, 'firstSideTryAl')
+    end
     traces_al_1stSide = firstSideTryAl.traces;
     time_aligned_1stSide = firstSideTryAl.time;
     % print(shape(traces_al_1stSide))
@@ -62,28 +70,36 @@ for io = 1:length(o)
     
     % Load goTone-aligned traces, frames, frame of event of interest
     % use goToneAl_noStimAft to make sure there was no stim after go tone.
-    load(postName, 'goToneAl')
+    if loadPostNameVars
+        load(postName, 'goToneAl')
+    end
     traces_al_go = goToneAl.traces;
     time_aligned_go = goToneAl.time;
     % print(shape(traces_al_go))
     
     
     % Load reward-aligned traces, frames, frame of event of interest
-    load(postName, 'rewardAl')
+    if loadPostNameVars
+        load(postName, 'rewardAl')
+    end
     traces_al_rew = rewardAl.traces;
     time_aligned_rew = rewardAl.time;
     % print(shape(traces_al_rew))
     
     
     % Load commitIncorrect-aligned traces, frames, frame of event of interest
-    load(postName, 'commitIncorrAl')
+    if loadPostNameVars
+        load(postName, 'commitIncorrAl')
+    end
     traces_al_incorrResp = commitIncorrAl.traces;
     time_aligned_incorrResp = commitIncorrAl.time;
     % print(shape(traces_al_incorrResp))
     
     
     % Load initiationTone-aligned traces, frames, frame of event of interest
-    load(postName, 'initToneAl')
+    if loadPostNameVars
+        load(postName, 'initToneAl')
+    end
     traces_al_init = initToneAl.traces;
     time_aligned_init = initToneAl.time;
     % print(shape(traces_al_init))
@@ -317,11 +333,10 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         plot([0, 0],[yl(1),yl(2)],'k:')
         
         if savefigs
-            savefig(fullfile(pd, 'figs',sprintf('caTraces_%s_alHrLr', outcome2ana)))
+            savefig(fullfile(pd, 'figs',sprintf('caTraces%s%s_alHrLr', traceType, outcome2ana)))
         end
     end      
+    
 end
-
-
 
 

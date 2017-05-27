@@ -47,8 +47,8 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni16'
-    imagingFolder = '151001'
+    mousename = 'fni18'
+    imagingFolder = '151209'
     mdfFileNumber = [1] 
 
     trialHistAnalysis = 0;    

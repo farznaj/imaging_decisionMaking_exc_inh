@@ -31,7 +31,7 @@ def svm_notebook_setVars8(mousename, imagingFolder, mdfFileNumber, chAl, numSamp
 
 #    chAl = 0 # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
     softNorm = 1 # if 1, no neurons will be excluded, bc we do soft normalization of FRs, so non-active neurons wont be problematic. if softNorm = 0, NsExcluded will be found
-
+    useEqualTrNums = 1 # Make sure both classes have the same number of trials when training the classifier
     outcome2ana = 'all' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
 #    stimAligned = 1 # use stimulus-aligned traces for analyses?
 #    doSVM = 1 # use SVM to decode stim category.

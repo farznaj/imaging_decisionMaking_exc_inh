@@ -5,6 +5,11 @@ function writeTif(movie, outFile, channels2write)
 % tifList = {'150825_002_1.tif'};
 % outSuffix = '_MCM';
 
+if ~iscell(movie)
+    a{1} = movie;
+    movie = a;
+end
+
 if ~exist('channels2write', 'var') || isempty(channels2write)
     channels2write = find(~cellfun(@isempty, movie)); % 1:size(movieMC);
 end

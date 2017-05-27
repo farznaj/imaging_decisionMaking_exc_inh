@@ -57,8 +57,7 @@ else
     % nan for ROIs that could not be classified as inhibit or excit.
     
     % calls inhibitROIselection to set inhibitRois
-    [inhibitRois_pix, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss);
-    inhibitRois = inhibitRois_pix;
+    [inhibitRois_pix, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss);    
 %     [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss);
     
     if saveInhibitRois
@@ -73,6 +72,8 @@ else
         %             save(imfilename, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')
     end
 end
+
+inhibitRois = inhibitRois_pix;
 
 % fprintf('Fract inhibit %.3f, excit %.3f, unknown %.3f\n', [...
 %     mean(inhibitRois==1), mean(inhibitRois==0), mean(isnan(inhibitRois))])

@@ -64,7 +64,7 @@ end
 
 %% Prepare deltaF/F
 
-if ~exist('dFOF', 'var')
+if ~exist('dFOF', 'var') || isempty(dFOF)
     smoothPts = 6;
     dFOF = konnerthDeltaFOverF(activity, pmtOffFrames, smoothPts, minPts);
 %     if ~exist('S_df', 'var')

@@ -25,6 +25,8 @@ thSamps = 10  # Days that have <thSamps samples that satisfy >=thNon0W non0 weig
 setTo50 = 1 # if 1, the above two jobs will be done.
 doL2All = 0 # for fni17 you also did subsel and L2... set this to 1, to get their plots and compare them with L1 (no subsel)
 
+eps = 10**-10 # tiny number below which weight is considered 0
+
 
 #%%
 '''
@@ -111,12 +113,12 @@ for iday in range(len(days)):
         w_shfl = Data.pop('w_shfl')
 #        ash = np.mean(w_shfl!=0,axis=1) # fraction non-0 weights
 #        ash = ash>0 # index of samples that have at least 1 non0 weight for shuffled  
-        ash = np.sum(w_shfl!=0,axis=1)<thNon0Ws # samples w fewer than 2 non-0 weights
+        ash = np.sum(w_shfl > eps,axis=1)<thNon0Ws # samples w fewer than 2 non-0 weights
         ash = ~ash # samples w >=2 non0 weights
         w_data = Data.pop('w_data')
 #        ada = np.mean(w_data!=0,axis=1) # fraction non-0 weights                
 #        ada = ada>0 # index of samples that have at least 1 non0 weight for data
-        ada = np.sum(w_data!=0,axis=1)<thNon0Ws # samples w fewer than 2 non-0 weights        
+        ada = np.sum(w_data > eps,axis=1)<thNon0Ws # samples w fewer than 2 non-0 weights        
         ada = ~ada # samples w >=2 non0 weights
         numNon0SampShfl[iday] = ash.sum() # number of cv samples with >=2 non-0 weights
         numNon0SampData[iday] = ada.sum()
@@ -137,7 +139,7 @@ for iday in range(len(days)):
             
             if setTo50:
                 # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!
-                # The reson I don't simply exclude them is that I want them to count when I get average across days... lets say I am comparing two conditions, one doesn't have much decoding info (as a result mostly 0 weights)... I don't want to throw it away... not having information about the choice is informative for me.
+                # The reason I don't simply exclude them is that I want them to count when I get average across days... lets say I am comparing two conditions, one doesn't have much decoding info (as a result mostly 0 weights)... I don't want to throw it away... not having information about the choice is informative for me.
                 # set to nan the test/train error of those samples that have all-0 weights
                 l1_err_test_data[~ada, iday] = 50#np.nan #it will be nan for samples with all-0 weights
                 l1_err_test_shfl[~ash, iday] = 50#np.nan

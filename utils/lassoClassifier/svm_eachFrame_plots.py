@@ -3,6 +3,10 @@
 Plots class accuracy for svm trained on non-overlapping time windows  (outputs of file svm_eachFrame.py)
  ... svm trained to decode choice on choice-aligned or stimulus-aligned traces.
  
+ 
+Remember for fni18 there are 2 svm_eachFrame mat files, the earlier file is using all trials (unequal HR, LR, like how you've done all your analysis). 
+The later mat file is with equal number of hr and lr trials (subselecting trials)... this helped with 151209 class accur trace which was weird in the earlier mat file.
+ 
 Created on Sun Mar 12 15:12:29 2017
 @author: farznaj
 """
@@ -10,15 +14,20 @@ Created on Sun Mar 12 15:12:29 2017
 
 #%% Change the following vars:
 
-mousename = 'fni17' #'fni17'
+mousename = 'fni18' #'fni17'
 
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
 execfile("svm_plots_setVars.py")  
 
-savefigs = 0
+chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 doPlots = 0 #1 # plot c path of each day 
-chAl = 0 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
+savefigs = 0
+
+#eps = 10**-10 # tiny number below which weight is considered 0
+#thNon0Ws = 2 # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!
+#thSamps = 10  # Days that have <thSamps samples that satisfy >=thNon0W non0 weights will be manually set to 50 (class error of all their samples) ... bc we think <5 samples will not give us an accurate measure of class error of a day.
+#setTo50 = 1 # if 1, the above two jobs will be done.
 
 
 #%% 
@@ -173,9 +182,10 @@ for iday in range(len(days)):
     perClassErrorTest_chance = Data.pop('perClassErrorTest_chance')
     perClassErrorTest_shfl = Data.pop('perClassErrorTest_shfl')            
 
-#        Data = scio.loadmat(svmName, variable_names=['wAllC','bAllC'])
-#        wAllC = Data.pop('wAllC')
+#    Data = scio.loadmat(svmName, variable_names=['wAllC']) #,'bAllC'])
+#    wAllC = Data.pop('wAllC')
 #        bAllC = Data.pop('bAllC')
+    
 #     
     #'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'trsTrainedTestedInds':trsTrainedTestedInds, 'trsRemCorrInds':trsRemCorrInds,
 #    Data = scio.loadmat(svmName, variable_names=['trsTrainedTestedInds','trsRemCorrInds'])
@@ -186,6 +196,8 @@ for iday in range(len(days)):
     numFrs = perClassErrorTest.shape[2]     
     
 
+        
+        
     #%% Find bestc for each frame, and plot c path
 
     classErr_bestC_train_data = np.full((numSamples, numFrs), np.nan)
@@ -193,6 +205,7 @@ for iday in range(len(days)):
     classErr_bestC_test_shfl = np.full((numSamples, numFrs), np.nan)
     classErr_bestC_test_chance = np.full((numSamples, numFrs), np.nan)
     cbestFrs = np.full((numFrs), np.nan)
+    numNon0SampData = np.full((numFrs), np.nan)       
         
     for ifr in range(numFrs):
         
@@ -263,8 +276,16 @@ for iday in range(len(days)):
         classErr_bestC_train_data[:,ifr] = perClassErrorTrain[:,indBestC,ifr].squeeze() # numSamps           
         classErr_bestC_test_data[:,ifr] = perClassErrorTest[:,indBestC,ifr].squeeze()
         classErr_bestC_test_shfl[:,ifr] = perClassErrorTest_shfl[:,indBestC,ifr].squeeze()
-        classErr_bestC_test_chance[:,ifr] = perClassErrorTest_chance[:,indBestC,ifr].squeeze()
-        
+        classErr_bestC_test_chance[:,ifr] = perClassErrorTest_chance[:,indBestC,ifr].squeeze()        
+
+       # check the number of non-0 weights
+#       for ifr in range(numFrs):
+#        w_data = wAllC[:,indBestC,:,ifr].squeeze()
+#        print np.sum(w_data > eps,axis=1)
+#        ada = np.sum(w_data > eps,axis=1) < thNon0Ws # samples w fewer than 2 non-0 weights        
+#        ada = ~ada # samples w >=2 non0 weights
+#        numNon0SampData[ifr] = ada.sum() # number of cv samples with >=2 non-0 weights
+
         
         #%% Plot C path           
         
@@ -295,6 +316,7 @@ for iday in range(len(days)):
             plt.tight_layout()
           
            
+
     #%% Once done with all frames, save vars for all days
            
     # Delete vars before starting the next day           
@@ -374,167 +396,9 @@ else:
     
 
 
-#%% For each day plot class accur and match it with dist of event times. Do it for both stim-aligned and choice-aligned data
-# for this plot you need to run the codes above once with chAl=0 and once with chAl=1; also run eventTimes_dist
 
-for iday in range(len(days)):    
-
-    #%%
-    # relative to stim onset
-    timeStimOffset0_all_relOn = np.nanmean(timeStimOffset0_all[iday] - timeStimOnset_all[iday])
-    timeStimOffset_all_relOn = np.nanmean(timeStimOffset_all[iday] - timeStimOnset_all[iday])
-    timeCommitCL_CR_Gotone_all_relOn = np.nanmean(timeCommitCL_CR_Gotone_all[iday] - timeStimOnset_all[iday])
-    time1stSideTry_all_relOn = np.nanmean(time1stSideTry_all[iday] - timeStimOnset_all[iday])
-
-    # relative to choice onset
-    timeStimOnset_all_relCh = np.nanmean(timeStimOnset_all[iday] - time1stSideTry_all[iday])    
-    timeStimOffset0_all_relCh = np.nanmean(timeStimOffset0_all[iday] - time1stSideTry_all[iday])
-    timeStimOffset_all_relCh = np.nanmean(timeStimOffset_all[iday] - time1stSideTry_all[iday])
-    timeCommitCL_CR_Gotone_all_relCh = np.nanmean(timeCommitCL_CR_Gotone_all[iday] - time1stSideTry_all[iday])
-    
-    
-    #%% Plot class accur trace for each day
-    
-    plt.figure()
-    
-    ######## stAl
-    colors = 'k','r','b','m'
-    nPre = eventI_allDays_st[iday] # number of frames before the common eventI, also the index of common eventI. 
-    nPost = (len(av_l2_test_d_st[iday]) - eventI_allDays_st[iday] - 1)
-    
-    a = -(np.asarray(frameLength*regressBins) * range(nPre+1)[::-1])
-    b = (np.asarray(frameLength*regressBins) * range(1, nPost+1))
-    time_al = np.concatenate((a,b))
-    
-    plt.subplot(223)
-    plt.errorbar(time_al, av_l2_test_d_st[iday], yerr = sd_l2_test_d_st[iday])    
-#    plt.title(days[iday])
-    #plt.errorbar(range(len(av_l2_test_d[iday])), av_l2_test_d[iday], yerr = sd_l2_test_d[iday])
-
-    # mark event times relative to stim onset
-    plt.plot([0, 0], [50, 100], color='g')
-    plt.plot([timeStimOffset0_all_relOn, timeStimOffset0_all_relOn], [50, 100], color=colors[0])
-    plt.plot([timeStimOffset_all_relOn, timeStimOffset_all_relOn], [50, 100], color=colors[1])
-    plt.plot([timeCommitCL_CR_Gotone_all_relOn, timeCommitCL_CR_Gotone_all_relOn], [50, 100], color=colors[2])
-    plt.plot([time1stSideTry_all_relOn, time1stSideTry_all_relOn], [50, 100], color=colors[3])
-    plt.xlabel('Time relative to stim onset (ms)')
-    plt.ylabel('Classification accuracy (%)') #, fontsize=13)
-    
-    ax = plt.gca(); xl = ax.get_xlim(); makeNicePlots(ax,1)
-    
-    
-    ###### Plot hist of event times
-    stimOffset0_st = timeStimOffset0_all[iday] - timeStimOnset_all[iday]
-    stimOffset_st = timeStimOffset_all[iday] - timeStimOnset_all[iday]
-    goTone_st = timeCommitCL_CR_Gotone_all[iday] - timeStimOnset_all[iday]
-    sideTry_st = time1stSideTry_all[iday] - timeStimOnset_all[iday]
-
-    stimOffset0_st = stimOffset0_st[~np.isnan(stimOffset0_st)]
-    stimOffset_st = stimOffset_st[~np.isnan(stimOffset_st)]
-    goTone_st = goTone_st[~np.isnan(goTone_st)]
-    sideTry_st = sideTry_st[~np.isnan(sideTry_st)]
-    
-    labs = 'stimOffset_1rep', 'stimOffset', 'goTone', '1stSideTry'
-    a = stimOffset0_st, stimOffset_st, goTone_st, sideTry_st
-    binEvery = 100
-    
-    bn = np.arange(np.min(np.concatenate((a))), np.max(np.concatenate((a))), binEvery)
-    bn[-1] = np.max(a) # unlike digitize, histogram doesn't count the right most value
-    
-    plt.subplot(221)
-    # set hists
-    for i in range(len(a)):
-        hist, bin_edges = np.histogram(a[i], bins=bn)
-    #    hist = hist/float(np.sum(hist))     # use this if you want to get fraction of trials instead of number of trials
-        hb = plt.bar(bin_edges[0:-1], hist, binEvery, alpha=.4, color=colors[i], label=labs[i]) 
-    
-#    plt.xlabel('Time relative to stim onset (ms)')
-    plt.ylabel('Number of trials')
-    plt.legend(handles=[hb], loc='center left', bbox_to_anchor=(.7, .7)) 
-    
-    plt.title(days[iday])
-    plt.xlim(xl)    
-    ax = plt.gca(); makeNicePlots(ax,1)
-
-
-
-    #%% chAl
-    colors = 'g','k','r','b'
-    nPre = eventI_allDays_ch[iday] # number of frames before the common eventI, also the index of common eventI. 
-    nPost = (len(av_l2_test_d_ch[iday]) - eventI_allDays_ch[iday] - 1)
-    
-    a = -(np.asarray(frameLength*regressBins) * range(nPre+1)[::-1])
-    b = (np.asarray(frameLength*regressBins) * range(1, nPost+1))
-    time_al = np.concatenate((a,b))
-    
-    plt.subplot(224)
-    plt.errorbar(time_al, av_l2_test_d_ch[iday], yerr = sd_l2_test_d_ch[iday])    
-#    plt.title(days[iday])
-
-    # mark event times relative to choice onset
-    plt.plot([timeStimOnset_all_relCh, timeStimOnset_all_relCh], [50, 100], color=colors[0])    
-    plt.plot([timeStimOffset0_all_relCh, timeStimOffset0_all_relCh], [50, 100], color=colors[1])
-    plt.plot([timeStimOffset_all_relCh, timeStimOffset_all_relCh], [50, 100], color=colors[2])
-    plt.plot([timeCommitCL_CR_Gotone_all_relCh, timeCommitCL_CR_Gotone_all_relCh], [50, 100], color=colors[3])
-    plt.plot([0, 0], [50, 100], color='m')
-    plt.xlabel('Time relative to choice onset (ms)')
-    ax = plt.gca(); xl = ax.get_xlim(); makeNicePlots(ax,1)
-    
-    
-    ###### Plot hist of event times
-    stimOnset_ch = timeStimOnset_all[iday] - time1stSideTry_all[iday]
-    stimOffset0_ch = timeStimOffset0_all[iday] - time1stSideTry_all[iday]
-    stimOffset_ch = timeStimOffset_all[iday] - time1stSideTry_all[iday]
-    goTone_ch = timeCommitCL_CR_Gotone_all[iday] - time1stSideTry_all[iday]
-    
-    stimOnset_ch = stimOnset_ch[~np.isnan(stimOnset_ch)]
-    stimOffset0_ch = stimOffset0_ch[~np.isnan(stimOffset0_ch)]
-    stimOffset_ch = stimOffset_ch[~np.isnan(stimOffset_ch)]
-    goTone_ch = goTone_ch[~np.isnan(goTone_ch)]    
-    
-    labs = 'stimOnset','stimOffset_1rep', 'stimOffset', 'goTone'
-    a = stimOnset_ch, stimOffset0_ch, stimOffset_ch, goTone_ch
-    binEvery = 100
-    
-    bn = np.arange(np.min(np.concatenate((a))), np.max(np.concatenate((a))), binEvery)
-    bn[-1] = np.max(a) # unlike digitize, histogram doesn't count the right most value
-    
-    plt.subplot(222)
-    # set hists
-    for i in range(len(a)):
-        hist, bin_edges = np.histogram(a[i], bins=bn)
-    #    hist = hist/float(np.sum(hist))     # use this if you want to get fraction of trials instead of number of trials
-        plt.bar(bin_edges[0:-1], hist, binEvery, alpha=.4, color=colors[i], label=labs[i]) 
-    
-#    plt.xlabel('Time relative to choice onset (ms)')
-#    plt.ylabel('Number of trials')
-    plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
-    
-    plt.xlim(xl)    
-    ax = plt.gca(); makeNicePlots(ax,1)
-    
-    plt.subplots_adjust(wspace=1, hspace=.5)
-    
-    
-    """
-    plt.subplot(223)
-    a = timeStimOffset0_all[iday] - timeStimOnset_all[iday]
-    plt.hist(a[~np.isnan(a)], color='b')
-    
-    a = timeStimOffset_all[iday] - timeStimOnset_all[iday]
-    plt.hist(a[~np.isnan(a)], color='r')
-
-    a = timeCommitCL_CR_Gotone_all[iday] - timeStimOnset_all[iday]
-    plt.hist(a[~np.isnan(a)], color='k')
-
-    a = time1stSideTry_all[iday] - timeStimOnset_all[iday]
-    plt.hist(a[~np.isnan(a)], color='m')
-    
-    plt.xlabel('Time relative to stim onset (ms)')
-    plt.ylabel('# trials')   
-    """
-
-    
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #%%
 ######################## PLOTS ########################
 
@@ -551,20 +415,22 @@ for iday in range(len(days)):
     time_al = np.concatenate((a,b))
     
     plt.subplot(221)
-    plt.errorbar(time_al, av_l2_test_d[iday], yerr = sd_l2_test_d[iday])    
+    plt.errorbar(time_al, av_l2_test_d[iday], yerr = sd_l2_test_d[iday], label=' ')    
     plt.title(days[iday])
     #plt.errorbar(range(len(av_l2_test_d[iday])), av_l2_test_d[iday], yerr = sd_l2_test_d[iday])
 
     plt.subplot(222)
-    plt.errorbar(time_al, av_l2_test_s[iday], yerr = sd_l2_test_s[iday])
+    plt.errorbar(time_al, av_l2_test_s[iday], yerr = sd_l2_test_s[iday], label='')
 
     plt.subplot(223)
-    plt.errorbar(time_al, av_l2_train_d[iday], yerr = sd_l2_train_d[iday])
+    plt.errorbar(time_al, av_l2_train_d[iday], yerr = sd_l2_train_d[iday], label='')
 
     plt.subplot(224)
-    plt.errorbar(time_al, av_l2_test_c[iday], yerr = sd_l2_test_c[iday])    
+    plt.errorbar(time_al, av_l2_test_c[iday], yerr = sd_l2_test_c[iday], label=' ')    
 #    plt.show()
-   
+plt.subplot(224)
+plt.legend(loc='center left', bbox_to_anchor=(.7, .7)) 
+
 
 ##%%
 plt.subplot(221)
@@ -611,15 +477,14 @@ if savefigs:#% Save the figure
     plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
     
     
-
-
-
-
-
+    
 #%%
+##################################################################################################
 ############## Align class accur traces of all days to make a final average trace ##############
+################################################################################################## 
  
-#%% Find the common eventI, number of frames before and after the common eventI for the alignment of traces of all days.
+ 
+##%% Find the common eventI, number of frames before and after the common eventI for the alignment of traces of all days.
 # By common eventI, we  mean the index on which all traces will be aligned.
         
 nPost = (np.ones((numDays,1))+np.nan).flatten().astype('int')
@@ -676,9 +541,15 @@ _,pcorrtrace = stats.ttest_ind(av_l2_test_d_aligned.transpose(), av_l2_test_s_al
 
 plt.figure(figsize=(4.5,3))
 
+# test_shfl
+#plt.fill_between(time_aligned, av_l2_test_s_aligned_ave - av_l2_test_s_aligned_std, av_l2_test_s_aligned_ave + av_l2_test_s_aligned_std, alpha=0.5, edgecolor='k', facecolor='k')
+#plt.plot(time_aligned, av_l2_test_s_aligned_ave, 'g')
+
+# test_chance
 plt.fill_between(time_aligned, av_l2_test_c_aligned_ave - av_l2_test_c_aligned_std, av_l2_test_c_aligned_ave + av_l2_test_c_aligned_std, alpha=0.5, edgecolor='k', facecolor='k')
 plt.plot(time_aligned, av_l2_test_c_aligned_ave, 'k')
 
+# data
 plt.fill_between(time_aligned, av_l2_test_d_aligned_ave - av_l2_test_d_aligned_std, av_l2_test_d_aligned_ave + av_l2_test_d_aligned_std, alpha=0.5, edgecolor='r', facecolor='r')
 plt.plot(time_aligned, av_l2_test_d_aligned_ave, 'r')
 
@@ -723,3 +594,175 @@ if savefigs:#% Save the figure
 
 
 
+
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#%% # For each day plot dist of event times (match it with class accur traces). Do it for both stim-aligned and choice-aligned data 
+# For this section you need to run eventTimesDist.py; also run the codes above once with chAl=0 and once with chAl=1.
+
+if 'eventI_allDays_ch' in locals() and 'eventI_allDays_st' in locals():
+    execfile("eventTimesDist.py")
+    
+    
+    for iday in range(len(days)):    
+    
+        #%%
+        # relative to stim onset
+        timeStimOffset0_all_relOn = np.nanmean(timeStimOffset0_all[iday] - timeStimOnset_all[iday])
+        timeStimOffset_all_relOn = np.nanmean(timeStimOffset_all[iday] - timeStimOnset_all[iday])
+        timeCommitCL_CR_Gotone_all_relOn = np.nanmean(timeCommitCL_CR_Gotone_all[iday] - timeStimOnset_all[iday])
+        time1stSideTry_all_relOn = np.nanmean(time1stSideTry_all[iday] - timeStimOnset_all[iday])
+    
+        # relative to choice onset
+        timeStimOnset_all_relCh = np.nanmean(timeStimOnset_all[iday] - time1stSideTry_all[iday])    
+        timeStimOffset0_all_relCh = np.nanmean(timeStimOffset0_all[iday] - time1stSideTry_all[iday])
+        timeStimOffset_all_relCh = np.nanmean(timeStimOffset_all[iday] - time1stSideTry_all[iday])
+        timeCommitCL_CR_Gotone_all_relCh = np.nanmean(timeCommitCL_CR_Gotone_all[iday] - time1stSideTry_all[iday])
+        
+        
+        #%% Plot class accur trace for each day
+        
+        plt.figure()
+        
+        ######## stAl
+        colors = 'k','r','b','m'
+        nPre = eventI_allDays_st[iday] # number of frames before the common eventI, also the index of common eventI. 
+        nPost = (len(av_l2_test_d_st[iday]) - eventI_allDays_st[iday] - 1)
+        
+        a = -(np.asarray(frameLength*regressBins) * range(nPre+1)[::-1])
+        b = (np.asarray(frameLength*regressBins) * range(1, nPost+1))
+        time_al = np.concatenate((a,b))
+        
+        plt.subplot(223)
+        plt.errorbar(time_al, av_l2_test_d_st[iday], yerr = sd_l2_test_d_st[iday])    
+    #    plt.title(days[iday])
+        #plt.errorbar(range(len(av_l2_test_d[iday])), av_l2_test_d[iday], yerr = sd_l2_test_d[iday])
+    
+        # mark event times relative to stim onset
+        plt.plot([0, 0], [50, 100], color='g')
+        plt.plot([timeStimOffset0_all_relOn, timeStimOffset0_all_relOn], [50, 100], color=colors[0])
+        plt.plot([timeStimOffset_all_relOn, timeStimOffset_all_relOn], [50, 100], color=colors[1])
+        plt.plot([timeCommitCL_CR_Gotone_all_relOn, timeCommitCL_CR_Gotone_all_relOn], [50, 100], color=colors[2])
+        plt.plot([time1stSideTry_all_relOn, time1stSideTry_all_relOn], [50, 100], color=colors[3])
+        plt.xlabel('Time relative to stim onset (ms)')
+        plt.ylabel('Classification accuracy (%)') #, fontsize=13)
+        
+        ax = plt.gca(); xl = ax.get_xlim(); makeNicePlots(ax,1)
+        
+        
+        ###### Plot hist of event times
+        stimOffset0_st = timeStimOffset0_all[iday] - timeStimOnset_all[iday]
+        stimOffset_st = timeStimOffset_all[iday] - timeStimOnset_all[iday]
+        goTone_st = timeCommitCL_CR_Gotone_all[iday] - timeStimOnset_all[iday]
+        sideTry_st = time1stSideTry_all[iday] - timeStimOnset_all[iday]
+    
+        stimOffset0_st = stimOffset0_st[~np.isnan(stimOffset0_st)]
+        stimOffset_st = stimOffset_st[~np.isnan(stimOffset_st)]
+        goTone_st = goTone_st[~np.isnan(goTone_st)]
+        sideTry_st = sideTry_st[~np.isnan(sideTry_st)]
+        
+        labs = 'stimOffset_1rep', 'stimOffset', 'goTone', '1stSideTry'
+        a = stimOffset0_st, stimOffset_st, goTone_st, sideTry_st
+        binEvery = 100
+        
+        bn = np.arange(np.min(np.concatenate((a))), np.max(np.concatenate((a))), binEvery)
+        bn[-1] = np.max(a) # unlike digitize, histogram doesn't count the right most value
+        
+        plt.subplot(221)
+        # set hists
+        for i in range(len(a)):
+            hist, bin_edges = np.histogram(a[i], bins=bn)
+        #    hist = hist/float(np.sum(hist))     # use this if you want to get fraction of trials instead of number of trials
+            hb = plt.bar(bin_edges[0:-1], hist, binEvery, alpha=.4, color=colors[i], label=labs[i]) 
+        
+    #    plt.xlabel('Time relative to stim onset (ms)')
+        plt.ylabel('Number of trials')
+        plt.legend(handles=[hb], loc='center left', bbox_to_anchor=(.7, .7)) 
+        
+        plt.title(days[iday])
+        plt.xlim(xl)    
+        ax = plt.gca(); makeNicePlots(ax,1)
+    
+    
+    
+        #%% chAl
+        colors = 'g','k','r','b'
+        nPre = eventI_allDays_ch[iday] # number of frames before the common eventI, also the index of common eventI. 
+        nPost = (len(av_l2_test_d_ch[iday]) - eventI_allDays_ch[iday] - 1)
+        
+        a = -(np.asarray(frameLength*regressBins) * range(nPre+1)[::-1])
+        b = (np.asarray(frameLength*regressBins) * range(1, nPost+1))
+        time_al = np.concatenate((a,b))
+        
+        plt.subplot(224)
+        plt.errorbar(time_al, av_l2_test_d_ch[iday], yerr = sd_l2_test_d_ch[iday])    
+    #    plt.title(days[iday])
+    
+        # mark event times relative to choice onset
+        plt.plot([timeStimOnset_all_relCh, timeStimOnset_all_relCh], [50, 100], color=colors[0])    
+        plt.plot([timeStimOffset0_all_relCh, timeStimOffset0_all_relCh], [50, 100], color=colors[1])
+        plt.plot([timeStimOffset_all_relCh, timeStimOffset_all_relCh], [50, 100], color=colors[2])
+        plt.plot([timeCommitCL_CR_Gotone_all_relCh, timeCommitCL_CR_Gotone_all_relCh], [50, 100], color=colors[3])
+        plt.plot([0, 0], [50, 100], color='m')
+        plt.xlabel('Time relative to choice onset (ms)')
+        ax = plt.gca(); xl = ax.get_xlim(); makeNicePlots(ax,1)
+        
+        
+        ###### Plot hist of event times
+        stimOnset_ch = timeStimOnset_all[iday] - time1stSideTry_all[iday]
+        stimOffset0_ch = timeStimOffset0_all[iday] - time1stSideTry_all[iday]
+        stimOffset_ch = timeStimOffset_all[iday] - time1stSideTry_all[iday]
+        goTone_ch = timeCommitCL_CR_Gotone_all[iday] - time1stSideTry_all[iday]
+        
+        stimOnset_ch = stimOnset_ch[~np.isnan(stimOnset_ch)]
+        stimOffset0_ch = stimOffset0_ch[~np.isnan(stimOffset0_ch)]
+        stimOffset_ch = stimOffset_ch[~np.isnan(stimOffset_ch)]
+        goTone_ch = goTone_ch[~np.isnan(goTone_ch)]    
+        
+        labs = 'stimOnset','stimOffset_1rep', 'stimOffset', 'goTone'
+        a = stimOnset_ch, stimOffset0_ch, stimOffset_ch, goTone_ch
+        binEvery = 100
+        
+        bn = np.arange(np.min(np.concatenate((a))), np.max(np.concatenate((a))), binEvery)
+        bn[-1] = np.max(a) # unlike digitize, histogram doesn't count the right most value
+        
+        plt.subplot(222)
+        # set hists
+        for i in range(len(a)):
+            hist, bin_edges = np.histogram(a[i], bins=bn)
+        #    hist = hist/float(np.sum(hist))     # use this if you want to get fraction of trials instead of number of trials
+            plt.bar(bin_edges[0:-1], hist, binEvery, alpha=.4, color=colors[i], label=labs[i]) 
+        
+    #    plt.xlabel('Time relative to choice onset (ms)')
+    #    plt.ylabel('Number of trials')
+        plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
+        
+        plt.xlim(xl)    
+        ax = plt.gca(); makeNicePlots(ax,1)
+        
+        plt.subplots_adjust(wspace=1, hspace=.5)
+        
+        
+        """
+        plt.subplot(223)
+        a = timeStimOffset0_all[iday] - timeStimOnset_all[iday]
+        plt.hist(a[~np.isnan(a)], color='b')
+        
+        a = timeStimOffset_all[iday] - timeStimOnset_all[iday]
+        plt.hist(a[~np.isnan(a)], color='r')
+    
+        a = timeCommitCL_CR_Gotone_all[iday] - timeStimOnset_all[iday]
+        plt.hist(a[~np.isnan(a)], color='k')
+    
+        a = time1stSideTry_all[iday] - timeStimOnset_all[iday]
+        plt.hist(a[~np.isnan(a)], color='m')
+        
+        plt.xlabel('Time relative to stim onset (ms)')
+        plt.ylabel('# trials')   
+        """
+    
+        
+    ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

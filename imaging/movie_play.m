@@ -11,7 +11,7 @@ if ~exist('frames', 'var') || isempty(frames)
 end
 
 if ~exist('pauseDur', 'var')
-    pauseDur = 1E-3;
+    pauseDur = 1E-1;
 end
 if length(frames)==1
     pauseDur = nan;

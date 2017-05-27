@@ -43,6 +43,10 @@ if ~isfield(all_data, 'propOnlyVisual')
     [all_data.propOnlyVisual] = deal(NaN);
 end
 
+if ~isfield(all_data, 'didNotLickagain')
+    [all_data.didNotLickagain] = deal(NaN);
+end
+
 
 if ~isfield(all_data, 'outcome')
     wrongStart = [all_data.wrongInitiation];

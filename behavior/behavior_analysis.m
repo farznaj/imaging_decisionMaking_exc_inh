@@ -5,8 +5,8 @@
 % clear all; home
 % clear n_days
 
-subject = 'hni04';
-days = {'15-Jan-2016'};
+subject = 'fn07';
+days = {'18-Feb-2015'};
 savefigs = 0;
 n_days = 1; %15; % specify number of days back (from days{1}) that you want to analyze. if you don't specify this, only days mentioned in days will be analyzed.
 
@@ -24,6 +24,7 @@ if ispc
     server_address = '\\sonas-hs.cshl.edu\churchland\data'; % office PC
 elseif isunix
     server_address = '/Volumes/Churchland/data'; % your mac
+    server_address = '~/Shares/Churchland/data';
 end
 
 if ~exist('hpmf', 'var') || ~ishandle(hpmf)
@@ -118,7 +119,7 @@ if isempty(alldata)
     return
 end
 
-cb = alldata(1).categoryBoundaryHz; % categ boundary in hz
+cb = 16; %alldata(1).categoryBoundaryHz; % categ boundary in hz
 
 
 %% Set event numbers and trial types: multi-sensory, only visual, only audio

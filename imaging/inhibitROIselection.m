@@ -353,6 +353,11 @@ end
 
 % Reset unsure ROIs that have high corr_A_inh to inhibit:
 inhibitRois(isnan(inhibitRois) & corr_A_inh > .55) = 1; %.5
+% below is more strict, only those unsure ROIs that have a high signal and
+% high corr are set to inhibitory!
+error 'test this thing below'
+inhibitRois(roi2surr_sig >= quantile(roi2surr_sig, .85) & corr_A_inh > .55) = 1; %.5
+
 
 % Reset inhibit ROIs that have low corr_A_inh to unsure:
 inhibitRois(inhibitRois==1 & corr_A_inh < .15) = nan; % <0 <.1

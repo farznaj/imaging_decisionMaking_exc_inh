@@ -12,8 +12,8 @@ Created on Thu Apr  6 16:46:51 2017
 
 excludeTrs = 1 # If 1, some trials will be excluded from the dists; You need to set the svmName file which contains trsExcluded
 
-#%% Change the following vars:
-
+#%% Set the following vars:
+'''
 mousename = 'fni17' #'fni17'
 
 trialHistAnalysis = 0;
@@ -24,7 +24,7 @@ savefigs = 1
 doPlots = 0 #1 # plot dist of each day 
 
 chAl = 0 # Related to setting svmName; If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
-
+'''
 
 #%% 
 import numpy as np
@@ -107,37 +107,42 @@ for iday in range(len(days)):
     
     # Set the time of stimOffset for a single repetition of the stim (without extra stim, etc)
     # timeStimOffset includes extra stim, etc... so we set timeStimeOffset0 (which is stimOffset after 1 repetition) here
-    import datetime
-    import glob
-    bFold = os.path.join(dataPath+mousename,'behavior')
-    # from imagingFolder get month name (as Oct for example).
-    y = 2000+int(imagingFolder[0:2])
-    mname = ((datetime.datetime(y,int(imagingFolder[2:4]), int(imagingFolder[4:]))).strftime("%B"))[0:3]
-    bFileName = mousename+'_'+imagingFolder[4:]+'-'+mname+'-'+str(y)+'_*.mat'
-    
-    bFileName = glob.glob(os.path.join(bFold,bFileName))   
-    # sort pnevFileNames by date (descending)
-    bFileName = sorted(bFileName, key=os.path.getmtime)
-    bFileName = bFileName[::-1]
-     
-    stimDur_diff_all = []
-    for ii in range(len(bFileName)):
-        bnow = bFileName[0]       
-        Data = scio.loadmat(bnow, variable_names=['all_data'],squeeze_me=True,struct_as_record=False)
-        stimDur_diff_all.append(np.array([Data['all_data'][i].stimDur_diff for i in range(len(Data['all_data']))])) # remember difference indexing in matlab and python!
-    sdur = np.unique(stimDur_diff_all) * 1000 # ms
-#    print sdur
-    if len(sdur)>1:
-        sys.exit('Aborting ... trials have different stimDur_diff values')
-    if sdur==0: # waitDur was used to generate stimulus
-        waitDuration_all = []
+    Data = scio.loadmat(postName, variable_names=['timeSingleStimOffset'])
+    if len(Data) > 3:
+        timeStimOffset0 = np.array(Data.pop('timeSingleStimOffset')).flatten().astype('float')
+    else:
+        import datetime
+        import glob
+        bFold = os.path.join(dataPath+mousename,'behavior')
+        # from imagingFolder get month name (as Oct for example).
+        y = 2000+int(imagingFolder[0:2])
+        mname = ((datetime.datetime(y,int(imagingFolder[2:4]), int(imagingFolder[4:]))).strftime("%B"))[0:3]
+        bFileName = mousename+'_'+imagingFolder[4:]+'-'+mname+'-'+str(y)+'_*.mat'
+        
+        bFileName = glob.glob(os.path.join(bFold,bFileName))   
+        # sort pnevFileNames by date (descending)
+        bFileName = sorted(bFileName, key=os.path.getmtime)
+        bFileName = bFileName[::-1]
+         
+        stimDur_diff_all = []
         for ii in range(len(bFileName)):
-            sys.exit('Aborting ... needs work... u added timeSingleStimOffset to setEventTimesRelBcontrolScopeTTL.m... if not saved for a day, below needs work for days with multiple sessions!')
-    #        bnow = bFileName[0]       
-    #        Data = scio.loadmat(bnow, variable_names=['all_data'],squeeze_me=True,struct_as_record=False)
-    #        waitDuration_all.append(np.array([Data['all_data'][i].waitDuration for i in range(len(Data['all_data']))])) # remember difference indexing in matlab and python!
-    #    sdur = timeStimOnset + waitDuration_all
-    timeStimOffset0 = timeStimOnset + sdur
+            bnow = bFileName[0]       
+            Data = scio.loadmat(bnow, variable_names=['all_data'],squeeze_me=True,struct_as_record=False)
+            stimDur_diff_all.append(np.array([Data['all_data'][i].stimDur_diff for i in range(len(Data['all_data']))])) # remember difference indexing in matlab and python!
+        sdur = np.unique(stimDur_diff_all) * 1000 # ms
+        print sdur
+        if len(sdur)>1:
+            sys.exit('Aborting ... trials have different stimDur_diff values')
+        if sdur==0: # waitDur was used to generate stimulus
+            waitDuration_all = []
+            for ii in range(len(bFileName)):
+                sys.exit('Aborting ... needs work... u added timeSingleStimOffset to setEventTimesRelBcontrolScopeTTL.m... if not saved for a day, below needs work for days with multiple sessions!')
+        #        bnow = bFileName[0]       
+        #        Data = scio.loadmat(bnow, variable_names=['all_data'],squeeze_me=True,struct_as_record=False)
+        #        waitDuration_all.append(np.array([Data['all_data'][i].waitDuration for i in range(len(Data['all_data']))])) # remember difference indexing in matlab and python!
+        #    sdur = timeStimOnset + waitDuration_all
+        timeStimOffset0 = timeStimOnset + sdur    
+
     
 
     ######### load trsExcluded if you want to check the dist of only those trials that went into SVM     

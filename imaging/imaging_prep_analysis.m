@@ -1,7 +1,7 @@
 function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, good_inhibit, outcomes, allResp, allResp_HR_LR, ...
         trs2rmv, stimdur, stimrate, stimtype, cb, timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, ...
         timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename, pnevFileName] = ....
-   imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength, save_aligned_traces);
+   imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength, save_aligned_traces, savefigs);
 % Right after you are done with preproc on the cluster, run the following scripts:
 % - plotEftyVarsMean (if needed follow by setPmtOffFrames to set pmtOffFrames and by findTrsWithMissingFrames to set frame-dropped trials. In this latter case you will need to rerun CNMF!): for a quick evaluation of the traces and spotting any potential frame drops, etc
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
@@ -39,7 +39,8 @@ normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by i
 evaluateEftyOuts = 0; 
 compareManual = 0; % compare results with manual ROI extraction
 plot_ave_noTrGroup = 0; % Set to 1 when analyzing a session for the 1st time. Plots average imaging traces across all neurons and all trials aligned on particular trial events. Also plots average lick traces aligned on trial events.
-save_aligned_traces = 1;
+save_aligned_traces = 0;
+savefigs = 0;
 
 setInhibitExcit = 0; % if 1, inhibitory and excitatory neurons will be set unless inhibitRois is already saved in imfilename (in which case it will be loaded).
 plotEftyAC1by1 = 0; % A and C for each component will be plotted 1 by 1 for evaluation of of Efty's results. 
@@ -359,26 +360,28 @@ mkdir(fullfile(pd, 'figs')) % save the following 3 figures in a folder named "fi
 
 if evaluateEftyOuts
     
-    load(imfilename, 'imHeight', 'imWidth', 'medImage')
+    load(imfilename, 'imHeight', 'imWidth', 'medImage')    
     
     % Plot average of spatial components.
     figure; imagesc(reshape(mean(A,2), imHeight, imWidth))  %     figure; imagesc(reshape(mean(P.psdx,2), imHeight, imWidth))
 
     % Plot COMs
     im = normImage(medImage{2});
+    load(moreName, 'CC')
+    COMs = fastCOMsA(A, [imHeight, imWidth]);
+    
+    figure;
+    imagesc(im); hold on; % imagesc(log(im));   %     colormap gray     
+    for rr = 1:length(CC) % find(~badROIs01)'                 
+        plot(COMs(rr,2), COMs(rr,1), 'r.')
+    end   
 %     im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt        
     %{
     contour_threshold = .95;
     plotCOMs = 1;
     [CC, ~, COMs] = setCC_cleanCC_plotCC_setMask(A, imHeight, imWidth, contour_threshold, im, plotCOMs);
     %}
-    figure;
-    imagesc(im); hold on; % imagesc(log(im));   %     colormap gray     
-    for rr = 1:length(CC) % find(~badROIs01)'         
-        COMs = fastCOMsA(A, [imHeight, imWidth]);
-        plot(COMs(rr,2), COMs(rr,1), 'r.')
-    end
-    
+
 
     %% plot C, f, manual activity
     
@@ -386,7 +389,9 @@ if evaluateEftyOuts
     
     plotEftyVarsMean(mouse, imagingFolder, mdfFileNumber, {C, S, f, activity_man_eftMask_ch2, cs_frtrs})
     
-    savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons'))  
+    if savefigs
+        savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons'))  
+    end
     
     
     %% shift and scale C, man, etc to compare them...        
@@ -429,7 +434,9 @@ if evaluateEftyOuts
     
     linkaxes([a1, a2, a3], 'x')    
     
-    savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons_sup'))  
+    if savefigs
+        savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons_sup'))  
+    end
     
     
     %% Assess tau and noise for each neuron
@@ -455,8 +462,7 @@ end
 
 if plotEftyAC1by1
     
-    load(moreName, 'CC')
-    
+%     load(moreName, 'CC')    
     load(imfilename, 'imHeight', 'imWidth', 'medImage', 'cs_frtrs')
     im = medImage{2};
     im = im - min(im(:)); softImMax = quantile(im(:), 0.995); im = im / softImMax; im(im > 1) = 1; % matt
@@ -480,8 +486,16 @@ end
 spikes = S';
 activity = C'; %temporalComp'; % frames x units % temporalComp = C; % C_mcmc; % C2; % obj.C;
 % activity = activity_man_eftMask_ch2;
-dFOF = C_df'; % temporalDf'; temporalDf = C_df; % C_mcmc_df; % C_df; % obj.C_df;
+% dFOF = C_df'; % temporalDf'; temporalDf = C_df; % C_mcmc_df; % C_df; % obj.C_df;
+minPts = 7000; %800;
+smoothPts = 6;
+dFOF = konnerthDeltaFOverF(activity_man_eftMask_ch2, pmtOffFrames{1}, smoothPts, minPts);
 
+%{
+spikes = C';
+activity = activity_man_eftMask_ch2;
+dFOF = []; % to use Konnath df/f
+%}
 clear C C_df S
 
 
@@ -613,12 +627,15 @@ subplot(222)
 plot(outcomes), xlabel('Trials'), ylabel('Outcome'), %  1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
 subplot(224)
 plot(allResp_HR_LR), ylim([-.5 1.5]), xlabel('Trials'), ylabel('Response (HR:1 , LR: 0)')
-savefig(fullfile(pd, 'figs','behav_motCorr_sum')) 
+if savefigs
+    savefig(fullfile(pd, 'figs','behav_motCorr_sum')) 
+end
 
-
-
-alldata_frameTimes = {alldata.frameTimes};
-save(postName, '-append', 'alldata_frameTimes')
+a = matfile(postName);
+if ~isprop(a, 'alldata_frameTimes')
+    alldata_frameTimes = {alldata.frameTimes};
+    save(postName, '-append', 'alldata_frameTimes')
+end
 
 
 %% Set event times (ms) relative to when bcontrol starts sending the scope TTL. event times will be set to NaN for trs2rmv.
@@ -634,7 +651,7 @@ scopeTTLOrigTime = 1;
 stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, setNaN_goToneEarlierThanStimOffset};
 % stimAftGoToneParams = []; % {0,0,0};
 [timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, ...
-    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks] = ...
+    time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, timeStimOnsetAll, timeSingleStimOffset] = ...
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams, outcomes);
 
 % below are problematic trials in which go tone happened earlier than
@@ -762,9 +779,10 @@ fprintf('N good-quality and all neurons: %d, %d. Ratio: %.2f\n', [sum(goodinds),
 
 %% In alldata, set good quality traces.
 
-alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.activity}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
-% alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.dFOF}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
 alldataSpikesGood = cellfun(@(x)x(:, goodinds), {alldata.spikes}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
+alldataActivityGood = cellfun(@(x)x(:, goodinds), {alldata.activity}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
+alldataDfofGood = cellfun(@(x)x(:, goodinds), {alldata.dFOF}, 'uniformoutput', 0); % cell array, 1 x number of trials. Each cell is frames x units.
+
 
 % The following is all good, but commented to save memory. uncomment if you need the vars.
 %{
@@ -904,15 +922,18 @@ if plot_ave_noTrGroup
         'timeReward', 'timeCommitIncorrResp', 'timeStop'};
     
     avetrialAlign_plotAve_noTrGroup(evT, outcome2ana, stimrate2ana, strength2ana, respSide2ana, trs2rmv, allResp_HR_LR, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, timeInitTone, timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, timeStop)
-    savefig(fullfile(pd, 'figs','caTraces_trEventAl'))    
-    
+    if savefigs
+        savefig(fullfile(pd, 'figs','caTraces_trEventAl'))    
+    end
     
     %%%%%% plot average lick traces aligned on trial events.
     cprintf('blue', 'Plot average lick traces aligned on trial events.\n')
     lickInds = [1, 2,3]; % Licks to analyze % 1: center lick, 2: left lick; 3: right lick
     
     lickAlign(lickInds, evT, outcome2ana, stimrate2ana, strength2ana, trs2rmv, outcomes, stimrate, cb, alldata, frameLength)    
-    savefig(fullfile(pd, 'figs','lickTraces_trEventAl'))
+    if savefigs
+        savefig(fullfile(pd, 'figs','lickTraces_trEventAl'))
+    end
     
     
     
@@ -925,7 +946,9 @@ if plot_ave_noTrGroup
     excludeLicksPrePost = 'none'; % 'none'; 'pre'; 'post'; 'both';
     
     avetrialAlign_plotAve_noTrGroup_licks(evT, outcome2ana, stimrate2ana, strength2ana, outcomes, stimrate, cb, alldata, alldataDfofGood, alldataSpikesGood, frameLength, nPreFrames, nPostFrames, centerLicks, leftLicks, rightLicks, excludeLicksPrePost)
-    savefig(fullfile(pd, 'figs','caTraces_lickAl'))    
+    if savefigs
+        savefig(fullfile(pd, 'figs','caTraces_lickAl'))    
+    end
     
 end
 
@@ -942,12 +965,43 @@ end
 
 %% Set and save aligned traces (will be used for SVM, etc)
 
-set_aligned_traces
+% what traces you want to align and plot: (normally you save alldataSpikesGood)
 
+tracesAll = {alldataSpikesGood, alldataActivityGood, alldataDfofGood}; % alldataSpikesGoodExc; % alldataSpikesGoodInh; % alldataSpikesGood;  % traces to be aligned.
+traceTypeAll = {'_S_', '_C_', '_dfof_'};
 
-%% Plot average ca traces (across all neurons) for HR and LR trials, aligned on different trial events. (at the begining of the script you set some vars... check them if you want to customize them!).
+% traces = alldataSpikesGood; % alldataSpikesGoodExc; % alldataSpikesGoodInh; % alldataSpikesGood;  % traces to be aligned.
+% traces = alldataDfofGood;
+% traces = alldataActivityGood;
 
-plotAlTracesHrLr
+varsAlreadySet = 1;
+loadPostNameVars = 0; % if 1, aligned traces will be loaded from postName, but we just set them in set_aligned_traces
+    
+for itrac = 1:3
+       
+    traceType = traceTypeAll{itrac};
+    traces = tracesAll{itrac};
+
+    fprintf('Making plots for the %s traces...\n', traceType(2:end-1))
+    
+    set_aligned_traces
+    
+    if itrac~=1
+        close(fannoy) 
+    end
+    load(postName, 'outcomes') % outcomes based on animal's 1st choice.
+    
+    if save_aligned_traces & itrac==1 % only save it for S
+        save(postName, '-append', 'trialHistory', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs', 'stimAl_noEarlyDec')
+    end
+
+    
+    %% Plot average ca traces (across all neurons) for HR and LR trials, aligned on different trial events. (at the begining of the script you set some vars... check them if you want to customize them!).
+
+    plotAlTracesHrLr
+    
+    
+end
 
 
 %%

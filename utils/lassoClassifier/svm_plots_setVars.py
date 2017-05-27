@@ -15,6 +15,8 @@ if mousename=='fni17':
     ep_ms = [809, 1109]
 elif mousename=='fni16':
     ep_ms = [] #[809, 1109] # set to [] if each day had a different ep # will be used only for trialHistAnalysis=0
+elif mousename=='fni18':
+    ep_ms = [] #[809, 1109] # set to [] if each day had a different ep # will be used only for trialHistAnalysis=0
         
 # Define days that you want to analyze
 if mousename=='fni17':  
@@ -24,10 +26,15 @@ if mousename=='fni17':
 elif mousename=='fni16':
     days = ['150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2'];
 #    days = ['150930_1-2', '151001_1', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2'];
-    
+
     if trialHistAnalysis == 1 and iTiFlg == 1:
         days.remove('151001_1') # this day has only 8 long ITI trials, 1 of which is hr ... so not enough trials for the HR class to train the classifier!
-        
+
+elif mousename=='fni18':
+#    days = ['151209_1', '151210_1', '151211_1', '151214_1-2', '151215_1-2', '151216_1', '151217_1-2']
+#    days = ['151209_1', '151210_1', '151211_1', '151214_1-2'] # following days removed bc of z motion: '151215_1-2', '151216_1', '151217_1-2'
+    days = ['151209_1', '151210_1', '151211_1'] # even '151214_1-2' is suspicious about z motion, so remove it!
+
     
 savefigs = False
 
