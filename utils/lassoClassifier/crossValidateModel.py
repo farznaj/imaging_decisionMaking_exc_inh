@@ -40,6 +40,7 @@ def crossValidateModel(X, Y, modelFn, **options):
             Ys = Y[shfl];
             Xs = X[shfl, :]; 
         else:
+            shfl = np.arange(0, numObservations)
             Ys = Y
             Xs = X
             

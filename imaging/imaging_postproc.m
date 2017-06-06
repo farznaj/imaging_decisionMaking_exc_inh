@@ -66,9 +66,13 @@ set_mask_CC(mouse, imagingFolder, mdfFileNumber)
 %% findBadROIs
 
 savebadROIs01 = 1; % if 1, badROIs01 will be appended to more_pnevFile
-evalBadRes = 1; % plot figures to evaluate the results
+evalBadRes = 0; % plot figures to evaluate the results
 
-fixed_th_srt_val = 0; % it was 1 for ni16,fni17; changed to 0 for fn18. % if fixed 4150 will be used as the threshold on srt_val, if not, we will find the srt_val threshold by employing Andrea's measure
+if ismember(mouse, {'fni16', 'fni17'})
+    fixed_th_srt_val = 1; % it was 1 for ni16,fni17; changed to 0 for fn18. % if fixed 4150 will be used as the threshold on srt_val, if not, we will find the srt_val threshold by employing Andrea's measure
+elseif strcmp(mouse,'fni18')
+    fixed_th_srt_val = 0;
+end
 exclude_badHighlightCorr = 1;
 
 th_AG = -20; % you can change it to -30 to exclude more of the poor quality ROIs.
@@ -98,14 +102,14 @@ do2dGauss = 0; % Do 2D gaussian fitting on ch1 images of gcamp ROIs for ROIs ide
 inhibit_excit_prep(mouse, imagingFolder, mdfFileNumber, saveInhibitRois, assessClass_unsure_inh_excit, keyEval, manThSet, identifInh, do2dGauss)
 
 
-%% Merge gcamp and tdtomato channel, also mark identified inhibitory neurons
-
+%%%%%% Merge gcamp and tdtomato channel, also mark identified inhibitory neurons
 savefigs = 1; 
-plotA = 0;  
-removeBadA = 0; 
-% qhg = .98;
-inhibit_gcamp_merge(mouse, imagingFolder, mdfFileNumber, savefigs, plotA, removeBadA) %, qhg
-
+removeBadA = 0; % only used when plotA is 1; if removeBadA = 1, green channel will only show good quality ROIs, otherwise it will show all ROIs.
+for plotA = [0,1]; % if 1, green channel will be ROIs identified in A; if 0, it will be the average image of green channel.
+    % qhg = .98;
+    [rgImg, gcampImg, tdTomatoImg] = inhibit_gcamp_merge(mouse, imagingFolder, mdfFileNumber, savefigs, plotA, removeBadA); %, qhg
+end
+ 
 
 %% imaging_prep_analysis
 % close all

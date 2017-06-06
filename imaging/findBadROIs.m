@@ -51,7 +51,7 @@ pnev2load = [];
 disp(pnev_n)
 cd(fileparts(imfilename))
 
-fname = fullfile(pd, sprintf('more_%s.mat', pnev_n));
+moreName = fullfile(pd, sprintf('more_%s.mat', pnev_n));
 
 
 %% Load vars
@@ -59,7 +59,7 @@ fname = fullfile(pd, sprintf('more_%s.mat', pnev_n));
 load(pnevFileName, 'activity_man_eftMask_ch2', 'C', 'P', 'srt_val', 'A', 'highlightCorrROI', 'roiPatch', 'highlightPatchAvg')
 load(pnevFileName, 'rval_space') % Efty's version of our highlightCorr measure.
 load(imfilename, 'imHeight', 'imWidth', 'sdImage')
-load(fname, 'fitness', 'mask', 'CC') % 'idx_components',
+load(moreName, 'fitness', 'mask', 'CC') % 'idx_components',
 
 fitnessNow = fitness';
 % below commented bc u modified Andrea's python code so fitness and erfc
@@ -179,15 +179,18 @@ subplot(616), plot(mask_numpix), title('mask # pixels')
 
 badAG = fitnessNow >= th_AG;
 
-if ~fixed_th_srt_val
+if fixed_th_srt_val
+    disp('Using a fixed thereshold for EP sort values!')
+else
+    disp('Defining thereshold based on AG measure!')
     numbad = sum(fitnessNow >= th_AG);
     ss = sort(srt_val);
     if ~numbad
         th_srt_val = 0;
     %     disp('There are no')
     else
-        th_srt_val = ss(numbad); % you are trying to find a good threshold for srt_val (below which ROIs are bad).
-        fprintf('\tThreshold of Efty based on Andrea measure = %.2f. Fixed th=%.1f\n', ss(numbad), th_srt_val)
+        fprintf('\tThreshold based on AG measure = %.2f. Fixed th=%.2f\n', ss(numbad), th_srt_val)
+        th_srt_val = ss(numbad); % you are trying to find a good threshold for srt_val (below which ROIs are bad).        
     end
 end
 % fprintf('Threshold for Efty srt_val= %.2f\n', full(th_srt_val))
@@ -234,7 +237,12 @@ val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB = [srt_val,fitnessNow,mask_numpix,
 th_EP_AG_size_tau_tempCorr_hiLight_hiLightDB = [th_srt_val, -th_AG, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr, th_badHighlightCorr];
 
 if savebadROIs01
-    save(fname, '-append', 'bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB', 'badROIs01','th_EP_AG_size_tau_tempCorr_hiLight_hiLightDB','val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB')
+    a = matfile(moreName); 
+    if isprop(a, 'badROIs01') && ~isprop(a, 'th_EP_AG_size_tau_tempCorr_hiLight_hiLightDB')
+        save(moreName, '-append', 'th_EP_AG_size_tau_tempCorr_hiLight_hiLightDB','val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB')
+    else
+        save(moreName, '-append', 'bad_EP_AG_size_tau_tempCorr_hiLight_hiLightDB', 'badROIs01','th_EP_AG_size_tau_tempCorr_hiLight_hiLightDB','val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB')
+    end
 end
 
 

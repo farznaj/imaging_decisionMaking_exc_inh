@@ -1,4 +1,4 @@
-function inhibit_gcamp_merge(mouse, imagingFolder, mdfFileNumber, savefigs, plotA, removeBadA, qhg)
+function [rgImg, gcampImg, tdTomatoImg] = inhibit_gcamp_merge(mouse, imagingFolder, mdfFileNumber, savefigs, plotA, removeBadA, qhg)
 
 % Merge red (after bleedthrough correction) and green channels, and
 % superimpose contours of identified inhibitory neurons.
@@ -38,7 +38,8 @@ pnev2load = [];
 %     mdfFileNumber = str2double(simpleTokenize(dn{2}, '-'));
     
     
-    %%
+    %% Set mat file names
+    
     [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
     [pd, pnev_n] = fileparts(pnevFileName);
     %     disp(pnev_n)
@@ -47,7 +48,8 @@ pnev2load = [];
     moreName = fullfile(pd, sprintf('more_%s.mat', pnev_n));
     
     
-    %%
+    %% Load mat files
+    
     a = matfile(moreName);
     if isprop(a, 'inhibitRois_pix')
         load(moreName, 'inhibitRois_pix', 'inhibitImageCorrcted_pix')
@@ -57,6 +59,7 @@ pnev2load = [];
         load(moreName, 'inhibitRois', 'inhibitImageCorrcted')
     end
     load(moreName, 'badROIs01', 'CC')
+    CCb = CC(badROIs01);
     CC = CC(~badROIs01);
     
     if plotA
@@ -67,12 +70,12 @@ pnev2load = [];
         end
     else
         load(imfilename, 'sdImage')
-        load(imfilename, 'aveImage')
-        load(imfilename, 'maxImage')
+%         load(imfilename, 'aveImage')
+%         load(imfilename, 'maxImage')
     end
     
     
-    %%
+    %% Set images for red and green channels, also the merged image
     
     %%%%% Red channel
     tdTomatoImg = inhibitImageCorrcted;
@@ -98,25 +101,44 @@ pnev2load = [];
     rgImg = cat(3, tdTomatoImg, gcampImg, zeros(size(gcampImg)));
     
     
-    %%
-    % colors = hot(3*length(CC));
-    % colors = colors(end:-1:1,:);
+    %% Plot
     
-    figure;
-    imagesc(rgImg)
-    %     imagesc(gcampImg)
-    % imagesc(tdTomatoImg)
-    hold on
-    axis image
+    % colors = hot(3*length(CC)); % colors = colors(end:-1:1,:);    
+    figure('units','normalized','outerposition',[0 0 1 1])
+    ha = tight_subplot(1,7,[.03,.01],[.03,.03]);
+    
+    axes(ha(1)), imagesc(cat(3, zeros(size(gcampImg)), gcampImg, zeros(size(gcampImg)))); axis image; axis off; title('gcamp (sdImage)')
+    axes(ha(2)), imagesc(cat(3, tdTomatoImg, zeros(size(tdTomatoImg)), zeros(size(tdTomatoImg)))); axis image; axis off; title('tdTomato (bleedthrough corrected)')
+    axes(ha(3)), imagesc(cat(3, tdTomatoImg, gcampImg, zeros(size(gcampImg)))); axis image; axis off; title('merged')
+    
+    axes(ha(4)), imagesc(rgImg); hold on; axis image; axis off
     for rr = find(inhibitRois==1)
         plot(CC{rr}(2,:), CC{rr}(1,:), 'color', 'b') %colors(rr, :))
-    end
+    end 
+    title(sprintf('%d inhibitory neurons', sum(inhibitRois==1)))
     
-    %     title(sprintf('%s - %d', imagingFolder, mdfFileNumber))
-    title(imagingFolder)
+    axes(ha(5)), imagesc(rgImg); hold on; axis image; axis off
+    for rr = find(inhibitRois==0)
+        plot(CC{rr}(2,:), CC{rr}(1,:), 'color', 'b') %colors(rr, :))
+    end        
+    title(sprintf('%d excitatory neurons', sum(inhibitRois==0)))
+    
+    axes(ha(6)), imagesc(rgImg); hold on; axis image; axis off
+    for rr = find(isnan(inhibitRois))
+        plot(CC{rr}(2,:), CC{rr}(1,:), 'color', 'b') %colors(rr, :))
+    end         
+    title(sprintf('%d unsure neurons', sum(isnan(inhibitRois))))
+    
+    axes(ha(7)), imagesc(rgImg); hold on; axis image; axis off
+    for rr = 1:length(CCb)
+        plot(CCb{rr}(2,:), CCb{rr}(1,:), 'color', 'b') %colors(rr, :))
+    end         
+    title(sprintf('%d bad ROIs', length(CCb)))
+    
+    set(gcf, 'name', imagingFolder) %     title(sprintf('%s - %d', imagingFolder, mdfFileNumber))
         
     
-    %%
+    %% Save
     if savefigs
         if plotA            
             if removeBadA
@@ -126,11 +148,12 @@ pnev2load = [];
             end
         else
             savefig(fullfile(pd, 'figs','red_green'))  
+            saveas(gca, fullfile(pd, 'figs','red_green'), 'tif')
         end
     end    
     
     %%
-    clearvars -except signalCh pnev2load days mouse savefigs plotA removeBadA
+%     clearvars -except signalCh pnev2load days mouse savefigs plotA removeBadA
         
 % end
 

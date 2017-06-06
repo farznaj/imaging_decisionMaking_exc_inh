@@ -80,9 +80,9 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni18'
-    imagingFolder = '151210'
-    mdfFileNumber = [1] 
+    mousename = 'fni17'
+    imagingFolder = '151102'
+    mdfFileNumber = [1,2] 
 
     trialHistAnalysis = 0;    
 #    roundi = 1; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)

@@ -16,8 +16,8 @@ Created on Fri Dec  9 15:25:41 2016
 #         if previous-choice, specify ITI flag
 #     - Trials that will be used for projections and class accuracy traces (corr, incorr, all, trained).
 
-# In[1]:
 
+# In[1]:
 
 #def svm_excInh_setVars():
 # Add the option to toggle on/off the raw code. Copied from http://stackoverflow.com/questions/27934885/how-to-hide-code-from-cells-in-ipython-notebook-visualized-with-nbviewer

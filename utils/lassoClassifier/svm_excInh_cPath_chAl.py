@@ -8,6 +8,10 @@ Population used for decoding is:
     allExc = 1 # use allexc and inh neurons for decoding (but not unsure neurons)                       
     eqExcInh = 1 # use equal number of exc and inh neurons for decoding... numSamps of these populations will be made.
     
+Remember the percentClassError that you get here is not for inh only or exc only, it is for all neurons or for a population made of equal number of inh and exc neurons).
+What this code mainly does is to compute the fraction of non-0 weights for each value of c, also because we have percentClassError for data and shuffled, 
+we can compute bestC too.
+    
     
 Created on Sun Feb 19 21:37:52 2017
 @author: farznaj
