@@ -183,7 +183,8 @@ function hout = getCDataHandles(h)
 %   such a group's CData automatically changes the CData of its children, 
 %   (as well as the children's handles), so there's no need to act on them.
 
-error(nargchk(1,1,nargin,'struct'))
+% error(nargchk(1,1,nargin,'struct')) %FN
+narginchk(1,1) %FN
 
 hout = [];
 if isempty(h),return;end
@@ -207,7 +208,8 @@ end
 function hAx = getParentAxes(h)
 % getParentAxes  Return enclosing axes of a given object (could be self)
 
-error(nargchk(1,1,nargin,'struct'))
+% error(nargchk(1,1,nargin,'struct')) %FN
+narginchk(1,1) %FN
 %object itself may be an axis
 if strcmp(get(h,'type'),'axes'),
     hAx = h;
@@ -230,7 +232,8 @@ function [h, nancolor] = checkArgs(args)
 % checkArgs  Validate input arguments to freezeColors
 
 nargs = length(args);
-error(nargchk(0,3,nargs,'struct'))
+% error(nargchk(0,3,nargs,'struct')) %FN
+narginchk(0,3) %FN
 
 %grab handle from first argument if we have an odd number of arguments
 if mod(nargs,2),

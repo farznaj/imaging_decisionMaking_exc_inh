@@ -113,12 +113,12 @@ for iday in range(len(days)):
         w_shfl = Data.pop('w_shfl')
 #        ash = np.mean(w_shfl!=0,axis=1) # fraction non-0 weights
 #        ash = ash>0 # index of samples that have at least 1 non0 weight for shuffled  
-        ash = np.sum(w_shfl > eps,axis=1)<thNon0Ws # samples w fewer than 2 non-0 weights
+        ash = np.sum(abs(w_shfl)>eps,axis=1)<thNon0Ws # samples w fewer than 2 non-0 weights
         ash = ~ash # samples w >=2 non0 weights
         w_data = Data.pop('w_data')
 #        ada = np.mean(w_data!=0,axis=1) # fraction non-0 weights                
 #        ada = ada>0 # index of samples that have at least 1 non0 weight for data
-        ada = np.sum(w_data > eps,axis=1)<thNon0Ws # samples w fewer than 2 non-0 weights        
+        ada = np.sum(abs(w_data)>eps,axis=1)<thNon0Ws # samples w fewer than 2 non-0 weights        
         ada = ~ada # samples w >=2 non0 weights
         numNon0SampShfl[iday] = ash.sum() # number of cv samples with >=2 non-0 weights
         numNon0SampData[iday] = ada.sum()

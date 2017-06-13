@@ -9,16 +9,17 @@ The later mat file is with equal number of hr and lr trials (subselecting trials
  
 Created on Sun Mar 12 15:12:29 2017
 @author: farznaj
-"""
-
+"""     
 
 #%% Change the following vars:
 
-mousename = 'fni18' #'fni17'
+mousename = 'fni17' #'fni17'
 if mousename == 'fni18': #set one of the following to 1:
     allDays = 0# all 7 days will be used (last 3 days have z motion!)
     noZmotionDays = 1 # 4 days that dont have z motion will be used.
     noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
+
+loadInhAllexcEqexc = 0 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)       
 
 
 trialHistAnalysis = 0;
@@ -26,9 +27,10 @@ iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all
 execfile("svm_plots_setVars.py")  
 
 chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
-doPlots = 0 #1 # plot c path of each day 
-savefigs = 1
+savefigs = 0
+superimpose = 1 # the averaged aligned traces of testing and shuffled will be plotted on the same figure
 
+#doPlots = 0 #1 # plot c path of each day 
 #eps = 10**-10 # tiny number below which weight is considered 0
 #thNon0Ws = 2 # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!
 #thSamps = 10  # Days that have <thSamps samples that satisfy >=thNon0W non0 weights will be manually set to 50 (class error of all their samples) ... bc we think <5 samples will not give us an accurate measure of class error of a day.
@@ -40,8 +42,11 @@ import numpy as np
 frameLength = 1000/30.9; # sec.
 regressBins = int(np.round(100/frameLength)) # must be same regressBins used in svm_eachFrame. 100ms # set to nan if you don't want to downsample.
 
-#dnow = '/classAccurTraces_eachFrame/'+mousename+'/'
-dnow = '/excInh_trainDecoder_eachFrame/'+mousename+'/'
+if loadInhAllexcEqexc==1:
+    dnow = '/excInh_trainDecoder_eachFrame/'+mousename+'/'
+else:
+    dnow = '/excInh_trainDecoder_eachFrame/'+mousename+'/inhRois/'
+
 
 smallestC = 0 # Identify best c: if 1: smallest c whose CV error falls below 1 se of min CV error will be used as optimal C; if 0: c that gives min CV error will be used as optimal c.
 if smallestC==1:
@@ -53,7 +58,7 @@ else:
 
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
 
-def setSVMname(pnevFileName, trialHistAnalysis, chAl, regressBins=3, useEqualTrNums=1):
+def setSVMname(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc=[], regressBins=3, useEqualTrNums=1):
     import glob
 
     if chAl==1:
@@ -61,16 +66,38 @@ def setSVMname(pnevFileName, trialHistAnalysis, chAl, regressBins=3, useEqualTrN
     else:
         al = 'stAl'
         
-    if trialHistAnalysis:
-        if useEqualTrNums:
-            svmn = 'excInh_SVMtrained_eachFrame_prevChoice_%s_ds%d_eqTrs_*' %(al,regressBins)
+    if len(doInhAllexcEqexc)==0: # 1st run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc at the same time, also for all days (except a few days of fni18), inhRois was used (not the new inhRois_pix)       
+        if trialHistAnalysis:
+            if useEqualTrNums:
+                svmn = 'excInh_SVMtrained_eachFrame_prevChoice_%s_ds%d_eqTrs_*' %(al,regressBins)
+            else:
+                svmn = 'excInh_SVMtrained_eachFrame_prevChoice_%s_ds%d_*' %(al,regressBins)
         else:
-            svmn = 'excInh_SVMtrained_eachFrame_prevChoice_%s_ds%d_*' %(al,regressBins)
-    else:
-        if useEqualTrNums:
-            svmn = 'excInh_SVMtrained_eachFrame_currChoice_%s_ds%d_eqTrs_*' %(al,regressBins)
+            if useEqualTrNums:
+                svmn = 'excInh_SVMtrained_eachFrame_currChoice_%s_ds%d_eqTrs_*' %(al,regressBins)
+            else:
+                svmn = 'excInh_SVMtrained_eachFrame_currChoice_%s_ds%d_*' %(al,regressBins)
+        
+    else: # 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)       
+        if doInhAllexcEqexc[0] == 1:
+            ntype = 'inh'
+        elif doInhAllexcEqexc[1] == 1:
+            ntype = 'allExc'
+        elif doInhAllexcEqexc[2] == 1:
+            ntype = 'eqExc'           
+            
+        if trialHistAnalysis:
+            if useEqualTrNums:
+                svmn = 'excInh_SVMtrained_eachFrame_%s_prevChoice_%s_ds%d_eqTrs_*' %(ntype, al,regressBins)
+            else:
+                svmn = 'excInh_SVMtrained_eachFrame_%s_prevChoice_%s_ds%d_*' %(ntype, al,regressBins)
         else:
-            svmn = 'excInh_SVMtrained_eachFrame_currChoice_%s_ds%d_*' %(al,regressBins)
+            if useEqualTrNums:
+                svmn = 'excInh_SVMtrained_eachFrame_%s_currChoice_%s_ds%d_eqTrs_*' %(ntype, al,regressBins)
+            else:
+                svmn = 'excInh_SVMtrained_eachFrame_%s_currChoice_%s_ds%d_*' %(ntype, al,regressBins)
+        
+        
         
     svmn = svmn + os.path.basename(pnevFileName) #pnevFileName[-32:]    
     svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
@@ -79,7 +106,41 @@ def setSVMname(pnevFileName, trialHistAnalysis, chAl, regressBins=3, useEqualTrN
     return svmName
     
 
-   
+
+#%%   
+def setTo50classErr(classError, w, thNon0Ws = .05, thSamps = 10, eps = 1e-10):
+#            classError: perClassErrorTest_data_inh
+#            wname = 'w_data_inh'
+#            thNon0Ws = 2 # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!
+#            thSamps = 10  # Days that have <thSamps samples that satisfy >=thNon0W non0 weights will be manually set to 50 (class error of all their samples) ... bc we think <5 samples will not give us an accurate measure of class error of a day.
+
+#    d = scio.loadmat(svmName, variable_names=[wname])
+#    w = d.pop(wname)            
+    a = abs(w) > eps
+    # average abs(w) across neurons:
+    if w.ndim==4: #exc : average across excShuffles
+        a = np.mean(a, axis=0)
+    aa = np.mean(a, axis=1) # samples x frames; shows average number of neurons with non0 weights for each sample and frame 
+#        plt.imshow(aa), plt.colorbar()
+    goodSamps = aa > thNon0Ws # samples with >.05 of neurons having non-0 weight 
+#        sum(goodSamps) # for each frame, it shows number of samples with >.05 of neurons having non-0 weight        
+    
+#    print ~goodSamps
+    if sum(sum(goodSamps)<thSamps)>0:
+        print sum(goodSamps)<thSamps
+    
+    if w.ndim==3: 
+        classError[~goodSamps] = 50 # set to 50 class error of samples which have <=.05 of non-0-weight neurons
+        classError[:,sum(goodSamps)<thSamps] = 50 # if fewer than 10 samples contributed to a frame, set the perClassError of all samples for that frame to 50...       
+    elif w.ndim==4: #exc : average across excShuffles
+        classError[:,~goodSamps] = 50 # set to 50 class error of samples which have <=.05 of non-0-weight neurons
+        classError[:,:,sum(goodSamps)<thSamps] = 50 # if fewer than 10 samples contributed to a frame, set the perClassError of all samples for that frame to 50...       
+    
+    modClassError = classError+0
+    
+    return modClassError
+    
+           
 #%% 
 '''
 #####################################################################################################################################################   
@@ -99,7 +160,9 @@ perClassErrorTest_chance_allExc_all = []
 perClassErrorTest_data_exc_all = []
 perClassErrorTest_shfl_exc_all = []
 perClassErrorTest_chance_exc_all = []
- 
+numInh = np.full((len(days)), np.nan)
+numAllexc = np.full((len(days)), np.nan)
+
    
 for iday in range(len(days)): 
 
@@ -123,15 +186,8 @@ for iday in range(len(days)):
     print(os.path.basename(imfilename))
 
 
-    #%%
-    svmName = setSVMname(pnevFileName, trialHistAnalysis, chAl, regressBins) # for chAl: the latest file is with soft norm; earlier file is 
-
-    svmName = svmName[0]
-    print os.path.basename(svmName)    
-
-
-    #%% Set eventI
-    
+    #%% Set eventI (downsampled)
+            
     if chAl==1:    #%% Use choice-aligned traces 
         # Load 1stSideTry-aligned traces, frames, frame of event of interest
         # use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
@@ -154,13 +210,11 @@ for iday in range(len(days)):
             time_aligned_stim = Data['stimAl_allTrs'].time.astype('float')
             # time_aligned_stimAll = Data['stimAl_allTrs'].time.astype('float') # same as time_aligned_stim        
         
-        time_trace = time_aligned_stim
-        
+        time_trace = time_aligned_stim        
     print(np.shape(time_trace))
       
     
-    ##%% Downsample traces: average across multiple times (downsampling, not a moving average. we only average every regressBins points.)
-    
+    ##%% Downsample traces: average across multiple times (downsampling, not a moving average. we only average every regressBins points.)    
     if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
         print 'Downsampling traces ....'    
             
@@ -174,8 +228,7 @@ for iday in range(len(days)):
         eventI_ds = np.argwhere(np.sign(time_trace)>0)[0] # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
     
     else:
-        print 'Not downsampling traces ....'
-        
+        print 'Not downsampling traces ....'        
 #        eventI_ch = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
 #        eventI_ds = eventI_ch
     
@@ -183,49 +236,73 @@ for iday in range(len(days)):
     
     
     #%% Load SVM vars
-        
-    Data = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_inh', 'perClassErrorTest_shfl_inh', 'perClassErrorTest_chance_inh',    
-                                                 'perClassErrorTest_data_allExc', 'perClassErrorTest_shfl_allExc', 'perClassErrorTest_chance_allExc',    
-                                                 'perClassErrorTest_data_exc', 'perClassErrorTest_shfl_exc', 'perClassErrorTest_chance_exc'])
     
-    #    regType = Data.pop('regType').astype('str')
-    #    cvect = Data.pop('cvect').squeeze()
-    #    trsExcluded_svr = Data.pop('trsExcluded_svr').astype('bool').squeeze()                
-    perClassErrorTest_data_inh = Data.pop('perClassErrorTest_data_inh')
-    perClassErrorTest_shfl_inh = Data.pop('perClassErrorTest_shfl_inh')
-    perClassErrorTest_chance_inh = Data.pop('perClassErrorTest_chance_inh')   
-    perClassErrorTest_data_allExc = Data.pop('perClassErrorTest_data_allExc')
-    perClassErrorTest_shfl_allExc = Data.pop('perClassErrorTest_shfl_allExc')
-    perClassErrorTest_chance_allExc = Data.pop('perClassErrorTest_chance_allExc')   
-    perClassErrorTest_data_exc = Data.pop('perClassErrorTest_data_exc')
-    perClassErrorTest_shfl_exc = Data.pop('perClassErrorTest_shfl_exc')
-    perClassErrorTest_chance_exc = Data.pop('perClassErrorTest_chance_exc')
-    
-#    Data = scio.loadmat(svmName, variable_names=['wAllC']) #,'bAllC'])
-#    wAllC = Data.pop('wAllC')
-#        bAllC = Data.pop('bAllC')    
-#     
-    #'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'trsTrainedTestedInds':trsTrainedTestedInds, 'trsRemCorrInds':trsRemCorrInds,
-#    Data = scio.loadmat(svmName, variable_names=['trsTrainedTestedInds','trsRemCorrInds'])
-#    trsTrainedTestedInds = Data.pop('trsTrainedTestedInds')
-#    trsRemCorrInds = Data.pop('trsRemCorrInds')                
-                 
-#    numSamples = perClassErrorTest.shape[0] 
-#    numFrs = perClassErrorTest.shape[2]     
+    if loadInhAllexcEqexc==0: # 1st run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc at the same time, also for all days (except a few days of fni18), inhRois was used (not the new inhRois_pix)       
+        svmName = setSVMname(pnevFileName, trialHistAnalysis, chAl, [], regressBins)
+        svmName = svmName[0]
+        print os.path.basename(svmName)    
 
-    """
-       'thAct':thAct, 'numShufflesExc':numShufflesExc, 'numSamples':numSamples, 'softNorm':softNorm, 'meanX_fr':meanX_fr, 'stdX_fr':stdX_fr,
-       'winLen':winLen, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded,
-       'regType':regType, 'cvect':cvect, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
-       'cbest_inh':cbest_inh, 'w_data_inh':w_data_inh, 'b_data_inh':b_data_inh,
-       'perClassErrorTrain_data_inh':perClassErrorTrain_data_inh,
-       'cbest_allExc':cbest_allExc, 'w_data_allExc':w_data_allExc, 'b_data_allExc':b_data_allExc,
-       'perClassErrorTrain_data_allExc':perClassErrorTrain_data_allExc,        
-       'cbest_exc':cbest_exc, 'w_data_exc':w_data_exc, 'b_data_exc':b_data_exc,
-       'perClassErrorTrain_data_exc':perClassErrorTrain_data_exc,
-    """
+        Data = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_inh', 'perClassErrorTest_shfl_inh', 'perClassErrorTest_chance_inh',    
+                                                 'perClassErrorTest_data_allExc', 'perClassErrorTest_shfl_allExc', 'perClassErrorTest_chance_allExc',    
+                                                 'perClassErrorTest_data_exc', 'perClassErrorTest_shfl_exc', 'perClassErrorTest_chance_exc',
+                                                 'w_data_inh', 'w_data_allExc', 'w_data_exc'])        
+        Datai = Dataae = Datae = Data                                                 
+
+    else:  # 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)       
+        
+        for idi in range(3):
+            doInhAllexcEqexc = np.full((3), False)
+            doInhAllexcEqexc[idi] = True 
+            svmName = setSVMname(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins)        
+            svmName = svmName[0]
+            print os.path.basename(svmName)    
+
+            if doInhAllexcEqexc[0] == 1:
+                Datai = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_inh', 'perClassErrorTest_shfl_inh', 'perClassErrorTest_chance_inh', 'w_data_inh'])
+            elif doInhAllexcEqexc[1] == 1:
+                Dataae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_allExc', 'perClassErrorTest_shfl_allExc', 'perClassErrorTest_chance_allExc', 'w_data_allExc'])
+            elif doInhAllexcEqexc[2] == 1:
+                Datae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_exc', 'perClassErrorTest_shfl_exc', 'perClassErrorTest_chance_exc', 'w_data_exc'])                                                 
+        
+        
+    ###%%             
+    perClassErrorTest_data_inh = Datai.pop('perClassErrorTest_data_inh')
+    perClassErrorTest_shfl_inh = Datai.pop('perClassErrorTest_shfl_inh')
+    perClassErrorTest_chance_inh = Datai.pop('perClassErrorTest_chance_inh') 
+    w_data_inh = Datai.pop('w_data_inh') 
+    
+    perClassErrorTest_data_allExc = Dataae.pop('perClassErrorTest_data_allExc')
+    perClassErrorTest_shfl_allExc = Dataae.pop('perClassErrorTest_shfl_allExc')
+    perClassErrorTest_chance_allExc = Dataae.pop('perClassErrorTest_chance_allExc')   
+    w_data_allExc = Dataae.pop('w_data_allExc') 
+    
+    perClassErrorTest_data_exc = Datae.pop('perClassErrorTest_data_exc')    
+    perClassErrorTest_shfl_exc = Datae.pop('perClassErrorTest_shfl_exc')
+    perClassErrorTest_chance_exc = Datae.pop('perClassErrorTest_chance_exc')
+    w_data_exc = Datae.pop('w_data_exc') 
+    
    
-   
+
+    #%% Set class errors to 50 if less than .05 fraction of neurons in a sample have non-0 weights, and set all samples class error to 50, if less than 10 samples satisfy this condition.
+ 
+    perClassErrorTest_data_inh = setTo50classErr(perClassErrorTest_data_inh, w_data_inh, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+    perClassErrorTest_shfl_inh = setTo50classErr(perClassErrorTest_shfl_inh, w_data_inh, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+    perClassErrorTest_chance_inh = setTo50classErr(perClassErrorTest_chance_inh, w_data_inh, thNon0Ws = .05, thSamps = 10, eps = 1e-10)    
+    
+    perClassErrorTest_data_allExc = setTo50classErr(perClassErrorTest_data_allExc, w_data_allExc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+    perClassErrorTest_shfl_allExc = setTo50classErr(perClassErrorTest_shfl_allExc, w_data_allExc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+    perClassErrorTest_chance_allExc = setTo50classErr(perClassErrorTest_chance_allExc, w_data_allExc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)    
+    
+    perClassErrorTest_data_exc = setTo50classErr(perClassErrorTest_data_exc, w_data_exc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+    perClassErrorTest_shfl_exc = setTo50classErr(perClassErrorTest_shfl_exc, w_data_exc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+    perClassErrorTest_chance_exc = setTo50classErr(perClassErrorTest_chance_exc, w_data_exc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)    
+    
+
+    #%% Get number of inh and exc
+
+    numInh[iday] = w_data_inh.shape[1]
+    numAllexc[iday] = w_data_allExc.shape[1]
+
 
     #%% Once done with all frames, save vars for all days
     
@@ -294,8 +371,6 @@ sd_test_shfl_allExc = np.array([np.nanstd(perClassErrorTest_shfl_allExc_all[iday
 
 av_test_chance_allExc = np.array([100-np.nanmean(perClassErrorTest_chance_allExc_all[iday], axis=0) for iday in range(len(days))]) # numDays
 sd_test_chance_allExc = np.array([np.nanstd(perClassErrorTest_chance_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(len(days))])  
-
-
 
 # below wont work if different days have different number of frames
 '''
@@ -369,13 +444,123 @@ else:
     
 
 
+#%%
+##################################################################################################
+############## Align class accur traces of all days to make a final average trace ##############
+################################################################################################## 
+  
+##%% Find the common eventI, number of frames before and after the common eventI for the alignment of traces of all days.
+# By common eventI, we  mean the index on which all traces will be aligned.
+        
+nPost = (np.ones((numDays,1))+np.nan).flatten().astype('int')
+for iday in range(numDays):
+    nPost[iday] = (len(av_test_data_inh_ch[iday]) - eventI_allDays[iday] - 1)
+
+nPreMin = min(eventI_allDays) # number of frames before the common eventI, also the index of common eventI. 
+nPostMin = min(nPost)
+print 'Number of frames before = %d, and after = %d the common eventI' %(nPreMin, nPostMin)
+
+
+###%% Set the time array for the across-day aligned traces
+
+a = -(np.asarray(frameLength*regressBins) * range(nPreMin+1)[::-1])
+b = (np.asarray(frameLength*regressBins) * range(1, nPostMin+1))
+time_aligned = np.concatenate((a,b))
+
+
+#%% Align traces of all days on the common eventI
+
+def alTrace(trace, eventI_allDays, nPreMin, nPostMin):    
+
+    trace_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)     
+    for iday in range(trace.shape[0]):
+        trace_aligned[:, iday] = trace[iday][eventI_allDays[iday] - nPreMin  :  eventI_allDays[iday] + nPostMin + 1]    
+    return trace_aligned
+    
+
+av_test_data_inh_aligned = alTrace(av_test_data_inh, eventI_allDays, nPreMin, nPostMin)
+av_test_shfl_inh_aligned = alTrace(av_test_shfl_inh, eventI_allDays, nPreMin, nPostMin)
+av_test_chance_inh_aligned = alTrace(av_test_chance_inh, eventI_allDays, nPreMin, nPostMin)
+
+av_test_data_exc_aligned = alTrace(av_test_data_exc, eventI_allDays, nPreMin, nPostMin)
+av_test_shfl_exc_aligned = alTrace(av_test_shfl_exc, eventI_allDays, nPreMin, nPostMin)
+av_test_chance_exc_aligned = alTrace(av_test_chance_exc, eventI_allDays, nPreMin, nPostMin)
+
+av_test_data_allExc_aligned = alTrace(av_test_data_allExc, eventI_allDays, nPreMin, nPostMin)
+av_test_shfl_allExc_aligned = alTrace(av_test_shfl_allExc, eventI_allDays, nPreMin, nPostMin)
+av_test_chance_allExc_aligned = alTrace(av_test_chance_allExc, eventI_allDays, nPreMin, nPostMin)
+
+
+##%% Average and STD across days (each day includes the average class accuracy across samples.)
+
+av_av_test_data_inh_aligned = np.mean(av_test_data_inh_aligned, axis=1)
+sd_av_test_data_inh_aligned = np.std(av_test_data_inh_aligned, axis=1)
+
+av_av_test_shfl_inh_aligned = np.mean(av_test_shfl_inh_aligned, axis=1)
+sd_av_test_shfl_inh_aligned = np.std(av_test_shfl_inh_aligned, axis=1)
+
+av_av_test_chance_inh_aligned = np.mean(av_test_chance_inh_aligned, axis=1)
+sd_av_test_chance_inh_aligned = np.std(av_test_chance_inh_aligned, axis=1)
+
+
+av_av_test_data_exc_aligned = np.mean(av_test_data_exc_aligned, axis=1)
+sd_av_test_data_exc_aligned = np.std(av_test_data_exc_aligned, axis=1)
+
+av_av_test_shfl_exc_aligned = np.mean(av_test_shfl_exc_aligned, axis=1)
+sd_av_test_shfl_exc_aligned = np.std(av_test_shfl_exc_aligned, axis=1)
+
+av_av_test_chance_exc_aligned = np.mean(av_test_chance_exc_aligned, axis=1)
+sd_av_test_chance_exc_aligned = np.std(av_test_chance_exc_aligned, axis=1)
+
+
+av_av_test_data_allExc_aligned = np.mean(av_test_data_allExc_aligned, axis=1)
+sd_av_test_data_allExc_aligned = np.std(av_test_data_allExc_aligned, axis=1)
+
+av_av_test_shfl_allExc_aligned = np.mean(av_test_shfl_allExc_aligned, axis=1)
+sd_av_test_shfl_allExc_aligned = np.std(av_test_shfl_allExc_aligned, axis=1)
+
+av_av_test_chance_allExc_aligned = np.mean(av_test_chance_allExc_aligned, axis=1)
+sd_av_test_chance_allExc_aligned = np.std(av_test_chance_allExc_aligned, axis=1)
+
+
+#_,pcorrtrace0 = stats.ttest_1samp(av_l2_test_d_aligned.transpose(), 50) # p value of class accuracy being different from 50
+
+_,pcorrtrace = stats.ttest_ind(av_test_data_exc_aligned.transpose(), av_test_data_inh_aligned.transpose()) # p value of class accuracy being different from 50
+        
+        
 
 ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #%%
 ######################## PLOTS ########################
 
-# Plot class accur trace for each day
+
+#%% Compare number of inh vs exc for each day
+
+plt.figure(figsize=(4.5,3)) #plt.figure()
+plt.plot(numInh, label='inh')
+plt.plot(numAllexc, label='exc')
+plt.title('average: inh=%d exc=%d inh/exc=%.2f' %(np.round(numInh.mean()), np.round(numAllexc.mean()), np.mean(numInh) / np.mean(numAllexc)))
+plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
+plt.xlabel('days')
+plt.ylabel('# neurons')
+
+if savefigs:#% Save the figure
+    if chAl==1:
+        dd = 'chAl_numNeurons'
+    else:
+        dd = 'stAl_numNeurons'
+        
+    d = os.path.join(svmdir+dnow)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+            
+    fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
+    plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+    
+    
+#%% Plot class accur trace for each day
 
 plt.figure()
 for iday in range(len(days)):    
@@ -453,89 +638,7 @@ if savefigs:#% Save the figure
     
     
     
-#%%
-##################################################################################################
-############## Align class accur traces of all days to make a final average trace ##############
-################################################################################################## 
-  
-##%% Find the common eventI, number of frames before and after the common eventI for the alignment of traces of all days.
-# By common eventI, we  mean the index on which all traces will be aligned.
-        
-nPost = (np.ones((numDays,1))+np.nan).flatten().astype('int')
-for iday in range(numDays):
-    nPost[iday] = (len(av_test_data_inh_ch[iday]) - eventI_allDays[iday] - 1)
 
-nPreMin = min(eventI_allDays) # number of frames before the common eventI, also the index of common eventI. 
-nPostMin = min(nPost)
-print 'Number of frames before = %d, and after = %d the common eventI' %(nPreMin, nPostMin)
-
-
-#%% Set the time array for the across-day aligned traces
-
-a = -(np.asarray(frameLength*regressBins) * range(nPreMin+1)[::-1])
-b = (np.asarray(frameLength*regressBins) * range(1, nPostMin+1))
-time_aligned = np.concatenate((a,b))
-
-
-#%% Align traces of all days on the common eventI
-
-def alTrace(trace, eventI_allDays, nPreMin, nPostMin):    
-
-    trace_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)     
-    for iday in range(trace.shape[0]):
-        trace_aligned[:, iday] = trace[iday][eventI_allDays[iday] - nPreMin  :  eventI_allDays[iday] + nPostMin + 1]    
-    return trace_aligned
-    
-
-av_test_data_inh_aligned = alTrace(av_test_data_inh, eventI_allDays, nPreMin, nPostMin)
-av_test_shfl_inh_aligned = alTrace(av_test_shfl_inh, eventI_allDays, nPreMin, nPostMin)
-av_test_chance_inh_aligned = alTrace(av_test_chance_inh, eventI_allDays, nPreMin, nPostMin)
-
-av_test_data_exc_aligned = alTrace(av_test_data_exc, eventI_allDays, nPreMin, nPostMin)
-av_test_shfl_exc_aligned = alTrace(av_test_shfl_exc, eventI_allDays, nPreMin, nPostMin)
-av_test_chance_exc_aligned = alTrace(av_test_chance_exc, eventI_allDays, nPreMin, nPostMin)
-
-av_test_data_allExc_aligned = alTrace(av_test_data_allExc, eventI_allDays, nPreMin, nPostMin)
-av_test_shfl_allExc_aligned = alTrace(av_test_shfl_allExc, eventI_allDays, nPreMin, nPostMin)
-av_test_chance_allExc_aligned = alTrace(av_test_chance_allExc, eventI_allDays, nPreMin, nPostMin)
-
-
-#%% Average and STD across days (each day includes the average class accuracy across samples.)
-
-av_av_test_data_inh_aligned = np.mean(av_test_data_inh_aligned, axis=1)
-sd_av_test_data_inh_aligned = np.std(av_test_data_inh_aligned, axis=1)
-
-av_av_test_shfl_inh_aligned = np.mean(av_test_shfl_inh_aligned, axis=1)
-sd_av_test_shfl_inh_aligned = np.std(av_test_shfl_inh_aligned, axis=1)
-
-av_av_test_chance_inh_aligned = np.mean(av_test_chance_inh_aligned, axis=1)
-sd_av_test_chance_inh_aligned = np.std(av_test_chance_inh_aligned, axis=1)
-
-
-av_av_test_data_exc_aligned = np.mean(av_test_data_exc_aligned, axis=1)
-sd_av_test_data_exc_aligned = np.std(av_test_data_exc_aligned, axis=1)
-
-av_av_test_shfl_exc_aligned = np.mean(av_test_shfl_exc_aligned, axis=1)
-sd_av_test_shfl_exc_aligned = np.std(av_test_shfl_exc_aligned, axis=1)
-
-av_av_test_chance_exc_aligned = np.mean(av_test_chance_exc_aligned, axis=1)
-sd_av_test_chance_exc_aligned = np.std(av_test_chance_exc_aligned, axis=1)
-
-
-av_av_test_data_allExc_aligned = np.mean(av_test_data_allExc_aligned, axis=1)
-sd_av_test_data_allExc_aligned = np.std(av_test_data_allExc_aligned, axis=1)
-
-av_av_test_shfl_allExc_aligned = np.mean(av_test_shfl_allExc_aligned, axis=1)
-sd_av_test_shfl_allExc_aligned = np.std(av_test_shfl_allExc_aligned, axis=1)
-
-av_av_test_chance_allExc_aligned = np.mean(av_test_chance_allExc_aligned, axis=1)
-sd_av_test_chance_allExc_aligned = np.std(av_test_chance_allExc_aligned, axis=1)
-
-
-#_,pcorrtrace0 = stats.ttest_1samp(av_l2_test_d_aligned.transpose(), 50) # p value of class accuracy being different from 50
-
-_,pcorrtrace = stats.ttest_ind(av_test_data_exc_aligned.transpose(), av_test_data_inh_aligned.transpose()) # p value of class accuracy being different from 50
-        
        
 #%% Plot the average of aligned traces across all days
 
@@ -554,11 +657,12 @@ plt.fill_between(time_aligned, av_av_test_data_allExc_aligned - sd_av_test_data_
 plt.plot(time_aligned, av_av_test_data_allExc_aligned, 'k')
 
 if chAl==1:
-    plt.xlabel('Time since choice onset (ms)', fontsize=13)
+    plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
 else:
-    plt.xlabel('Time since stim onset (ms)', fontsize=13)
-plt.ylabel('Classification accuracy (%)', fontsize=13)
-plt.title('Testing data')
+    plt.xlabel('Time relative to stim onset (ms)', fontsize=11)
+plt.ylabel('Classification accuracy (%)', fontsize=11)
+if superimpose==0:    
+    plt.title('Testing data')
 #plt.title('SVM trained on non-overlapping %.2f ms windows' %(regressBins*frameLength), fontsize=13)
 #plt.legend()
 ax = plt.gca()
@@ -570,41 +674,47 @@ plt.plot(time_aligned, pp, color='k')
 
 
 #### shfl
-plt.subplot(222)
+if superimpose==0:
+    plt.subplot(222)
 # exc
-plt.fill_between(time_aligned, av_av_test_shfl_exc_aligned - sd_av_test_shfl_exc_aligned, av_av_test_shfl_exc_aligned + sd_av_test_shfl_exc_aligned, alpha=0.5, edgecolor='b', facecolor='b')
+plt.fill_between(time_aligned, av_av_test_shfl_exc_aligned - sd_av_test_shfl_exc_aligned, av_av_test_shfl_exc_aligned + sd_av_test_shfl_exc_aligned, alpha=0.3, edgecolor='b', facecolor='b')
 plt.plot(time_aligned, av_av_test_shfl_exc_aligned, 'b')
 # inh
-plt.fill_between(time_aligned, av_av_test_shfl_inh_aligned - sd_av_test_shfl_inh_aligned, av_av_test_shfl_inh_aligned + sd_av_test_shfl_inh_aligned, alpha=0.5, edgecolor='r', facecolor='r')
+plt.fill_between(time_aligned, av_av_test_shfl_inh_aligned - sd_av_test_shfl_inh_aligned, av_av_test_shfl_inh_aligned + sd_av_test_shfl_inh_aligned, alpha=0.3, edgecolor='r', facecolor='r')
 plt.plot(time_aligned, av_av_test_shfl_inh_aligned, 'r')
 # allExc
-plt.fill_between(time_aligned, av_av_test_shfl_allExc_aligned - sd_av_test_shfl_allExc_aligned, av_av_test_shfl_allExc_aligned + sd_av_test_shfl_allExc_aligned, alpha=0.5, edgecolor='k', facecolor='k')
+plt.fill_between(time_aligned, av_av_test_shfl_allExc_aligned - sd_av_test_shfl_allExc_aligned, av_av_test_shfl_allExc_aligned + sd_av_test_shfl_allExc_aligned, alpha=0.3, edgecolor='k', facecolor='k')
 plt.plot(time_aligned, av_av_test_shfl_allExc_aligned, 'k')
-plt.title('Shuffled Y')
+if superimpose==0:    
+    plt.title('Shuffled Y')
 ax = plt.gca()
 makeNicePlots(ax,1,1)
 
 
 #### chance
-plt.subplot(223)
-# exc
-plt.fill_between(time_aligned, av_av_test_chance_exc_aligned - sd_av_test_chance_exc_aligned, av_av_test_chance_exc_aligned + sd_av_test_chance_exc_aligned, alpha=0.5, edgecolor='b', facecolor='b')
-plt.plot(time_aligned, av_av_test_chance_exc_aligned, 'b')
-# inh
-plt.fill_between(time_aligned, av_av_test_chance_inh_aligned - sd_av_test_chance_inh_aligned, av_av_test_chance_inh_aligned + sd_av_test_chance_inh_aligned, alpha=0.5, edgecolor='r', facecolor='r')
-plt.plot(time_aligned, av_av_test_chance_inh_aligned, 'r')
-# allExc
-plt.fill_between(time_aligned, av_av_test_chance_allExc_aligned - sd_av_test_chance_allExc_aligned, av_av_test_chance_allExc_aligned + sd_av_test_chance_allExc_aligned, alpha=0.5, edgecolor='k', facecolor='k')
-plt.plot(time_aligned, av_av_test_chance_allExc_aligned, 'k')
-plt.title('Chance Y')
-ax = plt.gca()
-makeNicePlots(ax,1,1)
+if superimpose==0:    
+    plt.subplot(223)
+    # exc
+    plt.fill_between(time_aligned, av_av_test_chance_exc_aligned - sd_av_test_chance_exc_aligned, av_av_test_chance_exc_aligned + sd_av_test_chance_exc_aligned, alpha=0.5, edgecolor='b', facecolor='b')
+    plt.plot(time_aligned, av_av_test_chance_exc_aligned, 'b')
+    # inh
+    plt.fill_between(time_aligned, av_av_test_chance_inh_aligned - sd_av_test_chance_inh_aligned, av_av_test_chance_inh_aligned + sd_av_test_chance_inh_aligned, alpha=0.5, edgecolor='r', facecolor='r')
+    plt.plot(time_aligned, av_av_test_chance_inh_aligned, 'r')
+    # allExc
+    plt.fill_between(time_aligned, av_av_test_chance_allExc_aligned - sd_av_test_chance_allExc_aligned, av_av_test_chance_allExc_aligned + sd_av_test_chance_allExc_aligned, alpha=0.5, edgecolor='k', facecolor='k')
+    plt.plot(time_aligned, av_av_test_chance_allExc_aligned, 'k')
+    plt.title('Chance Y')
+    ax = plt.gca()
+    makeNicePlots(ax,1,1)
 
-
-plt.subplots_adjust(hspace=0.65)
+    plt.subplots_adjust(hspace=0.65)
+    
+    
 plt.legend(['inh','exc','allExc'],loc='center left', bbox_to_anchor=(1, .7)) 
 
 
+#xmin, xmax = ax.get_xlim()
+plt.xlim([-1400,500])
 
 ##%% Save the figure    
 if savefigs:
@@ -613,18 +723,23 @@ if savefigs:
     else:
         dd = 'stAl_aveDays'
         
+    if superimpose==1:        
+        dd = dd+'_sup'
+        
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
         print 'creating folder'
         os.makedirs(d)
-            
+#            
     fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+#    fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+'svg')
+#    plt.savefig(fign, dpi=300, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
 
 
 
 
-
+ 
 
 
 ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -2,7 +2,7 @@
 # NOTE: add for saving meanX, stdX and _chAl mean and std.
 
 """
-# Trains decoder using only inh or only exc neurons after finding bestc for each decoder separately.
+# Trains decoder on each frame (time window) using only inh or only exc neurons after finding bestc for each decoder separately.
 
 
 Train SVM on each frame (time windows of 100ms)... Also find best c for each frame.
@@ -1594,7 +1594,7 @@ if saveResults:
     
     if doInhAllexcEqexc[0] == 1:
         scio.savemat(svmName, {'thAct':thAct, 'numShufflesExc':numShufflesExc, 'numSamples':numSamples, 'softNorm':softNorm, 'meanX_fr':meanX_fr, 'stdX_fr':stdX_fr,
-                               'winLen':winLen, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'regType':regType, 'cvect':cvect, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
+                               'winLen':winLen, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'regType':regType, 'cvect':cvect, 'eventI_ds':eventI_ds, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
                                'cbest_inh':cbest_inh, 'w_data_inh':w_data_inh, 'b_data_inh':b_data_inh,
                                'perClassErrorTrain_data_inh':perClassErrorTrain_data_inh,
                                'perClassErrorTest_data_inh':perClassErrorTest_data_inh,
@@ -1603,7 +1603,7 @@ if saveResults:
                                
     elif doInhAllexcEqexc[1] == 1:
         scio.savemat(svmName, {'thAct':thAct, 'numShufflesExc':numShufflesExc, 'numSamples':numSamples, 'softNorm':softNorm, 'meanX_fr':meanX_fr, 'stdX_fr':stdX_fr,
-                               'winLen':winLen, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'regType':regType, 'cvect':cvect, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
+                               'winLen':winLen, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'regType':regType, 'cvect':cvect, 'eventI_ds':eventI_ds, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
                                'cbest_allExc':cbest_allExc, 'w_data_allExc':w_data_allExc, 'b_data_allExc':b_data_allExc,
                                'perClassErrorTrain_data_allExc':perClassErrorTrain_data_allExc,
                                'perClassErrorTest_data_allExc':perClassErrorTest_data_allExc,
@@ -1612,7 +1612,7 @@ if saveResults:
        
     elif doInhAllexcEqexc[2] == 1:       
         scio.savemat(svmName, {'thAct':thAct, 'numShufflesExc':numShufflesExc, 'numSamples':numSamples, 'softNorm':softNorm, 'meanX_fr':meanX_fr, 'stdX_fr':stdX_fr,
-                               'winLen':winLen, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'regType':regType, 'cvect':cvect, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
+                               'winLen':winLen, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'regType':regType, 'cvect':cvect, 'eventI_ds':eventI_ds, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
                                'cbest_exc':cbest_exc, 'w_data_exc':w_data_exc, 'b_data_exc':b_data_exc,
                                'perClassErrorTrain_data_exc':perClassErrorTrain_data_exc,
                                'perClassErrorTest_data_exc':perClassErrorTest_data_exc,

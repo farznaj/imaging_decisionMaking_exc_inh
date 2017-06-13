@@ -471,13 +471,20 @@ if plotEftyAC1by1
 %     C_df = C_df0';
     
     inds2plot = randperm(size(C,1)); % 1:size(C,1); % randperm(size(C,1)) % excl(randperm(length(excl)))'; % size(C,1):-1:1;  
+    
+    % plot C and act_man
+    plotEftManTracesROIs(C, S, activity_man_eftMask_ch2', A, [], CC, [], 1:size(C_df,1), im, C, inds2plot, 0, 0, medImage{1}, cs_frtrs);
+     
+    % below is fine too, if you want to plot df/f 
+    %{
     if ~exist('dFOF_man','var') % use this if you don't have manual activity
         plotEftManTracesROIs(C_df, S, [], A, [], CC, [], [], im, C, inds2plot, 0, 0, medImage{1}, cs_frtrs);
     else % use this if you wan to compare with manual activity:
-        plotEftManTracesROIs(C_df, S, dFOF_man', A, [], CC, [], 1:size(C_df,1), im, C, inds2plot, 0, 0, medImage{1}, cs_frtrs);
+        plotEftManTracesROIs(C_df, S, dFOF_man', A, [], CC, [], 1:size(C_df,1), im, C, inds2plot, 0, 0, medImage{1}, cs_frtrs);       
 %         plotEftManTracesROIs(C_df, S, activity_man_eftMask_ch2', A, [], CC, [], 1:size(C_df,1), im, C, inds2plot, 0, 0, medImage{1}, cs_frtrs);  % use this if for the superimposed image you want to compare C with manActiv (instead of their df versions)
         % traceQualManual = plotEftManTracesROIs(C_df, S_df, dFOF, A2, mask_eft, CC, CC_rois, eftMatchIdx_mask, im, C, inds2plot, manualTraceQual, plothists, im2)
     end
+    %}
     
 end
 
