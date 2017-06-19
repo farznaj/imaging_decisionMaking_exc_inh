@@ -17,13 +17,19 @@ def ttest2(a, b, **tailOption):
     return p
 	
 	
+
 #%%
+# optional inputs:
+#postNProvided = 1; # Default:0; If your directory does not contain pnevFile and instead it contains postFile, set this to 1 to get pnevFileName
+#signalCh = 2 # # since gcamp is channel 2, should be 2.
+#pnev2load = [] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
+
 def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options):
 
     if options.get('signalCh'):
         signalCh = options.get('signalCh');    
     else:
-        signalCh = []
+        signalCh = 0
         
     if options.get('pnev2load'):
         pnev2load = options.get('pnev2load');    
@@ -35,8 +41,14 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     else:
         postNProvided = 0
         
-    ##%%
-#    import numpy as np
+    if options.get('nOuts'):
+        nOuts = options.get('nOuts');    
+    else:
+        nOuts = 2
+
+
+    #%%
+    import numpy as np
     import platform
     import glob
     import os.path
@@ -44,27 +56,32 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     if len(pnev2load)==0:
         pnev2load = [0];
             
-    ##%%
-    dataPath = []
+    #%%
     if platform.system()=='Linux':
         if os.getcwd().find('grid')!=-1: # server # sonas
             dataPath = '/sonas-hs/churchland/nlsas/data/data/'
         else: # office linux
             dataPath = '/home/farznaj/Shares/Churchland/data/'
+    elif platform.system()=='Darwin':
+        dataPath = '/Volumes/My Stu_win/ChurchlandLab/'
     else:
         dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data/'
         
-    ##%%        
+    #%%        
     tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
-    r = '%03d-'*len(mdfFileNumber)
+#    print mdfFileNumber, type(mdfFileNumber)
+#    mdfFileNumber = np.array(mdfFileNumber).astype('int')
+#    print mdfFileNumber, type(mdfFileNumber), np.shape(mdfFileNumber)
+#    print np.shape(mdfFileNumber)[0]
+    r = '%03d-'*np.shape(mdfFileNumber)[0] #len(mdfFileNumber)
     r = r[:-1]
     rr = r % (tuple(mdfFileNumber))
     
     date_major = imagingFolder+'_'+rr
     imfilename = os.path.join(tifFold,date_major+'.mat')
     
-    ##%%
-    if len(signalCh)>0:
+    #%%
+    if signalCh>0:
         if postNProvided:
             pnevFileName = 'post_'+date_major+'_ch'+str(signalCh)+'-Pnev*'
         else:
@@ -73,7 +90,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         pnevFileName = glob.glob(os.path.join(tifFold,pnevFileName))   
         # sort pnevFileNames by date (descending)
         pnevFileName = sorted(pnevFileName, key=os.path.getmtime)
-        pnevFileName = pnevFileName[::-1]
+        pnevFileName = pnevFileName[::-1] # so the latest file is the 1st one.
         '''
         array = []
         for idx in range(0, len(pnevFileName)):
@@ -94,9 +111,17 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     else:
         pnevFileName = ''
     
-    ##%%
-    return imfilename, pnevFileName, dataPath
+    #%%
+    if nOuts==2:
+        return imfilename, pnevFileName
+    else:
+        return imfilename, pnevFileName, dataPath
     
+    
+#%%
+#imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh, pnev2load)
+
+
     
     
 #%% Define perClassError: percent difference between Y and Yhat, ie classification error
@@ -200,13 +225,16 @@ def histerrbar(a,b,binEvery,p,colors = ['g','k']):
     hist = hist/float(np.sum(hist))    
     # Plot hist of a
     ax1 = plt.subplot(h1) #(gs[0,0:2])
-    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[0], alpha=.4, label=lab1)
+#    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[0], alpha=.4, label=lab1)
+    plt.plot(bin_edges[0:-1], hist, color=colors[0], label=lab1)    
     
     # set his of b
     hist, bin_edges = np.histogram(b, bins=bn)
     hist = hist/float(np.sum(hist));     #d = stats.mode(np.diff(bin_edges))[0]/float(2)
     # Plot hist of b
-    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[1], alpha=.4, label=lab2)
+#    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[1], alpha=.4, label=lab2)
+    plt.plot(bin_edges[0:-1], hist, color=colors[1], label=lab2)    
+    
     
     plt.legend(loc=0, frameon=False)
     plt.ylabel('Prob (all days & N shuffs at bestc)')
@@ -232,14 +260,23 @@ def histerrbar(a,b,binEvery,p,colors = ['g','k']):
     return ax1,ax2
 
 
-
+    
+#%%
 def errbarAllDays(a,b,p):
-    eav = np.nanmean(a, axis=1) # average across shuffles
-    iav = np.nanmean(b, axis=1)
-    ele = np.shape(a)[1] - np.sum(np.isnan(a),axis=1) # number of non-nan shuffles of each day
-    ile = np.shape(b)[1] - np.sum(np.isnan(b),axis=1) # number of non-nan shuffles of each day
-    esd = np.divide(np.nanstd(a, axis=1), np.sqrt(ele))
-    isd = np.divide(np.nanstd(b, axis=1), np.sqrt(ile))
+    if a.ndim==1:
+        eav = [np.mean(a[i]) for i in range(len(a))] #np.nanmean(a, axis=1) # average across shuffles
+        iav = [np.mean(b[i]) for i in range(len(b))] #np.nanmean(b, axis=1)
+        ele = [len(a[i]) for i in range(len(a))] #np.shape(a)[1] - np.sum(np.isnan(a),axis=1) # number of non-nan shuffles of each day
+        ile = [len(b[i]) for i in range(len(b))] #np.shape(b)[1] - np.sum(np.isnan(b),axis=1) # number of non-nan shuffles of each day
+        esd = np.divide([np.std(a[i]) for i in range(len(a))], np.sqrt(ele))
+        isd = np.divide([np.std(b[i]) for i in range(len(b))], np.sqrt(ile))
+    else:
+        eav = np.nanmean(a, axis=1) # average across shuffles
+        iav = np.nanmean(b, axis=1)
+        ele = np.shape(a)[1] - np.sum(np.isnan(a),axis=1) # number of non-nan shuffles of each day
+        ile = np.shape(b)[1] - np.sum(np.isnan(b),axis=1) # number of non-nan shuffles of each day
+        esd = np.divide(np.nanstd(a, axis=1), np.sqrt(ele))
+        isd = np.divide(np.nanstd(b, axis=1), np.sqrt(ile))
     
     pp = p
     pp[p>.05] = np.nan

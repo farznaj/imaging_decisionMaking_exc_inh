@@ -276,8 +276,8 @@ binEvery = .001 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
 a = np.concatenate((wexc)) #np.reshape(wexc,(-1,)) 
 b = np.concatenate((winh)) #np.reshape(winh,(-1,))
 
-print np.sum(abs(a)<=eps), ' inh ws < eps'
-print np.sum(abs(b)<=eps), ' exc ws < eps'
+print np.sum(abs(a)<=eps), ' exc ws < eps'
+print np.sum(abs(b)<=eps), ' inh ws < eps'
 print [len(a), len(b)]
 _, p = stats.ttest_ind(a, b, nan_policy='omit')
 
@@ -327,8 +327,8 @@ binEvery = .002 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
 a = np.concatenate(abs(wexc)) #np.reshape(wexc,(-1,)) 
 b = np.concatenate(abs(winh)) #np.reshape(winh,(-1,))
 
-print np.sum(abs(a)<=eps), ' inh ws < eps'
-print np.sum(abs(b)<=eps), ' exc ws < eps'
+print np.sum(abs(a)<=eps), ' exc ws < eps'
+print np.sum(abs(b)<=eps), ' inh ws < eps'
 print [len(a), len(b)]
 _, p = stats.ttest_ind(a, b, nan_policy='omit')
 

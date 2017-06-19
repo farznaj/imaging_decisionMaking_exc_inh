@@ -59,12 +59,13 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         pnev2load = [0];
             
     #%%
-    dataPath = []
     if platform.system()=='Linux':
-        if os.getcwd().find('sonas')==1: # server
+        if os.getcwd().find('grid')!=-1: # server # sonas
             dataPath = '/sonas-hs/churchland/nlsas/data/data/'
         else: # office linux
             dataPath = '/home/farznaj/Shares/Churchland/data/'
+    elif platform.system()=='Darwin':
+        dataPath = '/Volumes/My Stu_win/ChurchlandLab'
     else:
         dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data/'
         

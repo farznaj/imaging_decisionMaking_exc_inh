@@ -5,7 +5,7 @@ Created on Tue Dec 13 15:07:58 2016
 @author: farznaj
 """
 
-
+#def svm_plots_setVars_n(mousename, figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/', trialHistAnalysis=0, iTiFlg=2):
 #%% 
 #mousename = 'fni16' #'fni17'
 #trialHistAnalysis = 0;
@@ -41,7 +41,15 @@ elif mousename=='fni18':
 #savefigs = False
 
 fmt = ['pdf', 'svg', 'eps'] #'png', 'pdf': preserve transparency # Format of figures for saving
-figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/' # Directory for saving figures.
+
+#figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/' # Directory for saving figures.
+import platform
+if platform.system()=='Linux':
+    figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/'
+elif platform.system()=='Darwin':
+    figsDir = '/Users/Farzaneh/Dropbox/ChurchlandLab/Farzaneh_Gamal/'
+    svmfold = ''
+
 #neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
 import sys
 eps = sys.float_info.epsilon #10**-10 # tiny number below which weight is considered 0
@@ -60,8 +68,8 @@ import scipy.stats as stats
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 #import sys
-sys.path.append('/home/farznaj/Documents/trial_history/imaging/')  
-from setImagingAnalysisNamesP import *
+#sys.path.append('/home/farznaj/Documents/trial_history/imaging/')  
+#from setImagingAnalysisNamesP import *
 
 plt.rc('font', family='helvetica')    
 
@@ -122,6 +130,6 @@ if not os.path.exists(svmdir):
 daysOrig = days
 numDays = len(days)
 print 'Analyzing mouse',mousename,'-', len(days), 'days'
+        
     
-
- 
+#    return days, suffn 

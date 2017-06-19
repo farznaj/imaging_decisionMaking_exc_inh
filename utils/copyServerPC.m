@@ -23,7 +23,15 @@ for iday = 1:length(days)
     dest = '/media/farznaj/My Stu_win/ChurchlandLab';
     destFold = fullfile(dest, mouse, 'imaging', imagingFolder);
     mkdir(destFold)
-
+    %{
+    destFold = fullfile(dest, mouse, 'imaging', imagingFolder, 'svm');    
+    mkdir(destFold)
+    pd = fullfile(dest, mouse, 'imaging', imagingFolder);
+    svmName1 = fullfile(pd, '*SVM*');
+    svmName2 = fullfile(pd, 'svm*');    
+    movefile(svmName1, destFold)
+    movefile(svmName2, destFold)    
+    %}
     %%
     copyfile(moreName, destFold)
     copyfile(postName, destFold)
