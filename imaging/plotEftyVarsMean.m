@@ -58,7 +58,7 @@ end
 cprintf('red', 'Remember about pmtOffFrames!! \n')
 
 %
-figure; a = [];
+figure('position', [675         247        1351         729]); a = [];
 
 subplot(413), hold on
 top = nanmean(S);
@@ -71,20 +71,6 @@ if exist('nFrsSess', 'var'),
 end
 
 plot(top); title('S'),
-a = [a, gca];
-
-
-subplot(411), hold on
-top = nanmean(activity_man_eftMask_ch2');
-hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
-set([hh], 'handlevisibility', 'off')
-if exist('nFrsSess', 'var'),
-    h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [min(top); max(top)], 'k'); % mark session beginnings
-    h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
-    set([h0; h00], 'handlevisibility', 'off');
-end
-
-plot(top); title('manual, Any pmtOffFrames?!'),
 a = [a, gca];
 
 
@@ -118,9 +104,35 @@ plot(top); title('f'),
 a = [a, gca];
 
 
+if exist('activity_man_eftMask_ch2', 'var')
+    subplot(411), hold on
+    top = nanmean(activity_man_eftMask_ch2');
+    hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
+    set([hh], 'handlevisibility', 'off')
+    if exist('nFrsSess', 'var'),
+        h0 = plot([cumsum([0, nFrsSess]); cumsum([0, nFrsSess])], [min(top); max(top)], 'k'); % mark session beginnings
+        h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
+        set([h0; h00], 'handlevisibility', 'off');
+    end
+
+    plot(top); title('manual, Any pmtOffFrames?!'),
+    a = [a, gca];
+end
+
 linkaxes(a, 'x')
 xlim([0 size(C,2)])
 
+pause
+r2 = 0;
+% figure(h)
+for rr = 1:floor(length(C)/.5e4)+1
+    r1 = r2;
+    r2 = r1+.5e4;
+    xlim([r1 r2])
+    %     ginput
+    pause
+end
+    
 %{
 mkdir(fullfile(pd, 'figs')) % save the following 3 figures in a folder named "figs"
 savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons'))  
