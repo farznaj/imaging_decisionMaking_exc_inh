@@ -22,8 +22,10 @@ if isempty(strfind(pwd, 'gamalamin')) % Farzaneh
     elseif isunix
         if isempty(strfind(pwd, 'grid')) % 'sonas')) % Unix in the office
             dataPath = '~/Shares/Churchland/data';
+            altDataPath = '~/Shares/Churchland_hpc_home/space_managed_data'; % the new space-managed server (wos, to which data is migrated from grid)
         else % server
             dataPath = '/sonas-hs/churchland/nlsas/data/data';
+            altDataPath = '/sonas-hs/churchland/hpc/home/space_managed_data';
         end
     elseif ispc
         dataPath = '\\sonas-hs.cshl.edu\churchland\data'; % Office PC
@@ -34,6 +36,15 @@ end
 
 
 tifFold = fullfile(dataPath, mousename, 'imaging', imagingFolder);
+
+if ~exist(tifFold, 'dir') 
+    if exist('altDataPath', 'var')
+        tifFold = fullfile(altDataPath, mousename, 'imaging', imagingFolder);
+    else
+        error('Data directory does not exist!')
+    end
+end
+
 % date_major = sprintf('%s_%03d', imagingFolder(1:6), mdfFileNumber);
 r = repmat('%03d-', 1, length(mdfFileNumber));
 r(end) = [];
