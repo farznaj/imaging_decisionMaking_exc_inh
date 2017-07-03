@@ -20,6 +20,7 @@ plotMotCorr_normImg(mouse, imagingFolder, mdfFileNumber)
 
 %% plotEftyVarsMean
 
+close all
 %%%% NOTE %%%% 
 cprintf('blue', 'If needed follow this script by codes setPmtOffFrames to set pmtOffFrames\nand by findTrsWithMissingFrames to set frame-dropped trials. In this\nlatter case you will need to rerun CNMF (bc frames were dropped and\nidentification of trials was wrong)!\n')
 

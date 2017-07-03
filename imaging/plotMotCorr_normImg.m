@@ -63,7 +63,7 @@ a = whos('-file', imfilename);
 if any(ismember({a.name}, 'movieRawRep'))
     load(imfilename, 'movieRawRep', 'movieMCMRep')
 
-    f = figure('position', [41         106        1244         802]);
+    f = figure('position', [406         138        1244         802]); %[41         106        1244         802]);
     doimadj = 1;
     figPar.num = f.Number;
     for fr = 1:size(movieRawRep{1},3)

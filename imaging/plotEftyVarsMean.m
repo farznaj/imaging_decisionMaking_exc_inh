@@ -70,7 +70,7 @@ if exist('nFrsSess', 'var'),
     set([h0; h00], 'handlevisibility', 'off');
 end
 
-plot(top); title('S'),
+plot(top); title(sprintf('Normed S, range=%.2f', range(top)))
 a = [a, gca];
 
 
@@ -85,7 +85,7 @@ if exist('nFrsSess', 'var'),
     set([h0; h00], 'handlevisibility', 'off');
 end
 
-plot(top); title('C'),
+plot(top); title(sprintf('C, range=%d', range(top)))
 a = [a, gca];
 
 
@@ -100,7 +100,7 @@ if exist('nFrsSess', 'var'),
     set([h0; h00], 'handlevisibility', 'off');
 end
 
-plot(top); title('f'),
+plot(top); title(sprintf('f, range=%.2f', range(f)))
 a = [a, gca];
 
 
@@ -115,7 +115,8 @@ if exist('activity_man_eftMask_ch2', 'var')
         set([h0; h00], 'handlevisibility', 'off');
     end
 
-    plot(top); title('manual, Any pmtOffFrames?!'),
+    plot(top); %title('manual, Any pmtOffFrames?!'),
+    sprintf('Manual (any pmtOffFrames?), range=%d', range(top))
     a = [a, gca];
 end
 
