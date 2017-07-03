@@ -125,9 +125,9 @@ xlim([0 size(C,2)])
 pause
 r2 = 0;
 % figure(h)
-for rr = 1:floor(length(C)/.5e4)+1
+for rr = 1:floor(length(C)/.1e4)+1
     r1 = r2;
-    r2 = r1+.5e4;
+    r2 = r1+.1e4;
     xlim([r1 r2])
     %     ginput
     pause
