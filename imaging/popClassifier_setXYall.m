@@ -58,17 +58,19 @@ end
 %% Load matlab variables: event-aligned traces, inhibitRois, outcomes,  choice, etc
 %     - traces are set in set_aligned_traces.m matlab script.
 % Load time of some trial events
-if loadPostNameVars
+
+% if loadPostNameVars
     load(postName, 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'time1stSideTry')
 
-
-    % Load stim-aligned_allTrials traces, frames, frame of event of interest
+if loadPostNameVars    
     if trialHistAnalysis==0
-        load(postName, 'stimAl_noEarlyDec')
+        load(postName, 'stimAl_noEarlyDec') % Load stim-aligned_allTrials traces, frames, frame of event of interest
         stimAl_allTrs = stimAl_noEarlyDec;
     else
         load(postName, 'stimAl_allTrs')
     end
+else
+    stimAl_allTrs = stimAl_noEarlyDec;
 end
 eventI = stimAl_allTrs.eventI;
 traces_al_stimAll = stimAl_allTrs.traces;
@@ -87,7 +89,9 @@ outcomes = outcomes(1:length(all_data_sess{1}));
 allResp_HR_LR = allResp_HR_LR(1:length(all_data_sess{1}));
 %}
 choiceVecAll = allResp_HR_LR;  % trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.
-fprintf('Current outcome: %d correct choices; %d incorrect choices\n', sum(outcomes==1), sum(outcomes==0))
+cprintf('blue', 'Current outcome: %d correct choices; %d incorrect choices\n', sum(outcomes==1), sum(outcomes==0))
+cprintf('blue','\tCorr: %d LR; %d HR\n',  sum(choiceVecAll(outcomes==1)==0), sum(choiceVecAll(outcomes==1)==1))
+cprintf('blue','\tIncorr: %d LR; %d HR\n',  sum(choiceVecAll(outcomes==0)==0), sum(choiceVecAll(outcomes==0)==1))
 
 if trialHistAnalysis
     % Load trialHistory structure to get choice vector of the previous trial
@@ -153,7 +157,7 @@ else
     
     if isempty(ep_ms) %~exist('ep_ms', 'var')
         ep_ms = [floor(nanmin(time1stSideTry-timeStimOnset))-30-300, floor(nanmin(time1stSideTry-timeStimOnset))-30];
-        fprintf('Training window: [%d %d] ms\n', ep_ms(1), ep_ms(2))
+        cprintf('blue', 'Training window: [%d %d] ms\n', ep_ms(1), ep_ms(2))
     end
     epStartRel2Event = ceil(ep_ms(1)/frameLength); % the start point of the epoch relative to alignedEvent for training SVM. (500ms)
     epEndRel2Event = ceil(ep_ms(2)/frameLength); % the end point of the epoch relative to alignedEvent for training SVM. (700ms)
@@ -196,14 +200,14 @@ if trialHistAnalysis==0
     % th_stim_dur = 800; % min stim duration to include a trial in timeStimOnset
     
     if doPlots
-        if loadPostNameVars
+%         if loadPostNameVars
             load(postName, 'timeReward', 'timeCommitIncorrResp')
-        end
+%         end
         
         figure; hold on
 %         subplot(1,2,1); 
         plot(timeCommitCL_CR_Gotone - timeStimOnset)
-        plot(timeStimOffset - timeStimOnset, 'r')
+        plot(timeStimOffset - timeStimOnset, 'g')
         plot(time1stSideTry - timeStimOnset, 'm')
         plot(timeReward - timeStimOnset)
         plot(timeCommitIncorrResp - timeStimOnset)
@@ -425,7 +429,7 @@ end
 %% Exclude non-active neurons from X and set inhRois (ie neurons that don't fire in any of the trials during ep)
 
 X = X(:,~NsExcluded);
-disp(size(X));
+% disp(size(X));
     
 % Set inhRois which is same as inhibitRois but with non-active neurons excluded. (it has same size as X)
 if neuronType==2
@@ -437,7 +441,7 @@ end
 
 numTrials = sum(~trsExcluded);
 numNeurons = sum(~NsExcluded);
-fprintf('%d neurons; %d trials\n', numNeurons, numTrials)
+cprintf('blue', '%d neurons; %d trials\n', numNeurons, numTrials)
 
 
 

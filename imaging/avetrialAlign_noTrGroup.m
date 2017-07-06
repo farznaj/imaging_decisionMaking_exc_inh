@@ -123,7 +123,7 @@ if alignWheel
     dd = diff([max(a)*frameLength  max(eventInds_w)*wheelTimeRes]);
     if dd > 33
         fprintf('%.2f ms = difference in eventTime between wheel trace and imaging trace\n', dd)
-        error('Why is there such a big difference?!')
+        warning('Why is there such a big difference?!')
     end
     
     

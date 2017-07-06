@@ -165,7 +165,7 @@ end
 
 %% Plot all the measures for componentes sorted by Eftychios's srt_val
 
-figure;
+figure('position', [1204         261         560         715]);
 subplot(611), plot(srt_val), title('sort value')
 subplot(612), plot(fitnessNow), title('fitness')
 subplot(613), plot(temp_corr), title('temp corr')
@@ -179,19 +179,21 @@ subplot(616), plot(mask_numpix), title('mask # pixels')
 
 badAG = fitnessNow >= th_AG;
 
+numbad = sum(fitnessNow >= th_AG);
+ss = sort(srt_val);
+if ~numbad
+    th_srt_val0 = 0;
+    %     disp('There are no')
+else
+    fprintf('\tThreshold based on AG measure = %.2f. Fixed th=%.2f\n', ss(numbad), th_srt_val)
+    th_srt_val0 = ss(numbad); % you are trying to find a good threshold for srt_val (below which ROIs are bad).        
+end
+
 if fixed_th_srt_val
     disp('Using a fixed thereshold for EP sort values!')
 else
     disp('Defining thereshold based on AG measure!')
-    numbad = sum(fitnessNow >= th_AG);
-    ss = sort(srt_val);
-    if ~numbad
-        th_srt_val = 0;
-    %     disp('There are no')
-    else
-        fprintf('\tThreshold based on AG measure = %.2f. Fixed th=%.2f\n', ss(numbad), th_srt_val)
-        th_srt_val = ss(numbad); % you are trying to find a good threshold for srt_val (below which ROIs are bad).        
-    end
+    th_srt_val = th_srt_val0;
 end
 % fprintf('Threshold for Efty srt_val= %.2f\n', full(th_srt_val))
 badEP = srt_val < th_srt_val;
@@ -330,7 +332,8 @@ size(rois2p)
 %}
 
 if evalBadRes
-    
+    vv = val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB;
+    vv(:,2) = -vv(:,2);
     % which ROIs to plot?
     for goodbad=1:2
         
@@ -407,8 +410,8 @@ if evalBadRes
             subplot(3,6,16), title({sprintf('corr(raw,A): EP=%.2f; DB=%.2f', rval_space(i), highlightCorrROI(i))})
             if ismember(i, badROIs) % indicate which measures were low!
 %                 subplot(3,6,17), title()                
-                ff = find(val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB(i,:) < th_EP_AG_size_tau_tempCorr_hiLight_hiLightDB);
-                badvals = val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB(i,ff);
+                ff = find(vv(i,:) < th_EP_AG_size_tau_tempCorr_hiLight_hiLightDB);
+                badvals = vv(i,ff);
                 st = {'EP'    'AG'    'size'    'tau'    'tempCorr'    'hiLightEP'    'hiLightDB'};
                 a0 = text(1.5,.5, st(ff));
                 a1 = text(2,.42, sprintf('%.1f\n', badvals));

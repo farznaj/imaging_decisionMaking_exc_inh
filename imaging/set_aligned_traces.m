@@ -26,10 +26,18 @@ outcomes = outcomes(1:length(all_data_sess{1}));
 allResp_HR_LR = allResp_HR_LR(1:length(all_data_sess{1}));
 %}
 
+
 %%
 % varsAlreadySet = 0; % set to 0 if not calling from imaging_prep_analysis
 [pd, pnev_n] = fileparts(pnevFileName);
 postName = fullfile(pd, sprintf('post_%s.mat', pnev_n));
+
+a = matfile(postName);
+if isprop(a, 'timeInitTone')==0
+    saveTimeVars = 1;
+else
+    saveTimeVars = 0;
+end
 
 
 % traces = alldataSpikesGood; % alldataSpikesGoodExc; % alldataSpikesGoodInh; % alldataSpikesGood;  % traces to be aligned.
@@ -56,8 +64,9 @@ if ~varsAlreadySet
     
     allowCorrectResp = 'change'; % 'change'; 'remove'; 'nothing'; % if 'change': on trials that mouse corrected his choice, go with the original response.
     uncommittedResp = 'nothing'; % 'change'; 'remove'; 'nothing'; % what to do on trials that mouse made a response (licked the side port) but did not lick again to commit it.
-
-    [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp);
+    allowCorrectOutcomeChange = 1;
+    verbose = 0;
+    [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp, allowCorrectOutcomeChange, verbose);
 
     % set trs2rmv to nan
     outcomes(trs2rmv) = NaN;
@@ -89,6 +98,10 @@ if ~varsAlreadySet
         save(postName, '-append', 'cb', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOnsetAll', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp', 'timeSingleStimOffset')
     end
 
+elseif varsAlreadySet==1 & saveTimeVars==1
+    if save_aligned_traces
+        save(postName, '-append', 'cb', 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOnsetAll', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp', 'timeSingleStimOffset')
+    end
 else
     load(postName, 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOnsetAll', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp', 'timeSingleStimOffset')
 end
@@ -103,6 +116,7 @@ timeCommitIncorrResp0 = timeCommitIncorrResp;
 set_change_of_mind_trs % set change-of-mind trials. output will be trs_com.
     
 
+% onlySetNPrePost = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -113,7 +127,7 @@ alignedEvent = 'initTone'; % align the traces on stim onset. % 'initTone', 'stim
 
 [traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
     (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
-    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
+    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames, timeStimOffset);
 
 clear initToneAl
 initToneAl.traces = traces_al_sm;
@@ -134,7 +148,7 @@ alignedEvent = 'stimOn'; % align the traces on stim onset. % 'initTone', 'stimOn
 
 [traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
     (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset0, ...
-    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
+    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames, timeStimOffset);
 
 clear stimAl_allTrs
 stimAl_allTrs.traces = traces_al_sm;
@@ -153,7 +167,7 @@ alignedEvent = 'stimOn'; % align the traces on stim onset. % 'initTone', 'stimOn
 
 [traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
     (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
-    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
+    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames, timeStimOffset);
 
 clear stimAl_noEarlyDec
 stimAl_noEarlyDec.traces = traces_al_sm;
@@ -169,6 +183,25 @@ stimAl_noEarlyDec
 % # You need traces_al_stim for decoding the upcoming choice bc you average responses during ep and you want to 
 % # control for what happens there. But for trial-history analysis you average responses before stimOnset, so you 
 % # don't care about when go tone happened or how long the stimulus was.
+
+
+%% Align traces on stimulus, excluding trials with early-decision outcome
+% NOTE: Because you are using timeStimOnsetAll instad of timeStimOnset, stimAl_allTrs that you compute here will include early-decision trials (outcomes=-1). So you may need to remove them later.
+disp('______________________________________')
+
+% remember traces_al_sm has nan for trs2rmv as well as trs in alignedEvent that are nan.
+alignedEvent = 'stimOff'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
+
+[traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
+    (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
+    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames, timeStimOffset);
+
+clear stimOffAl
+stimOffAl.traces = traces_al_sm;
+stimOffAl.time = time_aligned;
+stimOffAl.eventI = eventI;
+
+stimOffAl
 
 
 %% All these parts commented bc you are removing trials with short stimDur or with goTone<ep_end from stimAl_allTrs.traces in python. So you don't need to set a separate variable named stimAl.traces
@@ -308,7 +341,7 @@ a = time1stSideTry - timeCommitCL_CR_Gotone;
 fannoy = figure; 
 subplot(211), plot(a)
 xlabel('Trial')
-ylabel('Time btwn goTone & 1stSideTry (ms)')
+title('Time btwn goTone & 1stSideTry (ms)')
 
 
 %% Align traces on 1stSideTry: excluding change-of-mind trials (ie trying without committing), so these are all followed by a commit lick on the same side.
@@ -317,7 +350,7 @@ alignedEvent = '1stSideTry'; % align the traces on stim onset. % 'initTone', 'st
 
 [traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
     (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
-    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
+    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames, timeStimOffset);
 
 clear firstSideTryAl
 firstSideTryAl.traces = traces_al_sm;
@@ -334,7 +367,7 @@ if sum(trs_com)>0
     alignedEvent = '1stSideTry'; % align the traces on stim onset. % 'initTone', 'stimOn', 'goTone', '1stSideTry', 'reward', 'commitIncorrResp'
     [traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
         (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
-        timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
+        timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames, timeStimOffset);
 
     clear firstSideTryAl_COM
     firstSideTryAl_COM.traces = traces_al_sm;
@@ -393,7 +426,7 @@ timeCommitCL_CR_Gotone = timeCommitCL_CR_Gotone0;
 
 [traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
     (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
-    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
+    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames, timeStimOffset);
 
 clear goToneAl
 goToneAl.traces = traces_al_sm;
@@ -417,7 +450,7 @@ if sum(timeCommitCL_CR_Gotone0 <= timeStimOffset)>0
 
         [traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
             (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
-            timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
+            timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames, timeStimOffset);
 
         clear goToneAl_noStimAft
         goToneAl_noStimAft.traces = traces_al_sm;
@@ -460,7 +493,7 @@ alignedEvent = 'reward'; % align the traces on stim onset. % 'initTone', 'stimOn
 
 [traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
     (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
-    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
+    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames, timeStimOffset);
 
 clear rewardAl
 rewardAl.traces = traces_al_sm;
@@ -504,7 +537,7 @@ alignedEvent = 'commitIncorrResp'; % align the traces on stim onset. % 'initTone
 
 [traces_al_sm, time_aligned, eventI] = alignTraces_prePost_filt...
     (traces, traceTimeVec, alignedEvent, frameLength, dofilter, timeInitTone, timeStimOnset, ...
-    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames);
+    timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, nPreFrames, nPostFrames, timeStimOffset);
 
 clear commitIncorrAl
 commitIncorrAl.traces = traces_al_sm;
@@ -530,7 +563,8 @@ for iTiFlg = 0:2; % 0: short ITI, 1: long ITI, 2: all ITIs.
     % in the script below outcomes will be computed based on the final
     % choice of the animal... so outcomes after this script is different
     % from the one saved inpostName (ie based on animal's 1st choice)
-    popClassifier_trialHistory % computes choiceVec0; % trials x 1;  1 for HR choice, 0 for LR prev choice.
+%     popClassifier_trialHistory % computes choiceVec0; % trials x 1;  1 for HR choice, 0 for LR prev choice.
+    choiceVec0 = popClassifier_trialHistory(alldata, trs2rmv, iTiFlg, stimrate, cb, vec_iti, prevSuccessFlg, allTrs2rmv);
     
     trialHistory.choiceVec0(:, iTiFlg+1) = choiceVec0; 
 end

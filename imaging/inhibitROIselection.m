@@ -1,4 +1,4 @@
-function [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibitROIselection(maskGcamp, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CCgcamp, ch2Image, COMs, C, A, do2dGauss, val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB)
+function [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all, th_pix] = inhibitROIselection(maskGcamp, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CCgcamp, ch2Image, COMs, C, A, do2dGauss, val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB)
 % inhibitRois = inhibitROIselection(maskGcamp, inhibitImage, sigTh, CCgcamp);
 %
 % Identifies inhibitory neurons on a gcamp channel (containing both
@@ -408,19 +408,32 @@ for rr = 1:size(A,2);
     sizeROIhiPix(rr) = sum(Anow(:)~=0);
 end
 % figure; hold on; plot(sizeROIhiPix); plot(val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB(:,3))
+th_pix1 = quantile(sizeROIhiPix, .1);
+th_pix2 = quantile(sizeROIhiPix, .2);
+
+% the following vals were used for fni16,17,18
+%{
+th_pix1 = 35;
+th_pix2 = 45;  
+%}
+
+figure; hold on
+plot(sort(sizeROIhiPix))
+plot([0, length(sizeROIhiPix)], [th_pix1, th_pix1])
+plot([0, length(sizeROIhiPix)], [th_pix2, th_pix2])
+
+th_pix = [th_pix1,th_pix2];
 
 
 %% Set too small ROIs that have a bit low highLightCorr_db measure to unsure (they are usually like a dot or a string (perhaps apical dendrites or neuropil)... )
 
 % If ROI is too small (unless its highlightCorr is very high), set it to nan.
-th_pix = 35;  
 th_hl = .8;
-inhibitRois(sizeROIhiPix < th_pix & hl_db' < th_hl) = nan;
+inhibitRois(sizeROIhiPix < th_pix1 & hl_db' < th_hl) = nan;
 
 % If ROI is small but not too small, set it to nan if also its highlighCorr is not high.
-th_pix = 45;  
 th_hl = .6;
-inhibitRois(sizeROIhiPix < th_pix & hl_db' < th_hl) = nan;
+inhibitRois(sizeROIhiPix < th_pix2 & hl_db' < th_hl) = nan;
 
 % Set ROIs with very low highlightCorr, regardless of their ROI size, to unsure.
 th_hl = .2;
@@ -428,6 +441,7 @@ inhibitRois(hl_db' < th_hl) = nan;
 
 
 disp('_________ adjusted by ROI size _______')
+fprintf('th(sizeROIhiPix) for very small and small ROIs = %d, %d\n', th_pix1, th_pix2)
 cprintf('blue', '%d inhibitory; %d excitatory; %d unsure neurons in gcamp channel.\n', sum(inhibitRois==1), sum(inhibitRois==0), sum(isnan(inhibitRois)))
 cprintf('blue', '%.1f%% inhibitory; %.1f%% excitatory; %.1f%% unsure neurons in gcamp channel.\n', mean(inhibitRois==1)*100, mean(inhibitRois==0)*100, mean(isnan(inhibitRois)*100))
 

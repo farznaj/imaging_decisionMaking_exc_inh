@@ -1,4 +1,4 @@
-function plotMotCorr_normImg(mouse, imagingFolder, mdfFileNumber)
+function plotMotCorr_normImg(mouse, imagingFolder, mdfFileNumber, showMov)
 % Assess motion correction. Also see how normalizing the movie worked (in
 % order to make pixel intensities uniform before running CNMF).
 %
@@ -18,6 +18,7 @@ mouse = 'fni19';
 imagingFolder = '150930';
 mdfFileNumber = [1];
 %}
+
 
 
 %% Load imfilename
@@ -60,7 +61,7 @@ title({t1,t2})
 
 a = whos('-file', imfilename);
 
-if any(ismember({a.name}, 'movieRawRep'))
+if showMov && any(ismember({a.name}, 'movieRawRep'))
     load(imfilename, 'movieRawRep', 'movieMCMRep')
 
     f = figure('position', [406         138        1244         802]); %[41         106        1244         802]);

@@ -12,8 +12,8 @@ eval_comp_main(mousename, imagingFolder, mdfFileNumber)
 Created on Tue Aug 23 09:52:25 2016
 @author: farznaj
 """
-
-
+    
+#%%    
 def eval_comp_main(mousename, imagingFolder, mdfFileNumber, C=0, YrA=0, size_C=0):
     
 #    if options.get('C'):

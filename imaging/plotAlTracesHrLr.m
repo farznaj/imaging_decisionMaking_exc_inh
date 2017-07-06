@@ -50,7 +50,7 @@ for io = 1:length(o)
     
     % set vars
     popClassifier_setXYall
-    close % close that stupid figure
+%     close % close that stupid figure
     
     
     %%

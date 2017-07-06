@@ -1,7 +1,7 @@
 function [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = alignTraces_prePost_allCases...
     (alignedEvent, traces, traceTimeVec, frameLength, defaultPrePostFrames, shiftTime, scaleTime, ...
     timeInitTone, timeStimOnset, timeCommitCL_CR_Gotone, time1stSideTry, timeReward, timeCommitIncorrResp, ...
-    trs2rmv, flag_traces, nPreFrames, nPostFrames, onlySetNPrePost)
+    trs2rmv, flag_traces, nPreFrames, nPostFrames, onlySetNPrePost, timeStimOffset)
 
 % uses switch case to align traces using the prePost method.
 % alignedEvent is one of the follwoing: 
@@ -135,7 +135,34 @@ switch alignedEvent
             cprintf('blue', 'alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
         end
         
-    
+        
+    case 'stimOff'  
+        %% go tone (timeCommitCL_CR_Gotone)
+        eventNow = timeStimOffset;
+        eventBef = timeStimOnset;
+        eventAft = [];        
+%         nPreFrames = 3; % 10;
+
+        eventInds_f = eventTimeToIdx(eventNow, traceTimeVec);
+        
+%         [~, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        if set_npre & set_npost
+            [nPreFrames, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        elseif set_npre
+            [nPreFrames, ~] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+        elseif set_npost
+            [~, nPostFrames] = nPrePostFrs_set(eventNow, eventBef, eventAft, frameLength, defaultPrePostFrames);
+%         else
+%             nPreFrames = nPre0;
+%             nPostFrames = nPost0;
+        end
+        
+        if ~onlySetNPrePost
+            [traces_aligned_fut, time_aligned, eventI, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces, eventInds_f, nPreFrames, nPostFrames, shiftTime, scaleTime, flag_traces); % frames x units x trials        
+            cprintf('blue', 'alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', alignedEvent, nPreFrames, nPostFrames)
+        end
+        
+     
     case 'goTone'  
         %% go tone (timeCommitCL_CR_Gotone)
         eventNow = timeCommitCL_CR_Gotone;

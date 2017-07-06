@@ -57,16 +57,16 @@ else
     % nan for ROIs that could not be classified as inhibit or excit.
     
     % calls inhibitROIselection to set inhibitRois
-    [inhibitRois_pix, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss);    
+    [inhibitRois_pix, roi2surr_sig, sigTh_IE, x_all, cost_all, th_pix] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss);    
 %     [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss);
     
     if saveInhibitRois
         fprintf('Appending inhibitRois to more_pnevFile...\n')
         if ~isempty(x_all)
-            save(moreName, '-append', 'inhibitRois_pix', 'roi2surr_sig', 'sigTh_IE', 'x_all', 'cost_all')
+            save(moreName, '-append', 'inhibitRois_pix', 'roi2surr_sig', 'sigTh_IE', 'x_all', 'cost_all', 'th_pix')
 %             save(moreName, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh_IE', 'x_all', 'cost_all')
         else
-            save(moreName, '-append', 'inhibitRois_pix', 'roi2surr_sig', 'sigTh_IE')
+            save(moreName, '-append', 'inhibitRois_pix', 'roi2surr_sig', 'sigTh_IE', 'th_pix')
 %             save(moreName, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh_IE')
         end
         %             save(imfilename, '-append', 'inhibitRois', 'roi2surr_sig', 'sigTh')

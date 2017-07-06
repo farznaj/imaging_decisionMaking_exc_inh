@@ -42,8 +42,10 @@ if isempty(strfind(pwd, 'gamalamin')) % Farzaneh
     elseif isunix
         if isempty(strfind(pwd, 'sonas')) % Unix in the office
             dataPath = '~/Shares/Churchland/data';
+            altDataPath = '~/Shares/Churchland_hpc_home/space_managed_data'; % the new space-managed server (wos, to which data is migrated from grid)
         else
             dataPath = '/sonas-hs/churchland/nlsas/data/data'; % server
+            altDataPath = '/sonas-hs/churchland/hpc/home/space_managed_data';
         end
     elseif ispc
         dataPath = '\\sonas-hs.cshl.edu\churchland\data'; % lab PC
@@ -55,6 +57,13 @@ end
 
 
 folder = fullfile(dataPath, subject, 'behavior'); % folder = fullfile('Z:','data', subject, 'behavior');
+if ~exist(folder, 'dir') 
+    if exist('altDataPath', 'var')
+        folder = fullfile(altDataPath, subject, 'behavior');
+    else
+        error('Data directory does not exist!')
+    end
+end
 
 % delete files that start with '._'
 delete_dot_underline_files(subject)

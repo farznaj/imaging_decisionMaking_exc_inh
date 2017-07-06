@@ -1,4 +1,4 @@
-function plotEftyVarsMean(mouse, imagingFolder, mdfFileNumber, setvars)
+function plotEftyVarsMean(mouse, imagingFolder, mdfFileNumber, setvars, doPause)
 % If needed follow this script by codes setPmtOffFrames to set pmtOffFrames
 % and by findTrsWithMissingFrames to set frame-dropped trials. In this
 % latter case you will need to rerun CNMF (bc frames were dropped and
@@ -25,6 +25,10 @@ imagingFolder = '150930';
 mdfFileNumber = [1]; 
 %}
 
+if ~exist('doPause', 'var')
+    doPause = 1;
+end
+
 
 if isnumeric(setvars) && setvars==1
     signalCh = 2; % because you get A from channel 2, I think this should be always 2.
@@ -45,12 +49,14 @@ if isnumeric(setvars) && setvars==1
 
     load(imfilename, 'Nnan_nanBeg_nanEnd')
     [C, S, C_df] = processEftyOuts(C, S, C_df, Nnan_nanBeg_nanEnd, normalizeSpikes);    % S(:, [32672       32333       32439       32547]) = nan; % sharp spikes due to frame missing (their trials will be excluded... you are just doing this so they dont affect the normalization.)
+    pausePlot = 1;
 else
     C = setvars{1};
     S = setvars{2};
     f = setvars{3};
     activity_man_eftMask_ch2 = setvars{4};
     cs_frtrs = setvars{5};
+    pausePlot = 0;
 end
 
 
@@ -70,7 +76,7 @@ if exist('nFrsSess', 'var'),
     set([h0; h00], 'handlevisibility', 'off');
 end
 
-plot(top); title(sprintf('Normed S, range=%.2f', range(top)))
+plot(top); title(sprintf('Normed S, range=%.3f', range(top)))
 a = [a, gca];
 
 
@@ -85,7 +91,7 @@ if exist('nFrsSess', 'var'),
     set([h0; h00], 'handlevisibility', 'off');
 end
 
-plot(top); title(sprintf('C, range=%d', range(top)))
+plot(top); title(sprintf('C, range=%.0f', range(top)))
 a = [a, gca];
 
 
@@ -100,7 +106,7 @@ if exist('nFrsSess', 'var'),
     set([h0; h00], 'handlevisibility', 'off');
 end
 
-plot(top); title(sprintf('f, range=%.2f', range(f)))
+plot(top); title(sprintf('f, range=%.4f', range(f)))
 a = [a, gca];
 
 
@@ -116,24 +122,27 @@ if exist('activity_man_eftMask_ch2', 'var')
     end
 
     plot(top); %title('manual, Any pmtOffFrames?!'),
-    sprintf('Manual (any pmtOffFrames?), range=%d', range(top))
+    title(sprintf('Manual (any pmtOffFrames?), range=%.0f', range(top)))
     a = [a, gca];
 end
 
 linkaxes(a, 'x')
 xlim([0 size(C,2)])
 
-pause
-r2 = 0;
-% figure(h)
-for rr = 1:floor(length(C)/.1e4)+1
-    r1 = r2;
-    r2 = r1+.1e4;
-    xlim([r1 r2])
-    %     ginput
+if pausePlot && doPause
     pause
+    r2 = 0;
+    % figure(h)
+    for rr = 1:floor(length(C)/.1e4)+1
+        r1 = r2;
+        r2 = r1+.1e4;
+        xlim([r1 r2])
+        %     ginput
+        pause
+    end
 end
-    
+
+
 %{
 mkdir(fullfile(pd, 'figs')) % save the following 3 figures in a folder named "figs"
 savefig(fullfile(pd, 'figs','caTraces_aveAllNeurons'))  

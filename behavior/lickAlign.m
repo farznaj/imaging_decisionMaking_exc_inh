@@ -80,7 +80,7 @@ scopeTTLOrigTime = 0;
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, [], outcomes);
 
 
-f = figure('name', top);
+f = figure('name', top, 'position', [520         284        1401         459]);
 % doplots = 0;
 
 for i = 1:length(evT)
@@ -154,9 +154,15 @@ for i = 1:length(evT)
     %     xlim([e-1000 e+1000])
     %     xlim([timeEventAlign(xl1)  timeEventAlign(xl2)])
     %}
-    xlabel('Time (ms)')
-    ylabel('Fraction trials with licks')
-    title(evT{i})
+    if i==1
+        xlabel('Time (ms)')
+        ylabel('Fraction trials with licks')
+    end
+    if i>1
+        title(evT{i}(5:end))
+    else
+        title(evT{i})        
+    end
     
     
     %{
@@ -263,8 +269,10 @@ for i = 1:length(evT)
     xlim([xl1 xl2])
     %     xlim([timeEventAlign(xl1)  timeEventAlign(xl2)])
     %}
-    xlabel('Frame')
-    ylabel('Fraction trials with licks')
+    if i==1
+        xlabel('Frame')
+        ylabel('Fraction trials with licks')
+    end
     %     title(evT{i})
     
     

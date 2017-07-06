@@ -106,43 +106,52 @@ pnev2load = [];
     % colors = hot(3*length(CC)); % colors = colors(end:-1:1,:);    
     col = 'c'; %'b';
     lw = 1;
-    figure('units','normalized','outerposition',[0 0 1 1])
+    figure('units','normalized','outerposition',[0 0 1 1], 'position',[0.1802         0    0.7786    0.9028])
     ha = tight_subplot(1,7,[.03,.01],[.03,.03]);
     
-    axes(ha(1)), imagesc(cat(3, zeros(size(gcampImg)), gcampImg, zeros(size(gcampImg)))); axis image; axis off; if plotA, title('gcamp'), else title('gcamp (sdImage)'), end
-    axes(ha(2)), imagesc(cat(3, tdTomatoImg, zeros(size(tdTomatoImg)), zeros(size(tdTomatoImg)))); axis image; axis off; title('tdTomato (bleedthrough corrected)')
-    axes(ha(3)), imagesc(cat(3, tdTomatoImg, gcampImg, zeros(size(gcampImg)))); axis image; axis off; title('merged')
+    axes(ha(1)), imagesc(cat(3, zeros(size(gcampImg)), gcampImg, zeros(size(gcampImg)))); axis image; axis off; if plotA, title('gcamp'), else title('gcamp (sdImage)'), end; a = gca;
+    axes(ha(2)), imagesc(cat(3, tdTomatoImg, zeros(size(tdTomatoImg)), zeros(size(tdTomatoImg)))); axis image; axis off; title('tdTomato (bleedthrough corrected)'); a = [a, gca];
+    axes(ha(3)), imagesc(cat(3, tdTomatoImg, gcampImg, zeros(size(gcampImg)))); axis image; axis off; title('merged'); a= [a, gca];
     
     axes(ha(4)), imagesc(rgImg); hold on; axis image; axis off
     for rr = find(inhibitRois==1)
-        plot(CC{rr}(2,:), CC{rr}(1,:), 'color', col, 'linewidth', lw) %colors(rr, :))
+        plot(CC{rr}(2,:), CC{rr}(1,:), 'color', col, 'linewidth', lw); a = [a, gca]; %colors(rr, :))
     end 
     title(sprintf('%d inhibitory neurons', sum(inhibitRois==1)))
     
     axes(ha(5)), imagesc(rgImg); hold on; axis image; axis off
     for rr = find(inhibitRois==0)
-        plot(CC{rr}(2,:), CC{rr}(1,:), 'color', col, 'linewidth', lw) %colors(rr, :))
+        plot(CC{rr}(2,:), CC{rr}(1,:), 'color', col, 'linewidth', lw); a= [a, gca]; %colors(rr, :))
     end        
     title(sprintf('%d excitatory neurons', sum(inhibitRois==0)))
     
     axes(ha(6)), imagesc(rgImg); hold on; axis image; axis off
     for rr = find(isnan(inhibitRois))
-        plot(CC{rr}(2,:), CC{rr}(1,:), 'color', col, 'linewidth', lw) %colors(rr, :))
+        plot(CC{rr}(2,:), CC{rr}(1,:), 'color', col, 'linewidth', lw); a = [a, gca]; %colors(rr, :))
     end         
     title(sprintf('%d unsure neurons', sum(isnan(inhibitRois))))
     
     axes(ha(7)), imagesc(rgImg); hold on; axis image; axis off
     for rr = 1:length(CCb)
-        plot(CCb{rr}(2,:), CCb{rr}(1,:), 'color', col, 'linewidth', lw) %colors(rr, :))
+        if ~isempty(CCb{rr})
+            plot(CCb{rr}(2,:), CCb{rr}(1,:), 'color', col, 'linewidth', lw); a = [a, gca]; %colors(rr, :))
+        else
+            cprintf('-blue', 'ROI %d has empty contour!\n', rr)
+        end        
     end         
     title(sprintf('%d bad ROIs', length(CCb)))
     
     set(gcf, 'name', imagingFolder) %     title(sprintf('%s - %d', imagingFolder, mdfFileNumber))
-        
+    linkaxes(a)
+    zoom
+    
     
     %% Save
     
     if savefigs
+        if ~exist(fullfile(pd, 'figs'), 'dir')
+            mkdir(fullfile(pd, 'figs'))
+        end
         if plotA            
             if removeBadA
                 savefig(fullfile(pd, 'figs','red_green_A_goodNeurons'))  

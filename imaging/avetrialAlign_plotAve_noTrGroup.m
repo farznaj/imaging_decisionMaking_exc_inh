@@ -120,7 +120,7 @@ doplots = 0;
 
 fn = sprintf('%s - Shades: stand error across trials (neuron-averaged traces of trials)', top);
 % fn = sprintf('%s - Shades for rows 1 & 2: standard errors across neural traces (trial-averaged traces of neurons).  Shades for row 3: stand error across trials', top);
-f = figure('name', fn);
+f = figure('name', fn, 'position', [680         587        1375         389]);
 cnt = 0;
 
 for i = ievents
@@ -237,7 +237,12 @@ for i = ievents
     end
     ylim([min(top(xl1:xl2)-tosd(xl1:xl2))  max(top(xl1:xl2)+tosd(xl1:xl2))])
     %     ylabel('DF/F')
-    title(evT{i})
+    if i>1
+        title(evT{i}(5:end))
+    else
+        title(evT{i})
+    end
+    
     
     
     

@@ -75,7 +75,7 @@ wheelTimeRes = alldata(1).wheelSampleInt;
 [traces_wheel, times_wheel] = wheelInfo(alldata);
 
 
-figure('name', sprintf('%s outcomes, %s strengths, %s stimulus', os, strength2ana, stimrate2ana), 'position', [66   550   235   420]);
+figure('name', sprintf('%s outcomes, %s strengths, %s stimulus', os, strength2ana, stimrate2ana), 'position', [514   351   246   595]); %[66   550   235   420]);
 
 
 %%
@@ -162,7 +162,7 @@ for i = 1:length(evT) % loop over center, left and right licks.
             
             case 1  % imaging DF/F
                 traces = alldataDfofGood; % alldataSpikesGood; %  traces to be aligned.
-                ylabel('DF/F')
+                title('DF/F')
                 
                 shiftTime = frameLength / 2;
                 scaleTime = frameLength;
@@ -174,7 +174,7 @@ for i = 1:length(evT) % loop over center, left and right licks.
                 
             case 2 % imaging Spikes
                 traces = alldataSpikesGood;
-                ylabel('Spiking')
+                title('Spiking')
                 
                 shiftTime = frameLength / 2;
                 scaleTime = frameLength;
@@ -381,7 +381,7 @@ for i = 1:length(evT) % loop over center, left and right licks.
     subplot(3,1,3)
     
     traces = traces_wheel;
-    ylabel('Wheel revolution')
+    title('Wheel revolution')
     
     shiftTime = wheelTimeRes / 2;
     scaleTime = wheelTimeRes;
@@ -487,8 +487,10 @@ for i = 1:length(evT) % loop over center, left and right licks.
     
     av = nanmean(traces_licks_ful, 3); % average across licks
     top = nanmean(av,2); % average across neurons.
-    tosd = nanstd(av, [], 2);
-    tosd = tosd / sqrt(size(av, 2)); % plot se
+    tosd = nanstd(traces_licks_ful, [], 3);
+    tosd = tosd / sqrt(size(traces_licks_ful, 3)); % plot se    
+%     tosd = nanstd(av, [], 2);
+%     tosd = tosd / sqrt(size(av, 2)); % plot se
     
     % figure;
     e = nPre+1; % find(time_aligned >= 0, 1);

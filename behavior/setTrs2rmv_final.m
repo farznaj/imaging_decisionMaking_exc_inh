@@ -1,8 +1,12 @@
-function [trs2rmv, stimdur, stimrate, stimtype, cb] = setTrs2rmv_final(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing, trStartMissingUnknown, trEndMissing, trEndMissingUnknown, trialNumbers)
+function [trs2rmv, stimdur, stimrate, stimtype, cb] = setTrs2rmv_final(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing, trStartMissingUnknown, trEndMissing, trEndMissingUnknown, trialNumbers, rmvTrsStimRateChanged)
 % the complete function for setting trs2rmv, it calls setTrs2rmv
 
 if ~exist('imagingFlg', 'var')
     imagingFlg = 0; % when analysis only behavioral data.
+end
+
+if ~exist('rmvTrsStimRateChanged', 'var')
+    rmvTrsStimRateChanged = 1;
 end
 
 if ~exist('trEndMissing', 'var'), trEndMissing = []; end
@@ -80,21 +84,26 @@ if sum(fractFlashBefGoTone<1)>0
     
     figure; plot(fractFlashBefGoTone)
     xlabel('Trial')
-    ylabel([{'Fraction of flashes played before Go Tone'}, {'Ideally we want 1.'}])
+    title([{'Fraction of flashes played before Go Tone'}, {'Ideally we want 1.'}])
 end
 
 
 if any(stimRateChanged)
     trsStimTypeScrewed = find(stimRateChanged)'; % in these trials when go tone came stim type (hr vs lr) was different from the entire stim... these are obviously problematic trials.
-    cprintf('blue', '%d = #trs with a different stim type at Go Tone than the actual stim type\n', length(trsStimTypeScrewed))
-    cprintf('blue','... excluding them!\n')
+    cprintf('magenta', '%d = #trs with a different stim type at Go Tone than the actual stim type\n', length(trsStimTypeScrewed))
+    
     aveFractFlashBefGoTone_stimRateChanged = nanmean(fractFlashBefGoTone(stimRateChanged));
     fprintf('%.2f= mean fraction of flashes occurred before goTone in trials that stimType changed dur to goTone earier bein than stimOffset\n', aveFractFlashBefGoTone_stimRateChanged)
     
     aveOutcomeFractFlashBefGoTone_stimRateChanged = nanmean([alldata(stimRateChanged).outcome]);
     fprintf('%.2f= mean outcome on trials with stimType Changed\n', aveOutcomeFractFlashBefGoTone_stimRateChanged)
     
-    trs2rmv = unique([trs2rmv; trsStimTypeScrewed]);
+    if rmvTrsStimRateChanged
+        cprintf('magenta','... excluding them!\n')
+        trs2rmv = unique([trs2rmv; trsStimTypeScrewed]);
+    else
+        cprintf('magenta','... not excluding them!\n')
+    end
 end
 
 cprintf('blue', 'Number of trs2rmv: %d\n', length(trs2rmv))

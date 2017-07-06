@@ -1,7 +1,7 @@
 function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, good_inhibit, outcomes, allResp, allResp_HR_LR, ...
         trs2rmv, stimdur, stimrate, stimtype, cb, timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, ...
         timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename, pnevFileName] = ....
-   imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength, save_aligned_traces, savefigs);
+   imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength, save_aligned_traces, savefigs, rmvTrsStimRateChanged);
 % Right after you are done with preproc on the cluster, run the following scripts:
 % - plotEftyVarsMean (if needed follow by setPmtOffFrames to set pmtOffFrames and by findTrsWithMissingFrames to set frame-dropped trials. In this latter case you will need to rerun CNMF!): for a quick evaluation of the traces and spotting any potential frame drops, etc
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
@@ -128,6 +128,8 @@ pnev2load = [];
 %}
 [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
 [pd, pnev_n] = fileparts(pnevFileName);
+% [~,b] = fileparts(imfilename);
+% diary(['diary_',b])
 disp(pnev_n)
 cd(fileparts(imfilename))
 
@@ -191,7 +193,7 @@ set(gca,'tickdir','out')
 % u = unique({all_data.rewardStage}); disp(u);
 rs = {all_data.rewardStage}; 
 ave_rewardStage_allowCorr_chooseSide = [nanmean(strcmp(rs, 'Allow correction')), nanmean(strcmp(rs, 'Choose side'))];
-fprintf('Fraction of trials (rewardStage): allowCorr= %.3f. chooseSide= %.3f\n', ave_rewardStage_allowCorr_chooseSide)
+fprintf('Fraction of trials (rewardStage): allowCorr= %.3f. chooseSide= %.3f (GUI-set, not necessarily used by the animal.)\n', ave_rewardStage_allowCorr_chooseSide)
 % rsi = zeros(1, length(rs)); 
 % rsi(strcmp(rs, 'Choose side')) = 1; 
 % figure; plot(rsi); ylim([-.1 1.1])
@@ -205,7 +207,7 @@ fprintf('Fraction of trials (rewardStage): allowCorr= %.3f. chooseSide= %.3f\n',
 
 load(pnevFileName, 'activity_man_eftMask_ch2')
 
-if compareManual
+% if compareManual
     
     load(imfilename, 'imHeight', 'imWidth', 'pmtOffFrames')
     
@@ -223,7 +225,24 @@ if compareManual
     
     % Compute Df/f for the manually found activity trace.
     gcampCh = 2; smoothPts = 6; minPts = 7000; %800;
+    
+    % in case there are all-nan traces (can happen if ROI is too small), remove them before runing
+    % konnarthDeltaF because runningF doesnt accept nans. 
+    a = sum(isnan(activity_man_eftMask_ch2));     b = sum(a,1);
+    allNaNrois = find(b);
+    if ~isempty(allNaNrois)
+        cprintf('red', 'ROI %d has all-nan manAct!\n', allNaNrois)
+        activity_man_eftMask_ch2(:,allNaNrois) = [];
+    end
+    
     dFOF_man = konnerthDeltaFOverF(activity_man_eftMask_ch2, pmtOffFrames{gcampCh}, smoothPts, minPts);
+    
+    if ~isempty(allNaNrois)
+        activity_man_eftMask_ch2 = insertElement(activity_man_eftMask_ch2', allNaNrois, nan); 
+        activity_man_eftMask_ch2 =  activity_man_eftMask_ch2';
+        dFOF_man = insertElement(dFOF_man', allNaNrois, nan);
+        dFOF_man = dFOF_man';
+    end
     
     
     %% masks and matching ROIs between the 2 methods.
@@ -254,7 +273,7 @@ if compareManual
     matchedROI_idx = matchROIs_sumMask(refMask, toMatchMask); % matchedROI_idx(i)=j means ROI i of refMask matched ROI j of toMatchMask.
     %}
     
-end
+% end
 
 
 %% Assess pixel shifts (ie output of motion correction), pmtOffFrames and badFrames (frames with too much motion)
@@ -496,14 +515,15 @@ activity = C'; %temporalComp'; % frames x units % temporalComp = C; % C_mcmc; % 
 % dFOF = C_df'; % temporalDf'; temporalDf = C_df; % C_mcmc_df; % C_df; % obj.C_df;
 minPts = 7000; %800;
 smoothPts = 6;
-dFOF = konnerthDeltaFOverF(activity_man_eftMask_ch2, pmtOffFrames{1}, smoothPts, minPts);
+dFOF = dFOF_man; %konnerthDeltaFOverF(activity_man_eftMask_ch2, pmtOffFrames{1}, smoothPts, minPts);
+
 
 %{
 spikes = C';
 activity = activity_man_eftMask_ch2;
 dFOF = []; % to use Konnath df/f
 %}
-clear C C_df S
+clear C C_df S dFOF_man
 
 
 %%
@@ -591,7 +611,7 @@ if length(mdfFileNumber)==1
     if ~exist('trStartMissingUnknown', 'var'), trStartMissingUnknown = []; end
     
     imagingFlg = 1;
-    [trs2rmv, stimdur, stimrate, stimtype, cb] = setTrs2rmv_final(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing, trStartMissingUnknown, trEndMissing, trEndMissingUnknown, trialNumbers);
+    [trs2rmv, stimdur, stimrate, stimtype, cb] = setTrs2rmv_final(alldata, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing, trStartMissingUnknown, trEndMissing, trEndMissingUnknown, trialNumbers, rmvTrsStimRateChanged);
     trs2rmv(trs2rmv>length(alldata)) = [];
     
 else
@@ -609,7 +629,9 @@ clear spikes activity dFOF
 allowCorrectResp = 'change'; % 'change'; 'remove'; 'nothing'; % if 'change': on trials that mouse corrected his choice, go with the original response.
 uncommittedResp = 'nothing'; % 'change'; 'remove'; 'nothing'; % what to do on trials that mouse made a response (licked the side port) but did not lick again to commit it.
 %}
-[outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp); % 1 for HR choice, 0 for LR choice.
+allowCorrectOutcomeChange = 1;
+verbose = 1;
+[outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp, allowCorrectOutcomeChange, verbose); % 1 for HR choice, 0 for LR choice.
 
 % set trs2rmv to nan
 outcomes(trs2rmv) = NaN;
@@ -621,7 +643,7 @@ allResp_HR_LR(trs2rmv) = NaN;
 postName = fullfile(pd, sprintf('post_%s.mat', pnev_n));
 if ~exist(postName, 'file')
     warning('creating postFile and saving vars in it')
-    save(postName, 'outcomes', 'allResp_HR_LR', 'stimrate')
+    save(postName, 'outcomes', 'allResp_HR_LR', 'stimrate', 'rmvTrsStimRateChanged')
 end
 
 % save('151102_001.mat', '-append', 'trs2rmv')  % Do this!
@@ -983,7 +1005,14 @@ traceTypeAll = {'_S_', '_C_', '_dfof_'};
 
 varsAlreadySet = 1;
 loadPostNameVars = 0; % if 1, aligned traces will be loaded from postName, but we just set them in set_aligned_traces
-    
+
+a = matfile(postName);
+if isprop(a, 'firstSideTryAl')==0
+    saveAlVars = 1;
+else
+    saveAlVars = 0;
+end
+
 for itrac = 1:3
        
     traceType = traceTypeAll{itrac};
@@ -996,10 +1025,14 @@ for itrac = 1:3
     if itrac~=1
         close(fannoy) 
     end
-    load(postName, 'outcomes') % outcomes based on animal's 1st choice.
+%     load(postName, 'outcomes') % outcomes based on animal's 1st choice. we need to load them again bc they are changed in set_aligned_traces
+    % on July 3, 2017 you made popClassifier_trialHistory a function.
+    % Before that outcomes and allResp_HR_LR were getting changed there,
+    % but above you only loaded outcomes... so plots below were not
+    % quite correct if there was allowCorr.
     
-    if save_aligned_traces & itrac==1 % only save it for S
-        save(postName, '-append', 'trialHistory', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs', 'stimAl_noEarlyDec')
+    if save_aligned_traces & itrac==1 & saveAlVars==1 % only save it for S
+        save(postName, '-append', 'trialHistory', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs', 'stimAl_noEarlyDec', 'stimOffAl')
     end
 
     
@@ -1074,6 +1107,8 @@ if furtherAnalyses
     
 end
 
+
+% diary off
 
 %%
 %% Set problematic trials to later exclude them if desired.

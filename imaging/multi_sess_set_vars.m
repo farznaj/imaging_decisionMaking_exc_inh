@@ -172,7 +172,7 @@ for ise = 1:length(mdfFileNumber)
     if ~exist('trEndMissingUnknown', 'var'), trEndMissingUnknown = []; end
     if ~exist('trStartMissingUnknown', 'var'), trStartMissingUnknown = []; end
     
-    [trs2rmv_sess, stimdur_sess, stimrate_sess, stimtype_sess, cb] = setTrs2rmv_final(all_data_sess{ise}, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing_sess{ise}, trStartMissingUnknown, trEndMissing, trEndMissingUnknown, trialNumbers);
+    [trs2rmv_sess, stimdur_sess, stimrate_sess, stimtype_sess, cb] = setTrs2rmv_final(all_data_sess{ise}, thbeg, excludeExtraStim, excludeShortWaitDur, begTrs, imagingFlg, badAlignTrStartCode, trialStartMissing, trialCodeMissing_sess{ise}, trStartMissingUnknown, trEndMissing, trEndMissingUnknown, trialNumbers, rmvTrsStimRateChanged);
     
     trs2rmv = [trs2rmv; trs2rmv_sess + cs_alldata(ise)];
     stimdur = [stimdur; stimdur_sess];

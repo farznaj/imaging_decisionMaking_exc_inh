@@ -1,3 +1,5 @@
+function choiceVec0 = popClassifier_trialHistory(alldata, trs2rmv, iTiFlg, stimrate, cb, vec_iti, prevSuccessFlg, allTrs2rmv)
+
 % This script will be called inside popClassifier if trialHistAnalysis is
 % set to 1.
 
@@ -56,8 +58,9 @@ end
 % why you set allowCorrectOutcomeChange to 0.
 allowCorrectOutcomeChange = 0; % If 0, outcome of allowCorrEntered
 % trials wont be changed (although animal's choice will be changed). If 1,
-% outcome will be changed as well.
-[outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp, allowCorrectOutcomeChange);
+% outcome will be changed as well.    
+verbose = 0;
+[outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp, allowCorrectOutcomeChange, verbose);
 % Remember alldata.outcome is not necessarily the same as outcomes,
 % depending on what you do to allCorrection trials, if it is set to change,
 % then outcomes and alldata.outcome will be opposite to each other!!!

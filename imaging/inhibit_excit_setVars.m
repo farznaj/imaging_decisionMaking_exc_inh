@@ -1,4 +1,4 @@
-function [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss)
+function [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all, th_pix] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss)
 % identify inhibitory neurons (only on good neurons (not badROIs))
 
 % sigTh = 1.2;
@@ -211,7 +211,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     
     %%
     fprintf('Identifying inhibitory neurons....\n')    
-    [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all] = inhibitROIselection(mask, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CC, ch2Image, COMs, C, A, do2dGauss, val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
+    [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all, th_pix] = inhibitROIselection(mask, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CC, ch2Image, COMs, C, A, do2dGauss, val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
     
     
     %% Show the results

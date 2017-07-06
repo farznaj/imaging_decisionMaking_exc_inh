@@ -1,4 +1,5 @@
-function [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp(alldata, uncommittedResp, allowCorrectResp, allowCorrectOutcomeChange)
+function [outcomes, allResp, allResp_HR_LR] = set_outcomes_allResp...
+    (alldata, uncommittedResp, allowCorrectResp, allowCorrectOutcomeChange, verbose)
 %
 % set outcome and response side for each trial, taking into account
 % allcorrection and uncommitted responses.
@@ -48,6 +49,10 @@ if ~exist('allowCorrectOutcomeChange', 'var')
     % will be changed). If 1, outcome will be changed as well.
 end
 
+if ~exist('verbose', 'var')
+    verbose = 1;
+end
+
 
 %% Set outcomes and allResp.
 
@@ -62,17 +67,18 @@ if isfield(alldata(23).parsedEvents.states, 'punish_allowcorrection')
     % this does not give all trials that the mouse 1st committed error. If the mouse was on sideChoose, he will go to punish (and not punish allow correction).)
     a = arrayfun(@(x)x.parsedEvents.states.punish_allowcorrection, alldata, 'uniformoutput', 0);
     allowCorrectEntered = ~cellfun(@isempty, a);
-    fprintf('%.3f = Fraction of trials aninmal entered allowCorrection\n', nanmean(allowCorrectEntered))
-
+    if verbose
+        fprintf('%.3f = Fraction of trials aninmal entered allowCorrection\n', nanmean(allowCorrectEntered))
+    end
     if sum(allowCorrectEntered) > 0
         a = nanmean(allowCorrectEntered & outcomes==1) / nanmean(allowCorrectEntered);
-        fprintf('%.3f = Fract of allowCorrectEntered trials with final success\n', a)
+        if verbose, fprintf('%.3f = Fract of allowCorrectEntered trials with final success\n', a); end
         a = nanmean(allowCorrectEntered & outcomes==0) / nanmean(allowCorrectEntered);
-        fprintf('%.3f = Fract of allowCorrectEntered trials with final failure\n', a)
+        if verbose, fprintf('%.3f = Fract of allowCorrectEntered trials with final failure\n', a); end
         a = nanmean(allowCorrectEntered & outcomes==-5) / nanmean(allowCorrectEntered);
-        fprintf('%.3f = Fract of allowCorrectEntered trials with final no sideLickAgain\n', a)
+        if verbose, fprintf('%.3f = Fract of allowCorrectEntered trials with final no sideLickAgain\n', a); end
         a = nanmean(allowCorrectEntered & outcomes==-2) / nanmean(allowCorrectEntered);
-        fprintf('%.3f = Fract of allowCorrectEntered trials with final noChoice. These are really noSideLickAgain, but must correspond to earlier training days when you did not have the state wait4decision2. \n', a)
+        if verbose, fprintf('%.3f = Fract of allowCorrectEntered trials with final noChoice. These are really noSideLickAgain, but must correspond to earlier training days when you did not have the state wait4decision2. \n', a); end
 
         if nanmean(ismember(unique(outcomes(allowCorrectEntered)), [-5 -2 0 1])) ~=1
             error('This cannot happen!')
@@ -180,7 +186,7 @@ if isfield(alldata(23).parsedEvents.states, 'errorlick_again_wait')
     corrThenErr = (correctlick_again_wait_entered & outcomes==0); % uncommitted correct lick then committed error lick.
 
     fract_corrBut1stErr_ErrBut1stCorr = [sum(errThenCorr) / sum(outcomes==1) ,  sum(corrThenErr) / sum(outcomes==0)];
-    fprintf('%.2f= fract correct outcome preceded by error try\n%.2f= fract incorrect outcome preceded by correct try\n', fract_corrBut1stErr_ErrBut1stCorr)
+    if verbose, fprintf('%.2f= fract correct outcome preceded by error try\n%.2f= fract incorrect outcome preceded by correct try\n', fract_corrBut1stErr_ErrBut1stCorr); end
 
 
     % Some numbers to quantify animal's changes of mind:
@@ -194,13 +200,13 @@ if isfield(alldata(23).parsedEvents.states, 'errorlick_again_wait')
     % made a correct lick during wait4decision), animal made incorrect lick
     % afterwards?
     a = nanmean(errorlick_again_entered(correctlick_again_wait_entered));
-    fprintf('%.2f = Fract correct try followed by error try\n', a)
+    if verbose, fprintf('%.2f = Fract correct try followed by error try\n', a); end
 
     % In what fraction of errorlick_wait trials (ie trials that animal
     % made an error lick during wait4decision), animal made correct lick
     % afterwards?
     a = nanmean(correctlick_again_entered(errorlick_again_wait_entered));
-    fprintf('%.2f = Fract error try followed by correct try\n', a)
+    if verbose, fprintf('%.2f = Fract error try followed by correct try\n', a); end
 
 
 
