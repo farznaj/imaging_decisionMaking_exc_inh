@@ -73,10 +73,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         
     #%%        
     tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
-#    print os.path.exists(tifFold)
-#    print 'altDataPath' in locals()
-#    print altDataPath
-	
+
     if not os.path.exists(tifFold):
         if 'altDataPath' in locals():
             tifFold = os.path.join(altDataPath+mousename, 'imaging', imagingFolder)
@@ -84,10 +81,6 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
             sys.exit('Data directory does not exist!')
 
 
-#    print mdfFileNumber, type(mdfFileNumber)
-#    mdfFileNumber = np.array(mdfFileNumber).astype('int')
-#    print mdfFileNumber, type(mdfFileNumber), np.shape(mdfFileNumber)
-#    print np.shape(mdfFileNumber)[0]
     r = '%03d-'*np.shape(mdfFileNumber)[0] #len(mdfFileNumber)
     r = r[:-1]
     rr = r % (tuple(mdfFileNumber))

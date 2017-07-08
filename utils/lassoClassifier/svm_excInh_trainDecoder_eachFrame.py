@@ -263,13 +263,25 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     if platform.system()=='Linux':
         if os.getcwd().find('grid')!=-1: # server # sonas
             dataPath = '/sonas-hs/churchland/nlsas/data/data/'
-        else: # office linux
-            dataPath = '/home/farznaj/Shares/Churchland/data/'
-    else:
-        dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data/'
-        
-    ##%%        
+                altDataPath = '/sonas-hs/churchland/hpc/home/space_managed_data/'
+            else: # office linux
+                dataPath = '/home/farznaj/Shares/Churchland/data/'
+                altDataPath = '/home/farznaj/Shares/Churchland_hpc_home/space_managed_data/' # the new space-managed server (wos, to which data is migrated from grid)
+    elif platform.system()=='Darwin':
+        dataPath = '/Volumes/My Stu_win/ChurchlandLab'
+        else:
+            dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data/'
+
+    #%%
     tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
+        
+        if not os.path.exists(tifFold):
+            if 'altDataPath' in locals():
+                tifFold = os.path.join(altDataPath+mousename, 'imaging', imagingFolder)
+            else:
+                sys.exit('Data directory does not exist!')
+
+
     r = '%03d-'*len(mdfFileNumber)
     r = r[:-1]
     rr = r % (tuple(mdfFileNumber))
