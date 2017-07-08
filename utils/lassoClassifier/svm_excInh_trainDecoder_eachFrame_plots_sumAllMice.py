@@ -24,6 +24,7 @@ chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-ali
 savefigs = 1
 superimpose = 1 # the averaged aligned traces of testing and shuffled will be plotted on the same figure
 loadWeights = 0
+num2AnInhAllexcEqexc = 2; # if 3, all 3 types (inh, allExc, exc) will be analyzed. If 2, inh and allExc will be analyzed. if 1, inh will be analyzed. # if you have all svm files saved, set it to 3.
 
 # following will be needed for 'fni18': #set one of the following to 1:
 allDays = 0# all 7 days will be used (last 3 days have z motion!)
@@ -294,8 +295,8 @@ for im in range(len(mice)):
     
         else:  # 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)       
             
-            for idi in range(3):
-                doInhAllexcEqexc = np.full((3), False)
+            for idi in range(num2AnInhAllexcEqexc):
+                doInhAllexcEqexc = np.full((num2AnInhAllexcEqexc), False)
                 doInhAllexcEqexc[idi] = True 
                 svmName = setSVMname(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins)        
                 svmName = svmName[0]
