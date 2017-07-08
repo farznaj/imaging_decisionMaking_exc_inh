@@ -14,14 +14,14 @@ Created on Sun Mar 12 15:12:29 2017
 
 
 #%%
-mice = 'fni19' #'fni16', 'fni17', 'fni18', 'fni19'
+mice = 'fni19' #'fni16', 'fni17', 'fni18', 'fni19' # if you want to use only one mouse, make sure you put comma at the end; eg. mice = 'fni19',
 
 
 loadInhAllexcEqexc = 1 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)
 
 time2an = -1; # relative to eventI, look at classErr in what time stamp.
 chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
-savefigs = 0
+savefigs = 1
 superimpose = 1 # the averaged aligned traces of testing and shuffled will be plotted on the same figure
 loadWeights = 0
 
@@ -574,9 +574,9 @@ makeNicePlots(ax)
 
 if savefigs:#% Save the figure
     if chAl==1:
-        dd = 'chAl_allMice'
+        dd = 'chAl_' + '_'.join(mice) #'chAl_allMice'
     else:
-        dd = 'stAl_allMice'
+        dd = 'stAl_' + '_'.join(mice) #'stAl_allMice'
     
     if loadInhAllexcEqexc==0:        
         dd = dd+'_inhRois'
@@ -588,6 +588,7 @@ if savefigs:#% Save the figure
             
     fign = os.path.join(svmdir+dnow0, suffn[0:5]+dd+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+
 
 
 
