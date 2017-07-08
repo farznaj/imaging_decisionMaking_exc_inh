@@ -24,7 +24,7 @@ chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-ali
 savefigs = 1
 superimpose = 1 # the averaged aligned traces of testing and shuffled will be plotted on the same figure
 loadWeights = 0
-num2AnInhAllexcEqexc = 2; # if 3, all 3 types (inh, allExc, exc) will be analyzed. If 2, inh and allExc will be analyzed. if 1, inh will be analyzed. # if you have all svm files saved, set it to 3.
+num2AnInhAllexcEqexc = 2 # if 3, all 3 types (inh, allExc, exc) will be analyzed. If 2, inh and allExc will be analyzed. if 1, inh will be analyzed. # if you have all svm files saved, set it to 3.
 
 # following will be needed for 'fni18': #set one of the following to 1:
 allDays = 0# all 7 days will be used (last 3 days have z motion!)
@@ -332,12 +332,13 @@ for im in range(len(mice)):
         perClassErrorTest_chance_allExc = Dataae.pop('perClassErrorTest_chance_allExc')   
         if loadWeights==1:
             w_data_allExc = Dataae.pop('w_data_allExc') 
-        
-        perClassErrorTest_data_exc = Datae.pop('perClassErrorTest_data_exc')    
-        perClassErrorTest_shfl_exc = Datae.pop('perClassErrorTest_shfl_exc')
-        perClassErrorTest_chance_exc = Datae.pop('perClassErrorTest_chance_exc')
-        if loadWeights==1:
-            w_data_exc = Datae.pop('w_data_exc') 
+
+        if num2AnInhAllexcEqexc == 3:
+            perClassErrorTest_data_exc = Datae.pop('perClassErrorTest_data_exc')
+            perClassErrorTest_shfl_exc = Datae.pop('perClassErrorTest_shfl_exc')
+            perClassErrorTest_chance_exc = Datae.pop('perClassErrorTest_chance_exc')
+            if loadWeights==1:
+                w_data_exc = Datae.pop('w_data_exc') 
         
        
     
@@ -351,10 +352,11 @@ for im in range(len(mice)):
             perClassErrorTest_data_allExc = setTo50classErr(perClassErrorTest_data_allExc, w_data_allExc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
             perClassErrorTest_shfl_allExc = setTo50classErr(perClassErrorTest_shfl_allExc, w_data_allExc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
             perClassErrorTest_chance_allExc = setTo50classErr(perClassErrorTest_chance_allExc, w_data_allExc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)    
-            
-            perClassErrorTest_data_exc = setTo50classErr(perClassErrorTest_data_exc, w_data_exc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
-            perClassErrorTest_shfl_exc = setTo50classErr(perClassErrorTest_shfl_exc, w_data_exc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
-            perClassErrorTest_chance_exc = setTo50classErr(perClassErrorTest_chance_exc, w_data_exc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)    
+        
+            if num2AnInhAllexcEqexc == 3:
+                perClassErrorTest_data_exc = setTo50classErr(perClassErrorTest_data_exc, w_data_exc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+                perClassErrorTest_shfl_exc = setTo50classErr(perClassErrorTest_shfl_exc, w_data_exc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+                perClassErrorTest_chance_exc = setTo50classErr(perClassErrorTest_chance_exc, w_data_exc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)    
         
             #% Get number of inh and exc        
             numInh[iday] = w_data_inh.shape[1]
@@ -370,10 +372,11 @@ for im in range(len(mice)):
         perClassErrorTest_data_allExc = perClassErrorTest_data_allExc[:,eventI_ds+time2an].squeeze() # numSamps
         perClassErrorTest_shfl_allExc = perClassErrorTest_shfl_allExc[:,eventI_ds+time2an].squeeze() # numSamps
         perClassErrorTest_chance_allExc = perClassErrorTest_chance_allExc[:,eventI_ds+time2an].squeeze() # numSamps
-        
-        perClassErrorTest_data_exc = perClassErrorTest_data_exc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
-        perClassErrorTest_shfl_exc = perClassErrorTest_shfl_exc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
-        perClassErrorTest_chance_exc = perClassErrorTest_chance_exc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
+
+        if num2AnInhAllexcEqexc == 3:
+            perClassErrorTest_data_exc = perClassErrorTest_data_exc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
+            perClassErrorTest_shfl_exc = perClassErrorTest_shfl_exc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
+            perClassErrorTest_chance_exc = perClassErrorTest_chance_exc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
     
     
         #%% Append vars for all days
@@ -381,16 +384,23 @@ for im in range(len(mice)):
         perClassErrorTest_data_inh_all.append(perClassErrorTest_data_inh) # each day: samps x numFrs    
         perClassErrorTest_shfl_inh_all.append(perClassErrorTest_shfl_inh)
         perClassErrorTest_chance_inh_all.append(perClassErrorTest_chance_inh)
-        perClassErrorTest_data_allExc_all.append(perClassErrorTest_data_allExc) # each day: samps x numFrs    
+
+        perClassErrorTest_data_allExc_all.append(perClassErrorTest_data_allExc) # each day: samps x numFrs
         perClassErrorTest_shfl_allExc_all.append(perClassErrorTest_shfl_allExc)
         perClassErrorTest_chance_allExc_all.append(perClassErrorTest_chance_allExc) 
-        perClassErrorTest_data_exc_all.append(perClassErrorTest_data_exc) # each day: numShufflesExc x numSamples x numFrames    
-        perClassErrorTest_shfl_exc_all.append(perClassErrorTest_shfl_exc)
-        perClassErrorTest_chance_exc_all.append(perClassErrorTest_chance_exc)
-    
+
+        if num2AnInhAllexcEqexc == 3:
+            perClassErrorTest_data_exc_all.append(perClassErrorTest_data_exc) # each day: numShufflesExc x numSamples x numFrames
+            perClassErrorTest_shfl_exc_all.append(perClassErrorTest_shfl_exc)
+            perClassErrorTest_chance_exc_all.append(perClassErrorTest_chance_exc)
+
         # Delete vars before starting the next day    
-        if loadWeights==1: 
-            del perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc
+        if loadWeights==1:
+            if num2AnInhAllexcEqexc == 3:
+                del perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc
+            else:
+                del perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, w_data_inh, w_data_allExc
+
         else:
             del perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc
     
@@ -405,12 +415,15 @@ for im in range(len(mice)):
     perClassErrorTest_data_inh_all = np.array(perClassErrorTest_data_inh_all)
     perClassErrorTest_shfl_inh_all = np.array(perClassErrorTest_shfl_inh_all)
     perClassErrorTest_chance_inh_all = np.array(perClassErrorTest_chance_inh_all)
+    
     perClassErrorTest_data_allExc_all = np.array(perClassErrorTest_data_allExc_all)
     perClassErrorTest_shfl_allExc_all = np.array(perClassErrorTest_shfl_allExc_all)
     perClassErrorTest_chance_allExc_all = np.array(perClassErrorTest_chance_allExc_all)
-    perClassErrorTest_data_exc_all = np.array(perClassErrorTest_data_exc_all) # numShufflesExc x numSamples x numFrames
-    perClassErrorTest_shfl_exc_all = np.array(perClassErrorTest_shfl_exc_all)
-    perClassErrorTest_chance_exc_all = np.array(perClassErrorTest_chance_exc_all)
+
+    if num2AnInhAllexcEqexc == 3:
+        perClassErrorTest_data_exc_all = np.array(perClassErrorTest_data_exc_all) # numShufflesExc x numSamples x numFrames
+        perClassErrorTest_shfl_exc_all = np.array(perClassErrorTest_shfl_exc_all)
+        perClassErrorTest_chance_exc_all = np.array(perClassErrorTest_chance_exc_all)
     
     
     #%% Average and std of class accuracies across CV samples ... for each day
@@ -432,36 +445,39 @@ for im in range(len(mice)):
     av_test_chance_allExc = 100-np.mean(perClassErrorTest_chance_allExc_all, axis=1)
     sd_test_chance_allExc = np.std(perClassErrorTest_chance_allExc_all, axis=1) / np.sqrt(numSamples)
     
-    av_test_data_exc = 100-np.mean(perClassErrorTest_data_exc_all, axis=(1,2)) # average across cv samples and excShuffles
-    sd_test_data_exc = np.std(perClassErrorTest_data_exc_all, axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
-    av_test_shfl_exc = 100-np.mean(perClassErrorTest_shfl_exc_all, axis=(1,2))
-    sd_test_shfl_exc = np.std(perClassErrorTest_shfl_exc_all, axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
-    av_test_chance_exc = 100-np.mean(perClassErrorTest_chance_exc_all, axis=(1,2))
-    sd_test_chance_exc = np.std(perClassErrorTest_chance_exc_all, axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
+    if num2AnInhAllexcEqexc == 3:
+        av_test_data_exc = 100-np.mean(perClassErrorTest_data_exc_all, axis=(1,2)) # average across cv samples and excShuffles
+        sd_test_data_exc = np.std(perClassErrorTest_data_exc_all, axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
+        av_test_shfl_exc = 100-np.mean(perClassErrorTest_shfl_exc_all, axis=(1,2))
+        sd_test_shfl_exc = np.std(perClassErrorTest_shfl_exc_all, axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
+        av_test_chance_exc = 100-np.mean(perClassErrorTest_chance_exc_all, axis=(1,2))
+        sd_test_chance_exc = np.std(perClassErrorTest_chance_exc_all, axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
     
     
     #%% Keep values of all mice (cvSample-averaged)
     
     av_test_data_inh_allMice.append(av_test_data_inh)
     sd_test_data_inh_allMice.append(sd_test_data_inh)
-    av_test_data_exc_allMice.append(av_test_data_exc)
-    sd_test_data_exc_allMice.append(sd_test_data_exc)
-    av_test_data_allExc_allMice.append(av_test_data_allExc)
-    sd_test_data_allExc_allMice.append(sd_test_data_allExc)
-    
     av_test_shfl_inh_allMice.append(av_test_shfl_inh)
     sd_test_shfl_inh_allMice.append(sd_test_shfl_inh)
-    av_test_shfl_exc_allMice.append(av_test_shfl_exc)
-    sd_test_shfl_exc_allMice.append(sd_test_shfl_exc)
-    av_test_shfl_allExc_allMice.append(av_test_shfl_allExc)
-    sd_test_shfl_allExc_allMice.append(sd_test_shfl_allExc)
-
     av_test_chance_inh_allMice.append(av_test_chance_inh)
     sd_test_chance_inh_allMice.append(sd_test_chance_inh)
-    av_test_chance_exc_allMice.append(av_test_chance_exc)
-    sd_test_chance_exc_allMice.append(sd_test_chance_exc)
+
+    av_test_data_allExc_allMice.append(av_test_data_allExc)
+    sd_test_data_allExc_allMice.append(sd_test_data_allExc)
+    av_test_shfl_allExc_allMice.append(av_test_shfl_allExc)
+    sd_test_shfl_allExc_allMice.append(sd_test_shfl_allExc)
     av_test_chance_allExc_allMice.append(av_test_chance_allExc)
     sd_test_chance_allExc_allMice.append(sd_test_chance_allExc)
+
+    if num2AnInhAllexcEqexc == 3:
+        av_test_data_exc_allMice.append(av_test_data_exc)
+        sd_test_data_exc_allMice.append(sd_test_data_exc)
+        av_test_shfl_exc_allMice.append(av_test_shfl_exc)
+        sd_test_shfl_exc_allMice.append(sd_test_shfl_exc)
+        av_test_chance_exc_allMice.append(av_test_chance_exc)
+        sd_test_chance_exc_allMice.append(sd_test_chance_exc)
+
 
     
     
@@ -472,9 +488,11 @@ for im in range(len(mice)):
     
     plt.figure(figsize=(4.5,3))
     plt.errorbar(range(numDays), av_test_data_inh, sd_test_data_inh, label='inh', color='r')
-    plt.errorbar(range(numDays), av_test_data_exc, sd_test_data_exc, label='exc', color='b')
     plt.errorbar(range(numDays), av_test_data_allExc, sd_test_data_allExc, label='allExc', color='k')
-    plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
+    if num2AnInhAllexcEqexc == 3:
+        plt.errorbar(range(numDays), av_test_data_exc, sd_test_data_exc, label='exc', color='b')
+
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7))
     plt.xlabel('Days')
     plt.ylabel('Classification accuracy (%)')
     makeNicePlots(plt.gca())
@@ -493,9 +511,10 @@ for im in range(len(mice)):
                 
         fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
         plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
-        
-    _,pcorrtrace = stats.ttest_ind(av_test_data_inh, av_test_data_exc) # p value of class accuracy being different from 50
-    print pcorrtrace     
+
+    if num2AnInhAllexcEqexc == 3:
+        _,pcorrtrace = stats.ttest_ind(av_test_data_inh, av_test_data_exc) # p value of class accuracy being different from 50
+        print pcorrtrace     
     
     
 
@@ -504,51 +523,51 @@ for im in range(len(mice)):
 #%%
 av_test_data_inh_allMice = np.array(av_test_data_inh_allMice)
 sd_test_data_inh_allMice = np.array(sd_test_data_inh_allMice)
-av_test_data_exc_allMice = np.array(av_test_data_exc_allMice)
-sd_test_data_exc_allMice = np.array(sd_test_data_exc_allMice)
-av_test_data_allExc_allMice = np.array(av_test_data_allExc_allMice)
-sd_test_data_allExc_allMice = np.array(sd_test_data_allExc_allMice)
-
 av_test_shfl_inh_allMice = np.array(av_test_shfl_inh_allMice)
 sd_test_shfl_inh_allMice = np.array(sd_test_shfl_inh_allMice)
-av_test_shfl_exc_allMice = np.array(av_test_shfl_exc_allMice)
-sd_test_shfl_exc_allMice = np.array(sd_test_shfl_exc_allMice)
-av_test_shfl_allExc_allMice = np.array(av_test_shfl_allExc_allMice)
-sd_test_shfl_allExc_allMice = np.array(sd_test_shfl_allExc_allMice)
-
 av_test_chance_inh_allMice = np.array(av_test_chance_inh_allMice)
 sd_test_chance_inh_allMice = np.array(sd_test_chance_inh_allMice)
-av_test_chance_exc_allMice = np.array(av_test_chance_exc_allMice)
-sd_test_chance_exc_allMice = np.array(sd_test_chance_exc_allMice)
+
+av_test_data_allExc_allMice = np.array(av_test_data_allExc_allMice)
+sd_test_data_allExc_allMice = np.array(sd_test_data_allExc_allMice)
+av_test_shfl_allExc_allMice = np.array(av_test_shfl_allExc_allMice)
+sd_test_shfl_allExc_allMice = np.array(sd_test_shfl_allExc_allMice)
 av_test_chance_allExc_allMice = np.array(av_test_chance_allExc_allMice)
 sd_test_chance_allExc_allMice = np.array(sd_test_chance_allExc_allMice)
+
+if num2AnInhAllexcEqexc == 3:
+    av_test_data_exc_allMice = np.array(av_test_data_exc_allMice)
+    sd_test_data_exc_allMice = np.array(sd_test_data_exc_allMice)
+    av_test_shfl_exc_allMice = np.array(av_test_shfl_exc_allMice)
+    sd_test_shfl_exc_allMice = np.array(sd_test_shfl_exc_allMice)
+    av_test_chance_exc_allMice = np.array(av_test_chance_exc_allMice)
+    sd_test_chance_exc_allMice = np.array(sd_test_chance_exc_allMice)
 
 
 #%% Average classErr across sessions for each mouse
 
 av_av_test_data_inh_allMice = np.array([np.nanmean(av_test_data_inh_allMice[im], axis=0) for im in range(len(mice))])
-av_av_test_data_exc_allMice = np.array([np.nanmean(av_test_data_exc_allMice[im], axis=0) for im in range(len(mice))])
-av_av_test_data_allExc_allMice = np.array([np.nanmean(av_test_data_allExc_allMice[im], axis=0) for im in range(len(mice))])
-
 sd_av_test_data_inh_allMice = np.array([np.nanstd(av_test_data_inh_allMice[im], axis=0) for im in range(len(mice))])
-sd_av_test_data_exc_allMice = np.array([np.nanstd(av_test_data_exc_allMice[im], axis=0) for im in range(len(mice))])
-sd_av_test_data_allExc_allMice = np.array([np.nanstd(av_test_data_allExc_allMice[im], axis=0) for im in range(len(mice))])
-
 av_av_test_shfl_inh_allMice = np.array([np.nanmean(av_test_shfl_inh_allMice[im], axis=0) for im in range(len(mice))])
-av_av_test_shfl_exc_allMice = np.array([np.nanmean(av_test_shfl_exc_allMice[im], axis=0) for im in range(len(mice))])
-av_av_test_shfl_allExc_allMice = np.array([np.nanmean(av_test_shfl_allExc_allMice[im], axis=0) for im in range(len(mice))])
-
 sd_av_test_shfl_inh_allMice = np.array([np.nanstd(av_test_shfl_inh_allMice[im], axis=0) for im in range(len(mice))])
-sd_av_test_shfl_exc_allMice = np.array([np.nanstd(av_test_shfl_exc_allMice[im], axis=0) for im in range(len(mice))])
-sd_av_test_shfl_allExc_allMice = np.array([np.nanstd(av_test_shfl_allExc_allMice[im], axis=0) for im in range(len(mice))])
-
 av_av_test_chance_inh_allMice = np.array([np.nanmean(av_test_chance_inh_allMice[im], axis=0) for im in range(len(mice))])
-av_av_test_chance_exc_allMice = np.array([np.nanmean(av_test_chance_exc_allMice[im], axis=0) for im in range(len(mice))])
-av_av_test_chance_allExc_allMice = np.array([np.nanmean(av_test_chance_allExc_allMice[im], axis=0) for im in range(len(mice))])
-
 sd_av_test_chance_inh_allMice = np.array([np.nanstd(av_test_chance_inh_allMice[im], axis=0) for im in range(len(mice))])
-sd_av_test_chance_exc_allMice = np.array([np.nanstd(av_test_chance_exc_allMice[im], axis=0) for im in range(len(mice))])
+
+av_av_test_data_allExc_allMice = np.array([np.nanmean(av_test_data_allExc_allMice[im], axis=0) for im in range(len(mice))])
+sd_av_test_data_allExc_allMice = np.array([np.nanstd(av_test_data_allExc_allMice[im], axis=0) for im in range(len(mice))])
+av_av_test_shfl_allExc_allMice = np.array([np.nanmean(av_test_shfl_allExc_allMice[im], axis=0) for im in range(len(mice))])
+sd_av_test_shfl_allExc_allMice = np.array([np.nanstd(av_test_shfl_allExc_allMice[im], axis=0) for im in range(len(mice))])
+av_av_test_chance_allExc_allMice = np.array([np.nanmean(av_test_chance_allExc_allMice[im], axis=0) for im in range(len(mice))])
 sd_av_test_chance_allExc_allMice = np.array([np.nanstd(av_test_chance_allExc_allMice[im], axis=0) for im in range(len(mice))])
+
+if num2AnInhAllexcEqexc == 3:
+    av_av_test_data_exc_allMice = np.array([np.nanmean(av_test_data_exc_allMice[im], axis=0) for im in range(len(mice))])
+    sd_av_test_data_exc_allMice = np.array([np.nanstd(av_test_data_exc_allMice[im], axis=0) for im in range(len(mice))])
+    av_av_test_shfl_exc_allMice = np.array([np.nanmean(av_test_shfl_exc_allMice[im], axis=0) for im in range(len(mice))])
+    sd_av_test_shfl_exc_allMice = np.array([np.nanstd(av_test_shfl_exc_allMice[im], axis=0) for im in range(len(mice))])
+    av_av_test_chance_exc_allMice = np.array([np.nanmean(av_test_chance_exc_allMice[im], axis=0) for im in range(len(mice))])
+    sd_av_test_chance_exc_allMice = np.array([np.nanstd(av_test_chance_exc_allMice[im], axis=0) for im in range(len(mice))])
+
 
 
 #%% Plot session-averaged classErr for each mouse
@@ -556,8 +575,9 @@ sd_av_test_chance_allExc_allMice = np.array([np.nanstd(av_test_chance_allExc_all
 plt.figure(figsize=(2,3))
 
 plt.errorbar(range(len(mice)), av_av_test_data_inh_allMice, sd_av_test_data_inh_allMice, fmt='o', label='inh', color='r')
-plt.errorbar(range(len(mice)), av_av_test_data_exc_allMice, sd_av_test_data_exc_allMice, fmt='o', label='exc', color='b')
 plt.errorbar(range(len(mice)), av_av_test_data_allExc_allMice, sd_av_test_data_allExc_allMice, fmt='o', label='allExc', color='k')
+if num2AnInhAllexcEqexc == 3:
+    plt.errorbar(range(len(mice)), av_av_test_data_exc_allMice, sd_av_test_data_exc_allMice, fmt='o', label='exc', color='b')
 '''
 plt.errorbar(range(len(mice)), av_av_test_shfl_inh_allMice, sd_av_test_shfl_inh_allMice, color='r', fmt='o')
 plt.errorbar(range(len(mice)), av_av_test_shfl_exc_allMice, sd_av_test_shfl_exc_allMice, color='b', fmt='o')
