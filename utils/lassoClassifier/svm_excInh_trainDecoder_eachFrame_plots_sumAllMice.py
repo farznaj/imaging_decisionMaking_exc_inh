@@ -432,7 +432,8 @@ for im in range(len(mice)):
     #%% Average and std of class accuracies across CV samples ... for each day
     
     numSamples = np.shape(perClassErrorTest_data_inh_all[0])[0]
-    numExcSamples = np.shape(perClassErrorTest_data_exc_all[0])[0]
+    if num2AnInhAllexcEqexc == 3:
+        numExcSamples = np.shape(perClassErrorTest_data_exc_all[0])[0]
     
     av_test_data_inh = 100-np.mean(perClassErrorTest_data_inh_all, axis=1) # average across cv samples
     sd_test_data_inh = np.std(perClassErrorTest_data_inh_all, axis=1) / np.sqrt(numSamples)
