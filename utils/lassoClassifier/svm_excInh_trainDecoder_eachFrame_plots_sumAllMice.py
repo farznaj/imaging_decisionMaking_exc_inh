@@ -14,14 +14,14 @@ Created on Sun Mar 12 15:12:29 2017
 
 
 #%%
-mice = 'fni16', 'fni17', 'fni18'
+mice = 'fni19' #'fni16', 'fni17', 'fni18', 'fni19'
 
 
-loadInhAllexcEqexc = 0 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)       
+loadInhAllexcEqexc = 1 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)
 
 time2an = -1; # relative to eventI, look at classErr in what time stamp.
 chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
-savefigs = 1
+savefigs = 0
 superimpose = 1 # the averaged aligned traces of testing and shuffled will be plotted on the same figure
 loadWeights = 0
 
