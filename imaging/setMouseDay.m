@@ -102,7 +102,7 @@ for iday = 1:length(days)
     if ~exist(savedir, 'dir')
         mkdir(savedir)
     end
-    movefile('html/*_sum*', savedir)
+    movefile('~/Documents/trial_history/imaging/html/*_sum*', savedir)
 
     clearvars -except mouse days
 end

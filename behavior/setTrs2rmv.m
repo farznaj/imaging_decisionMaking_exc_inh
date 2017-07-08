@@ -75,7 +75,7 @@ if exist('badAlignTrStartCode', 'var')
     % Trials including pmtOffFrames and bigMotion (badFrames).
     trs_badMotion_pmtOff = unique([find([alldata.anyBadFrames]==1), find([alldata.anyPmtOffFrames]==1)]);
     
-    % Trials that miss frames at the end (they are find for alignments on earlier events)
+    % Trials that miss frames at the end (they are fine for alignments on earlier events)
     trs_endMiss = unique([trialNumbers(trEndMissing), trialNumbers(trEndMissingUnknown)]);
     
     % Trials that miss trialCode signal.
