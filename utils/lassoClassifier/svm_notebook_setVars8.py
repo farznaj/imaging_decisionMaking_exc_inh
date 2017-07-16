@@ -27,8 +27,12 @@ Created on Fri Oct 28 12:48:43 2016
 
 #allExc = 0 # use allexc and inh neurons for decoding (but not unsure neurons)                       
 #eqExcInh = 1 # use equal number of exc and inh neurons for decoding... numSamps of these populations will be made.
-def svm_notebook_setVars8(mousename, imagingFolder, mdfFileNumber, chAl, numSamples=50, trialHistAnalysis=0, iTiFlg=2):
+#ch_st_goAl = [0,1,0] # whether do analysis on traces aligned on choice, stim or go tone.
+def svm_notebook_setVars8(mousename, imagingFolder, mdfFileNumber, ch_st_goAl, numSamples=50, trialHistAnalysis=0, iTiFlg=2):
 
+    chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
+    stAl = ch_st_goAl[1]
+    goToneAl = ch_st_goAl[2]
 #    chAl = 0 # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
     softNorm = 1 # if 1, no neurons will be excluded, bc we do soft normalization of FRs, so non-active neurons wont be problematic. if softNorm = 0, NsExcluded will be found
     useEqualTrNums = 1 # Make sure both classes have the same number of trials when training the classifier

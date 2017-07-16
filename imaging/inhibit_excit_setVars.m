@@ -151,7 +151,7 @@ linkaxes([a1,a2],'x')
 normims = 0;
 warning('off', 'MATLAB:nargchk:deprecated')
 ax1 = [];
-figure('name', sprintf('Average images. Model: red = offset + slope * green, commonSlope = %.2f', slope_common));
+figure('name', sprintf('Average images. Model: red = offset + slope * green, commonSlope = %.2f', slope_common), 'position', [680   270   843   706]);
 % figure('name', sprintf('model: red = offset + slope * green, commonSlope = %.2f, cost = %.2f', slope_common, cost_common));
 ha = tight_subplot(2,2,[.05],[.05],[.05]);
 
@@ -184,6 +184,14 @@ hold on, plotCOMsCC(COMs)
 %}
 linkaxes(ax1)
 
+[pd,pnev_n] = fileparts(pnevFileName);
+figdir = fullfile(pd, 'figs');
+if ~exist(figdir, 'dir')
+    mkdir(figdir) % save the following 3 figures in a folder named "figs"
+end
+
+savefig(fullfile(figdir, 'inhIdentCorrImg')) 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -208,10 +216,10 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     
     % sigTh_IE: threshold value on roi2surr_sig for identifying inhibit and excit neurons: 1st element for inhibit, 2nd element for excit.
     
-    
+
     %%
     fprintf('Identifying inhibitory neurons....\n')    
-    [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all, th_pix] = inhibitROIselection(mask, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CC, ch2Image, COMs, C, A, do2dGauss, val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
+    [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all, th_pix] = inhibitROIselection(mask, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CC, ch2Image, COMs, C, A, do2dGauss, val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB, figdir); % an array of length all neurons, with 1s for inhibit. and 0s for excit. neurons
     
     
     %% Show the results
@@ -260,6 +268,8 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     end
     title(sprintf('gcamp ROIs idenetified as unsure (n=%d)', sum(isnan(inhibitRois))));    
 
+    savefig(fullfile(figdir, 'inhIdentROIs')) 
+    
    
     %% Compare spike rates
     
@@ -283,11 +293,12 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
 %     figure;
     top = S;
     subplot(422), hold on;
-    plot(mean(top(isnan(inhibitRois),:)),'c'); plot(mean(top(inhibitRois==1,:)),'r'); plot(mean(top(inhibitRois==0,:)),'color',[0,127,0]/255); legend('uns', 'inh', 'exc'); xlim([1,length(top)]); title(sprintf('S; meanS: uns %.1f; inh %.1f; exc %.1f', meanS_uns_inh_exc))
+    plot(mean(top(isnan(inhibitRois),:)),'c'); plot(mean(top(inhibitRois==1,:)),'r'); plot(mean(top(inhibitRois==0,:)),'color',[0,127,0]/255); legend('uns', 'inh', 'exc'); xlim([1,length(top)]); title(sprintf('S\nmeanS: uns %.1f; inh %.1f; exc %.1f', meanS_uns_inh_exc))
     subplot(424), plot(mean(top(inhibitRois==1,:))), title('inhibit'); xlim([1,length(top)])
     subplot(426),  plot(mean(top(inhibitRois==0,:))), title('excit'); xlim([1,length(top)])
     subplot(428),  plot(mean(top(isnan(inhibitRois),:))), title('unsure'); xlim([1,length(top)])
 
+    savefig(fullfile(figdir, 'inhIdentAveTraces')) 
 
     %{
     subplot(221), plot(mean(activity_man_eftMask_ch2(:, inhibitRois==1), 2)), title('ch2, inhibit')

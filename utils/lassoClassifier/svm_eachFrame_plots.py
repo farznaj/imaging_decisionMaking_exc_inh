@@ -2,6 +2,7 @@
 """
 Plots class accuracy for svm trained on non-overlapping time windows  (outputs of file svm_eachFrame.py)
  ... svm trained to decode choice on choice-aligned or stimulus-aligned traces.
+It will also call eventTimeDist.py to plot dist of event times and compare it with class acuur traces.
  
  
 Remember for fni18 there are 2 svm_eachFrame mat files, the earlier file is using all trials (unequal HR, LR, like how you've done all your analysis). 
@@ -11,10 +12,10 @@ Created on Sun Mar 12 15:12:29 2017
 @author: farznaj
 """
 
-
 #%% Change the following vars:
 
-mousename = 'fni18' #'fni17'
+mousename = 'fni19' #'fni17'
+ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone.
 if mousename == 'fni18':
     allDays = 0# all 7 days will be used (last 3 days have z motion!)
     noZmotionDays = 1 # 4 days that dont have z motion will be used.
@@ -22,9 +23,13 @@ if mousename == 'fni18':
     
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
-execfile("svm_plots_setVars.py")  
+execfile("defFuns.py")
+execfile("svm_plots_setVars_n.py")  
 
-chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
+#chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
+chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
+stAl = ch_st_goAl[1]
+goToneAl = ch_st_goAl[2]
 doPlots = 0 #1 # plot c path of each day 
 savefigs = 0
 
@@ -39,7 +44,7 @@ import numpy as np
 frameLength = 1000/30.9; # sec.
 regressBins = int(np.round(100/frameLength)) # must be same regressBins used in svm_eachFrame. 100ms # set to nan if you don't want to downsample.
 
-dnow = '/classAccurTraces_eachFrame/'+mousename+'/'
+dnow = '/classAccurTraces_eachFrame_timeDists/'+mousename+'/'
 
 smallestC = 0 # Identify best c: if 1: smallest c whose CV error falls below 1 se of min CV error will be used as optimal C; if 0: c that gives min CV error will be used as optimal c.
 if smallestC==1:
@@ -206,7 +211,6 @@ def setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_s
 #%% 
 '''
 #####################################################################################################################################################   
-############################ stimulus-aligned, SVR (trained on trials of 1 choice to avoid variations in neural response due to animal's choice... we only want stimulus rate to be different) ###################################################################################################     
 #####################################################################################################################################################
 '''
             
@@ -438,7 +442,7 @@ for iday in range(len(days)):
     plt.errorbar(time_al, av_l2_test_c[iday], yerr = sd_l2_test_c[iday], label=' ')    
 #    plt.show()
 plt.subplot(224)
-plt.legend(loc='center left', bbox_to_anchor=(.7, .7)) 
+#plt.legend(loc='center left', bbox_to_anchor=(.7, .7)) 
 
 
 ##%%
@@ -608,16 +612,22 @@ if savefigs:#% Save the figure
 ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%% # For each day plot dist of event times (match it with class accur traces). Do it for both stim-aligned and choice-aligned data 
+#%% # For each day plot dist of event times as well as class accur traces. Do it for both stim-aligned and choice-aligned data 
 # For this section you need to run eventTimesDist.py; also run the codes above once with chAl=0 and once with chAl=1.
 
 if 'eventI_allDays_ch' in locals() and 'eventI_allDays_st' in locals():
+    
+    #%% Set time vars needed below and Plot time dist of trial events for all days (pooled trials)
+    
     execfile("eventTimesDist.py")
     
     
+    #%% Plot class accur and event time dists for each day
+    
     for iday in range(len(days)):    
     
-        #%%
+        #%% Set event time vars
+    
         # relative to stim onset
         timeStimOffset0_all_relOn = np.nanmean(timeStimOffset0_all[iday] - timeStimOnset_all[iday])
         timeStimOffset_all_relOn = np.nanmean(timeStimOffset_all[iday] - timeStimOnset_all[iday])
@@ -631,11 +641,11 @@ if 'eventI_allDays_ch' in locals() and 'eventI_allDays_st' in locals():
         timeCommitCL_CR_Gotone_all_relCh = np.nanmean(timeCommitCL_CR_Gotone_all[iday] - time1stSideTry_all[iday])
         
         
-        #%% Plot class accur trace for each day
+        #%% stAl; Plot class accur trace and timeDists for each day
         
         plt.figure()
         
-        ######## stAl
+        ############### class accuracy
         colors = 'k','r','b','m'
         nPre = eventI_allDays_st[iday] # number of frames before the common eventI, also the index of common eventI. 
         nPost = (len(av_l2_test_d_st[iday]) - eventI_allDays_st[iday] - 1)
@@ -646,8 +656,6 @@ if 'eventI_allDays_ch' in locals() and 'eventI_allDays_st' in locals():
         
         plt.subplot(223)
         plt.errorbar(time_al, av_l2_test_d_st[iday], yerr = sd_l2_test_d_st[iday])    
-    #    plt.title(days[iday])
-        #plt.errorbar(range(len(av_l2_test_d[iday])), av_l2_test_d[iday], yerr = sd_l2_test_d[iday])
     
         # mark event times relative to stim onset
         plt.plot([0, 0], [50, 100], color='g')
@@ -661,7 +669,9 @@ if 'eventI_allDays_ch' in locals() and 'eventI_allDays_st' in locals():
         ax = plt.gca(); xl = ax.get_xlim(); makeNicePlots(ax,1)
         
         
-        ###### Plot hist of event times
+        
+        
+        ################# Plot hist of event times
         stimOffset0_st = timeStimOffset0_all[iday] - timeStimOnset_all[iday]
         stimOffset_st = timeStimOffset_all[iday] - timeStimOnset_all[iday]
         goTone_st = timeCommitCL_CR_Gotone_all[iday] - timeStimOnset_all[iday]
@@ -677,7 +687,7 @@ if 'eventI_allDays_ch' in locals() and 'eventI_allDays_st' in locals():
         binEvery = 100
         
         bn = np.arange(np.min(np.concatenate((a))), np.max(np.concatenate((a))), binEvery)
-        bn[-1] = np.max(a) # unlike digitize, histogram doesn't count the right most value
+        bn[-1] = np.max(np.concatenate(a)) # unlike digitize, histogram doesn't count the right most value
         
         plt.subplot(221)
         # set hists
@@ -696,7 +706,9 @@ if 'eventI_allDays_ch' in locals() and 'eventI_allDays_st' in locals():
     
     
     
-        #%% chAl
+        #%% chAl; plot class accuracy and timeDists
+    
+        ############### class accuracy
         colors = 'g','k','r','b'
         nPre = eventI_allDays_ch[iday] # number of frames before the common eventI, also the index of common eventI. 
         nPost = (len(av_l2_test_d_ch[iday]) - eventI_allDays_ch[iday] - 1)
@@ -706,9 +718,8 @@ if 'eventI_allDays_ch' in locals() and 'eventI_allDays_st' in locals():
         time_al = np.concatenate((a,b))
         
         plt.subplot(224)
-        plt.errorbar(time_al, av_l2_test_d_ch[iday], yerr = sd_l2_test_d_ch[iday])    
-    #    plt.title(days[iday])
-    
+        plt.errorbar(time_al, av_l2_test_d_ch[iday], yerr = sd_l2_test_d_ch[iday])  
+        
         # mark event times relative to choice onset
         plt.plot([timeStimOnset_all_relCh, timeStimOnset_all_relCh], [50, 100], color=colors[0])    
         plt.plot([timeStimOffset0_all_relCh, timeStimOffset0_all_relCh], [50, 100], color=colors[1])
@@ -719,7 +730,8 @@ if 'eventI_allDays_ch' in locals() and 'eventI_allDays_st' in locals():
         ax = plt.gca(); xl = ax.get_xlim(); makeNicePlots(ax,1)
         
         
-        ###### Plot hist of event times
+        
+        ################## Plot hist of event times
         stimOnset_ch = timeStimOnset_all[iday] - time1stSideTry_all[iday]
         stimOffset0_ch = timeStimOffset0_all[iday] - time1stSideTry_all[iday]
         stimOffset_ch = timeStimOffset_all[iday] - time1stSideTry_all[iday]
@@ -735,7 +747,7 @@ if 'eventI_allDays_ch' in locals() and 'eventI_allDays_st' in locals():
         binEvery = 100
         
         bn = np.arange(np.min(np.concatenate((a))), np.max(np.concatenate((a))), binEvery)
-        bn[-1] = np.max(a) # unlike digitize, histogram doesn't count the right most value
+        bn[-1] = np.max(np.concatenate(a)) # unlike digitize, histogram doesn't count the right most value
         
         plt.subplot(222)
         # set hists
@@ -752,6 +764,20 @@ if 'eventI_allDays_ch' in locals() and 'eventI_allDays_st' in locals():
         ax = plt.gca(); makeNicePlots(ax,1)
         
         plt.subplots_adjust(wspace=1, hspace=.5)
+        
+
+
+        ##############%% Save the figure for each day 
+        if savefigs:
+            dd = 'timeDists_' + days[iday]
+                
+            d = os.path.join(svmdir+dnow)
+            if not os.path.exists(d):
+                print 'creating folder'
+                os.makedirs(d)
+                    
+            fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
+            plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
         
         
         """

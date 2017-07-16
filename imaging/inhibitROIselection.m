@@ -1,4 +1,4 @@
-function [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all, th_pix] = inhibitROIselection(maskGcamp, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CCgcamp, ch2Image, COMs, C, A, do2dGauss, val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB)
+function [inhibitRois, roi2surr_sig, sigTh_IE, x_all, cost_all, th_pix] = inhibitROIselection(maskGcamp, inhibitImage, manThSet, assessClass_unsure_inh_excit, keyEval, CCgcamp, ch2Image, COMs, C, A, do2dGauss, val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB, figdir)
 % inhibitRois = inhibitROIselection(maskGcamp, inhibitImage, sigTh, CCgcamp);
 %
 % Identifies inhibitory neurons on a gcamp channel (containing both
@@ -226,7 +226,8 @@ quantTh = .8; % .5; % .1; % threshold for finding inhibit neurons will be sigTh 
 sigTh = quantile(roi2surr_sig, quantTh);
 % sigTh = quantile(roi2surr_sig(roi2surr_sig~=0), quantTh);
 
-figure('position', [1443         622         453         354]); hold on
+h0 = figure('position', [1443         622         453         354]); 
+figure(h0); subplot(131), hold on
 h = plot(sort(roi2surr_sig)); set(h, 'handlevisibility', 'off')
 plot([0 length(roi2surr_sig)], [sigTh sigTh], 'r')
 plot([0 length(roi2surr_sig)], [quantile(roi2surr_sig, .9)  quantile(roi2surr_sig, .9)], 'g')
@@ -341,7 +342,14 @@ for rr = 1:size(maskGcamp,3);
 
 end
 
-% figure; plot(corr_A_inh), ylabel('Corr A,inh')
+thCorr = [.15, .3, .55];
+
+figure(h0); 
+subplot(132), hold on;
+plot(sort(corr_A_inh)), ylabel('Corr A,inh')
+plot([0, length(corr_A_inh)], [thCorr(1), thCorr(1)])
+plot([0, length(corr_A_inh)], [thCorr(2), thCorr(2)])
+plot([0, length(corr_A_inh)], [thCorr(3), thCorr(3)])
 
 % Another way of defining inhibitRois... good but still needs evaluation
 % like roi2surr_sig
@@ -352,31 +360,31 @@ end
 %% Adjust inhibitRois based on corr_A_inh
 
 % Reset unsure ROIs that have high corr_A_inh to inhibit:
-a = sum(isnan(inhibitRois) & corr_A_inh > .55 & (roi2surr_sig >= quantile(roi2surr_sig, .85)));
-aa = sum(isnan(inhibitRois) & corr_A_inh > .55); 
+a = sum(isnan(inhibitRois) & corr_A_inh > thCorr(3) & (roi2surr_sig >= quantile(roi2surr_sig, .85)));
+aa = sum(isnan(inhibitRois) & corr_A_inh > thCorr(3)); 
 cprintf('comment', '%d unsure ROIs with >=.85q sig and >.55 corr_A_inh (only high corr_A_inh: %d)\n', a, aa)
 cprintf('comment', '\tresetting them to inh\n')
 
 % inhibitRois(isnan(inhibitRois) & corr_A_inh > .55) = 1; %.5
 % below is more strict, only those unsure ROIs that have a high signal and
 % high corr are set to inhibitory!
-inhibitRois(isnan(inhibitRois) & corr_A_inh > .55 & (roi2surr_sig >= quantile(roi2surr_sig, .85))) = 1; %.5
+inhibitRois(isnan(inhibitRois) & corr_A_inh > thCorr(3) & (roi2surr_sig >= quantile(roi2surr_sig, .85))) = 1; %.5
 
 
 % Reset inhibit ROIs that have low corr_A_inh to unsure:
-a = sum(inhibitRois==1 & corr_A_inh < .15);
+a = sum(inhibitRois==1 & corr_A_inh < thCorr(1));
 cprintf('comment', '%d inh ROIs with <.15 corr_A_inh\n', a)
 cprintf('comment', '\tresetting them to unsure\n')
 
-inhibitRois(inhibitRois==1 & corr_A_inh < .15) = nan; % <0 <.1
+inhibitRois(inhibitRois==1 & corr_A_inh < thCorr(1)) = nan; % <0 <.1
 
 
 % Reset excit ROIs that have high corr_A_inh to unsure:
-a = sum(inhibitRois==0 & corr_A_inh > .3);
+a = sum(inhibitRois==0 & corr_A_inh > thCorr(2));
 cprintf('comment', '%d exc ROIs with >.3 corr_A_inh\n', a)
 cprintf('comment', '\tresetting them to unsure\n')
 
-inhibitRois(inhibitRois==0 & corr_A_inh > .3) = nan;
+inhibitRois(inhibitRois==0 & corr_A_inh > thCorr(2)) = nan;
 
 
 disp('_________ adjusted by corr_A_inh _______')
@@ -417,10 +425,14 @@ th_pix1 = 35;
 th_pix2 = 45;  
 %}
 
-figure; hold on
+figure(h0); subplot(133), hold on
 plot(sort(sizeROIhiPix))
 plot([0, length(sizeROIhiPix)], [th_pix1, th_pix1])
 plot([0, length(sizeROIhiPix)], [th_pix2, th_pix2])
+ylabel('sizeROIhiPix')
+
+savefig(fullfile(figdir, 'inhIdentMeas')) 
+
 
 th_pix = [th_pix1,th_pix2];
 

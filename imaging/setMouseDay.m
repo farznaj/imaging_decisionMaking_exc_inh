@@ -90,6 +90,7 @@ for iday = 1:length(days)
     signalCh = 2; % because you get A from channel 2, I think this should be always 2.
     pnev2load = [];
     [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
+    disp(pnevFileName)
     [pd, date_major] = fileparts(imfilename);
     figd = fullfile(pd, 'figs');     % cd(figd) %%% copyfile(fullfile('/home/farznaj/Documents/trial_history/imaging','imaging_postProc_html.m'),'.','f')
 

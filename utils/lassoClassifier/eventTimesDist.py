@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Get distributions of all event times (stimulus offset, go tone, choice, etc)
+Get distributions of all event times (stimulus offset, go tone, choice, etc), pooled across all days, from stim onset and well as choice onset.
 Also get reaction times (go tone to choice time)
+
+Plots will be saved in folder: classAccurTraces_eachFrame_timeDists
 
 If you want to exclude trials, you need to set the svmName file which contains trsExcluded
 
@@ -10,7 +12,17 @@ Created on Thu Apr  6 16:46:51 2017
 """
 
 
-excludeTrs = 1 # If 1, some trials will be excluded from the dists; You need to set the svmName file which contains trsExcluded
+mousename = 'fni19' #'fni17'
+savefigs = 1
+doPlots = 0 #1 # plot event times for each day
+# I think it maks sense to set excludeTrs to 0 bc those trials that are nan will have nan event Times...
+excludeTrs = 0 # If 1, some trials will be excluded from the dists; You need to set the svmName file which contains trsExcluded
+trialHistAnalysis = 0
+
+execfile("defFuns.py")
+execfile("svm_plots_setVars_n.py")  
+
+
 
 #%% Set the following vars:
 '''
@@ -31,7 +43,8 @@ import numpy as np
 frameLength = 1000/30.9; # sec.
 regressBins = int(np.round(100/frameLength)) # must be same regressBins used in svm_eachFrame. 100ms # set to nan if you don't want to downsample.
 
-dnow = '/classAccurTraces_eachFrame/'+mousename+'/'
+dnow = '/classAccurTraces_eachFrame_timeDists/'+mousename+'/'
+
 
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
 
@@ -228,6 +241,9 @@ for iday in range(len(days)):
         plt.xlabel('Time relative to stim onset (ms)')
         plt.ylabel('# trials')
         
+
+
+#############################################################################################
         
 #%% For each session subtract stimOnset times from the other event times
 
@@ -247,26 +263,6 @@ time1stSideTry_all_relGo = np.array([time1stSideTry_all[iday] - timeCommitCL_CR_
 
 #%% Pool all trials of all days
  
-stimOff0_pooled = np.concatenate((timeStimOffset0_all_relOn))
-print stimOff0_pooled.shape
-stimOff0_pooled = stimOff0_pooled[~np.isnan(stimOff0_pooled)]
-print stimOff0_pooled.shape
-
-stimOff_pooled = np.concatenate((timeStimOffset_all_relOn))
-print stimOff_pooled.shape
-stimOff_pooled = stimOff_pooled[~np.isnan(stimOff_pooled)]
-print stimOff_pooled.shape
-
-goTone_pooled = np.concatenate((timeCommitCL_CR_Gotone_all_relOn))
-print goTone_pooled.shape
-goTone_pooled = goTone_pooled[~np.isnan(goTone_pooled)]
-print goTone_pooled.shape
-
-choice_pooled = np.concatenate((time1stSideTry_all_relOn))
-print choice_pooled.shape
-choice_pooled = choice_pooled[~np.isnan(choice_pooled)]
-print choice_pooled.shape
-
 initTone_1st_pooled = np.concatenate((timeInitTone_1st_all_relOn))
 initTone_1st_pooled = initTone_1st_pooled[~np.isnan(initTone_1st_pooled)]
 print initTone_1st_pooled.shape
@@ -274,14 +270,26 @@ print initTone_1st_pooled.shape
 initTone_last_pooled = np.concatenate((timeInitTone_last_all_relOn))
 initTone_last_pooled = initTone_last_pooled[~np.isnan(initTone_last_pooled)]
 print initTone_last_pooled.shape
+ 
+stimOff0_pooled = np.concatenate((timeStimOffset0_all_relOn))
+#print stimOff0_pooled.shape
+stimOff0_pooled = stimOff0_pooled[~np.isnan(stimOff0_pooled)]
+print stimOff0_pooled.shape
 
-rew_pooled = np.concatenate((timeReward_all_relOn))
-rew_pooled = rew_pooled[~np.isnan(rew_pooled)]
-print rew_pooled.shape
+stimOff_pooled = np.concatenate((timeStimOffset_all_relOn))
+#print stimOff_pooled.shape
+stimOff_pooled = stimOff_pooled[~np.isnan(stimOff_pooled)]
+print stimOff_pooled.shape
 
-punish_pooled = np.concatenate((timeCommitIncorrResp_all_relOn))
-punish_pooled = punish_pooled[~np.isnan(punish_pooled)]
-print punish_pooled.shape
+goTone_pooled = np.concatenate((timeCommitCL_CR_Gotone_all_relOn))
+#print goTone_pooled.shape
+goTone_pooled = goTone_pooled[~np.isnan(goTone_pooled)]
+print goTone_pooled.shape
+
+choice_pooled = np.concatenate((time1stSideTry_all_relOn))
+#print choice_pooled.shape
+choice_pooled = choice_pooled[~np.isnan(choice_pooled)]
+print choice_pooled.shape
 
 choiceCorr_pooled = np.concatenate((time1stCorrectTry_all_relOn))
 choiceCorr_pooled = choiceCorr_pooled[~np.isnan(choiceCorr_pooled)]
@@ -291,8 +299,17 @@ choiceIncorr_pooled = np.concatenate((time1stIncorrectTry_all_relOn))
 choiceIncorr_pooled = choiceIncorr_pooled[~np.isnan(choiceIncorr_pooled)]
 print choiceIncorr_pooled.shape
 
+rew_pooled = np.concatenate((timeReward_all_relOn))
+rew_pooled = rew_pooled[~np.isnan(rew_pooled)]
+print rew_pooled.shape
+
+punish_pooled = np.concatenate((timeCommitIncorrResp_all_relOn))
+punish_pooled = punish_pooled[~np.isnan(punish_pooled)]
+print punish_pooled.shape
+
+
 rt_pooled = np.concatenate((time1stSideTry_all_relGo))
-print rt_pooled.shape
+#print rt_pooled.shape
 rt_pooled = rt_pooled[~np.isnan(rt_pooled)]
 print rt_pooled.shape
 
@@ -308,7 +325,7 @@ plt.subplot(212)
 plt.hist(initTone_last_pooled, color='r', alpha=.5, label = 'initTone')
 
 
-#%% Plot dist of corr, incorr: 1stTry and commit resp
+#%% Plot dist of 1stTry and commit resp for corr and incorr trials
 
 plt.figure()
 
@@ -349,13 +366,16 @@ plt.ylabel('Number of trials')
 plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
 
 
+
+############################### Relative to stimulus onset ###############################
+
 #%% Plot dist of stimOffset, goTone, choice, reaction time
 
 binwidth = 100
 
 plt.figure()
 
-plt.subplot(211)
+plt.subplot(311)
 """
 plt.hist(stimOff0_pooled, color='k', alpha=.5, label = 'stimOffset_1rep', bins=range(min(stimOff0_pooled), max(stimOff0_pooled) + binwidth, binwidth))
 plt.hist(stimOff_pooled, color='r', alpha=.5, label = 'stimOffset')       
@@ -368,7 +388,7 @@ a = stimOff0_pooled, stimOff_pooled, goTone_pooled, choice_pooled
 binEvery = 100
 
 bn = np.arange(np.min(np.concatenate((a))), np.max(np.concatenate((a))), binEvery)
-bn[-1] = np.max(a) # unlike digitize, histogram doesn't count the right most value
+bn[-1] = np.max(np.concatenate(a)) # unlike digitize, histogram doesn't count the right most value
 
 # set hists
 for i in range(len(a)):
@@ -382,11 +402,15 @@ plt.legend(loc='center left', bbox_to_anchor=(1, .7))
 
 ax = plt.gca();
 makeNicePlots(ax)
+yl = ax.get_ylim()
+plt.ylim([-yl[1]/10, yl[1]])
 #np.mean(goTone_pooled<999) # fraction of trials with go tone before stim offset
 
 
-# reaction time
-plt.subplot(212)
+
+############## reaction time ##############
+
+plt.subplot(312)
 h = plt.hist(rt_pooled, color='k', alpha=.5, label = 'goTone to choice', bins = len(bn))
 ax = plt.gca(); ymx = ax.get_ylim()
 yAtMean = h[0][np.argwhere(rt_pooled.mean()<h[1])[0]]; y = np.mean([ymx[1], yAtMean])
@@ -401,12 +425,121 @@ makeNicePlots(ax)
 plt.subplots_adjust(hspace=0.65)
 
 
+
+
+
+############################### Relative to choice onset ###############################
+
+#%%
+timeStimOnset_all_relCh = np.array([timeStimOnset_all[iday] - time1stSideTry_all[iday] for iday in range(len(days))])
+timeStimOffset0_all_relCh = np.array([timeStimOffset0_all[iday] - time1stSideTry_all[iday] for iday in range(len(days))])
+timeStimOffset_all_relCh = np.array([timeStimOffset_all[iday] - time1stSideTry_all[iday] for iday in range(len(days))])
+timeCommitCL_CR_Gotone_all_relCh = np.array([timeCommitCL_CR_Gotone_all[iday] - time1stSideTry_all[iday] for iday in range(len(days))])
+#time1stSideTry_all_relCh = np.array([time1stSideTry_all[iday] - time1stSideTry_all[iday] for iday in range(len(days))])
+timeInitTone_1st_all_relCh = np.array([timeInitTone_1st_all[iday] - time1stSideTry_all[iday] for iday in range(len(days))])
+timeInitTone_last_all_relCh = np.array([timeInitTone_last_all[iday] - time1stSideTry_all[iday] for iday in range(len(days))])
+timeReward_all_relCh = np.array([timeReward_all[iday] - time1stSideTry_all[iday] for iday in range(len(days))])
+timeCommitIncorrResp_all_relCh = np.array([timeCommitIncorrResp_all[iday] - time1stSideTry_all[iday] for iday in range(len(days))])
+time1stCorrectTry_all_relCh = np.array([time1stCorrectTry_all[iday] - time1stSideTry_all[iday] for iday in range(len(days))])
+time1stIncorrectTry_all_relCh = np.array([time1stIncorrectTry_all[iday] - time1stSideTry_all[iday] for iday in range(len(days))])
+
+
+#%% Pool all trials of all days
+ 
+initTone_1st_pooled = np.concatenate((timeInitTone_1st_all_relCh))
+initTone_1st_pooled = initTone_1st_pooled[~np.isnan(initTone_1st_pooled)]
+print initTone_1st_pooled.shape
+
+initTone_last_pooled = np.concatenate((timeInitTone_last_all_relCh))
+initTone_last_pooled = initTone_last_pooled[~np.isnan(initTone_last_pooled)]
+print initTone_last_pooled.shape
+
+stimOn_pooled = np.concatenate((timeStimOnset_all_relCh))
+stimOn_pooled = stimOn_pooled[~np.isnan(stimOn_pooled)]
+print stimOn_pooled.shape
+
+stimOff0_pooled = np.concatenate((timeStimOffset0_all_relCh))
+#print stimOff0_pooled.shape
+stimOff0_pooled = stimOff0_pooled[~np.isnan(stimOff0_pooled)]
+print stimOff0_pooled.shape
+
+stimOff_pooled = np.concatenate((timeStimOffset_all_relCh))
+#print stimOff_pooled.shape
+stimOff_pooled = stimOff_pooled[~np.isnan(stimOff_pooled)]
+print stimOff_pooled.shape
+
+goTone_pooled = np.concatenate((timeCommitCL_CR_Gotone_all_relCh))
+#print goTone_pooled.shape
+goTone_pooled = goTone_pooled[~np.isnan(goTone_pooled)]
+print goTone_pooled.shape
+
+'''
+choice_pooled = np.concatenate((time1stSideTry_all_relCh))
+#print choice_pooled.shape
+choice_pooled = choice_pooled[~np.isnan(choice_pooled)]
+print choice_pooled.shape
+'''
+
+choiceCorr_pooled = np.concatenate((time1stCorrectTry_all_relCh))
+choiceCorr_pooled = choiceCorr_pooled[~np.isnan(choiceCorr_pooled)]
+print choiceCorr_pooled.shape
+
+choiceIncorr_pooled = np.concatenate((time1stIncorrectTry_all_relCh))
+choiceIncorr_pooled = choiceIncorr_pooled[~np.isnan(choiceIncorr_pooled)]
+print choiceIncorr_pooled.shape
+
+rew_pooled = np.concatenate((timeReward_all_relCh))
+rew_pooled = rew_pooled[~np.isnan(rew_pooled)]
+print rew_pooled.shape
+
+punish_pooled = np.concatenate((timeCommitIncorrResp_all_relCh))
+punish_pooled = punish_pooled[~np.isnan(punish_pooled)]
+print punish_pooled.shape
+
+
+#%%
+plt.subplot(313)
+"""
+plt.hist(stimOff0_pooled, color='k', alpha=.5, label = 'stimOffset_1rep', bins=range(min(stimOff0_pooled), max(stimOff0_pooled) + binwidth, binwidth))
+plt.hist(stimOff_pooled, color='r', alpha=.5, label = 'stimOffset')       
+plt.hist(goTone_pooled, color='b', alpha=.5, label = 'goTone')
+plt.hist(choice_pooled, color='m', alpha=.5, label = '1stSideTry')
+"""
+colors = 'k','r','b','m'
+labs = 'stimOnset', 'stimOffset_1rep', 'stimOffset', 'goTone'
+a = stimOn_pooled, stimOff0_pooled, stimOff_pooled, goTone_pooled
+binEvery = 100
+
+bn = np.arange(np.min(np.concatenate((a))), np.max(np.concatenate((a))), binEvery)
+bn[-1] = np.max(np.concatenate(a)) # unlike digitize, histogram doesn't count the right most value
+
+# set hists
+for i in range(len(a)):
+    hist, bin_edges = np.histogram(a[i], bins=bn)
+#    hist = hist/float(np.sum(hist))     # use this if you want to get fraction of trials instead of number of trials
+    plt.bar(bin_edges[0:-1], hist, binEvery, alpha=.4, color=colors[i], label=labs[i]) 
+
+plt.xlabel('Time relative to choice onset (ms)')
+plt.ylabel('Number of trials')
+plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
+
+ax = plt.gca();
+makeNicePlots(ax)
+yl = ax.get_ylim()
+plt.ylim([-100, yl[1]])
+#np.mean(goTone_pooled<999) # fraction of trials with go tone before stim offset
+
+
+
 ##%% Save the figure    
 if savefigs:
+    dd = 'timeDists_allPooled'
+    '''
     if chAl==1:
         dd = 'chAl_timeDists'
     else:
         dd = 'stAl_timeDists'
+    '''
         
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
@@ -415,6 +548,5 @@ if savefigs:
             
     fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
-
 
 

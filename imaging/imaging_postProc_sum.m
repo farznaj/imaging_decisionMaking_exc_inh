@@ -46,15 +46,15 @@ for i = 1:length(b)
         xl = get(gca,'xlim');        
         % open 10 figures zoomed in at different x 
         totfs = unique([1 : floor((floor(xl(2)/.1e4)+1)/10) : floor(xl(2)/.1e4)+1, floor(xl(2)/.1e4)+1]);
-        disp(totfs)
+%         disp(totfs)
         for rr = totfs; %1:floor(xl(2)/.1e4)+1            
             open(fullfile(figd, b{i})) %open(b{i})
             r2 = rr * .1e4;
             r1 = r2 - .1e4;
-            disp([r1,r2])
+%             disp([r1,r2])
 %         end
             xlim([r1 r2])
-%             pause(1)
+            pause(1)
 %             open(fullfile(figd, b{i})) %open(b{i})
         end
     end    

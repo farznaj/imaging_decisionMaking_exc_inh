@@ -9,8 +9,8 @@
 
 %{
 mouse = 'fni19';
-imagingFolder = '150930';
-mdfFileNumber = [1];  % 3; %1; % or tif major
+imagingFolder = '151022';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
 %}
 
 %% Start a diary file
@@ -27,17 +27,17 @@ diary(['diary_',date_major])
 
 %% Assess motion correction. Also see how normalizing the movie worked (in order to make pixel intensities uniform before running CNMF).
 
-showMov = 1; % set to 1 to see MC rep movies.
+showMov = 0; % set to 1 to see MC rep movies.
 plotMotCorr_normImg(mouse, imagingFolder, mdfFileNumber, showMov)
 
 
 %% plotEftyVarsMean
 
-% close all
+close all
 %%%% NOTE %%%% 
 cprintf('blue', 'If needed follow this script by codes setPmtOffFrames to set pmtOffFrames\nand by findTrsWithMissingFrames to set frame-dropped trials. In this\nlatter case you will need to rerun CNMF (bc frames were dropped and\nidentification of trials was wrong)!\n')
 
-doPause = 1;
+doPause = 0;
 plotEftyVarsMean(mouse, imagingFolder, mdfFileNumber, 1, doPause)
 
 % setPmtOffFrames % set pmtOffFrames

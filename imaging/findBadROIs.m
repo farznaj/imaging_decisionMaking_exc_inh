@@ -48,10 +48,13 @@ pnev2load = [];
 
 [imfilename, pnevFileName] = setImagingAnalysisNames(mouse, imagingFolder, mdfFileNumber, signalCh, pnev2load);
 [pd,pnev_n] = fileparts(pnevFileName);
-disp(pnev_n)
+% disp(pnev_n)
 cd(fileparts(imfilename))
 
 moreName = fullfile(pd, sprintf('more_%s.mat', pnev_n));
+
+figdir = fullfile(pd, 'figs');
+mkdir(figdir) % save the following 3 figures in a folder named "figs"
 
 
 %% Load vars
@@ -138,6 +141,8 @@ figure(fht), subplot(326), histogram(srt_val)
 hold on, plot([th_srt_val th_srt_val],[0 100],'r')
 xlabel('Efty sort\_val')
 
+savefig(fullfile(figdir, 'ROIqualityMeas_hists')) 
+
 
 %% My measures on highlightPatch and roiPatch comparison
 %{
@@ -173,6 +178,7 @@ subplot(614), hold on; plot(highlightCorrROI'), plot(rval_space), title('spac co
 subplot(615), plot(tau(:,2)), title('decay tau')
 subplot(616), plot(mask_numpix), title('mask # pixels')
 % subplot(616), plot(meansdsig), title('meanSdImage')
+savefig(fullfile(pd, 'figs', 'ROIqualityMeas'))
 
 
 %% Identify bad components for each criterion

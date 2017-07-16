@@ -375,7 +375,9 @@ cs_frtrs(itr) - cs_frmovs(itif) % frame of trial itr on movie itif (ie frame ind
     
 %% Evaluate C,f,manual activity, also tau, sn as well as some params related to A
 
-mkdir(fullfile(pd, 'figs')) % save the following 3 figures in a folder named "figs"
+if ~exist(fullfile(pd, 'figs'), 'dir')
+    mkdir(fullfile(pd, 'figs')) % save the following 3 figures in a folder named "figs"
+end
 
 if evaluateEftyOuts
     

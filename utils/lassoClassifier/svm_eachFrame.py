@@ -54,18 +54,21 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni18' #'fni17' #'fni16' #
-    imagingFolder = '151209' #'151023' #'151001' #
+    mousename = 'fni19' #'fni17' #'fni16' #
+    imagingFolder = '151020' #'151023' #'151001' #
     mdfFileNumber = [1] #[1] 
 
-    chAl = 1 # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
+    ch_st_goAl = [0,1,0] # whether do analysis on traces aligned on choice, stim or go tone.
+    chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
+    stAl = ch_st_goAl[1]
+    goToneAl = ch_st_goAl[2]
     
     numSamples = 10 #100; # number of iterations for finding the best c (inverse of regularization parameter)
 #    nRandCorrSel = 10
 
     softNorm = 1 # if 1, no neurons will be excluded, bc we do soft normalization of FRs, so non-active neurons wont be problematic. if softNorm = 0, NsExcluded will be found
     useEqualTrNums = 1 # Make sure both classes have the same number of trials when training the classifier
-    
+    ch_st_goAl[0]
 #    minTrPerChoice = 15 # we need at least 15 trials (for a particular choice) to train SVM on...
 #    earliestGoTone = 50 # 32 (relative to end of stim (after a single repetition)) # In X matrix ideally we don't want trials with go tone within stim (bc we dont want neural activity to be influenced by go tone); however
     # we relax the conditions a bit and allow trials in which go tone happened within the last 50ms of stimulus. (if go tone happened earlier than 50ms, trial will be excluded.)
@@ -179,7 +182,7 @@ import os
 import glob
 
 # print sys.path
-sys.path.append('/home/farznaj/Documents/trial_history/imaging') # Gamal's dir needs to be added using "if" that takes the value of pwd
+#sys.path.append('/home/farznaj/Documents/trial_history/imaging') # Gamal's dir needs to be added using "if" that takes the value of pwd
 # print sys.path
 
 
@@ -263,13 +266,25 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     if platform.system()=='Linux':
         if os.getcwd().find('grid')!=-1: # server # sonas
             dataPath = '/sonas-hs/churchland/nlsas/data/data/'
+            altDataPath = '/sonas-hs/churchland/hpc/home/space_managed_data/'
         else: # office linux
             dataPath = '/home/farznaj/Shares/Churchland/data/'
+            altDataPath = '/home/farznaj/Shares/Churchland_hpc_home/space_managed_data/' # the new space-managed server (wos, to which data is migrated from grid)
+    elif platform.system()=='Darwin':
+        dataPath = '/Volumes/My Stu_win/ChurchlandLab'
     else:
         dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data/'
-        
-    ##%%        
+
+    ##%%
     tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
+        
+    if not os.path.exists(tifFold):
+        if 'altDataPath' in locals():
+            tifFold = os.path.join(altDataPath+mousename, 'imaging', imagingFolder)
+        else:
+            sys.exit('Data directory does not exist!')
+    
+    
     r = '%03d-'*len(mdfFileNumber)
     r = r[:-1]
     rr = r % (tuple(mdfFileNumber))
@@ -368,10 +383,10 @@ imfilename, pnevFileName, dataPath = setImagingAnalysisNamesP(mousename, imaging
 postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
 moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
 
-print(imfilename)
+#print(imfilename)
 print(pnevFileName)
-print(postName)
-print(moreName)
+#print(postName)
+#print(moreName)
 
 
 
@@ -558,7 +573,7 @@ else: # set choice for the current trial
     # Y = choiceVec0
     # print(choiceVec0.shape)
 print '%d correct trials; %d incorrect trials' %((outcomes==1).sum(), (outcomes==0).sum())
-
+print '%d HR trials; %d LR trials' %((choiceVec0==1).sum(), (choiceVec0==0).sum())
 
 
 #%% Load spikes and time traces to set X for training SVM
@@ -639,7 +654,7 @@ elif stAl==1:   #%% Use stimulus-aligned traces
     
     ##%% Remove some trials from traces_al_stim (if their choice is too early or their stim duration is too short)
     
-    ep_ms = [800] # I want to make sure in none of the trials choice happened before 800ms...
+    ep_ms = [th_stim_dur] #[800] # I want to make sure in none of the trials choice happened before 800ms...
     
     ########################%% Exclude some trials from traces_al_stim ########################
     if trialHistAnalysis==0:            
@@ -657,14 +672,14 @@ elif stAl==1:   #%% Use stimulus-aligned traces
         # Make sure in none of the trials choice (1st side try) happened before the end of training window (ep)
         ii = (time1stSideTry - timeStimOnset) <= ep_ms[-1];
         if np.sum(ii)>0:
-            print 'Excluding %i trials from timeStimOnset bc their choice is earlier than ep end' %(np.sum(ii))
+            print 'Excluding %i trials from timeStimOnset bc their choice is earlier than %dms' %(np.sum(ii), ep_ms[-1])
         #     timeStimOnset[i] = np.nan;  # by setting to nan, the aligned-traces of these trials will be computed as nan.
         else:
-            print('No trials with choice before the end of ep. Good :)')        
+            print'No trials with choice before %dms. Good :)' %(ep_ms[-1])       
     
     
         # Exclude trials whose stim duration was < th_stim_dur
-        j = (timeStimOffset - timeStimOnset) < th_stim_dur;
+        j = (timeStimOffset - timeStimOnset) < th_stim_dur; # this should be timeStimOffset0 if we want to make sure a single repetition of the stim is long enough!
         if np.sum(j)>0:
             print 'Excluding %i trials from timeStimOnset bc their stimDur < %dms' %(np.sum(j), th_stim_dur)
         #     timeStimOnset[j] = np.nan;
@@ -675,7 +690,7 @@ elif stAl==1:   #%% Use stimulus-aligned traces
     
         # Set trials to be removed from traces_al_stimAll    
         # toRmv = (i+j+ii)!=0;  
-        toRmv = (j+ii)!=0; print 'Not excluding %i trials whose goTone is earlier than ep end' %sum(i)
+        toRmv = (j+ii)!=0; print 'Not excluding %i trials whose goTone is earlier than %dms' %(sum(i),th_stim_dur)
         print 'Final: %i trials excluded in traces_al_stim' %np.sum(toRmv)
     
         

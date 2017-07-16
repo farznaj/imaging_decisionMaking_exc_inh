@@ -13,18 +13,19 @@ Created on Sun Mar 12 15:12:29 2017
 
 #%% Change the following vars:
 
-mousename = 'fni17' #'fni17'
+mousename = 'fni19' #'fni17'
 if mousename == 'fni18': #set one of the following to 1:
     allDays = 0# all 7 days will be used (last 3 days have z motion!)
     noZmotionDays = 1 # 4 days that dont have z motion will be used.
     noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
 
-loadInhAllexcEqexc = 0 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)       
+loadInhAllexcEqexc = 1 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)       
 
 
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
-execfile("svm_plots_setVars.py")  
+execfile("defFuns.py")
+execfile("svm_plots_setVars_n.py")  
 
 chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 savefigs = 0
@@ -544,6 +545,7 @@ plt.title('average: inh=%d exc=%d inh/exc=%.2f' %(np.round(numInh.mean()), np.ro
 plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
 plt.xlabel('days')
 plt.ylabel('# neurons')
+plt.xticks(range(len(days)), days, rotation='vertical')
 
 if savefigs:#% Save the figure
     if chAl==1:

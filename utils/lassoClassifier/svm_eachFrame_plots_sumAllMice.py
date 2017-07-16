@@ -545,9 +545,9 @@ makeNicePlots(ax)
 
 if savefigs:#% Save the figure
     if chAl==1:
-        dd = 'chAl_allMice'
+        dd = 'chAl_' + '_'.join(mice) #'chAl_allMice'
     else:
-        dd = 'stAl_allMice'    
+        dd = 'stAl_' + '_'.join(mice) #'stAl_allMice'
         
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
