@@ -59,15 +59,18 @@ else
     pausePlot = 0;
 end
 
+% load(imfilename, 'params'); frs2rmv = params.frsExclude;
+frs2rmv = [];
 
 %%
 cprintf('red', 'Remember about pmtOffFrames!! \n')
 
 %
-figure('position', [675         247        1351         729]); a = [];
+figure('position', [570           5        1351         971]); %[675         247        1351         729]
+a = [];
 
-subplot(413), hold on
-top = nanmean(S);
+subplot(514), hold on
+top = nanmean(S); top(frs2rmv)=nan;
 hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
 set([hh], 'handlevisibility', 'off')
 if exist('nFrsSess', 'var'),
@@ -75,14 +78,14 @@ if exist('nFrsSess', 'var'),
     h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
     set([h0; h00], 'handlevisibility', 'off');
 end
-
-plot(top); title(sprintf('Normed S, range=%.3f', range(top)))
+plot(top, 'linewidth',2); title(sprintf('Normed S, range=%.3f', range(top)))
+set(gca,'tickdir','out')
 a = [a, gca];
 
 
 
-subplot(412), hold on
-top = nanmean(C);
+subplot(515), hold on
+top = nanmean(C); top(frs2rmv)=nan;
 hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
 set([hh], 'handlevisibility', 'off')
 if exist('nFrsSess', 'var'),
@@ -90,14 +93,14 @@ if exist('nFrsSess', 'var'),
     h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
     set([h0; h00], 'handlevisibility', 'off');
 end
-
-plot(top); title(sprintf('C, range=%.0f', range(top)))
+plot(top, 'linewidth',2); title(sprintf('C, range=%.0f', range(top)))
+set(gca,'tickdir','out')
 a = [a, gca];
 
 
 
-subplot(414), hold on
-top = f;
+subplot(513), hold on
+top = f; top(frs2rmv)=nan;
 hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
 set([hh], 'handlevisibility', 'off')
 if exist('nFrsSess', 'var'),
@@ -105,14 +108,14 @@ if exist('nFrsSess', 'var'),
     h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
     set([h0; h00], 'handlevisibility', 'off');
 end
-
-plot(top); title(sprintf('f, range=%.4f', range(f)))
+plot(top, 'linewidth',2); title(sprintf('f, range=%.4f', range(f)))
+set(gca,'tickdir','out')
 a = [a, gca];
 
 
 if exist('activity_man_eftMask_ch2', 'var')
-    subplot(411), hold on
-    top = nanmean(activity_man_eftMask_ch2');
+    subplot(511), hold on
+    top = nanmean(activity_man_eftMask_ch2'); top(frs2rmv)=nan;    
     hh = plot([cs_frtrs; cs_frtrs], [min(top); max(top)], 'g'); % mark trial beginnings
     set([hh], 'handlevisibility', 'off')
     if exist('nFrsSess', 'var'),
@@ -120,14 +123,26 @@ if exist('activity_man_eftMask_ch2', 'var')
         h00 = plot([cs_frmovs; cs_frmovs], [min(top); max(top)], 'k:'); % mark tif movie beginnings
         set([h0; h00], 'handlevisibility', 'off');
     end
-
-    plot(top); %title('manual, Any pmtOffFrames?!'),
+    plot(top, 'linewidth',2); %title('manual, Any pmtOffFrames?!'),
     title(sprintf('Manual (any pmtOffFrames?), range=%.0f', range(top)))
+    set(gca,'tickdir','out')
+    a = [a, gca];
+    
+    
+    top = abs(diff(nanmean(activity_man_eftMask_ch2, 2))); top(frs2rmv-1)=nan;
+    th = nanmean(top) + 3.5*nanstd(top);     sharp_changes = find(top >= th);    
+    subplot(512), hold on; plot([0, length(top)],[th th], 'g')
+    plot([cs_frtrs ; cs_frtrs], [min(top) max(top)], 'g')
+    plot(top, 'linewidth',2);
+    plot([0, length(top)],[th th], 'g')
+    title('abs(diff(mean(activity, 2)))')    
+    set(gca,'tickdir','out')
     a = [a, gca];
 end
 
 linkaxes(a, 'x')
 xlim([0 size(C,2)])
+
 
 if pausePlot && doPause
     pause

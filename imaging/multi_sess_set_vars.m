@@ -86,7 +86,9 @@ for ise = 1:length(mdfFileNumber)
     end
     
     trialNumbers(isnan(framesPerTrial)) = [];
-    frame1RelToStartOff(isnan(framesPerTrial)) = [];
+    if length(frame1RelToStartOff) >= length(framesPerTrial)
+        frame1RelToStartOff(isnan(framesPerTrial)) = [];
+    end
     framesPerTrial(isnan(framesPerTrial)) = [];
     
     
@@ -129,8 +131,12 @@ cs_alldata = cumsum([0 len_alldata_eachsess]);
 framesPerTrial = NaN(1, sum(len_alldata_eachsess));
 for ise = 1:length(mdfFileNumber)
     ii = trialNumbers_sess{ise};
-    if sum(isnan(ii))>0
-        error('the very unusual case that trialCode is missing but still some frames are recorded. trialNumbers was set to nan')
+    if sum(isnan(ii)) > 0        
+        if sum(isnan(ii))==1
+            disp('the very unusual case that trialCode is missing but still some frames are recorded. trialNumbers was set to nan')
+        elseif sum(isnan(ii)) > 1
+            error('the very unusual case that trialCode is missing but still some frames are recorded. trialNumbers was set to nan')
+        end
         ii(isnan(ii)) = ii(find(isnan(ii))+1) - 1;
     end
     framesPerTrial(ii + cs_alldata(ise)) = framesPerTrial_sess{ise};
@@ -141,16 +147,18 @@ end
 
 minPts = 7000; % 800;
 set2nan = 1; % if 1, in trials that were not imaged, set frameTimes, dFOF, spikes and activity traces to all nans (size: min(framesPerTrial) x #neurons).
+mscanLag_sess = cell(1,length(mdfFileNumber));
 
 for ise = 1:length(mdfFileNumber)
     disp('_____________________')
     fprintf('Merging session %i ... \n', ise)
-    [all_data_sess{ise}, mscanLag] = mergeActivityIntoAlldata_fn(all_data_sess{ise}, activity_sess{ise}, framesPerTrial_sess{ise}, ...
+    [all_data_sess{ise}, mscanLag_sess{ise}] = mergeActivityIntoAlldata_fn(all_data_sess{ise}, activity_sess{ise}, framesPerTrial_sess{ise}, ...
         trialNumbers_sess{ise}, frame1RelToStartOff_sess{ise}, badFrames_sess{ise}{signalCh}, pmtOffFrames_sess{ise}{signalCh}, ...
         minPts, dFOF_sess{ise}, spikes_sess{ise}, set2nan);
 end
 
 alldata = cell2mat(all_data_sess);
+mscanLag = cell2mat(mscanLag_sess);
 
 
 %% Set trs2rmv, stimrate, outcome and response side. You will set certain variables to NaN for trs2rmv (but you will never remove them from any arrays).

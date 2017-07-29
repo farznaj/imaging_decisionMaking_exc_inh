@@ -28,17 +28,21 @@ for ise = 1:length(sess)
     date_major_se{ise} = sprintf('%06d_%03d', tifNumsOrig(find(s,1), 1:2)); % if there is only one mdfFile in tifNums, date_major_se will be same as date_major.
     
     for itm = 1:length(tifMinor) % loop through tif minor files.
-        if ~any(params.oldTifName)
+        if ~params.oldTifName(itm)
 %             a = dir(fullfile(params.tifFold, [date_major_se{ise}, '_00', num2str(tifMinor(itm)), '.mat']));
             a = dir(fullfile(params.tifFold, [date_major_se{ise}, ['_', repmat('0', 1, 3-length(num2str(tifMinor(itm))))], num2str(tifMinor(itm)), '.mat']));
-        elseif all(params.oldTifName)
-            if tifMinor(itm)<10
-                a = dir(fullfile(params.tifFold, [date_major_se{ise}, '_0', num2str(tifMinor(itm)), '.mat']));
+        else %if all(params.oldTifName)
+            if tifMinor(itm) < 10
+                if params.oldTifName(itm)==2 % very old file names with only 1 digit.
+                    a = dir(fullfile(params.tifFold, [date_major_se{ise}, '_', num2str(tifMinor(itm)), '.mat']));
+                elseif params.oldTifName(itm)==1
+                    a = dir(fullfile(params.tifFold, [date_major_se{ise}, '_0', num2str(tifMinor(itm)), '.mat']));
+                end
             else
                 a = dir(fullfile(params.tifFold, [date_major_se{ise}, '_', num2str(tifMinor(itm)), '.mat']));
             end
-        else
-            error('Some tif minors are named 00 and some are named 0. Fix the names!')
+%         else
+%             error('Some tif minors are named 00 and some are named 0. Fix the names!')
         end
         
         a = matfile(fullfile(params.tifFold, a.name));

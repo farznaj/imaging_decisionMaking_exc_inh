@@ -163,6 +163,7 @@ for imTr = 1:lastImTr
         end
         
     else
+        cprintf('Element %i in trialNumbers (ie trial %i in alldata) = %i \n', imTr, adTr+1, imTrNum)
         nMissing = nMissing + 1;
     end
     

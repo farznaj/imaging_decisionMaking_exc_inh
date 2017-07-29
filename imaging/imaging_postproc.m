@@ -8,9 +8,10 @@
 % - imaging_prep_analysis (calls set_aligned_traces... you will need its outputs)
 
 %{
-mouse = 'fni19';
-imagingFolder = '151022';
-mdfFileNumber = [1,2];  % 3; %1; % or tif major
+clear; close all
+mouse = 'fni17';
+imagingFolder = '150824';
+mdfFileNumber = [1];  % 3; %1; % or tif major
 %}
 
 %% Start a diary file
@@ -22,26 +23,34 @@ pnev2load = [];
 [md,date_major] = fileparts(imfilename);
 cd(md)
 % r = repmat('%03d-', 1, length(mdfFileNumber)); r(end) = []; date_major = sprintf(['%s_', r], imagingFolder, mdfFileNumber);
-diary(['diary_',date_major])
+diary(['diary2_',date_major])
+
+%{
+% delete the old postName file ... remove this later
+a = dir('post_*');
+delete(a.name)
+%}
+
 
 
 %% Assess motion correction. Also see how normalizing the movie worked (in order to make pixel intensities uniform before running CNMF).
-
-showMov = 0; % set to 1 to see MC rep movies.
+%{
+showMov = 1; % set to 1 to see MC rep movies.
 plotMotCorr_normImg(mouse, imagingFolder, mdfFileNumber, showMov)
 
 
 %% plotEftyVarsMean
 
-close all
+% close all
 %%%% NOTE %%%% 
 cprintf('blue', 'If needed follow this script by codes setPmtOffFrames to set pmtOffFrames\nand by findTrsWithMissingFrames to set frame-dropped trials. In this\nlatter case you will need to rerun CNMF (bc frames were dropped and\nidentification of trials was wrong)!\n')
 
-doPause = 0;
+doPause = 1;
 plotEftyVarsMean(mouse, imagingFolder, mdfFileNumber, 1, doPause)
-
+%
 % setPmtOffFrames % set pmtOffFrames
 % findTrsWithMissingFrames % set frame-dropped trials
+
 
 
 %% Run eval_comp_main from python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
@@ -67,10 +76,10 @@ py.importlib.import_module('setImagingAnalysisNamesP')
 
 % The following need be run if they are modified!
 % mod should be the the .py file (not the .pyc file!! if so delete .pyc file and rerun below)
-mod = py.importlib.import_module('setImagingAnalysisNamesP')
+mod = py.importlib.import_module('setImagingAnalysisNamesP');
 py.reload(mod)
 
-mod = py.importlib.import_module('eval_comp_main')
+mod = py.importlib.import_module('eval_comp_main');
 py.reload(mod)
 
 
@@ -137,15 +146,15 @@ for plotA = [0,1]; % if 1, green channel will be ROIs identified in A; if 0, it 
     [rgImg, gcampImg, tdTomatoImg] = inhibit_gcamp_merge(mouse, imagingFolder, mdfFileNumber, savefigs, plotA, removeBadA); %, qhg
 end
  
-
+%}
 %% imaging_prep_analysis
 
 close all
 % best is to set the 2 vars below to 0 so u get times of events for all trials; later decide which ones to set to nan.
 
 rmvTrsStimRateChanged = 0; % if 1, early-go-tone trials w stimRate categ different before and after go tone, will be excluded.
-
 do = 1; % set to 1 when first evaluating a session, to get plots and save figs and vars.
+
 normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
 warning('Note you have set normalizeSpikes to 1!!!')
 

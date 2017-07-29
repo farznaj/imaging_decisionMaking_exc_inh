@@ -56,11 +56,17 @@ f1 = sum(objc_regress)./norm(vertcat(Ys{:}))^2*100; % norm(vertcat(Ys{:}))^2 is 
 if onlyRegress==0
     kpdo = 1;
 %     maxIter = 1000; % start w 100, if cost of common slope model is more than regress model, increase it to 1000.
+    ik = 0;
     
-    while kpdo
+    while kpdo 
+        
+        ik = ik+1;
+        if ik>2, break, end
+        
+        
         %% Get the slope and offset for the common-slope model
         
-        fprintf('Solving common slope model; maxIter= %d...\n', maxIter)
+        fprintf('Rep %d, Solving common slope model; maxIter= %d...\n', ik, maxIter)
         [slope_common, offsets_ch1] = regressCommonSlopeModel(Xs, Ys, maxIter);
         
         
@@ -82,14 +88,14 @@ if onlyRegress==0
         cprintf('blue', 'Perc cost: commonSlope: %.2f . Regress: %.2f\n', [cost_common, f1])
         cprintf('blue', 'Slope: commonSlope: %.2f . Regress: %.2f\n', [slope_common, a1])
         
-        if cost_common > 5 
+        if cost_common > 6 %5 
             warning('Cost of common-slope model > 5% ... increasing maxIter to 2000')
             maxIter = 2000;
         elseif cost_common > f1
             warning('Regress model has lower cost that common-slope model. Increasing maxIter to 2000')
             maxIter = 2000;
         else
-            kpdo = 0;
+            kpdo = 0;            
         end
         
     end

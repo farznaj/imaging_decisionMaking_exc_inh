@@ -88,6 +88,10 @@ if exist('badAlignTrStartCode', 'var')
     
     
     trs2rmv = unique([trs2rmv; trs_problemAlign(:); trs_badMotion_pmtOff(:); trs_noTrialCode(:); trs_notScanned(:); trs_endMiss(:)]);
+    if sum(isnan(trs2rmv)) > 0
+        warning('trs2rmv includes nan; must be bc of a nan in trialNumbers, due to scanned trial but missed trialCode. TrialCodeMissing includes this trial, so removing nan from trs2rmv.')
+        trs2rmv(isnan(trs2rmv)) = [];
+    end
 
 end
 

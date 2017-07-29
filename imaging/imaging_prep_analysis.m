@@ -624,6 +624,29 @@ end
 clear spikes activity dFOF
 
 
+%% Plot mscan lag (mscan lag should be ok bc you control for it when you compute all data.frameTimes? 
+% badAlign is different: if the end of sampleOff does not align with the beginning of codeTime, something is wrong, so badAlign must be excluded.
+
+save(imfilename, '-append', 'mscanLag')
+
+figure; plot(mscanLag), xlabel('Trial'); ylabel('MScan lag (ms)')
+if savefigs
+    savefig(fullfile(pd, 'figs','MScanLag')) 
+end
+
+fl = find(abs(mscanLag) > 32);
+if ~isempty(fl)
+    fprintf('%d trials have mscanLag > 32ms\n', length(fl))
+    fll = fl(~ismember(fl, trs2rmv));
+    if ~isempty(fll)
+        warning('\t%d trial(s) with long mscanLag are not in trs2rmv', length(fll))
+        fprintf('mscanLag = %d ms\t\n', mscanLag(fll))
+    else
+        fprintf('\tall of them are in trs2rmv. Good!\n')
+    end
+end
+
+
 %% Set outcome and response side for each trial, taking into account allowcorrection and uncommitted responses.
 
 % Set some params related to behavior % behavior_info
