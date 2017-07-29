@@ -627,7 +627,7 @@ clear spikes activity dFOF
 %% Plot mscan lag (mscan lag should be ok bc you control for it when you compute all data.frameTimes? 
 % badAlign is different: if the end of sampleOff does not align with the beginning of codeTime, something is wrong, so badAlign must be excluded.
 
-save(imfilename, '-append', 'mscanLag')
+save(imfilename, '-append', 'mscanLag', 'trs2rmv')
 
 figure; plot(mscanLag), xlabel('Trial'); ylabel('MScan lag (ms)')
 if savefigs
