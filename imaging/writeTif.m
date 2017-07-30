@@ -6,7 +6,7 @@ function writeTif(movie, outFile, channels2write)
 % outSuffix = '_MCM';
 
 if ~iscell(movie)
-    a{1} = movie;
+    a{channels2write} = movie;
     movie = a;
 end
 

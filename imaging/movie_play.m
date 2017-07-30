@@ -51,11 +51,11 @@ for f = frames
     set(gcf,'name', num2str(f))
     
     if ~isnan(pauseDur)
-        if ~isnumeric(pauseDur)
-            pause
-        else
-            pause(pauseDur)
-        end
+    elseif ~isnumeric(pauseDur)
+        pause
+    else
+        pause(pauseDur)
+        %end
     end
     
 end
