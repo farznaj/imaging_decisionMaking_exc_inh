@@ -21,7 +21,26 @@ movefile('html/*_sum*', savedir)
 %}
 
 
+
+%% Read the diary files
+
+a = dir(fullfile(pd,'diary*.txt'));
+for i = 1:length(a)
+    fn = a(i).name;
+    fprintf('Reading diary file %s/n', a(i).name)
+    
+    % textread('results.txt', '%s', 'whitespace', '')
+    fid = fopen( 'results.txt');
+    notes = textscan(fid, '%s', 'whitespace', ''); 
+    fclose(fid);
+    
+    celldisp(notes)
+end
+
+
 %%
+disp(figd)
+
 aa = dir(fullfile(figd, '*.fig')); %dir('*.fig');
 % aa = a(~[a.isdir]);
 [~,i] = sort([aa.datenum]);
@@ -39,6 +58,10 @@ for i = 1:length(b)
         l = a(end-1); %legend of subplot 1
         lp = get(l,'position'); 
         set(l, 'position', [.4,.8,lp(3:4)])
+        
+        l = a(end-3); %legend of subplot 3
+        lp = get(l,'position'); 
+        set(l, 'position', [.4,.8,lp(3:4)])        
     end
     
     if i==fi
