@@ -22,23 +22,8 @@ movefile('html/*_sum*', savedir)
 
 
 
-%% Read the diary files
+%% PLOTS
 
-a = dir(fullfile(pd,'diary*.txt'));
-for i = 1:length(a)
-    fn = a(i).name;
-    fprintf('Reading diary file %s/n', a(i).name)
-    
-    % textread('results.txt', '%s', 'whitespace', '')
-    fid = fopen( 'results.txt');
-    notes = textscan(fid, '%s', 'whitespace', ''); 
-    fclose(fid);
-    
-    celldisp(notes)
-end
-
-
-%%
 disp(figd)
 
 aa = dir(fullfile(figd, '*.fig')); %dir('*.fig');
@@ -61,7 +46,7 @@ for i = 1:length(b)
         
         l = a(end-3); %legend of subplot 3
         lp = get(l,'position'); 
-        set(l, 'position', [.4,.8,lp(3:4)])        
+        set(l, 'position', [.4,.3,lp(3:4)])        
     end
     
     if i==fi
@@ -84,6 +69,27 @@ for i = 1:length(b)
 end
 
 
+
+%% DIARY FILES
+
+a = dir(fullfile(pd,'diary*'));
+for i = 1:length(a)
+    fn = a(i).name;
+    disp('________________________________________________________________________________________________')
+    disp('________________________________________________________________________________________________')
+    disp('________________________________________________________________________________________________')
+    fprintf('Reading diary file %s\n', a(i).name)
+    disp('________________________________________________________________________________________________')
+    disp('________________________________________________________________________________________________')
+    disp('________________________________________________________________________________________________')
+    
+%     notes = textread(fn, '%s', 'whitespace', '');    
+    fid = fopen(fn);
+    notes = textscan(fid, '%s', 'whitespace', ''); 
+    fclose(fid);
+    
+    celldisp(notes)
+end
 
 
 

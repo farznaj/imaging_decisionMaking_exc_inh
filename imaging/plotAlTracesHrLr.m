@@ -236,9 +236,9 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         legend([h1,h2], 'high rate', 'low rate')
         title('Init tone')
         xlim([time_aligned_init(1), time_aligned_init(end)])
-        yl = [min(tr1), max(tr1)];
+        yl = [min([tr1-tr1_se, tr0-tr0_se]), max([tr1+tr1_se, tr0+tr0_se])];
         plot([0, 0],[yl(1),yl(2)],'k:')
-        
+        ylim(yl)        
         
         % stim-aligned projections and raw average
         
@@ -254,9 +254,9 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         xlabel('time aligned to stim (ms)')
         title('Stim')
         xlim([time_aligned_stim(1), time_aligned_stim(end)])
-        yl = [min(tr1), max(tr1)];
+        yl = [min([tr1-tr1_se, tr0-tr0_se]), max([tr1+tr1_se, tr0+tr0_se])];
         plot([0, 0],[yl(1),yl(2)],'k:')
-        
+        ylim(yl)
         
         % goTone-aligned projections and raw average
         
@@ -272,9 +272,9 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         xlabel('time aligned to go tone (ms)')
         title('Go tone')
         xlim([time_aligned_go(1), time_aligned_go(end)])
-        yl = [min(tr1), max(tr1)];
+        yl = [min([tr1-tr1_se, tr0-tr0_se]), max([tr1+tr1_se, tr0+tr0_se])];
         plot([0, 0],[yl(1),yl(2)],'k:')
-        
+        ylim(yl)
         
         % choice-aligned projections and raw average
         
@@ -290,10 +290,9 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         xlabel('time aligned to choice (ms)')
         title('Choice')
         xlim([time_aligned_1stSide(1), time_aligned_1stSide(end)])
-        yl = [min(tr1), max(tr1)];
+        yl = [min([tr1-tr1_se, tr0-tr0_se]), max([tr1+tr1_se, tr0+tr0_se])];
         plot([0, 0],[yl(1),yl(2)],'k:')
-        
-        
+        ylim(yl)        
         
         % reward-aligned projections and raw average
         
@@ -309,11 +308,9 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         xlabel('time aligned to reward (ms)')
         title('Reward')
         xlim([time_aligned_rew(1), time_aligned_rew(end)])
-        yl = [min(tr1), max(tr1)];
+        yl = [min([tr1-tr1_se, tr0-tr0_se]), max([tr1+tr1_se, tr0+tr0_se])];
         plot([0, 0],[yl(1),yl(2)],'k:')
-        
-        
-        
+        ylim(yl)        
         
         % incommitResp-aligned projections and raw average
         
@@ -329,8 +326,10 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         xlabel('time aligned to incorrResp (ms)')
         title('Incorr resp')
         xlim([time_aligned_incorrResp(1), time_aligned_incorrResp(end)])
-        yl = [min(tr1), max(tr1)];
+        yl = [min([tr1-tr1_se, tr0-tr0_se]), max([tr1+tr1_se, tr0+tr0_se])];
         plot([0, 0],[yl(1),yl(2)],'k:')
+        ylim(yl)
+        
         
         if savefigs
             savefig(fullfile(pd, 'figs',sprintf('caTraces%s%s_alHrLr', traceType, outcome2ana)))

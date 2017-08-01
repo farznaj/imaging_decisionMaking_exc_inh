@@ -137,7 +137,7 @@ for imTr = 1:lastImTr
                 startOnOff = alldata(adTr).parsedEvents.states.start_rotary_scope(1, :); % 1st state that sent the scope ttl.
             end
             firstFrameStart = 1000 * diff(startOnOff) + frame1RelToStartOff(imTr); % duration (ms) that MScan lagged behind in executing bcontrol command signal % remember bcontrol states are in sec. % frame1RelToStartOff shows the lag between when bcontrol sent scopeTTL (+ trialStart) and when MScan started scanning. If it is -499 (ie the duration of start_rotary_scope) there was no lag. If it is >-499, it means MScan did not save the entire duration of start_rotary_scope, hence imaging started at a delay. If it <-499, mouse has entered state start_rotary_scope2.
-            mscanLag(adTr) = firstFrameStart;
+            mscanLag(adTr) = firstFrameStart; % positive value means duration of start signal was longer in alldata than in imaging; so imaging was lagged.
             % alldata.frameTimes is relative to when bcontrol sends the scope ttl.
             alldata(adTr).frameTimes = firstFrameStart + frameLength / 2 + ...
                 frameLength * (0:framesPerTrial(imTr)-1); % frameLength / 2 is added to set frameTimes to the center of a frame (instead of the beginning).

@@ -10,9 +10,9 @@
 %%
 %{
 close all
-mouse = 'fni19';
-imagingFolder = '151029';
-mdfFileNumber = [1,2,3];  % 3; %1; % or tif major
+mouse = 'fni17';
+imagingFolder = '150918';
+mdfFileNumber = [1];  % 3; %1; % or tif major
 
 close all, clearvars -except mouse imagingFolder mdfFileNumber
 %}
@@ -80,14 +80,13 @@ end
 savedir0 = fullfile('~/Dropbox/ChurchlandLab/Farzaneh_Gamal/postprop_sum',mouse);
 
 % tic
-for iday = 3 %1:length(days)
+for iday = 1:length(days)
     
     disp('__________________________________________________________________')
     dn = simpleTokenize(days{iday}, '_');
     
     imagingFolder = dn{1};
     mdfFileNumber = str2double(simpleTokenize(dn{2}, '-'));   
-
     fprintf('Analyzing day %s, sessions %s\n', imagingFolder, dn{2})   
     
     %%%
@@ -104,17 +103,28 @@ for iday = 3 %1:length(days)
 
         close all
 
-        savedir = fullfile(savedir0, date_major);
-        if ~exist(savedir, 'dir')
-            mkdir(savedir)
-        end
-        movefile('~/Documents/trial_history/imaging/html/*_sum*', savedir)
+        f = ls('~/Documents/trial_history/imaging/html/*_sum*');
+        [~,f2,f3] = fileparts(f); 
+        savedir = fullfile(savedir0, [date_major, '_', f2,f3]);
+        movefile(f, savedir) % '~/Documents/trial_history/imaging/html/*_sum*'
 
         clearvars -except mouse days savedir0
+
+%         savedir = fullfile(savedir0, date_major);
+%         if ~exist(savedir, 'dir')
+%             mkdir(savedir)
+%         end
+
     catch ME
         disp(ME)
     end
 end
 % t = toc
-
-    
+%{
+a = dir;
+a(~[a.isdir])=[];
+aa = {a.name};
+for i=3:length(aa)
+    movefile(fullfile(aa{i}, 'imaging_postProc_sum.pdf'), [aa{i}, '_imaging_postProc_sum.pdf'])
+end
+%}

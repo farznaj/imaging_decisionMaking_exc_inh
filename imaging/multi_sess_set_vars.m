@@ -128,6 +128,12 @@ cs_alldata = cumsum([0 len_alldata_eachsess]);
 
 %%% Set framesPerTrial for all sessions taking into account the missed trials.
 
+% IMPORTANT: Remember framesPerTrial defined below is not a concatenation of
+% framesPerTrial arrays of all sessions. Instead it corresponds to all_data
+% of all sessions. So if a trial is not scanned, just how it appears in
+% all_data, it will also appear in framesPerTrial below, but its value will
+% be nan.
+
 framesPerTrial = NaN(1, sum(len_alldata_eachsess));
 for ise = 1:length(mdfFileNumber)
     ii = trialNumbers_sess{ise};
@@ -139,8 +145,10 @@ for ise = 1:length(mdfFileNumber)
         end
         ii(isnan(ii)) = ii(find(isnan(ii))+1) - 1;
     end
+%     a{ise} = ii + cs_alldata(ise);
     framesPerTrial(ii + cs_alldata(ise)) = framesPerTrial_sess{ise};
 end
+framesPerTrial_alldata = framesPerTrial;
 
 
 %% Merge behavior and imaging

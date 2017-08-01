@@ -10,11 +10,11 @@
 %{
 clear; close all
 mouse = 'fni17';
-imagingFolder = '150824';
-mdfFileNumber = [1];  % 3; %1; % or tif major
+imagingFolder = '151022';
+mdfFileNumber = [1,2];  % 3; %1; % or tif major
 %}
 
-%% Start a diary file
+%% Set vars
 
 signalCh = 2; % because you get A from channel 2, I think this should be always 2.
 pnev2load = [];
@@ -23,14 +23,20 @@ pnev2load = [];
 [md,date_major] = fileparts(imfilename);
 cd(md)
 % r = repmat('%03d-', 1, length(mdfFileNumber)); r(end) = []; date_major = sprintf(['%s_', r], imagingFolder, mdfFileNumber);
+
+
+%% Start a diary file
+
 diary(['diary2_',date_major])
 
-%{
-% delete the old postName file ... remove this later
+%
+% rename the old postName file ... remove this later
 a = dir('post_*');
-delete(a.name)
-%}
-
+for ia = 1:length(a)
+    movefile(a(ia).name, ['0_',a.name])
+    % delete(a.name)
+end
+%
 
 
 %% Assess motion correction. Also see how normalizing the movie worked (in order to make pixel intensities uniform before running CNMF).
@@ -145,8 +151,8 @@ for plotA = [0,1]; % if 1, green channel will be ROIs identified in A; if 0, it 
     % qhg = .98;
     [rgImg, gcampImg, tdTomatoImg] = inhibit_gcamp_merge(mouse, imagingFolder, mdfFileNumber, savefigs, plotA, removeBadA); %, qhg
 end
- 
 %}
+
 %% imaging_prep_analysis
 
 close all

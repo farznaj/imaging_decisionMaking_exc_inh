@@ -619,6 +619,13 @@ if length(mdfFileNumber)==1
 else
     
     multi_sess_set_vars
+    save(imfilename, '-append', 'len_alldata_eachsess', 'framesPerTrial_alldata') % elements of these 2 arrays correspond to each other.
+    % it makes a lot of sense to save the above 2 vars for days with a
+    % single session too. It will make things much easier! you need to have
+    % a framesPerTrial array that corresponds to alldata, and has nan for
+    % non-imaged trials. I think you just need to set a nan array same
+    % length as the merged alldata (which I guess lacks the last trial),
+    % and then fill it with framesPerTrial using trialNumbers as indeces.
 end
 
 clear spikes activity dFOF
@@ -634,13 +641,22 @@ if savefigs
     savefig(fullfile(pd, 'figs','MScanLag')) 
 end
 
+if (~ismember(mscanLag<-2, trs2rmv))
+    error('There are trials with negative mscanLag and not among trs2rmv!')
+end
+
 fl = find(abs(mscanLag) > 32);
 if ~isempty(fl)
     fprintf('%d trials have mscanLag > 32ms\n', length(fl))
     fll = fl(~ismember(fl, trs2rmv));
     if ~isempty(fll)
-        warning('\t%d trial(s) with long mscanLag are not in trs2rmv', length(fll))
-        fprintf('mscanLag = %d ms\t\n', mscanLag(fll))
+        if any(mscanLag(fll) >= 32+5) % well, we dont want >32, but may be relax it upto 32+5.
+            fprintf('mscanLag = %d ms\t\n', mscanLag(fll))
+            error('mscan >= 32+5ms; why so large?!')
+        else % positive values will be taken care of in mergeAlldata ... so it should be fine! though if you want to be conservative you should exclude them.
+            warning('\t%d trial(s) with mscanLag > 32+5ms are not in trs2rmv', length(fll))
+            fprintf('mscanLag = %d ms\t\n', mscanLag(fll))
+        end
     else
         fprintf('\tall of them are in trs2rmv. Good!\n')
     end
@@ -1007,7 +1023,7 @@ if plot_ave_noTrGroup
 end
 
 
-%% Plot average traces across all neurons for different trial groups aligned on particular trial events.
+%% Plot trial-averaged (HR vs LR) traces for each individual neuron, aligned on each individual trial event.
 
 if plot_ave_trGroup
     fprintf('Remember: in each subplot (ie each neuron) different trials are contributing to different segments (alignments) of the trace!\n')

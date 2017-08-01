@@ -204,7 +204,7 @@ for tr = 1:length(alldata)
         
         %% stimulus offset : 
         
-        if ~ismember(outcomes(tr), -3)            
+        if ~ismember(outcomes(tr), -3) && ~isempty(alldata(tr).parsedEvents.states.wait_stim) % in the rare case that mouse licked during stim_delay the latter condition will not be met.            
             % end of the stim if stim was not aborted due to mouse going to one of the states written below.
             stimEndIfNoAbort = (alldata(tr).parsedEvents.states.wait_stim(1) * 1000) + (alldata(tr).stimDuration * 1000);
             
