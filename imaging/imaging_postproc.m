@@ -10,7 +10,7 @@
 %{
 clear; close all
 mouse = 'fni17';
-imagingFolder = '151022';
+imagingFolder = '150928';
 mdfFileNumber = [1,2];  % 3; %1; % or tif major
 %}
 
@@ -29,14 +29,14 @@ cd(md)
 
 diary(['diary2_',date_major])
 
-%
+%{
 % rename the old postName file ... remove this later
 a = dir('post_*');
 for ia = 1:length(a)
     movefile(a(ia).name, ['0_',a.name])
     % delete(a.name)
 end
-%
+%}
 
 
 %% Assess motion correction. Also see how normalizing the movie worked (in order to make pixel intensities uniform before running CNMF).

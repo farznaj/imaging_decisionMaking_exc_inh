@@ -233,12 +233,13 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         h1=boundedline(time_aligned_init, tr1, tr1_se, 'b', 'alpha');
         h2=boundedline(time_aligned_init, tr0, tr0_se, 'r', 'alpha');
         xlabel('time aligned to init tone (ms)')
-        legend([h1,h2], 'high rate', 'low rate')
+        legend([h1,h2], 'high rate', 'low rate'); set(legend, 'position', [0.4226    0.8873    0.1893    0.1190])
         title('Init tone')
         xlim([time_aligned_init(1), time_aligned_init(end)])
-        yl = [min([tr1-tr1_se, tr0-tr0_se]), max([tr1+tr1_se, tr0+tr0_se])];
+        yl = [min([tr1-tr1_se; tr0-tr0_se]), max([tr1+tr1_se; tr0+tr0_se])];
         plot([0, 0],[yl(1),yl(2)],'k:')
         ylim(yl)        
+        
         
         % stim-aligned projections and raw average
         
@@ -254,9 +255,10 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         xlabel('time aligned to stim (ms)')
         title('Stim')
         xlim([time_aligned_stim(1), time_aligned_stim(end)])
-        yl = [min([tr1-tr1_se, tr0-tr0_se]), max([tr1+tr1_se, tr0+tr0_se])];
+        yl = [min([tr1-tr1_se; tr0-tr0_se]), max([tr1+tr1_se; tr0+tr0_se])];
         plot([0, 0],[yl(1),yl(2)],'k:')
         ylim(yl)
+        
         
         % goTone-aligned projections and raw average
         
@@ -272,10 +274,11 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         xlabel('time aligned to go tone (ms)')
         title('Go tone')
         xlim([time_aligned_go(1), time_aligned_go(end)])
-        yl = [min([tr1-tr1_se, tr0-tr0_se]), max([tr1+tr1_se, tr0+tr0_se])];
+        yl = [min([tr1-tr1_se; tr0-tr0_se]), max([tr1+tr1_se; tr0+tr0_se])];
         plot([0, 0],[yl(1),yl(2)],'k:')
         ylim(yl)
         
+       
         % choice-aligned projections and raw average
         
         subplot(3,2,4)
@@ -290,45 +293,48 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         xlabel('time aligned to choice (ms)')
         title('Choice')
         xlim([time_aligned_1stSide(1), time_aligned_1stSide(end)])
-        yl = [min([tr1-tr1_se, tr0-tr0_se]), max([tr1+tr1_se, tr0+tr0_se])];
+        yl = [min([tr1-tr1_se; tr0-tr0_se]), max([tr1+tr1_se; tr0+tr0_se])];
         plot([0, 0],[yl(1),yl(2)],'k:')
         ylim(yl)        
         
+       
         % reward-aligned projections and raw average
-        
-        subplot(3,2,5)
-        a1 = squeeze(nanmean(Xt_rewAl(:, :, hr_trs),  2)); % frames x trials
-        tr1 = nanmean(a1,  2);
-        tr1_se = nanstd(a1,  [], 2) / sqrt(numTrials);
-        a0 = squeeze(nanmean(Xt_rewAl(:, :, lr_trs),  2)); % frames x trials
-        tr0 = nanmean(a0,  2);
-        tr0_se = nanstd(a0,  [], 2) / sqrt(numTrials);
-        boundedline(time_aligned_rew, tr1, tr1_se, 'b', 'alpha')
-        boundedline(time_aligned_rew, tr0, tr0_se, 'r', 'alpha')
-        xlabel('time aligned to reward (ms)')
-        title('Reward')
-        xlim([time_aligned_rew(1), time_aligned_rew(end)])
-        yl = [min([tr1-tr1_se, tr0-tr0_se]), max([tr1+tr1_se, tr0+tr0_se])];
-        plot([0, 0],[yl(1),yl(2)],'k:')
-        ylim(yl)        
+       if strcmp(outcome2ana, 'corr')
+            subplot(3,2,5)
+            a1 = squeeze(nanmean(Xt_rewAl(:, :, hr_trs),  2)); % frames x trials
+            tr1 = nanmean(a1,  2);
+            tr1_se = nanstd(a1,  [], 2) / sqrt(numTrials);
+            a0 = squeeze(nanmean(Xt_rewAl(:, :, lr_trs),  2)); % frames x trials
+            tr0 = nanmean(a0,  2);
+            tr0_se = nanstd(a0,  [], 2) / sqrt(numTrials);
+            boundedline(time_aligned_rew, tr1, tr1_se, 'b', 'alpha')
+            boundedline(time_aligned_rew, tr0, tr0_se, 'r', 'alpha')
+            xlabel('time aligned to reward (ms)')
+            title('Reward')
+            xlim([time_aligned_rew(1), time_aligned_rew(end)])
+            yl = [min([tr1-tr1_se; tr0-tr0_se]), max([tr1+tr1_se; tr0+tr0_se])];
+            plot([0, 0],[yl(1),yl(2)],'k:')
+            ylim(yl)        
+        end
         
         % incommitResp-aligned projections and raw average
-        
-        subplot(3,2,6)
-        a1 = squeeze(nanmean(Xt_incorrRespAl(:, :, hr_trs),  2)); % frames x trials
-        tr1 = nanmean(a1,  2);
-        tr1_se = nanstd(a1,  [], 2) / sqrt(numTrials);
-        a0 = squeeze(nanmean(Xt_incorrRespAl(:, :, lr_trs),  2)); % frames x trials
-        tr0 = nanmean(a0,  2);
-        tr0_se = nanstd(a0,  [], 2) / sqrt(numTrials);
-        boundedline(time_aligned_incorrResp, tr1, tr1_se, 'b', 'alpha')
-        boundedline(time_aligned_incorrResp, tr0, tr0_se, 'r', 'alpha')
-        xlabel('time aligned to incorrResp (ms)')
-        title('Incorr resp')
-        xlim([time_aligned_incorrResp(1), time_aligned_incorrResp(end)])
-        yl = [min([tr1-tr1_se, tr0-tr0_se]), max([tr1+tr1_se, tr0+tr0_se])];
-        plot([0, 0],[yl(1),yl(2)],'k:')
-        ylim(yl)
+        if strcmp(outcome2ana, 'incorr')
+            subplot(3,2,6)
+            a1 = squeeze(nanmean(Xt_incorrRespAl(:, :, hr_trs),  2)); % frames x trials
+            tr1 = nanmean(a1,  2);
+            tr1_se = nanstd(a1,  [], 2) / sqrt(numTrials);
+            a0 = squeeze(nanmean(Xt_incorrRespAl(:, :, lr_trs),  2)); % frames x trials
+            tr0 = nanmean(a0,  2);
+            tr0_se = nanstd(a0,  [], 2) / sqrt(numTrials);
+            boundedline(time_aligned_incorrResp, tr1, tr1_se, 'b', 'alpha')
+            boundedline(time_aligned_incorrResp, tr0, tr0_se, 'r', 'alpha')
+            xlabel('time aligned to incorrResp (ms)')
+            title('Incorr resp')
+            xlim([time_aligned_incorrResp(1), time_aligned_incorrResp(end)])
+            yl = [min([tr1-tr1_se; tr0-tr0_se]), max([tr1+tr1_se; tr0+tr0_se])];
+            plot([0, 0],[yl(1),yl(2)],'k:')
+            ylim(yl)
+        end
         
         
         if savefigs

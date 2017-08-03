@@ -634,16 +634,24 @@ clear spikes activity dFOF
 %% Plot mscan lag (mscan lag should be ok bc you control for it when you compute all data.frameTimes? 
 % badAlign is different: if the end of sampleOff does not align with the beginning of codeTime, something is wrong, so badAlign must be excluded.
 
-save(imfilename, '-append', 'mscanLag', 'trs2rmv')
-
 figure; plot(mscanLag), xlabel('Trial'); ylabel('MScan lag (ms)')
 if savefigs
     savefig(fullfile(pd, 'figs','MScanLag')) 
 end
 
-if (~ismember(mscanLag<-2, trs2rmv))
-    error('There are trials with negative mscanLag and not among trs2rmv!')
+fm = find(mscanLag<-2);
+if ~all(ismember(fm, trs2rmv))
+    fmm = fm(~ismember(fm, trs2rmv));
+    fprintf('Trials %d \n', fmm)
+    fprintf('\thave mscanLag= %.0f ms\n', mscanLag(fmm))
+    
+    trs2rmv = [trs2rmv; fmm']; % add it to trs2rmv
+    %     error('There are trials with negative mscanLag and not among trs2rmv!')
+    warning('Adding to trs2rmv trials with negative mscanLag that are not among trs2rmv!')
 end
+
+save(imfilename, '-append', 'mscanLag', 'trs2rmv')
+
 
 fl = find(abs(mscanLag) > 32);
 if ~isempty(fl)
@@ -654,7 +662,7 @@ if ~isempty(fl)
             fprintf('mscanLag = %d ms\t\n', mscanLag(fll))
             error('mscan >= 32+5ms; why so large?!')
         else % positive values will be taken care of in mergeAlldata ... so it should be fine! though if you want to be conservative you should exclude them.
-            warning('\t%d trial(s) with mscanLag > 32+5ms are not in trs2rmv', length(fll))
+            warning('\t%d trial(s) with [32 < mscanLag < 32+5]ms are not in trs2rmv', length(fll))
             fprintf('mscanLag = %d ms\t\n', mscanLag(fll))
         end
     else
