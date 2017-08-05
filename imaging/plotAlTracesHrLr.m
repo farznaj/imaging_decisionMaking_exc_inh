@@ -30,7 +30,7 @@ else
     thStimStrength = 3; % 2; % threshold of stim strength for defining hard, medium and easy trials.
     th_stim_dur = 0; % for fni18 u had to set it to 0! for fni16, fni17 it was 800; % min stim duration to include a trial in timeStimOnset
 end
-trs4project = 'trained'; % 'trained', 'all', 'corr', 'incorr' % trials that will be used for projections and the class accuracy trace; if 'trained', same trials that were used for SVM training will be used. "corr" and "incorr" refer to current trial's outcome, so they don't mean much if trialHistAnalysis=1.
+% trs4project = 'trained'; % 'trained', 'all', 'corr', 'incorr' % trials that will be used for projections and the class accuracy trace; if 'trained', same trials that were used for SVM training will be used. "corr" and "incorr" refer to current trial's outcome, so they don't mean much if trialHistAnalysis=1.
 
 thAct = 5e-4; %5e-4; % 1e-5 % neurons whose average activity during ep is less than thAct will be called non-active and will be excluded.
 % thTrsWithSpike = 1; % 3 % remove neurons that are active in <thSpTr trials.
@@ -47,9 +47,11 @@ o = {'corr', 'incorr'};
 for io = 1:length(o)
 
     outcome2ana = o{io};
+    trs4project = outcome2ana;
     
     % set vars
-    popClassifier_setXYall
+    popClassifier_setXYall % set trsExcluded and numTrials based on traces_al_stim
+%     plotAlTracesHrLr_pre % this one sets only vars that are needed below. popClassifier_setXYall sets additional ars related to svm.
 %     close % close that stupid figure
     
     
@@ -127,8 +129,6 @@ if trialHistAnalysis:
     
     
     
-    
-    
     %% Set the final traces for plotting (Remove trs and neurons to be excluded!)
     
     % trs4project = 'incorr' % 'trained', 'all', 'corr', 'incorr'
@@ -147,7 +147,7 @@ if trialHistAnalysis:
         Xt_initAl = traces_al_init;
         Xt_stimAl_all = traces_al_stimAll;
         choiceVecNow = choiceVecAll;
-    elseif strcmp(trs4project, 'trained')
+    elseif strcmp(trs4project, 'trained') %remember trsExcluded is computed in popClassifier_setXYall based on traces_al_stim... however not all trials in traces_al_stim go to choice_al, rew_al and incorr_al... so for plotting stand err it is wrong to divide all plots by numTrials...
         Xt = traces_al_stim(:, :, ~trsExcluded);
         Xt_choiceAl = traces_al_1stSide(:, :, ~trsExcluded);
         Xt_goAl = traces_al_go(:, :, ~trsExcluded);
@@ -180,7 +180,6 @@ if trialHistAnalysis:
     % Xt_choiceAl = traces_al_1stSide(:, :, np.sum(np.sum(np.isnan(traces_al_1stSide), axis =0), axis =0)==0);
     
     
-    
     % Exclude non-active neurons (ie neurons that don't fire in any of the trials during ep)
     Xt = Xt(:,~NsExcluded,:);
     Xt_choiceAl = Xt_choiceAl(:,~NsExcluded,:);
@@ -192,25 +191,41 @@ if trialHistAnalysis:
     
     % Only include the randomly selected set of neurons
     %{
-Xt = Xt(:,NsRand,:);
-Xt_choiceAl = Xt_choiceAl(:,NsRand,:);
-Xt_goAl = Xt_goAl(:,NsRand,:);
-Xt_rewAl = Xt_rewAl(:,NsRand,:);
-Xt_incorrRespAl = Xt_incorrRespAl(:,NsRand,:);
-Xt_initAl = Xt_initAl(:,NsRand,:);
-Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
-    %}
-    
+    Xt = Xt(:,NsRand,:);
+    Xt_choiceAl = Xt_choiceAl(:,NsRand,:);
+    Xt_goAl = Xt_goAl(:,NsRand,:);
+    Xt_rewAl = Xt_rewAl(:,NsRand,:);
+    Xt_incorrRespAl = Xt_incorrRespAl(:,NsRand,:);
+    Xt_initAl = Xt_initAl(:,NsRand,:);
+    Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
+    %}    
     
     % Divide data into high-rate (modeled as 1) and low-rate (modeled as 0) trials
     hr_trs = (choiceVecNow==1);
     lr_trs = (choiceVecNow==0);
     % print 'Projection traces have %d high-rate trials, and %d low-rate trials' %(np.sum(hr_trs), np.sum(lr_trs))
     
-    
-    
     % window of training (ep)
-    win = (ep-eventI)*frameLength;
+%     win = (ep-eventI)*frameLength;
+    
+    %%% compute number of valid trials for each each aligned trace
+    ni1 = sum(~isnan(squeeze(nanmean(Xt_initAl(:,:,hr_trs), 1))'), 2);
+    ni0 = sum(~isnan(squeeze(nanmean(Xt_initAl(:,:,lr_trs), 1))'), 2);
+    
+    ns1 = sum(~isnan(squeeze(nanmean(Xt(:,:,hr_trs), 1))'), 2);
+    ns0 = sum(~isnan(squeeze(nanmean(Xt(:,:,lr_trs), 1))'), 2);    
+    
+    ng1 = sum(~isnan(squeeze(nanmean(Xt_goAl(:,:,hr_trs), 1))'), 2);
+    ng0 = sum(~isnan(squeeze(nanmean(Xt_goAl(:,:,lr_trs), 1))'), 2);    
+
+    nc1 = sum(~isnan(squeeze(nanmean(Xt_choiceAl(:,:,hr_trs), 1))'), 2);
+    nc0 = sum(~isnan(squeeze(nanmean(Xt_choiceAl(:,:,lr_trs), 1))'), 2);        
+    
+    nr1 = sum(~isnan(squeeze(nanmean(Xt_rewAl(:,:,hr_trs), 1))'), 2);
+    nr0 = sum(~isnan(squeeze(nanmean(Xt_rewAl(:,:,lr_trs), 1))'), 2);    
+    
+    np1 = sum(~isnan(squeeze(nanmean(Xt_incorrRespAl(:,:,hr_trs), 1))'), 2);
+    np0 = sum(~isnan(squeeze(nanmean(Xt_incorrRespAl(:,:,lr_trs), 1))'), 2);    
     
     
     
@@ -226,10 +241,10 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         subplot(3,2,1)
         a1 = squeeze(nanmean(Xt_initAl(:, :, hr_trs),  2)); % frames x trials
         tr1 = nanmean(a1,  2);
-        tr1_se = nanstd(a1,  [], 2) / sqrt(numTrials);
+        tr1_se = nanstd(a1,  [], 2) / sqrt(ni1);
         a0 = squeeze(nanmean(Xt_initAl(:, :, lr_trs),  2)); % frames x trials
         tr0 = nanmean(a0,  2);
-        tr0_se = nanstd(a0,  [], 2) / sqrt(numTrials);
+        tr0_se = nanstd(a0,  [], 2) / sqrt(ni0);
         h1=boundedline(time_aligned_init, tr1, tr1_se, 'b', 'alpha');
         h2=boundedline(time_aligned_init, tr0, tr0_se, 'r', 'alpha');
         xlabel('time aligned to init tone (ms)')
@@ -246,10 +261,10 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         subplot(3,2,2) % I think you should use Xtsa here to make it compatible with the plot above.
         a1 = squeeze(nanmean(Xt(:, :, hr_trs),  2)); % frames x trials
         tr1 = nanmean(a1,  2);
-        tr1_se = nanstd(a1,  [], 2) / sqrt(numTrials);
+        tr1_se = nanstd(a1,  [], 2) / sqrt(ns1);
         a0 = squeeze(nanmean(Xt(:, :, lr_trs),  2)); % frames x trials
         tr0 = nanmean(a0,  2);
-        tr0_se = nanstd(a0,  [], 2) / sqrt(numTrials);
+        tr0_se = nanstd(a0,  [], 2) / sqrt(ns0);
         boundedline(time_aligned_stim, tr1, tr1_se, 'b', 'alpha')
         boundedline(time_aligned_stim, tr0, tr0_se, 'r', 'alpha')
         xlabel('time aligned to stim (ms)')
@@ -265,10 +280,10 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         subplot(3,2,3)
         a1 = squeeze(nanmean(Xt_goAl(:, :, hr_trs),  2)); % frames x trials
         tr1 = nanmean(a1,  2);
-        tr1_se = nanstd(a1,  [], 2) / sqrt(numTrials);
+        tr1_se = nanstd(a1,  [], 2) / sqrt(ng1);
         a0 = squeeze(nanmean(Xt_goAl(:, :, lr_trs),  2)); % frames x trials
         tr0 = nanmean(a0,  2);
-        tr0_se = nanstd(a0,  [], 2) / sqrt(numTrials);
+        tr0_se = nanstd(a0,  [], 2) / sqrt(ng0);
         boundedline(time_aligned_go, tr1, tr1_se, 'b', 'alpha')
         boundedline(time_aligned_go, tr0, tr0_se, 'r', 'alpha')
         xlabel('time aligned to go tone (ms)')
@@ -284,10 +299,10 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
         subplot(3,2,4)
         a1 = squeeze(nanmean(Xt_choiceAl(:, :, hr_trs),  2)); % frames x trials
         tr1 = nanmean(a1,  2);
-        tr1_se = nanstd(a1,  [], 2) / sqrt(numTrials);
+        tr1_se = nanstd(a1,  [], 2) / sqrt(nc1);
         a0 = squeeze(nanmean(Xt_choiceAl(:, :, lr_trs),  2)); % frames x trials
         tr0 = nanmean(a0,  2);
-        tr0_se = nanstd(a0,  [], 2) / sqrt(numTrials);
+        tr0_se = nanstd(a0,  [], 2) / sqrt(nc0);
         boundedline(time_aligned_1stSide, tr1, tr1_se, 'b', 'alpha')
         boundedline(time_aligned_1stSide, tr0, tr0_se, 'r', 'alpha')
         xlabel('time aligned to choice (ms)')
@@ -303,10 +318,10 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
             subplot(3,2,5)
             a1 = squeeze(nanmean(Xt_rewAl(:, :, hr_trs),  2)); % frames x trials
             tr1 = nanmean(a1,  2);
-            tr1_se = nanstd(a1,  [], 2) / sqrt(numTrials);
+            tr1_se = nanstd(a1,  [], 2) / sqrt(nr1);
             a0 = squeeze(nanmean(Xt_rewAl(:, :, lr_trs),  2)); % frames x trials
             tr0 = nanmean(a0,  2);
-            tr0_se = nanstd(a0,  [], 2) / sqrt(numTrials);
+            tr0_se = nanstd(a0,  [], 2) / sqrt(nr0);
             boundedline(time_aligned_rew, tr1, tr1_se, 'b', 'alpha')
             boundedline(time_aligned_rew, tr0, tr0_se, 'r', 'alpha')
             xlabel('time aligned to reward (ms)')
@@ -322,10 +337,10 @@ Xt_stimAl_all = Xt_stimAl_all(:,NsRand,:);
             subplot(3,2,6)
             a1 = squeeze(nanmean(Xt_incorrRespAl(:, :, hr_trs),  2)); % frames x trials
             tr1 = nanmean(a1,  2);
-            tr1_se = nanstd(a1,  [], 2) / sqrt(numTrials);
+            tr1_se = nanstd(a1,  [], 2) / sqrt(np1);
             a0 = squeeze(nanmean(Xt_incorrRespAl(:, :, lr_trs),  2)); % frames x trials
             tr0 = nanmean(a0,  2);
-            tr0_se = nanstd(a0,  [], 2) / sqrt(numTrials);
+            tr0_se = nanstd(a0,  [], 2) / sqrt(np0);
             boundedline(time_aligned_incorrResp, tr1, tr1_se, 'b', 'alpha')
             boundedline(time_aligned_incorrResp, tr0, tr0_se, 'r', 'alpha')
             xlabel('time aligned to incorrResp (ms)')

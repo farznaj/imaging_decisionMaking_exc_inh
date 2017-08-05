@@ -10,8 +10,8 @@
 %{
 clear; close all
 mouse = 'fni17';
-imagingFolder = '150928';
-mdfFileNumber = [1,2];  % 3; %1; % or tif major
+imagingFolder = '150820';
+mdfFileNumber = [1];  % 3; %1; % or tif major
 %}
 
 %% Set vars
@@ -23,7 +23,10 @@ pnev2load = [];
 [md,date_major] = fileparts(imfilename);
 cd(md)
 % r = repmat('%03d-', 1, length(mdfFileNumber)); r(end) = []; date_major = sprintf(['%s_', r], imagingFolder, mdfFileNumber);
-
+%{
+[~, pnev_n] = fileparts(pnevFileName);
+postName = fullfile(md, sprintf('post_%s.mat', pnev_n));
+%}
 
 %% Start a diary file
 
