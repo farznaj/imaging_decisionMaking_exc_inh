@@ -14,8 +14,8 @@ Created on Sun Mar 12 15:12:29 2017
 
 #%% Change the following vars:
 
-mousename = 'fni19' #'fni17'
-ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone.
+mousename = 'fni17' #'fni17'
+ch_st_goAl = [0,1,0] # whether do analysis on traces aligned on choice, stim or go tone.
 if mousename == 'fni18':
     allDays = 0# all 7 days will be used (last 3 days have z motion!)
     noZmotionDays = 1 # 4 days that dont have z motion will be used.
@@ -415,14 +415,22 @@ else:
 #%%
 ######################## PLOTS ########################
 
+# define a colormap
+from matplotlib import cm
+from numpy import linspace
+start = 0.0
+stop = 1.0
+number_of_lines= len(days)
+cm_subsection = linspace(start, stop, number_of_lines) 
+colors = [ cm.jet(x) for x in cm_subsection ]
+
 # Plot class accur trace for each day
 
 plt.figure()
 for iday in range(len(days)):    
 #    plt.figure()
     nPre = eventI_allDays[iday] # number of frames before the common eventI, also the index of common eventI. 
-    nPost = (len(av_l2_test_d[iday]) - eventI_allDays[iday] - 1)
-    
+    nPost = (len(av_l2_test_d[iday]) - eventI_allDays[iday] - 1)    
     a = -(np.asarray(frameLength*regressBins) * range(nPre+1)[::-1])
     b = (np.asarray(frameLength*regressBins) * range(1, nPost+1))
     time_al = np.concatenate((a,b))
@@ -430,8 +438,10 @@ for iday in range(len(days)):
     plt.subplot(221)
     plt.errorbar(time_al, av_l2_test_d[iday], yerr = sd_l2_test_d[iday], label=' ')    
     plt.title(days[iday])
+#    plt.plot([0,0], [50,100], color='k', linestyle=':')
     #plt.errorbar(range(len(av_l2_test_d[iday])), av_l2_test_d[iday], yerr = sd_l2_test_d[iday])
-
+#    plt.plot(time_al, av_l2_test_d[iday]-av_l2_test_s[iday], color=colors[iday])
+    
     plt.subplot(222)
     plt.errorbar(time_al, av_l2_test_s[iday], yerr = sd_l2_test_s[iday], label='')
 
@@ -440,8 +450,8 @@ for iday in range(len(days)):
 
     plt.subplot(224)
     plt.errorbar(time_al, av_l2_test_c[iday], yerr = sd_l2_test_c[iday], label=' ')    
-#    plt.show()
-plt.subplot(224)
+    plt.show()
+#plt.subplot(224)
 #plt.legend(loc='center left', bbox_to_anchor=(.7, .7)) 
 
 
@@ -490,6 +500,26 @@ if savefigs:#% Save the figure
     plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
     
     
+
+# plot test minus test_shuffle
+plt.figure()
+for iday in range(len(days)):    
+#    plt.figure()
+    nPre = eventI_allDays[iday] # number of frames before the common eventI, also the index of common eventI. 
+    nPost = (len(av_l2_test_d[iday]) - eventI_allDays[iday] - 1)    
+    a = -(np.asarray(frameLength*regressBins) * range(nPre+1)[::-1])
+    b = (np.asarray(frameLength*regressBins) * range(1, nPost+1))
+    time_al = np.concatenate((a,b))
+    
+#    plt.subplot(221)
+#    plt.errorbar(time_al, av_l2_test_d[iday], yerr = sd_l2_test_d[iday], label=' ')    
+    plt.title(days[iday])
+#    plt.plot([0,0], [50,100], color='k', linestyle=':')
+    #plt.errorbar(range(len(av_l2_test_d[iday])), av_l2_test_d[iday], yerr = sd_l2_test_d[iday])
+    plt.plot(time_al, av_l2_test_d[iday]-av_l2_test_s[iday], color=colors[iday])
+#    plt.plot(time_al, av_l2_test_d[iday]-av_l2_test_s[iday], color=colors[iday])
+    
+
     
 #%%
 ##################################################################################################

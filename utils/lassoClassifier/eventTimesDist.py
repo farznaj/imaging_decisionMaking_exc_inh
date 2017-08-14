@@ -12,8 +12,8 @@ Created on Thu Apr  6 16:46:51 2017
 """
 
 
-mousename = 'fni19' #'fni17'
-savefigs = 1
+#mousename = 'fni19' #'fni17'
+#savefigs = 1
 doPlots = 0 #1 # plot event times for each day
 # I think it maks sense to set excludeTrs to 0 bc those trials that are nan will have nan event Times...
 excludeTrs = 0 # If 1, some trials will be excluded from the dists; You need to set the svmName file which contains trsExcluded

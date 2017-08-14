@@ -6,12 +6,13 @@
 % - findBadROIs
 % - inhibit_excit_prep
 % - imaging_prep_analysis (calls set_aligned_traces... you will need its outputs)
-
 %{
+
 clear; close all
-mouse = 'fni17';
-imagingFolder = '150820';
+mouse = 'fni16';
+imagingFolder = '150817';
 mdfFileNumber = [1];  % 3; %1; % or tif major
+
 %}
 
 %% Set vars
@@ -59,8 +60,7 @@ plotEftyVarsMean(mouse, imagingFolder, mdfFileNumber, 1, doPause)
 %
 % setPmtOffFrames % set pmtOffFrames
 % findTrsWithMissingFrames % set frame-dropped trials
-
-
+%}
 
 %% Run eval_comp_main from python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
 
@@ -83,6 +83,8 @@ py.importlib.import_module('setImagingAnalysisNamesP')
 % py.eval_comp_main.eval_comp_main(mouse, imagingFolder, num2cell(mdfFileNumber))
 %}
 
+% for R2017 I had to exclude:
+%{
 % The following need be run if they are modified!
 % mod should be the the .py file (not the .pyc file!! if so delete .pyc file and rerun below)
 mod = py.importlib.import_module('setImagingAnalysisNamesP');
@@ -90,7 +92,7 @@ py.reload(mod)
 
 mod = py.importlib.import_module('eval_comp_main');
 py.reload(mod)
-
+%}
 
 py.eval_comp_main.eval_comp_main(mouse, imagingFolder, num2cell(mdfFileNumber), C(:)', YrA(:)', size(C))
 % figure; 
@@ -154,10 +156,10 @@ for plotA = [0,1]; % if 1, green channel will be ROIs identified in A; if 0, it 
     % qhg = .98;
     [rgImg, gcampImg, tdTomatoImg] = inhibit_gcamp_merge(mouse, imagingFolder, mdfFileNumber, savefigs, plotA, removeBadA); %, qhg
 end
-%}
+%
 
 %% imaging_prep_analysis
-
+%{
 close all
 % best is to set the 2 vars below to 0 so u get times of events for all trials; later decide which ones to set to nan.
 
@@ -189,7 +191,7 @@ frameLength = 1000/30.9; % sec.
         timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename, pnevFileName] = ....
    imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength, save_aligned_traces, savefigs, rmvTrsStimRateChanged);
 
-
+%}
 %%
 diary off
 

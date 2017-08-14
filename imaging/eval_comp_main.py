@@ -2,8 +2,8 @@
 """
 % Specify the file you want to analyze
 
-mousename = 'fni18'
-imagingFolder = '151210'
+mousename = 'fni16'
+imagingFolder = '150817'
 mdfFileNumber = [1]
 
 eval_comp_main(mousename, imagingFolder, mdfFileNumber)
@@ -14,7 +14,7 @@ Created on Tue Aug 23 09:52:25 2016
 """
     
 #%%    
-def eval_comp_main(mousename, imagingFolder, mdfFileNumber, C=0, YrA=0, size_C=0):
+def eval_comp_main(mousename, imagingFolder, mdfFileNumber, C=0, YrA=0, size_C=0, doplot=0):
     
 #    if options.get('C'):
 #        C = options.get('C');    
@@ -93,17 +93,20 @@ def eval_comp_main(mousename, imagingFolder, mdfFileNumber, C=0, YrA=0, size_C=0
     '''
     #np.mean(fitness[fitness!=fitness[0]])
     # Plot
-    from matplotlib import pyplot as plt
-    plt.figure
-    plt.subplot(2,1,1)
-    plt.plot(fitness)
-    plt.ylabel('fitness')
-    plt.subplot(2,1,2)
-    plt.plot(idx_components)
-    plt.xlabel('new index')
-    plt.ylabel('old index')
-    print np.shape(erfc)
-    
+    '''
+    print(doplot)
+    if doplot==1:
+        from matplotlib import pyplot as plt
+        plt.figure
+        plt.subplot(2,1,1)
+        plt.plot(fitness)
+        plt.ylabel('fitness')
+        plt.subplot(2,1,2)
+        plt.plot(idx_components)
+        plt.xlabel('new index')
+        plt.ylabel('old index')
+        print np.shape(erfc)
+    '''
     
     #%% Save results to mat file named "more_pnevFileName"
     fname = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
