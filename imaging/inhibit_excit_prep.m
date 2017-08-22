@@ -51,10 +51,7 @@ if ~(sum(assessClass_unsure_inh_excit)) && exist(moreName, 'file') && isprop(a, 
 %     load(moreName, 'inhibitRois')    
     
 else
-    % inhibitRois will be :
-    % 1 for inhibit ROIs.
-    % 0 for excit ROIs.
-    % nan for ROIs that could not be classified as inhibit or excit.
+    % inhibitRois will be :    % 1 for inhibit ROIs.    % 0 for excit ROIs.    % nan for ROIs that could not be classified as inhibit or excit.
     
     % calls inhibitROIselection to set inhibitRois
     [inhibitRois_pix, roi2surr_sig, sigTh_IE, x_all, cost_all, th_pix] = inhibit_excit_setVars(imfilename, pnevFileName, manThSet, assessClass_unsure_inh_excit, keyEval, identifInh, do2dGauss);    

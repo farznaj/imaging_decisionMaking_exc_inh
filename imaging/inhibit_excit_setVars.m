@@ -237,7 +237,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     colors = colors(end:-1:1,:);
     
     % plot inhibitory ROIs on the image of inhibit channel.
-    figure('name', fn, 'position', [288          75        1083         898]);
+    froi = figure('name', fn, 'position', [288          75        1083         898]);
     subplot(221)
     imagesc(im2p)
     colormap gray
@@ -268,7 +268,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     end
     title(sprintf('gcamp ROIs idenetified as unsure (n=%d)', sum(isnan(inhibitRois))));    
 
-    savefig(fullfile(figdir, 'inhIdentROIs')) 
+    savefig(froi, fullfile(figdir, 'inhIdentROIs')) 
     
    
     %% Compare spike rates
@@ -281,7 +281,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     
     %% Compare average C and S of inhibit and excit neurons
     
-    figure('position', [675          77        1019         899]);
+    ftra = figure('position', [675          77        1019         899]);
     top = C;
     subplot(421), hold on;
     plot(mean(top(isnan(inhibitRois),:)),'c'); plot(mean(top(inhibitRois==1,:)),'r'); plot(mean(top(inhibitRois==0,:)),'color',[0,127,0]/255); legend('uns', 'inh', 'exc'); xlim([1,length(top)]); title('C')
@@ -289,8 +289,7 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     subplot(425),  plot(mean(top(inhibitRois==0,:))), title('excit'); xlim([1,length(top)])
     subplot(427),  plot(mean(top(isnan(inhibitRois),:))), title('unsure'); xlim([1,length(top)])
     
-    
-%     figure;
+
     top = S;
     subplot(422), hold on;
     plot(mean(top(isnan(inhibitRois),:)),'c'); plot(mean(top(inhibitRois==1,:)),'r'); plot(mean(top(inhibitRois==0,:)),'color',[0,127,0]/255); legend('uns', 'inh', 'exc'); xlim([1,length(top)]); title(sprintf('S\nmeanS: uns %.1f; inh %.1f; exc %.1f', meanS_uns_inh_exc))
@@ -298,15 +297,13 @@ load(imfilename, 'aveImage'), workingImage = aveImage;
     subplot(426),  plot(mean(top(inhibitRois==0,:))), title('excit'); xlim([1,length(top)])
     subplot(428),  plot(mean(top(isnan(inhibitRois),:))), title('unsure'); xlim([1,length(top)])
 
-    savefig(fullfile(figdir, 'inhIdentAveTraces')) 
-
+    savefig(ftra, fullfile(figdir, 'inhIdentAveTraces'))
     %{
     subplot(221), plot(mean(activity_man_eftMask_ch2(:, inhibitRois==1), 2)), title('ch2, inhibit')
     subplot(223),  plot(mean(activity_man_eftMask_ch2(:, inhibitRois==0), 2)), title('ch2, excit')
     subplot(222), plot(mean(activity_man_eftMask_ch1(:, inhibitRois==1), 2)), title('ch1, inhibit')
     subplot(224),  plot(mean(activity_man_eftMask_ch1(:, inhibitRois==0), 2)), title('ch1, excit')
-    %}
-    
+    %}    
     % end
     
 else

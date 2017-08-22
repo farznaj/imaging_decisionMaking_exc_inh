@@ -12,13 +12,13 @@ Created on Sun Mar 12 15:12:29 2017
 """
 
 #%%
-mice = 'fni16', 'fni17', 'fni18', 'fni19'
+mice = 'fni17', #'fni16', 'fni17', 'fni18', 'fni19'
 
 chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 savefigs = 1
 #superimpose = 1 # the averaged aligned traces of testing and shuffled will be plotted on the same figure
 #loadWeights = 1
-doPlots = 0 #1 # plot hists of w per mouse
+doPlots = 1 #1 # plot hists of w per mouse
 # following will be needed for 'fni18': #set one of the following to 1:
 allDays = 0# all 7 days will be used (last 3 days have z motion!)
 noZmotionDays = 1 # 4 days that dont have z motion will be used.
@@ -375,8 +375,14 @@ for im in range(len(mice)):
             if not os.path.exists(d):
                 print 'creating folder'
                 os.makedirs(d)
+
+            if chAl==1:
+                dd = 'chAl_excInh_w_days_' + days[0][0:6] + '-to-' + days[-1][0:6]
+            else:
+                dd = 'stAl_excInh_w_days_' + days[0][0:6] + '-to-' + days[-1][0:6]
          
-            fign = os.path.join(d, suffn[0:5]+'excVSinh_allDays_w_'+dp+'.'+fmt[0])
+            fign = os.path.join(d, suffn[0:5]+dd+'_'+dp+'.'+fmt[0])         
+#            fign = os.path.join(d, suffn[0:5]+'excVSinh_allDays_w_'+dp+'.'+fmt[0])
             plt.savefig(fign, bbox_inches='tight')
             
             
@@ -427,8 +433,14 @@ for im in range(len(mice)):
             if not os.path.exists(d):
                 print 'creating folder'
                 os.makedirs(d)
+                
+            if chAl==1:
+                dd = 'chAl_excInh_absw_days_' + days[0][0:6] + '-to-' + days[-1][0:6]
+            else:
+                dd = 'stAl_excInh_absw_days_' + days[0][0:6] + '-to-' + days[-1][0:6]
          
-            fign = os.path.join(d, suffn[0:5]+'excVSinh_allDays_absw_w_'+dp+'.'+fmt[0])
+            fign = os.path.join(d, suffn[0:5]+dd+'_'+dp+'.'+fmt[0])
+#            fign = os.path.join(d, suffn[0:5]+'excVSinh_allDays_absw_'+dp+'.'+fmt[0])            
             plt.savefig(fign, bbox_inches='tight')
     
     

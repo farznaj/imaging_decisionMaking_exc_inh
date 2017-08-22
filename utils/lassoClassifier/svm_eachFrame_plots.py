@@ -14,8 +14,8 @@ Created on Sun Mar 12 15:12:29 2017
 
 #%% Change the following vars:
 
-mousename = 'fni17' #'fni17'
-ch_st_goAl = [0,1,0] # whether do analysis on traces aligned on choice, stim or go tone.
+mousename = 'fni16' #'fni17'
+ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone.
 if mousename == 'fni18':
     allDays = 0# all 7 days will be used (last 3 days have z motion!)
     noZmotionDays = 1 # 4 days that dont have z motion will be used.
@@ -31,7 +31,7 @@ chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-align
 stAl = ch_st_goAl[1]
 goToneAl = ch_st_goAl[2]
 doPlots = 0 #1 # plot c path of each day 
-savefigs = 0
+savefigs = 1
 
 #eps = 10**-10 # tiny number below which weight is considered 0
 #thNon0Ws = 2 # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!
@@ -437,7 +437,7 @@ for iday in range(len(days)):
     
     plt.subplot(221)
     plt.errorbar(time_al, av_l2_test_d[iday], yerr = sd_l2_test_d[iday], label=' ')    
-    plt.title(days[iday])
+#    plt.title(days[iday]) # Uncomment this if you a separate plot for each day.
 #    plt.plot([0,0], [50,100], color='k', linestyle=':')
     #plt.errorbar(range(len(av_l2_test_d[iday])), av_l2_test_d[iday], yerr = sd_l2_test_d[iday])
 #    plt.plot(time_al, av_l2_test_d[iday]-av_l2_test_s[iday], color=colors[iday])
@@ -450,13 +450,15 @@ for iday in range(len(days)):
 
     plt.subplot(224)
     plt.errorbar(time_al, av_l2_test_c[iday], yerr = sd_l2_test_c[iday], label=' ')    
-    plt.show()
+#    plt.show() # Uncomment this if you a separate plot for each day.
+    
 #plt.subplot(224)
 #plt.legend(loc='center left', bbox_to_anchor=(.7, .7)) 
 
 
 ##%%
 plt.subplot(221)
+plt.plot([0,0], [40,100], color='k', linestyle=':')
 plt.title('Test')
 if chAl==1:
     plt.xlabel('Time since choice onset (ms)', fontsize=13)
@@ -467,16 +469,19 @@ ax = plt.gca()
 makeNicePlots(ax,1)
 
 plt.subplot(222)
+plt.plot([0,0], [40,100], color='k', linestyle=':')
 plt.title('Test-shfl')
 ax = plt.gca()
 makeNicePlots(ax,1)
 
 plt.subplot(223)
+plt.plot([0,0], [40,100], color='k', linestyle=':')
 plt.title('Train')
 ax = plt.gca()
 makeNicePlots(ax,1)
 
 plt.subplot(224)
+plt.plot([0,0], [40,100], color='k', linestyle=':')
 plt.title('Test-chance')
 ax = plt.gca()
 makeNicePlots(ax,1)
@@ -487,9 +492,9 @@ plt.subplots_adjust(hspace=0.65)
 ##%% Save the figure    
 if savefigs:#% Save the figure
     if chAl==1:
-        dd = 'chAl_allDays'
+        dd = 'chAl_testTrain_' + days[0][0:6] + '-to-' + days[-1][0:6]
     else:
-        dd = 'stAl_allDays'
+        dd = 'stAl_testTrain_' + days[0][0:6] + '-to-' + days[-1][0:6]
         
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
@@ -500,7 +505,7 @@ if savefigs:#% Save the figure
     plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
     
     
-
+'''
 # plot test minus test_shuffle
 plt.figure()
 for iday in range(len(days)):    
@@ -518,9 +523,10 @@ for iday in range(len(days)):
     #plt.errorbar(range(len(av_l2_test_d[iday])), av_l2_test_d[iday], yerr = sd_l2_test_d[iday])
     plt.plot(time_al, av_l2_test_d[iday]-av_l2_test_s[iday], color=colors[iday])
 #    plt.plot(time_al, av_l2_test_d[iday]-av_l2_test_s[iday], color=colors[iday])
-    
+'''    
 
-    
+
+
 #%%
 ##################################################################################################
 ############## Align class accur traces of all days to make a final average trace ##############
@@ -620,9 +626,9 @@ plt.plot(time_aligned, pp, color='k')
 ##%% Save the figure    
 if savefigs:#% Save the figure
     if chAl==1:
-        dd = 'chAl_aveDays'
+        dd = 'chAl_aveDays_' + days[0][0:6] + '-to-' + days[-1][0:6]
     else:
-        dd = 'stAl_aveDays'
+        dd = 'stAl_aveDays_' + days[0][0:6] + '-to-' + days[-1][0:6]
         
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
@@ -635,16 +641,82 @@ if savefigs:#% Save the figure
 
 
 
+#%% Plot class accur in the last time window for each day
+
+time2an = -1; # 1 bin before eventI
+a = av_l2_test_d_aligned[nPreMin,:] - av_l2_test_s_aligned[nPreMin,:]
+
+plt.figure(figsize=(5.5,3))
+plt.plot(range(len(days)), a, marker='o')
+plt.xticks(range(len(days)), days, rotation='vertical')
+plt.ylabel('class accuracy (testing data - shfl) last 100ms before choice')
+
+makeNicePlots(plt.gca())
+
+##%% Save the figure    
+if savefigs:#% Save the figure
+    if chAl==1:
+        dd = 'chAl_time' + str(time2an) + '_' + days[0][0:6] + '-to-' + days[-1][0:6]
+    else:
+        dd = 'stAl_time' + str(time2an) + '_' + days[0][0:6] + '-to-' + days[-1][0:6]
+        
+    d = os.path.join(svmdir+dnow)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+            
+    fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
+    plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
 
 
 
+
+#%% Plot all days testing real data - shuffle
+
+# change color order to jet 
+from cycler import cycler
+plt.rcParams['axes.prop_cycle'] = cycler(color=colors)
+
+plt.figure(figsize=(5.5,3))
+lineObjects = plt.plot(time_aligned, av_l2_test_d_aligned - av_l2_test_s_aligned, label=days)
+plt.plot([0,0], [0,50], color='k', linestyle=':')
+plt.legend(iter(lineObjects), (days), bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+plt.ylabel('class accuracy (testing data - shfl)', fontsize=13)
+if chAl==1:
+    plt.xlabel('Time relative to choice onset (ms)', fontsize=13)
+else:
+    plt.xlabel('Time relative stim onset (ms)', fontsize=13)
+
+
+makeNicePlots(plt.gca())
+
+
+##%% Save the figure    
+if savefigs:#% Save the figure
+    if chAl==1:
+        dd = 'chAl_testMshfl_' + days[0][0:6] + '-to-' + days[-1][0:6]
+    else:
+        dd = 'stAl_testMshfl_' + days[0][0:6] + '-to-' + days[-1][0:6]
+        
+    d = os.path.join(svmdir+dnow)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+            
+    fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
+    plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+
+
+
+
+#%%
 ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #%% # For each day plot dist of event times as well as class accur traces. Do it for both stim-aligned and choice-aligned data 
 # For this section you need to run eventTimesDist.py; also run the codes above once with chAl=0 and once with chAl=1.
-
+no
 if 'eventI_allDays_ch' in locals() and 'eventI_allDays_st' in locals():
     
     #%% Set time vars needed below and Plot time dist of trial events for all days (pooled trials)

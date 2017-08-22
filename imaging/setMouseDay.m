@@ -15,6 +15,10 @@ imagingFolder = '150918';
 mdfFileNumber = [1];  % 3; %1; % or tif major
 
 close all, clearvars -except mouse imagingFolder mdfFileNumber
+
+% find the index of a particular day
+d = '150826';
+find(~cellfun(@isempty, strfind(days, d)))
 %}
 
 
@@ -26,10 +30,21 @@ days = {'150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', 
 % earlier days
 mouse = 'fni16';
 days = {'150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150824_1-2',...
-    ' 150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', ...
+    '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', ...
     '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1',...
     '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3',...
     '150928_1-2', '150929_1-2'}; % , '150914_1-2' : dont analyze!
+
+
+% all days
+mouse = 'fni16';
+days = {'150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150824_1-2',...
+    '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', ...
+    '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1',...
+    '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3',...
+    '150928_1-2', '150929_1-2', ...
+    '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2',...
+    '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2'}; % , '150914_1-2' : dont analyze!
 
 
 %%
@@ -73,8 +88,11 @@ days = {'150922_1', '150923_1', '150924_1-2', '150925_1-2', ...
 
 %% Run imaging_postproc for each day
 
-% tic
-for iday = 4:length(days)
+setFrdrops = 0; % set to 1 write after cnmf, so if needed you reran cnmf
+bad_mask_inh = 1; % if 1, badROIs, mask, and inh/exc will be set (ie almost all except for imaging_prep_analysis)
+doPost = 1; % if 1 imaging_prep_analysis will be run.
+
+for iday = 1:length(days)
     
     disp('__________________________________________________________________')
     dn = simpleTokenize(days{iday}, '_');
@@ -94,15 +112,18 @@ for iday = 4:length(days)
     end
     %%%
     close all
-    clearvars -except me mouse days
+    clearvars -except me mouse days setFrdrops bad_mask_inh doPost md iday
 end
-% t = toc
 
 
 %% Publish figures in a summary pdf file.
 
 savedir0 = fullfile('~/Dropbox/ChurchlandLab/Farzaneh_Gamal/postprop_sum',mouse);
 
+if ~exist('savedir0', 'dir')
+    mkdir(savedir0)
+end
+    
 % tic
 for iday = 1:length(days)
     
@@ -122,7 +143,7 @@ for iday = 1:length(days)
     figd = fullfile(pd, 'figs');     % cd(figd) %%% copyfile(fullfile('/home/farznaj/Documents/trial_history/imaging','imaging_postProc_html.m'),'.','f')
     
     %%
-    try
+%     try
         publish('/home/farznaj/Documents/trial_history/imaging/imaging_postProc_sum.m', 'format', 'pdf')
         
         close all
@@ -130,6 +151,7 @@ for iday = 1:length(days)
         f = ls('~/Documents/trial_history/imaging/html/*_sum*');
         [~,f2,f3] = fileparts(f);
         savedir = fullfile(savedir0, [date_major, '_', f2,f3]);
+      
         movefile(f, savedir) % '~/Documents/trial_history/imaging/html/*_sum*'
         
         clearvars -except mouse days savedir0
@@ -139,10 +161,11 @@ for iday = 1:length(days)
         %             mkdir(savedir)
         %         end
         
-    catch ME
-        disp(ME)
-    end
+%     catch ME
+%         disp(ME)
+%     end
 end
+
 % t = toc
 %{
 a = dir;
@@ -152,4 +175,46 @@ for i=3:length(aa)
     movefile(fullfile(aa{i}, 'imaging_postProc_sum.pdf'), [aa{i}, '_imaging_postProc_sum.pdf'])
 end
 %}
+
+
+
+
+
+
+%% Add missing fields to alldata
+
+doclean = 1;
+defaultHelpedTrs = 0;
+saveHelpedTrs = 1;
+
+
+%%%%%%
+for iday = 1:length(days)
+    
+    disp('__________________________________________________________________')
+    dn = simpleTokenize(days{iday}, '_');
+    
+    imagingFolder = dn{1};
+    mdfFileNumber = str2double(simpleTokenize(dn{2}, '-'));
+    
+    fprintf('Analyzing day %s, sessions %s\n', imagingFolder, dn{2})
+    
+    
+    %%%    
+    % set filenames
+    [alldata_fileNames, ~] = setBehavFileNames(mouse, {datestr(datenum(imagingFolder, 'yymmdd'))});
+    % sort it
+    [~,fn] = fileparts(alldata_fileNames{1});
+    a = alldata_fileNames(cellfun(@(x)~isempty(x),cellfun(@(x)strfind(x, fn(1:end-4)), alldata_fileNames, 'uniformoutput', 0)))';
+    [~, isf] = sort(cellfun(@(x)x(end-25:end), a, 'uniformoutput', 0));
+    alldata_fileNames = alldata_fileNames(isf);
+
+    % load the one corresponding to mdffilenumber.
+    [data, trials_per_session] = loadBehavData(alldata_fileNames(mdfFileNumber), defaultHelpedTrs, saveHelpedTrs, doclean);
+
+end
+
+
+
+
 

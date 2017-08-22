@@ -149,8 +149,12 @@ end
 
 
 %%    
-if exist('alldata_fileNam', 'var') && savealldata
-    warning('Overwriting all_data!!')
-    save(alldata_fileNam, 'all_data', '-append')
+if exist('alldata_fileNam', 'var') 
+    if savealldata
+        cprintf('r','Overwriting all_data after adding missing fields!\n')
+        save(alldata_fileNam, 'all_data', '-append')
+    else
+        fprintf('Alldata contains all fields; nice!\n')
+    end
 end
 

@@ -160,7 +160,7 @@ for i = 1:length(evT) % loop over center, left and right licks.
         
         switch isub
             
-            case 1  % imaging DF/F
+            case 1  % DF/F
                 traces = alldataDfofGood; % alldataSpikesGood; %  traces to be aligned.
                 title('DF/F')
                 
@@ -172,7 +172,7 @@ for i = 1:length(evT) % loop over center, left and right licks.
                 
                 disp('setting DF/F traces')
                 
-            case 2 % imaging Spikes
+            case 2 % Spikes
                 traces = alldataSpikesGood;
                 title('Spiking')
                 
@@ -287,8 +287,8 @@ for i = 1:length(evT) % loop over center, left and right licks.
         % figure;
         e = nPre+1; % find(time_aligned >= 0, 1);
         h(i) = boundedline((1:length(top))-e, top, tosd, col{i}, 'alpha');
-        
-        
+        boundedline((1:length(top))-e, top, tosd, col{i}, 'alpha');
+        hold on
         %     plot([nPreFrames+1 nPreFrames+1], [min(top) max(top)], 'k:')
         plot([0 0], [min(top) max(top)], 'k:')
         xlim([1 nPre+nPost+1]-e)
@@ -495,7 +495,7 @@ for i = 1:length(evT) % loop over center, left and right licks.
     % figure;
     e = nPre+1; % find(time_aligned >= 0, 1);
     h(i) = boundedline((1:length(top))-e, top, tosd, col{i}, 'alpha');
-    
+    hold on
     
     %     plot([nPreFrames+1 nPreFrames+1], [min(top) max(top)], 'k:')
     plot([0 0], [min(top) max(top)], 'k:')

@@ -1,11 +1,32 @@
 % Fix early sessions that a single alldata was saved for all imaging
 % sessions in a day.... Here we split alldata into n files, n=number of
 % sessions.
+%{
+mouse = 'fni17';
+imagingFolder = '150814';
+%}
 
-% Set the following vars
+% set this:
+nsess = 2; %length(alldata_fileNames);
 
-nsess = 2;
-n0 = alldata_fileNames{1}; %'fni16_25-Aug-2015_1340.mat'; % file with alldata of all sessions.
+
+%% Set filenames
+
+[alldata_fileNames, ~] = setBehavFileNames(mouse, {datestr(datenum(imagingFolder, 'yymmdd'))});
+% sort it
+[~,fn] = fileparts(alldata_fileNames{1});
+a = alldata_fileNames(cellfun(@(x)~isempty(x),cellfun(@(x)strfind(x, fn(1:end-4)), alldata_fileNames, 'uniformoutput', 0)))';
+[~, isf] = sort(cellfun(@(x)x(end-25:end), a, 'uniformoutput', 0));
+alldata_fileNames = alldata_fileNames(isf);
+
+celldisp(alldata_fileNames)
+
+[~, ~, tifFold] = setImagingAnalysisNames(mouse, imagingFolder, 1);
+
+
+%% Set the following vars
+
+n0 = alldata_fileNames{end}; %{1} %'fni16_25-Aug-2015_1340.mat'; % file with alldata of all sessions.
 % n0 = '~/Shares/Churchland/data/fni16/behavior/fni16_21-Aug-2015_1550.mat';
 n0
 [f1,f2,f3] = fileparts(n0);
@@ -32,35 +53,99 @@ lenFrCounts, sum(lenFrCounts)
 
 %% Split trials of all_data into multiple session
 
-load(n0, 'all_data')
-length(all_data)
+load(n0, 'all_data'), length(all_data)
 all_data0 = all_data;
 
-cs = [0, cumsum(lenFrCounts)];
+csImaging = [0, cumsum(lenFrCounts)];
+csImaging(end) = length(all_data0);
 
 all_datan = cell(1, length(lenFrCounts));
 for i = 1: length(lenFrCounts)
-    all_datan{i} = all_data(cs(i)+1:cs(i+1));
+    all_datan{i} = all_data(csImaging(i)+1:csImaging(i+1));
 end
 
+%%% Save the splitted all_data
+%{
 for i = 1: length(lenFrCounts)
     all_data = all_datan{i};
     save(na{i}, 'all_data')
 end
-
+%}
 
 %% Fix trial IDs and the last trial for all_data of session 2 to end. 
 
-for ii = 1: length(lenFrCounts)
+all_datan2 = cell(1, length(lenFrCounts));
+
+for ii = 1: length(lenFrCounts) % ii=2;
 
     n = na{ii};
-    load(n, 'all_data')
+    all_data = all_datan{ii};
+%     load(n, 'all_data')
     
     
     % fix file names.
     for i = 1:length(all_data)
         all_data(i).filename = n;
     end
+    
+    % Figure out what trial of all_data0 corresponds to first trial in the 2nd frameCount file.      
+    if ii>1  && ii==length(lenFrCounts)% some of the first few trials of session 2 may not be in imaging, so remove them.
+
+        % Compute number of frames from all_data0
+
+        frameLength = 1000 / 30.9;
+        nfrs = NaN(1, length(all_data)-1); % min(length(all_data)-1, length(framesPerTrial)));
+        for tr = 1 : length(nfrs) % min(length(all_data)-1, length(framesPerTrial))
+            % duration of a trial in mscan (ie duration of scopeTTL being sent).
+            durtr = all_data(tr).parsedEvents.states.stop_rotary_scope(1)*1000 + 500 - ...
+                all_data(tr).parsedEvents.states.start_rotary_scope(1)*1000; % 500 is added bc the duration of stop_rotary_scope is 500ms.
+            nfrs(tr) = durtr/ frameLength;
+        end
+
+
+        %%% Set number of frames from the frameCount file
+%         frameCountFileName = 'framecounts_002.txt'; % params.framecountFiles{2}
+%         nfrs_mscan = frameCountsRead(frameCountFileName);
+        nfrs_mscan = numfrs{ii};
+
+        %%%
+        mn = min(length(nfrs), length(nfrs_mscan));
+        figure; hold on;
+        plot(nfrs); %(1:mn)); 
+        plot(nfrs_mscan)
+
+
+        %%% Figure out what trial of all_data0 matches the 1st trial of frameCount file in terms of number of frames
+        mn = min(length(nfrs), length(nfrs_mscan));
+
+        jall = [];
+        tr = 20; 
+        for j = 1:30 %lenFrCounts(1)+30 %1-tr : 30
+            b = abs(nfrs_mscan(tr) - nfrs(tr+j))<2; 
+            if b==1 
+                jall = [jall, j]; 
+            end
+        end
+        disp(jall)
+        d = jall(1);  % the first one is perhaps the amount of shift you need to apply.
+        d = jall(end);
+
+        %%%
+        nfrs_alldata = nfrs(1+d : min(length(nfrs), d+mn));
+        plot(nfrs(1+d : min(length(nfrs), 1+d+mn))); % now plot the alldata0-computed frames from the trial that corresponds to 1st trial of frameCount file
+        % it should now match nfrs_mscan
+        mn2 = min(length(nfrs_alldata), length(nfrs_mscan));
+        figure; plot(nfrs_alldata(1:mn2) -nfrs_mscan(1:mn2)) 
+        if max(abs((nfrs_alldata(1:mn2) -nfrs_mscan(1:mn2)))) > 2.5
+            error('something wrong')
+        end
+        
+        %%%        
+        all_data = all_data(d+1:end);
+        cprintf('m', 'starting from trial %d of all_data0...\n', d+1)
+        
+    end
+    
     
     
     % fix trial IDs. session 1 is already good.
@@ -91,21 +176,47 @@ for ii = 1: length(lenFrCounts)
         all_data(end).wheelSampleInt = [];
         all_data(end).wheelPostTrialToRecord = [];
     end
-    
-    
-    
-    if ii>1
-        'check this'
-%         all_data = all_data(2:end);
-        d = length(all_data0) - cs(ii+1);
-        all_data = all_data(d+1:end);
-    end
+
     
     
     %% save the new all_data
     
-    save(n, 'all_data')
-    
+    all_datan2{ii} = all_data;
+%     save(n, 'all_data')
     
 end
+
+
+%% Save the new all_data files
+
+for ii = 1: length(lenFrCounts) % ii=2;    
+    all_data = all_datan2{ii};
+    save(na{ii}, 'all_data')
+end
+
+
+
+%%
+%         warning('check this')
+%         all_data = all_data(2:end);
+        %{
+        d = length(all_data0) - csImaging(ii+1);
+        cprintf('m', 'starting from trial %d of all_data...\n', d+1)
+        all_data = all_data(d+1:end);        
+        %{
+        % check for a random trial (tr)
+        tr = 7; for j=1:20, b = isequaln(all_datan{ii}(tr).parsedEvents.states, all_data0(tr+j).parsedEvents.states); if b==1, disp(j), break, end, end
+        if j~=d+1
+            error('something wrong; the 2 methods dont match!')
+        end
+        %}
+        %}
+        %{
+        % one guess is that the last trial in frameCount file matches the last
+        % trial in all_data0... we go with this guess and later when we do
+        % trialization we can confirm it or come back here and change it.
+        d = length(all_data0) - lenFrCounts(ii);
+        all_data = all_data0(d+1:end);
+        cprintf('m', 'starting from trial %d of all_data0...\n', d+1)
+        %}
 

@@ -28,17 +28,18 @@ disp(figd)
 
 aa = dir(fullfile(figd, '*.fig')); %dir('*.fig');
 % aa = a(~[a.isdir]);
-[~,i] = sort([aa.datenum]);
-b = {aa.name}; b = b(i);
+[~,s] = sort([aa.datenum]);
+b = {aa.name}; b = b(s);
 
 fi = find(ismember(b, 'caTraces_aveAllNeurons.fig')); % plot a few figures at different x so you can evaluate it well.
 fi2 = find(ismember(b, 'behav_motCorr_sum.fig')); % move its legend location
 
 for i = 1:length(b)
 
-    open(fullfile(figd, b{i})) %     open(b{i})
+    open(fullfile(figd, b{i})) % open(b{i})
     
-    if i==fi2
+    if i==fi2 % behav_motCorr_sum
+        pause(1)
         a = get(gcf,'children'); 
         l = a(end-1); %legend of subplot 1
         lp = get(l,'position'); 
@@ -49,7 +50,8 @@ for i = 1:length(b)
         set(l, 'position', [.4,.3,lp(3:4)])        
     end
     
-    if i==fi
+    %
+    if i==fi % caTraces_aveAllNeurons
         pause(3)
         xl = get(gca,'xlim');        
         % open 10 figures zoomed in at different x 
@@ -66,6 +68,8 @@ for i = 1:length(b)
 %             open(fullfile(figd, b{i})) %open(b{i})
         end
     end    
+    %
+    
 end
 
 
@@ -73,8 +77,9 @@ end
 %% DIARY FILES
 
 a = dir(fullfile(pd,'diary*'));
+% cd(pd)
 for i = 1:length(a)
-    fn = a(i).name;
+    fn = fullfile(pd, a(i).name);
     disp('________________________________________________________________________________________________')
     disp('________________________________________________________________________________________________')
     disp('________________________________________________________________________________________________')

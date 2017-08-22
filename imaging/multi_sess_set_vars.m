@@ -25,7 +25,8 @@ end
 celldisp(imfilename_sess)
 
 
-%%
+%% Setting pmtOffFrames and badFrames for each session
+
 % load(imfilename, 'pmtOffFrames', 'badFrames')
 % pmtOffFrames0 = pmtOffFrames;
 % badFrames0 = badFrames;
@@ -47,7 +48,7 @@ for ise = 1:length(mdfFileNumber)
 
     
     %%
-    clear cs_frtrs pmtOffFrames badFrames
+    clear cs_frtrs pmtOffFrames badFrames trialCodeMissing
     load(imfilename_sess{ise}, 'pmtOffFrames', 'badFrames')
     
 %     if exist('pmtOffFrames', 'var')
@@ -171,6 +172,7 @@ mscanLag = cell2mat(mscanLag_sess);
 
 %% Set trs2rmv, stimrate, outcome and response side. You will set certain variables to NaN for trs2rmv (but you will never remove them from any arrays).
 
+disp('=== Setting Trial Numbers ===')
 imagingFlg = 1;
 begTrs = 1; % 1st trial of each session
 % begTrs = [0 cumsum(trials_per_session)]+1;
@@ -179,9 +181,12 @@ begTrs = 1; % 1st trial of each session
 trs2rmv = []; stimdur = []; stimrate = []; stimtype = [];
 
 for ise = 1:length(mdfFileNumber)
+    disp('_____________________')
+    fprintf('\tsession %i ... \n', ise)
+    
+    clear trEndMissing trEndMissingUnknown trStartMissingUnknown % you didnt have this until 8/16/17... so it means all days analyzed prior to this date may have excluded some trials for sessions 2-end if trialEndMissing etc was not saved for them but existed for the earlier session!
     load(imfilename_sess{ise}, 'trialNumbers')
     load(imfilename_sess{ise}, 'badAlignTrStartCode', 'trialStartMissing'); %, 'trialCodeMissing') % they get set in framesPerTrialStopStart3An_fn
-
     load(imfilename_sess{ise}, 'trEndMissing', 'trEndMissingUnknown', 'trStartMissingUnknown')   
     
     if ~exist('trEndMissing', 'var'), trEndMissing = []; end

@@ -90,7 +90,8 @@ f = find((csfrs-nFrames)>0, 1)-2;
 if isempty(f)
     lastImTr = length(trialNumbers);
 else
-    warning('FN need to check this. This shouldnt happen if you are using activity trace that corresponds to entire session')
+%     warning('FN need to check this. This shouldnt happen if you are using activity trace that corresponds to entire session')
+    warning('Fewer frames in the movie than in frameCounts file. Not analysing the last trial!')
     lastImTr = f; % if the activity trace doesn't correspond to the entire movie.
 end
 
@@ -109,6 +110,8 @@ for imTr = 1:lastImTr
         
         % Double-check that we have a match
         if adTr <= length(adTrNums) && adTrNums(adTr) == imTrNum && ~isnan(framesPerTrial(imTr)) % Farz added the isnan term, bc when you stop the mouse during wait4init state, trialStart and trialCode get recorded, however no frameCounts will be recorde in the text file, which will turn to NaN in framesPerTrialStopStart2An_fn.
+            
+            fprintf('Imaging trial %d matches alldata trial %d\n', [imTr, adTr])
             alldata(adTr).activity = activity(activityInd:activityInd+framesPerTrial(imTr)-1, :); % frames x units
             alldata(adTr).dFOF = dFOF(activityInd:activityInd+framesPerTrial(imTr)-1, :); % frames x units
             if exist('S_df', 'var')
@@ -157,7 +160,7 @@ for imTr = 1:lastImTr
                 if imTrNum == adTrNums(end) + 1 % || imTrNum == adTrNums(end) % second term added by Farz.
                     fprintf('Missing the last trial of alldata, as is typical.\n');
                 else
-                    warning([num2str(imTrNum),'Missing a middle trial in alldata that is present in imaging data. This should never happen!']);
+                    warning([num2str(imTrNum),' missing a middle trial in alldata that is present in imaging data. This should never happen!']);
                 end
             end
         end

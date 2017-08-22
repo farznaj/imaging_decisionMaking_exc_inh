@@ -208,25 +208,24 @@ if trialHistAnalysis:
     % window of training (ep)
 %     win = (ep-eventI)*frameLength;
     
-    %%% compute number of valid trials for each each aligned trace
-    ni1 = sum(~isnan(squeeze(nanmean(Xt_initAl(:,:,hr_trs), 1))'), 2);
-    ni0 = sum(~isnan(squeeze(nanmean(Xt_initAl(:,:,lr_trs), 1))'), 2);
+    %%% compute number of valid trials for each aligned trace
+    ni1 = sum(~isnan(squeeze(sum(sum(Xt_initAl(:,:,hr_trs), 1),2)))); %sum(~isnan(squeeze(nanmean(Xt_initAl(:,:,hr_trs), 1))'), 2);
+    ni0 = sum(~isnan(squeeze(sum(sum(Xt_initAl(:,:,lr_trs), 1),2)))); %sum(~isnan(squeeze(nanmean(Xt_initAl(:,:,lr_trs), 1))'), 2);
     
-    ns1 = sum(~isnan(squeeze(nanmean(Xt(:,:,hr_trs), 1))'), 2);
-    ns0 = sum(~isnan(squeeze(nanmean(Xt(:,:,lr_trs), 1))'), 2);    
+    ns1 = sum(~isnan(squeeze(sum(sum(Xt(:,:,hr_trs), 1),2)))); %sum(~isnan(squeeze(nanmean(Xt(:,:,hr_trs), 1))'), 2);
+    ns0 = sum(~isnan(squeeze(sum(sum(Xt(:,:,lr_trs), 1),2)))); %sum(~isnan(squeeze(nanmean(Xt(:,:,lr_trs), 1))'), 2);    
     
-    ng1 = sum(~isnan(squeeze(nanmean(Xt_goAl(:,:,hr_trs), 1))'), 2);
-    ng0 = sum(~isnan(squeeze(nanmean(Xt_goAl(:,:,lr_trs), 1))'), 2);    
+    ng1 = sum(~isnan(squeeze(sum(sum(Xt_goAl(:,:,hr_trs), 1),2)))); %sum(~isnan(squeeze(nanmean(Xt_goAl(:,:,hr_trs), 1))'), 2);
+    ng0 = sum(~isnan(squeeze(sum(sum(Xt_goAl(:,:,lr_trs), 1),2)))); %sum(~isnan(squeeze(nanmean(Xt_goAl(:,:,lr_trs), 1))'), 2);    
 
-    nc1 = sum(~isnan(squeeze(nanmean(Xt_choiceAl(:,:,hr_trs), 1))'), 2);
-    nc0 = sum(~isnan(squeeze(nanmean(Xt_choiceAl(:,:,lr_trs), 1))'), 2);        
+    nc1 = sum(~isnan(squeeze(sum(sum(Xt_choiceAl(:,:,hr_trs), 1),2)))); %sum(~isnan(squeeze(nanmean(Xt_choiceAl(:,:,hr_trs), 1))'), 2);
+    nc0 = sum(~isnan(squeeze(sum(sum(Xt_choiceAl(:,:,lr_trs), 1),2)))); %sum(~isnan(squeeze(nanmean(Xt_choiceAl(:,:,lr_trs), 1))'), 2);        
     
-    nr1 = sum(~isnan(squeeze(nanmean(Xt_rewAl(:,:,hr_trs), 1))'), 2);
-    nr0 = sum(~isnan(squeeze(nanmean(Xt_rewAl(:,:,lr_trs), 1))'), 2);    
+    nr1 = sum(~isnan(squeeze(sum(sum(Xt_rewAl(:,:,hr_trs), 1),2)))); %sum(~isnan(squeeze(nanmean(Xt_rewAl(:,:,hr_trs), 1))'), 2);
+    nr0 = sum(~isnan(squeeze(sum(sum(Xt_rewAl(:,:,lr_trs), 1),2)))); %sum(~isnan(squeeze(nanmean(Xt_rewAl(:,:,lr_trs), 1))'), 2);    
     
-    np1 = sum(~isnan(squeeze(nanmean(Xt_incorrRespAl(:,:,hr_trs), 1))'), 2);
-    np0 = sum(~isnan(squeeze(nanmean(Xt_incorrRespAl(:,:,lr_trs), 1))'), 2);    
-    
+    np1 = sum(~isnan(squeeze(sum(sum(Xt_incorrRespAl(:,:,hr_trs), 1),2)))); %sum(~isnan(squeeze(nanmean(Xt_incorrRespAl(:,:,hr_trs), 1))'), 2);
+    np0 = sum(~isnan(squeeze(sum(sum(Xt_incorrRespAl(:,:,lr_trs), 1),2)))); %sum(~isnan(squeeze(nanmean(Xt_incorrRespAl(:,:,lr_trs), 1))'), 2);    
     
     
     
@@ -238,7 +237,7 @@ if trialHistAnalysis:
         
         % init-aligned projections and raw average
         figure('name', sprintf('Only %s; %d neurons; %d trials', outcome2ana, numNeurons, numTrials))
-        subplot(3,2,1)
+        subplot(3,2,1), hold on
         a1 = squeeze(nanmean(Xt_initAl(:, :, hr_trs),  2)); % frames x trials
         tr1 = nanmean(a1,  2);
         tr1_se = nanstd(a1,  [], 2) / sqrt(ni1);
@@ -258,7 +257,7 @@ if trialHistAnalysis:
         
         % stim-aligned projections and raw average
         
-        subplot(3,2,2) % I think you should use Xtsa here to make it compatible with the plot above.
+        subplot(3,2,2), hold on % I think you should use Xtsa here to make it compatible with the plot above.
         a1 = squeeze(nanmean(Xt(:, :, hr_trs),  2)); % frames x trials
         tr1 = nanmean(a1,  2);
         tr1_se = nanstd(a1,  [], 2) / sqrt(ns1);
@@ -277,7 +276,7 @@ if trialHistAnalysis:
         
         % goTone-aligned projections and raw average
         
-        subplot(3,2,3)
+        subplot(3,2,3), hold on
         a1 = squeeze(nanmean(Xt_goAl(:, :, hr_trs),  2)); % frames x trials
         tr1 = nanmean(a1,  2);
         tr1_se = nanstd(a1,  [], 2) / sqrt(ng1);
@@ -296,7 +295,7 @@ if trialHistAnalysis:
        
         % choice-aligned projections and raw average
         
-        subplot(3,2,4)
+        subplot(3,2,4), hold on
         a1 = squeeze(nanmean(Xt_choiceAl(:, :, hr_trs),  2)); % frames x trials
         tr1 = nanmean(a1,  2);
         tr1_se = nanstd(a1,  [], 2) / sqrt(nc1);
@@ -315,7 +314,7 @@ if trialHistAnalysis:
        
         % reward-aligned projections and raw average
        if strcmp(outcome2ana, 'corr')
-            subplot(3,2,5)
+            subplot(3,2,5), hold on
             a1 = squeeze(nanmean(Xt_rewAl(:, :, hr_trs),  2)); % frames x trials
             tr1 = nanmean(a1,  2);
             tr1_se = nanstd(a1,  [], 2) / sqrt(nr1);
@@ -334,7 +333,7 @@ if trialHistAnalysis:
         
         % incommitResp-aligned projections and raw average
         if strcmp(outcome2ana, 'incorr')
-            subplot(3,2,6)
+            subplot(3,2,6), hold on
             a1 = squeeze(nanmean(Xt_incorrRespAl(:, :, hr_trs),  2)); % frames x trials
             tr1 = nanmean(a1,  2);
             tr1_se = nanstd(a1,  [], 2) / sqrt(np1);

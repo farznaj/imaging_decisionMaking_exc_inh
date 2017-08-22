@@ -14,14 +14,14 @@ Created on Sun Mar 12 15:12:29 2017
 
 
 #%%
-mice = 'fni19', #'fni16', 'fni17', 'fni18', 'fni19' # if you want to use only one mouse, make sure you put comma at the end; eg. mice = 'fni19',
+mice = 'fni16', #'fni16', 'fni17', 'fni18', 'fni19' # if you want to use only one mouse, make sure you put comma at the end; eg. mice = 'fni19',
 
 
 loadInhAllexcEqexc = 1 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)
 
 time2an = -1; # relative to eventI, look at classErr in what time stamp.
 chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
-savefigs = 1
+savefigs = 0
 superimpose = 1 # the averaged aligned traces of testing and shuffled will be plotted on the same figure
 loadWeights = 0
 num2AnInhAllexcEqexc = 3 # if 3, all 3 types (inh, allExc, exc) will be analyzed. If 2, inh and allExc will be analyzed. if 1, inh will be analyzed. # if you have all svm files saved, set it to 3.
@@ -490,23 +490,47 @@ for im in range(len(mice)):
     
     #%% Plot class accuracy in the frame before the choice onset for each session
     
-    plt.figure(figsize=(4.5,3))
+    plt.figure(figsize=(5,6))
+    
+    ### data
+    plt.subplot(211)
     plt.errorbar(range(numDays), av_test_data_inh, sd_test_data_inh, label='inh', color='r')
     plt.errorbar(range(numDays), av_test_data_allExc, sd_test_data_allExc, label='allExc', color='k')
     if num2AnInhAllexcEqexc == 3:
         plt.errorbar(range(numDays), av_test_data_exc, sd_test_data_exc, label='exc', color='b')
-
-    plt.legend(loc='center left', bbox_to_anchor=(1, .7))
-    plt.xlabel('Days')
-    plt.ylabel('Classification accuracy (%)')
-    makeNicePlots(plt.gca())
-    plt.xlim([-.2,len(days)-1+.2])
+        
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
     
+#    plt.xticks(range(numDays), [days[i][0:6] for i in range(len(days))], rotation='vertical')    
+#    plt.xlabel('Days')
+    plt.ylabel('Classification accuracy (%)\ndata')
+    makeNicePlots(plt.gca())
+    plt.xlim([-1,len(days)-1+1])
+    
+
+
+    ### data - shuffle
+    plt.subplot(212)
+    plt.errorbar(range(numDays), av_test_data_inh - av_test_shfl_inh, sd_test_data_inh, label='inh', color='r')
+    plt.errorbar(range(numDays), av_test_data_allExc - av_test_shfl_allExc, sd_test_data_allExc, label='allExc', color='k')
+    if num2AnInhAllexcEqexc == 3:
+        plt.errorbar(range(numDays), av_test_data_exc - av_test_shfl_exc, sd_test_data_exc, label='exc', color='b')
+        
+
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)
+    plt.xticks(range(numDays), [days[i][0:6] for i in range(len(days))], rotation='vertical')    
+#    plt.xlabel('Days')
+    plt.ylabel('Classification accuracy (%)\ndata-shfl')
+    makeNicePlots(plt.gca())
+    plt.xlim([-1,len(days)-1+1])
+
+
+
     if savefigs:#% Save the figure
         if chAl==1:
-            dd = 'chAl_eachDay'
+            dd = 'chAl_days_' + days[0][0:6] + '-to-' + days[-1][0:6]
         else:
-            dd = 'stAl_eachDay'
+            dd = 'stAl_days_' + days[0][0:6] + '-to-' + days[-1][0:6]
             
         d = os.path.join(svmdir+dnow)
         if not os.path.exists(d):

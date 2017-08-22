@@ -58,9 +58,11 @@ nPostFrames = []; % nan;
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Set outcomes
+%% Set var
 
 if ~varsAlreadySet
+    
+    %%%%%%%%% Set outcomes
     
     allowCorrectResp = 'change'; % 'change'; 'remove'; 'nothing'; % if 'change': on trials that mouse corrected his choice, go with the original response.
     uncommittedResp = 'nothing'; % 'change'; 'remove'; 'nothing'; % what to do on trials that mouse made a response (licked the side port) but did not lick again to commit it.
@@ -106,14 +108,16 @@ else
     load(postName, 'timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOnsetAll', 'timeStimOffset', 'timeInitTone', 'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry', 'timeReward', 'timeCommitIncorrResp', 'timeSingleStimOffset')
 end
 
-
 % keep a copy of original time events before changing them.
 timeCommitCL_CR_Gotone0 = timeCommitCL_CR_Gotone;
 timeStimOnset0 = timeStimOnsetAll; % timeStimOnset; % Because you are using timeStimOnsetAll instad of timeStimOnset, stimAl_allTrs that you compute here will include early-decision trials (outcomes=-1). So you may need to remove them later.
 time1stSideTry0 = time1stSideTry;
 timeCommitIncorrResp0 = timeCommitIncorrResp;
 
-set_change_of_mind_trs % set change-of-mind trials. output will be trs_com.
+
+%% set change-of-mind trials. 
+
+set_change_of_mind_trs % output will be trs_com.
     
 
 % onlySetNPrePost = 0;

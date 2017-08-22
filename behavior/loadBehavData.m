@@ -32,18 +32,19 @@ for f = 1:length(alldata_fileNames)
     
     
     if doclean
-        %%  Take care of helped trials
+        %%  Take care of helped trials: add them to alldata and save alldata if these fields dont already exist.
 
         % show file names 
         a = alldata_fileNames(cellfun(@(x)~isempty(x),cellfun(@(x)strfind(x, fn(1:end-4)), alldata_fileNames, 'uniformoutput', 0)))'; 
-        sort(cellfun(@(x)x(end-25:end), a, 'uniformoutput', 0))
+        disp(sort(cellfun(@(x)x(end-25:end), a, 'uniformoutput', 0)))
 
         all_data = setHelpedTrs(all_data, defaultHelpedTrs, saveHelpedTrs, alldata_fileNames{f});
 
 
-        %% Take care of alldata fields that might be absent. (eg waitDurWarmup, adaptiveDurs, and startScopeDur) 
+        %% Take care of alldata fields that might be absent. (eg waitDurWarmup, adaptiveDurs, and startScopeDur): add them if they are missing and resave alldata. 
 
         all_data = cleanAlldataFields(all_data, alldata_fileNames{f});
+
         
     end
     
@@ -70,7 +71,7 @@ if length(trials_per_session) < 1
     fprintf('No session found for this day.\n\n');
     
 elseif length(trials_per_session) > 1
-    fprintf('Merged %d sessions.\n', length(trials_per_session));
+    fprintf('Pooled %d sessions.\n', length(trials_per_session));
     fprintf('On average: %d trials/day.\n', round(mean(trials_per_session)));    
     fprintf('Number of trials: '), fprintf([repmat('%d  ', 1,10), '\n'], trials_per_session), fprintf('\n')
     

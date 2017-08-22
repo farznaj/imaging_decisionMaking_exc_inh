@@ -141,6 +141,9 @@ figure(fht), subplot(326), histogram(srt_val)
 hold on, plot([th_srt_val th_srt_val],[0 100],'r')
 xlabel('Efty sort\_val')
 
+
+%% Save the figure
+
 savefig(fullfile(figdir, 'ROIqualityMeas_hists')) 
 
 
@@ -178,6 +181,10 @@ subplot(614), hold on; plot(highlightCorrROI'), plot(rval_space), title('spac co
 subplot(615), plot(tau(:,2)), title('decay tau')
 subplot(616), plot(mask_numpix), title('mask # pixels')
 % subplot(616), plot(meansdsig), title('meanSdImage')
+
+
+%% Save the figure
+
 savefig(fullfile(pd, 'figs', 'ROIqualityMeas'))
 
 
@@ -243,6 +250,9 @@ val_EP_AG_size_tau_tempCorr_hiLight_hiLightDB = [srt_val,fitnessNow,mask_numpix,
 % for all other thresholds too, values less than them will indicate a
 % bad ROI.
 th_EP_AG_size_tau_tempCorr_hiLight_hiLightDB = [th_srt_val, -th_AG, th_smallROI, th_shortDecayTau, th_badTempCorr, th_badHighlightCorr, th_badHighlightCorr];
+
+
+%% Save the vars
 
 if savebadROIs01
     a = matfile(moreName); 

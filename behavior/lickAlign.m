@@ -55,8 +55,8 @@ trs2ana = (ismember(outcomes, outcome2ana)) & str2ana & sr2ana;
 % trs2ana(1:162) = false; % last trials
 
 sl = repmat('%d ', 1, length(lickInds));
-top = sprintf(['licks ', sl, ', %s outcomes, %s strengths, %s stimulus: %i trials'], lickInds, os, strength2ana, stimrate2ana, sum(trs2ana));
-disp(['Analyzing ', top])
+topn = sprintf(['licks ', sl, ', %s outcomes, %s strengths, %s stimulus: %i trials'], lickInds, os, strength2ana, stimrate2ana, sum(trs2ana));
+disp(['Analyzing ', topn])
 
 
 %% Set the traces for licks (in time and frame resolution)
@@ -80,7 +80,7 @@ scopeTTLOrigTime = 0;
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, [], outcomes);
 
 
-f = figure('name', top, 'position', [520         284        1401         459]);
+f = figure('name', topn, 'position', [520         284        1401         459]);
 % doplots = 0;
 
 for i = 1:length(evT)
@@ -122,11 +122,12 @@ for i = 1:length(evT)
     
     av = nanmean(traceEventAlign,3); % frames x units. (average across trials).
     top = nanmean(av,2); % average across neurons.
-    tosd = nanstd(av, [], 2);
-    tosd = tosd / sqrt(size(av, 2)); % plot se
+%     tosd = nanstd(av, [], 2);
+%     tosd = tosd / sqrt(size(av, 2)); % plot se
     
     e = find(timeEventAlign >= 0, 1);
-    boundedline((1:length(top))-e, top, tosd, 'alpha')
+%     boundedline((1:length(top))-e, top, tosd, 'alpha')
+    plot((1:length(top))-e, top)
     %     plot(top)
     %     plot(timeEventAlign, top)
     
@@ -238,11 +239,12 @@ for i = 1:length(evT)
     
     av = nanmean(traceEventAlign,3); % frames x units. (average across trials).
     top = nanmean(av,2); % average across neurons.
-    tosd = nanstd(av, [], 2);
-    tosd = tosd / sqrt(size(av, 2)); % plot se
+%     tosd = nanstd(av, [], 2);
+%     tosd = tosd / sqrt(size(av, 2)); % plot se
     
     e = find(timeEventAlign >= 0, 1);
-    boundedline((1:length(top))-e, top, tosd, 'alpha')
+%     boundedline((1:length(top))-e, top, tosd, 'alpha')
+    plot((1:length(top))-e, top)
     %     plot(top)
     %     plot(timeEventAlign, top)
     

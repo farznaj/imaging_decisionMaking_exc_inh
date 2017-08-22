@@ -134,7 +134,7 @@ disp(pnev_n)
 cd(fileparts(imfilename))
 
 moreName = fullfile(pd, sprintf('more_%s.mat', pnev_n));
-
+aimf = matfile(imfilename);
 
 % load alldata
 
@@ -618,8 +618,14 @@ if length(mdfFileNumber)==1
     
 else
     
+    % assing pmtOff and badFrames to each session
+    % merge alldata with imaging for each session
+    % set trs2rmv for each session
     multi_sess_set_vars
-    save(imfilename, '-append', 'len_alldata_eachsess', 'framesPerTrial_alldata') % elements of these 2 arrays correspond to each other.
+    
+    if ~isprop(aimf, 'len_alldata_eachsess')
+        save(imfilename, '-append', 'len_alldata_eachsess', 'framesPerTrial_alldata') % elements of these 2 arrays correspond to each other.
+    end
     % it makes a lot of sense to save the above 2 vars for days with a
     % single session too. It will make things much easier! you need to have
     % a framesPerTrial array that corresponds to alldata, and has nan for
@@ -650,7 +656,12 @@ if ~all(ismember(fm, trs2rmv))
     warning('Adding to trs2rmv trials with negative mscanLag that are not among trs2rmv!')
 end
 
-save(imfilename, '-append', 'mscanLag', 'trs2rmv')
+% aimf = matfile(imfilename);
+if all([isprop(aimf, 'mscanLag'), isprop(aimf, 'trs2rmv')])
+    fprintf('mscanLag and trs2rmv are already saved in imfilename.\n')
+else
+    save(imfilename, '-append', 'mscanLag', 'trs2rmv')
+end
 
 
 fl = find(abs(mscanLag) > 32);
@@ -1159,7 +1170,7 @@ end
 
 % diary off
 
-%%
+
 %% Set problematic trials to later exclude them if desired.
 
 % commenting for now but you may need it later.

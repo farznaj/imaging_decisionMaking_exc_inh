@@ -47,10 +47,11 @@ else
 %         hold on; plot([all_data.helpedChoice])
         
         if logical(saveHelpedTrs)
-            warning('Overwriting all_data!!')
+            cprintf('r', 'Overwriting all_data after adding helped trials!\n')
             save(alldata_fileNam, 'all_data', '-append')
         end
-        
+    else
+        fprintf('Fields helpedInit and helpedChoice already exist!\n')
     end
 end
 
