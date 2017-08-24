@@ -1,7 +1,7 @@
 function [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, good_inhibit, outcomes, allResp, allResp_HR_LR, ...
         trs2rmv, stimdur, stimrate, stimtype, cb, timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, ...
         timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename, pnevFileName] = ....
-   imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength, save_aligned_traces, savefigs, rmvTrsStimRateChanged);
+   imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength, save_aligned_traces, savefigs, rmvTrsStimRateChanged, thbeg);
 % Right after you are done with preproc on the cluster, run the following scripts:
 % - plotEftyVarsMean (if needed follow by setPmtOffFrames to set pmtOffFrames and by findTrsWithMissingFrames to set frame-dropped trials. In this latter case you will need to rerun CNMF!): for a quick evaluation of the traces and spotting any potential frame drops, etc
 % - eval_comp_main on python (to save outputs of Andrea's evaluation of components in a mat file named more_pnevFile)
@@ -103,7 +103,9 @@ manualExamineTraceQual = 0; % if 0, traceQuality array needs to be saved.
 orderTraces = 0; % if 1, traces will be ordered based on the measure of quality from high to low quality.
 %}
 
-thbeg = 5; % n initial trials to exclude.
+if ~exist('thbeg', 'var')
+    thbeg = 5; % n initial trials to exclude.
+end
 signalCh = 2;
 pnev2load = []; %7 %4 % what pnev file to load (index based on sort from the latest pnev vile). Set [] to load the latest one.
 
@@ -656,6 +658,11 @@ if ~all(ismember(fm, trs2rmv))
     warning('Adding to trs2rmv trials with negative mscanLag that are not among trs2rmv!')
 end
 
+% Stop analyzing if only a few trials remain after removing bad trials!
+if length(alldata) - length(trs2rmv) < 5
+    error('Only %d trials remained after removing bad trials! Do you really want to continue with the analysis?!', length(alldata) - length(trs2rmv))
+end
+    
 % aimf = matfile(imfilename);
 if all([isprop(aimf, 'mscanLag'), isprop(aimf, 'trs2rmv')])
     fprintf('mscanLag and trs2rmv are already saved in imfilename.\n')

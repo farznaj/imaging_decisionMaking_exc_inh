@@ -22,7 +22,9 @@ find(~cellfun(@isempty, strfind(days, d)))
 %}
 
 
-%%
+%% fni16
+
+% later days
 mouse = 'fni16';
 days = {'150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2',...
     '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2'};
@@ -46,8 +48,27 @@ days = {'150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150824_1-
     '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2',...
     '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2'}; % , '150914_1-2' : dont analyze!
 
+% the following days dont have enough trials...
+% days = {'150807_1', '150814_1'}; % 150807 was a different spot than 0814-0819. And 0814-0819 were different from the rest.
 
-%%
+
+%% fni17
+
+% later days
+mouse = 'fni17';
+days = {'151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', ...
+    '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', ...
+    '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1',   '151102_1-2'};
+
+% earlier days
+mouse = 'fni17';
+days = {'150820_1', '150821_1', '150824_1', '150825_1', '150826_1', '150827_1', '150828_1', ...
+    '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', ...
+    '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', ...
+    '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', ...
+    '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1'};
+
+% all days
 mouse = 'fni17';
 days = {'150820_1', '150821_1', '150824_1', '150825_1', '150826_1', '150827_1', '150828_1', ...
     '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', ...
@@ -59,26 +80,38 @@ days = {'150820_1', '150821_1', '150824_1', '150825_1', '150826_1', '150827_1', 
     '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1',   '151102_1-2'};
 
 
-mouse = 'fni17';
-days = {'151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', ...
-    '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', ...
-    '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1',   '151102_1-2'};
+% {'150814_2', '150817_1', '150818_1', '150819_1-2'} % only spots that are the same as the rest of the days
+days = {'150814_1', '150814_2', '150817_1', '150818_1', '150819_1-2'}; % 0813 and 0814 were on a different spot than the rest
+% '150813_1' : not enough trials
 
 
-mouse = 'fni17';
-days = {'150820_1', '150821_1', '150824_1', '150825_1', '150826_1', '150827_1', '150828_1', ...
-    '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', ...
-    '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', ...
-    '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', ...
-    '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1'};
+%% fni18
 
-%%
 mouse = 'fni18';
 days = {'151209_1', '151210_1', '151211_1', '151214_1-2', '151215_1-2', '151216_1', '151217_1-2'};
 
-%%
+
+%% fni19
+
+% later days
 mouse = 'fni19';
 days = {'150922_1', '150923_1', '150924_1-2', '150925_1-2', ...
+    '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', ...
+    '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3',...
+    '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', ...
+    '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', ...
+    '151028_1-2', '151029_1-2-3', '151101_1'};
+
+
+% earlier days
+mouse = 'fni19';
+days = {'150901_1', '150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1'};
+
+
+% all days
+mouse = 'fni19';
+days = {'150901_1', '150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1',...
+    '150922_1', '150923_1', '150924_1-2', '150925_1-2', ...
     '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', ...
     '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3',...
     '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', ...
@@ -89,17 +122,17 @@ days = {'150922_1', '150923_1', '150924_1-2', '150925_1-2', ...
 %% Run imaging_postproc for each day
 
 setFrdrops = 0; % set to 1 write after cnmf, so if needed you reran cnmf
-bad_mask_inh = 1; % if 1, badROIs, mask, and inh/exc will be set (ie almost all except for imaging_prep_analysis)
+bad_mask_inh = 0; % if 1, badROIs, mask, and inh/exc will be set (ie almost all except for imaging_prep_analysis)
 doPost = 1; % if 1 imaging_prep_analysis will be run.
 
 for iday = 1:length(days)
-    
+
     disp('__________________________________________________________________')
     dn = simpleTokenize(days{iday}, '_');
-    
+
     imagingFolder = dn{1};
     mdfFileNumber = str2double(simpleTokenize(dn{2}, '-'));
-    
+
     fprintf('Analyzing day %s, sessions %s\n', imagingFolder, dn{2})
     %%%
     try
@@ -107,13 +140,15 @@ for iday = 1:length(days)
     catch ME
         me = ME;
         disp(ME)
-        {me.stack.name}, {me.stack.line}
+        celldisp({me.stack.name}), {me.stack.line}
         cd(md), save(['err_', imagingFolder], 'me')
+        diary off
     end
     %%%
     close all
-    clearvars -except me mouse days setFrdrops bad_mask_inh doPost md iday
+%         clearvars -except me mouse days setFrdrops bad_mask_inh doPost md iday mice
 end
+% end
 
 
 %% Publish figures in a summary pdf file.
@@ -123,17 +158,17 @@ savedir0 = fullfile('~/Dropbox/ChurchlandLab/Farzaneh_Gamal/postprop_sum',mouse)
 if ~exist('savedir0', 'dir')
     mkdir(savedir0)
 end
-    
+
 % tic
 for iday = 1:length(days)
-    
+
     disp('__________________________________________________________________')
     dn = simpleTokenize(days{iday}, '_');
-    
+
     imagingFolder = dn{1};
     mdfFileNumber = str2double(simpleTokenize(dn{2}, '-'));
     fprintf('Analyzing day %s, sessions %s\n', imagingFolder, dn{2})
-    
+
     %%%
     signalCh = 2; % because you get A from channel 2, I think this should be always 2.
     pnev2load = [];
@@ -141,30 +176,32 @@ for iday = 1:length(days)
     disp(pnevFileName)
     [pd, date_major] = fileparts(imfilename);
     figd = fullfile(pd, 'figs');     % cd(figd) %%% copyfile(fullfile('/home/farznaj/Documents/trial_history/imaging','imaging_postProc_html.m'),'.','f')
+
     
     %%
 %     try
         publish('/home/farznaj/Documents/trial_history/imaging/imaging_postProc_sum.m', 'format', 'pdf')
-        
+
         close all
-        
+
         f = ls('~/Documents/trial_history/imaging/html/*_sum*');
         [~,f2,f3] = fileparts(f);
         savedir = fullfile(savedir0, [date_major, '_', f2,f3]);
-      
+
         movefile(f, savedir) % '~/Documents/trial_history/imaging/html/*_sum*'
-        
-        clearvars -except mouse days savedir0
-        
+
+%             clearvars -except mouse days savedir0
+
         %         savedir = fullfile(savedir0, date_major);
         %         if ~exist(savedir, 'dir')
         %             mkdir(savedir)
         %         end
-        
+
 %     catch ME
 %         disp(ME)
 %     end
 end
+
 
 % t = toc
 %{

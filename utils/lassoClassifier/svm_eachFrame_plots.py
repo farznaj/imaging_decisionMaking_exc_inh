@@ -14,12 +14,15 @@ Created on Sun Mar 12 15:12:29 2017
 
 #%% Change the following vars:
 
-mousename = 'fni16' #'fni17'
+mousename = 'fni19' #'fni17'
 ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone.
 if mousename == 'fni18':
     allDays = 0# all 7 days will be used (last 3 days have z motion!)
     noZmotionDays = 1 # 4 days that dont have z motion will be used.
     noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
+if mousename == 'fni19':    
+    allDays = 1
+    noExtraStimDays = 0   
     
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
@@ -31,7 +34,7 @@ chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-align
 stAl = ch_st_goAl[1]
 goToneAl = ch_st_goAl[2]
 doPlots = 0 #1 # plot c path of each day 
-savefigs = 1
+savefigs = 0
 
 #eps = 10**-10 # tiny number below which weight is considered 0
 #thNon0Ws = 2 # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!

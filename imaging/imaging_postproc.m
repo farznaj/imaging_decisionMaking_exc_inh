@@ -9,8 +9,8 @@
 %{
 
 clear; close all
-mouse = 'fni19';
-imagingFolder = '150921';
+mouse = 'fni17';
+imagingFolder = '150813';
 mdfFileNumber = [1];      % or tif major
 
 setFrdrops = 1; % set to 1 write after cnmf, so if needed you reran cnmf
@@ -179,7 +179,11 @@ if doPost
 
     normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
     warning('Note you have set normalizeSpikes to 1!!!')
-
+    
+    thbeg = 5; % n initial trials to exclude.
+    if strcmp(mouse, 'fni19') && strcmp(imagingFolder,'150918')
+        thbeg = 7;
+    end
     % normally rmvTrsStimRateChanged is 1, except for early sessions of
     % training we have to set it to 0, otherwise lots of trials will be
     % excluded bc go tone has happpened very early.
@@ -200,7 +204,7 @@ if doPost
     [alldata, alldataSpikesGood, alldataDfofGood, goodinds, good_excit, good_inhibit, outcomes, allResp, allResp_HR_LR, ...
             trs2rmv, stimdur, stimrate, stimtype, cb, timeNoCentLickOnset, timeNoCentLickOffset, timeInitTone, time1stCenterLick, ...
             timeStimOnset, timeStimOffset, timeCommitCL_CR_Gotone, time1stSideTry, time1stCorrectTry, time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, imfilename, pnevFileName] ....
-       = imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength, save_aligned_traces, savefigs, rmvTrsStimRateChanged);
+       = imaging_prep_analysis(mouse, imagingFolder, mdfFileNumber, setInhibitExcit, rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_if_stimOffset_aft_1stSide, plot_ave_noTrGroup, evaluateEftyOuts, normalizeSpikes, compareManual, plotEftyAC1by1, frameLength, save_aligned_traces, savefigs, rmvTrsStimRateChanged, thbeg);
 
    diary off
    

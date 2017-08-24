@@ -233,6 +233,11 @@ if doiti
         itiVecInds = unique(bin_iti);
         itiVecInds(~itiVecInds) = []; % bin_iti=0 corresponds to NaN values of itiPreced. exclude them.
         
+        % I think it makes more sense to define it as below, so
+        % itiPrecedInput has always a consistent size even if a particular
+        % day doesnt have any trials in a bin of vec_iti
+        
+%         itiVecInds = 1:length(vec_iti)-1;
         
         itiPrecedInput = NaN(length(alldata), length(itiVecInds));
         for itr = 1:length(alldata)

@@ -67,27 +67,35 @@ for i = 1:length(b)
             pause(1)
 %             open(fullfile(figd, b{i})) %open(b{i})
         end
-    end    
+%         close all
+    end
     %
-    
 end
-
+% close all
 
 
 %% DIARY FILES
 
-a = dir(fullfile(pd,'diary*'));
+% read the latest diary files.
+% a = dir(fullfile(pd,'diary*'));
+a1 = dir(fullfile(pd,'diary_post*'));
+[~,i] = sort([a1.datenum]); 
+a1 = a1(i(end)).name;
+
+a2 = dir(fullfile(pd,'diary_BMI*'));
+[~,i] = sort([a2.datenum]); 
+a2 = a2(i(end)).name;
+
+a = {a1, a2};
 % cd(pd)
 for i = 1:length(a)
-    fn = fullfile(pd, a(i).name);
+    fn = fullfile(pd, a{i}); % fullfile(pd, a(i).name);
     disp('________________________________________________________________________________________________')
     disp('________________________________________________________________________________________________')
-    disp('________________________________________________________________________________________________')
-    fprintf('Reading diary file %s\n', a(i).name)
-    disp('________________________________________________________________________________________________')
+    fprintf('Reading diary file %s\n', a{i}) %(i).name)
     disp('________________________________________________________________________________________________')
     disp('________________________________________________________________________________________________')
-    
+        
 %     notes = textread(fn, '%s', 'whitespace', '');    
     fid = fopen(fn);
     notes = textscan(fid, '%s', 'whitespace', ''); 

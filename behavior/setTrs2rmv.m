@@ -56,7 +56,7 @@ else
 end
 
 if excludeShortWaitDur
-    fprintf('Excluding %i trials with waitDur < 32ms!\n', sum(trs_shortWaitdur(:)))
+    fprintf('Excluding %i trials with waitDur < 32ms!\n', length(trs_shortWaitdur(:)))
     trs2rmv = unique([trs2rmv(:); trs_shortWaitdur(:)]);
 else
     disp('Not excluding trials with waitDur < 32ms!')
