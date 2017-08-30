@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """
+# results get saved in /home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/SVM/excInh_trainDecoder_eachFrame/
+
 Summary of all mice: 
-Plots class accuracy for svm trained on non-overlapping time windows  (outputs of file svm_eachFrame.py)
+Plots class accuracy of frame -1 (outputs of file svm_eachFrame.py)
  ... svm trained to decode choice on choice-aligned or stimulus-aligned traces.
  
  
@@ -14,14 +16,13 @@ Created on Sun Mar 12 15:12:29 2017
 
 
 #%%
-mice = 'fni16', #'fni16', 'fni17', 'fni18', 'fni19' # if you want to use only one mouse, make sure you put comma at the end; eg. mice = 'fni19',
-
+mice = 'fni19', #'fni16', 'fni17', 'fni18', 'fni19' # if you want to use only one mouse, make sure you put comma at the end; eg. mice = 'fni19',
 
 loadInhAllexcEqexc = 1 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)
 
 time2an = -1; # relative to eventI, look at classErr in what time stamp.
 chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
-savefigs = 0
+savefigs = 1
 superimpose = 1 # the averaged aligned traces of testing and shuffled will be plotted on the same figure
 loadWeights = 0
 num2AnInhAllexcEqexc = 3 # if 3, all 3 types (inh, allExc, exc) will be analyzed. If 2, inh and allExc will be analyzed. if 1, inh will be analyzed. # if you have all svm files saved, set it to 3.
@@ -51,8 +52,8 @@ else:
     print 'bestc = c that gives min cv error'
 #I think we should go with min c as the bestc... at least we know it gives the best cv error... and it seems like it has nothing to do with whether the decoder generalizes to other data or not.
     
-
-dnow0 = '/excInh_trainDecoder_eachFrame/frame'+str(time2an)+'/'
+dnow0 = '/excInh_trainDecoder_eachFrame/'
+#dnow0 = '/excInh_trainDecoder_eachFrame/frame'+str(time2an)+'/'
         
 
 
@@ -177,15 +178,28 @@ sd_test_chance_allExc_allMice = []
 for im in range(len(mice)):
         
     mousename = mice[im] # mousename = 'fni16' #'fni17'
+    if mousename == 'fni18': #set one of the following to 1:
+        allDays = 1# all 7 days will be used (last 3 days have z motion!)
+        noZmotionDays = 0 # 4 days that dont have z motion will be used.
+        noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
+    if mousename == 'fni19':    
+        allDays = 1
+        noExtraStimDays = 0   
+    
     execfile("svm_plots_setVars_n.py")      
 #    execfile("svm_plots_setVars.py")      
     
-    #%%     
+    #%% 
+    if loadInhAllexcEqexc==1:
+        dnow = '/excInh_trainDecoder_eachFrame/'+mousename+'/'
+    else:
+        dnow = '/excInh_trainDecoder_eachFrame/'+mousename+'/inhRois/'
+    '''    
     if loadInhAllexcEqexc==1:
         dnow = '/excInh_trainDecoder_eachFrame/frame'+str(time2an)+'/'+mousename+'/'
     else:
         dnow = '/excInh_trainDecoder_eachFrame/frame'+str(time2an)+'/'+mousename+'/inhRois/'
-              
+    '''
                 
     #%% Loop over days    
     
@@ -490,47 +504,57 @@ for im in range(len(mice)):
     
     #%% Plot class accuracy in the frame before the choice onset for each session
     
-    plt.figure(figsize=(5,6))
+    plt.figure(figsize=(6,10))
     
-    ### data
-    plt.subplot(211)
-    plt.errorbar(range(numDays), av_test_data_inh, sd_test_data_inh, label='inh', color='r')
-    plt.errorbar(range(numDays), av_test_data_allExc, sd_test_data_allExc, label='allExc', color='k')
-    if num2AnInhAllexcEqexc == 3:
-        plt.errorbar(range(numDays), av_test_data_exc, sd_test_data_exc, label='exc', color='b')
-        
-    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
-    
-#    plt.xticks(range(numDays), [days[i][0:6] for i in range(len(days))], rotation='vertical')    
-#    plt.xlabel('Days')
-    plt.ylabel('Classification accuracy (%)\ndata')
-    makeNicePlots(plt.gca())
-    plt.xlim([-1,len(days)-1+1])
-    
-
 
     ### data - shuffle
-    plt.subplot(212)
+    plt.subplot(311)
     plt.errorbar(range(numDays), av_test_data_inh - av_test_shfl_inh, sd_test_data_inh, label='inh', color='r')
     plt.errorbar(range(numDays), av_test_data_allExc - av_test_shfl_allExc, sd_test_data_allExc, label='allExc', color='k')
     if num2AnInhAllexcEqexc == 3:
         plt.errorbar(range(numDays), av_test_data_exc - av_test_shfl_exc, sd_test_data_exc, label='exc', color='b')
-        
-
     plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)
-    plt.xticks(range(numDays), [days[i][0:6] for i in range(len(days))], rotation='vertical')    
+#    plt.xticks(range(numDays), [days[i][0:6] for i in range(len(days))], rotation='vertical')    
 #    plt.xlabel('Days')
     plt.ylabel('Classification accuracy (%)\ndata-shfl')
     makeNicePlots(plt.gca())
     plt.xlim([-1,len(days)-1+1])
 
 
+    ### data
+    plt.subplot(312)
+    plt.errorbar(range(numDays), av_test_data_inh, sd_test_data_inh, label='inh', color='r')
+    plt.errorbar(range(numDays), av_test_data_allExc, sd_test_data_allExc, label='allExc', color='k')
+    if num2AnInhAllexcEqexc == 3:
+        plt.errorbar(range(numDays), av_test_data_exc, sd_test_data_exc, label='exc', color='b')        
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)        
+#    plt.xticks(range(numDays), [days[i][0:6] for i in range(len(days))], rotation='vertical')    
+#    plt.xlabel('Days')
+    plt.ylabel('Classification accuracy (%)\ndata')
+    makeNicePlots(plt.gca())
+    plt.xlim([-1,len(days)-1+1])
 
+
+    ### shuffle
+    plt.subplot(313)
+    plt.errorbar(range(numDays), av_test_shfl_inh, sd_test_data_inh, label='inh', color='r')
+    plt.errorbar(range(numDays), av_test_shfl_allExc, sd_test_data_allExc, label='allExc', color='k')
+    if num2AnInhAllexcEqexc == 3:
+        plt.errorbar(range(numDays), av_test_shfl_exc, sd_test_data_exc, label='exc', color='b')
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)
+    plt.xticks(range(numDays), [days[i][0:6] for i in range(len(days))], rotation='vertical')    
+#    plt.xlabel('Days')
+    plt.ylabel('Classification accuracy (%)\nshfl')
+    makeNicePlots(plt.gca())
+    plt.xlim([-1,len(days)-1+1])
+
+
+    #### Save fig
     if savefigs:#% Save the figure
         if chAl==1:
-            dd = 'chAl_days_' + days[0][0:6] + '-to-' + days[-1][0:6]
+            dd = 'chAl_time' + str(time2an) + '_' + days[0][0:6] + '-to-' + days[-1][0:6]
         else:
-            dd = 'stAl_days_' + days[0][0:6] + '-to-' + days[-1][0:6]
+            dd = 'stAl_time' + str(time2an) + '_' + days[0][0:6] + '-to-' + days[-1][0:6]
             
         d = os.path.join(svmdir+dnow)
         if not os.path.exists(d):
@@ -538,14 +562,15 @@ for im in range(len(mice)):
             os.makedirs(d)
                 
         fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
+    
         plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
 
     if num2AnInhAllexcEqexc == 3:
         _,pcorrtrace = stats.ttest_ind(av_test_data_inh, av_test_data_exc) # p value of class accuracy being different from 50
         print pcorrtrace     
     
-    
 
+    
 ######################################################################################################################################################        
 ######################################################################################################################################################        
 #%%
@@ -598,7 +623,7 @@ if num2AnInhAllexcEqexc == 3:
 
 
 
-#%% Plot session-averaged classErr for each mouse
+#%% Plot classErr (averaged across all sessions) for each mouse
 
 plt.figure(figsize=(2,3))
 
@@ -623,12 +648,9 @@ makeNicePlots(ax)
 
 if savefigs:#% Save the figure
     if chAl==1:
-        dd = 'chAl_' + '_'.join(mice) #'chAl_allMice'
+        dd = 'chAl_time' + str(time2an) + '_' +  '_'.join(mice) # + days[0][0:6] + '-to-' + days[-1][0:6]
     else:
-        dd = 'stAl_' + '_'.join(mice) #'stAl_allMice'
-    
-    if loadInhAllexcEqexc==0:        
-        dd = dd+'_inhRois'
+        dd = 'stAl_time' + str(time2an) + '_' + '_'.join(mice) # + days[0][0:6] + '-to-' + days[-1][0:6]
         
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
@@ -636,8 +658,8 @@ if savefigs:#% Save the figure
         os.makedirs(d)
             
     fign = os.path.join(svmdir+dnow0, suffn[0:5]+dd+'.'+fmt[0])
-    plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
 
+    plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
 
 
 

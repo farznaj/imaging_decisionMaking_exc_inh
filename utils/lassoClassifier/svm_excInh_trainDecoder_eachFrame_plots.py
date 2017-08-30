@@ -14,13 +14,16 @@ Created on Sun Mar 12 15:12:29 2017
 #%% Change the following vars:
 
 mousename = 'fni19' #'fni17'
+
 if mousename == 'fni18': #set one of the following to 1:
-    allDays = 0# all 7 days will be used (last 3 days have z motion!)
-    noZmotionDays = 1 # 4 days that dont have z motion will be used.
+    allDays = 1# all 7 days will be used (last 3 days have z motion!)
+    noZmotionDays = 0 # 4 days that dont have z motion will be used.
     noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
+if mousename == 'fni19':    
+    allDays = 1
+    noExtraStimDays = 0   
 
 loadInhAllexcEqexc = 1 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)       
-
 
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
@@ -28,7 +31,7 @@ execfile("defFuns.py")
 execfile("svm_plots_setVars_n.py")  
 
 chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
-savefigs = 0
+savefigs = 1
 superimpose = 1 # the averaged aligned traces of testing and shuffled will be plotted on the same figure
 
 #doPlots = 0 #1 # plot c path of each day 
@@ -539,19 +542,22 @@ _,pcorrtrace = stats.ttest_ind(av_test_data_exc_aligned.transpose(), av_test_dat
 #%% Compare number of inh vs exc for each day
 
 plt.figure(figsize=(4.5,3)) #plt.figure()
-plt.plot(numInh, label='inh')
-plt.plot(numAllexc, label='exc')
+plt.plot(numInh, label='inh', color='r')
+plt.plot(numAllexc, label='allExc', color='k')
 plt.title('average: inh=%d exc=%d inh/exc=%.2f' %(np.round(numInh.mean()), np.round(numAllexc.mean()), np.mean(numInh) / np.mean(numAllexc)))
 plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
-plt.xlabel('days')
-plt.ylabel('# neurons')
-plt.xticks(range(len(days)), days, rotation='vertical')
+plt.xlabel('Days')
+plt.ylabel('# Neurons')
+plt.xticks(range(len(days)), [days[i][0:6] for i in range(len(days))], rotation='vertical')
+
+makeNicePlots(plt.gca(),1)
+
 
 if savefigs:#% Save the figure
     if chAl==1:
-        dd = 'chAl_numNeurons'
+        dd = 'chAl_numNeurons_days_' + days[0][0:6] + '-to-' + days[-1][0:6]
     else:
-        dd = 'stAl_numNeurons'
+        dd = 'stAl_numNeurons_days_' + days[0][0:6] + '-to-' + days[-1][0:6]
         
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
@@ -562,7 +568,8 @@ if savefigs:#% Save the figure
     plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
     
     
-#%% Plot class accur trace for each day
+    
+#%% Plot class accur trace for all days on top of each other
 
 plt.figure()
 for iday in range(len(days)):    
@@ -576,21 +583,20 @@ for iday in range(len(days)):
     
     
     plt.subplot(221)
-    plt.errorbar(time_al, av_test_data_inh_ch[iday], yerr = sd_test_data_inh_ch[iday], label='inh', color='r')    
-#    plt.title(days[iday])
     plt.errorbar(time_al, av_test_data_exc_ch[iday], yerr = sd_test_data_exc_ch[iday], label='exc', color='b')
+    plt.errorbar(time_al, av_test_data_inh_ch[iday], yerr = sd_test_data_inh_ch[iday], label='inh', color='r')    
     plt.errorbar(time_al, av_test_data_allExc_ch[iday], yerr = sd_test_data_allExc_ch[iday], label='allExc', color='k')
-
+#    plt.title(days[iday])    
 
     plt.subplot(222)
+    plt.plot(time_al, av_test_shfl_exc_ch[iday], label=' ', color='b')        
     plt.plot(time_al, av_test_shfl_inh_ch[iday], label=' ', color='r')    
-    plt.plot(time_al, av_test_shfl_exc_ch[iday], label=' ', color='b')    
     plt.plot(time_al, av_test_shfl_allExc_ch[iday], label=' ', color='k')        
     
     
     plt.subplot(223)
-    h0,=plt.plot(time_al, av_test_chance_inh_ch[iday], label='inh', color='r')    
-    h1,=plt.plot(time_al, av_test_chance_exc_ch[iday], label='exc', color='b')    
+    h0,=plt.plot(time_al, av_test_chance_exc_ch[iday], label='exc', color='b')        
+    h1,=plt.plot(time_al, av_test_chance_inh_ch[iday], label='inh', color='r')    
     h2,=plt.plot(time_al, av_test_chance_allExc_ch[iday], label='allExc', color='k')        
     
 #    plt.subplot(223)
@@ -617,18 +623,18 @@ plt.subplot(223)
 plt.title('chance')
 ax = plt.gca()
 makeNicePlots(ax,1)
-plt.legend([h0,h1,h2],['inh','exc','allExc'],loc='center left', bbox_to_anchor=(1, .7)) 
+plt.legend(handles=[h0,h1,h2], loc='center left', bbox_to_anchor=(1, .7), frameon=False) 
 
 #plt.show()
-plt.subplots_adjust(hspace=0.65)
+plt.subplots_adjust(hspace=0.75)
 
 
 ##%% Save the figure    
-if savefigs:#% Save the figure
+if savefigs:
     if chAl==1:
-        dd = 'chAl_allDays'
+        dd = 'chAl_allDays_' + days[0][0:6] + '-to-' + days[-1][0:6]
     else:
-        dd = 'stAl_allDays'
+        dd = 'stAl_allDays_' + days[0][0:6] + '-to-' + days[-1][0:6]
         
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
@@ -636,13 +642,13 @@ if savefigs:#% Save the figure
         os.makedirs(d)
             
     fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
+ 
     plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
-    
-    
+
     
 
        
-#%% Plot the average of aligned traces across all days
+#%% Plot the average of aligned traces across all days (exc, inh, allExc superimposed)
 
 plt.figure() #(figsize=(4.5,3))
 
@@ -650,13 +656,13 @@ plt.figure() #(figsize=(4.5,3))
 plt.subplot(221)
 # exc
 plt.fill_between(time_aligned, av_av_test_data_exc_aligned - sd_av_test_data_exc_aligned, av_av_test_data_exc_aligned + sd_av_test_data_exc_aligned, alpha=0.5, edgecolor='b', facecolor='b')
-plt.plot(time_aligned, av_av_test_data_exc_aligned, 'b')
+plt.plot(time_aligned, av_av_test_data_exc_aligned, 'b', label='exc')
 # inh
 plt.fill_between(time_aligned, av_av_test_data_inh_aligned - sd_av_test_data_inh_aligned, av_av_test_data_inh_aligned + sd_av_test_data_inh_aligned, alpha=0.5, edgecolor='r', facecolor='r')
-plt.plot(time_aligned, av_av_test_data_inh_aligned, 'r')
+plt.plot(time_aligned, av_av_test_data_inh_aligned, 'r', label='inh')
 # allExc
 plt.fill_between(time_aligned, av_av_test_data_allExc_aligned - sd_av_test_data_allExc_aligned, av_av_test_data_allExc_aligned + sd_av_test_data_allExc_aligned, alpha=0.5, edgecolor='k', facecolor='k')
-plt.plot(time_aligned, av_av_test_data_allExc_aligned, 'k')
+plt.plot(time_aligned, av_av_test_data_allExc_aligned, 'k', label='allExc')
 
 if chAl==1:
     plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
@@ -712,19 +718,19 @@ if superimpose==0:
     plt.subplots_adjust(hspace=0.65)
     
     
-plt.legend(['inh','exc','allExc'],loc='center left', bbox_to_anchor=(1, .7)) 
+plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False) 
 
 
 #xmin, xmax = ax.get_xlim()
-plt.xlim([-1400,500])
+#plt.xlim([-1400,500])
 
 ##%% Save the figure    
 if savefigs:
     if chAl==1:
-        dd = 'chAl_aveDays'
+        dd = 'chAl_aveDays_' + days[0][0:6] + '-to-' + days[-1][0:6]
     else:
-        dd = 'stAl_aveDays'
-        
+        dd = 'stAl_aveDays_' + days[0][0:6] + '-to-' + days[-1][0:6]
+
     if superimpose==1:        
         dd = dd+'_sup'
         
@@ -732,8 +738,9 @@ if savefigs:
     if not os.path.exists(d):
         print 'creating folder'
         os.makedirs(d)
-#            
+            
     fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
+ 
     plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
 #    fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+'svg')
 #    plt.savefig(fign, dpi=300, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
@@ -741,7 +748,6 @@ if savefigs:
 
 
 
- 
 
 
 ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

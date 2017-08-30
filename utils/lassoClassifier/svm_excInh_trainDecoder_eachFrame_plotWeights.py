@@ -12,9 +12,9 @@ Created on Sun Mar 12 15:12:29 2017
 """
 
 #%%
-mice = 'fni17', #'fni16', 'fni17', 'fni18', 'fni19'
+mice = 'fni19', #'fni16', 'fni17', 'fni18', 'fni19'
 
-chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
+ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 savefigs = 1
 #superimpose = 1 # the averaged aligned traces of testing and shuffled will be plotted on the same figure
 #loadWeights = 1
@@ -35,6 +35,9 @@ iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all
 #thSamps = 10  # Days that have <thSamps samples that satisfy >=thNon0W non0 weights will be manually set to 50 (class error of all their samples) ... bc we think <5 samples will not give us an accurate measure of class error of a day.
 #setTo50 = 1 # if 1, the above two jobs will be done.
 svmfold='svm'
+chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
+stAl = ch_st_goAl[1]
+goToneAl = ch_st_goAl[2]
 
 import numpy as np
 frameLength = 1000/30.9; # sec.
@@ -47,7 +50,7 @@ else:
     print 'bestc = c that gives min cv error'
 #I think we should go with min c as the bestc... at least we know it gives the best cv error... and it seems like it has nothing to do with whether the decoder generalizes to other data or not.
     
-dp = 'frame' + str(time2an)
+dp = 'time' + str(time2an)
 #dnow0 = '/excInh_trainDecoder_eachFrame_weights/frame'+str(time2an)+'/'
 dnow0 = '/excInh_trainDecoder_eachFrame_weights/'
        
@@ -107,10 +110,18 @@ for im in range(len(mice)):
         
     #%%            
     mousename = mice[im] # mousename = 'fni16' #'fni17'
+    if mousename == 'fni18': #set one of the following to 1:
+        allDays = 1# all 7 days will be used (last 3 days have z motion!)
+        noZmotionDays = 0 # 4 days that dont have z motion will be used.
+        noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
+    if mousename == 'fni19':    
+        allDays = 1
+        noExtraStimDays = 0   
+        
     execfile("svm_plots_setVars_n.py")      
 #    execfile("svm_plots_setVars.py")      
     numDaysAll[im] = len(days)
-    
+
     
     #%%     
     dnow = '/excInh_trainDecoder_eachFrame_weights/'+mousename+'/'
@@ -321,10 +332,15 @@ for im in range(len(mice)):
     
     
     
-    #%% hist of w at frame -1 for each mouse
-    ###############################################################################
-    #################################### PLOTS ####################################
-    ###############################################################################
+    #%% 
+    ##############################################################################################################################################################
+    #################################### PLOTS ###################################################################################################################
+    ##############################################################################################################################################################
+    ###### Histogram of w at frame -1 for each mouse #####################################################################################
+    ##############################################################################################################################################################
+    ##############################################################################################################################################################
+    
+    
     #%%
     if doPlots:
         lab1 = 'exc'
@@ -449,12 +465,12 @@ for im in range(len(mice)):
 
     
     
-#%%    
-###############################################################################
-###############################################################################
-###############################################################################
-#################################### PLOTS OF ALL MICE ####################################
-###############################################################################
+#%% PLOTS OF ALL MICE
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+#######################################################################################################################################################
+##############################################################################################################################################################
 
 #%% Hist of w at frame -1 --> at the end of this page you compute inha and exca, which are a general version of _all2 vars.... ie they include w values for all frames instead of just frame -1.
 

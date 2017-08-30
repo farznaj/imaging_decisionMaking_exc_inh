@@ -1,4 +1,4 @@
-# svm stability analysis: svm are svr are trained on each frame to decoder choice and stimulus.
+# svm stability analysis: svm and svr are trained on each frame to decode choice and stimulus.
 # This script should be run on the cluster.
 
 

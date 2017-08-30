@@ -14,11 +14,11 @@ Created on Sun Mar 12 15:12:29 2017
 
 #%% Change the following vars:
 
-mousename = 'fni19' #'fni17'
-ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone.
+mousename = 'fni18' #'fni17'
+ch_st_goAl = [0,1,0] # whether do analysis on traces aligned on choice, stim or go tone.
 if mousename == 'fni18':
-    allDays = 0# all 7 days will be used (last 3 days have z motion!)
-    noZmotionDays = 1 # 4 days that dont have z motion will be used.
+    allDays = 1 # all 7 days will be used (last 3 days have z motion!)
+    noZmotionDays = 0 # 4 days that dont have z motion will be used.
     noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
 if mousename == 'fni19':    
     allDays = 1
@@ -34,7 +34,7 @@ chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-align
 stAl = ch_st_goAl[1]
 goToneAl = ch_st_goAl[2]
 doPlots = 0 #1 # plot c path of each day 
-savefigs = 0
+savefigs = 1
 
 #eps = 10**-10 # tiny number below which weight is considered 0
 #thNon0Ws = 2 # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!
@@ -413,10 +413,15 @@ else:
 
 
 
+#%% PLOTS
 ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%
-######################## PLOTS ########################
+######################## PLOTS ##########################%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#%% Plot class accur trace for all days. Separate subplots for testing data, shuffle, chance and training data
 
 # define a colormap
 from matplotlib import cm
@@ -427,7 +432,6 @@ number_of_lines= len(days)
 cm_subsection = linspace(start, stop, number_of_lines) 
 colors = [ cm.jet(x) for x in cm_subsection ]
 
-# Plot class accur trace for each day
 
 plt.figure()
 for iday in range(len(days)):    
@@ -588,7 +592,13 @@ _,pcorrtrace0 = stats.ttest_1samp(av_l2_test_d_aligned.transpose(), 50) # p valu
 
 _,pcorrtrace = stats.ttest_ind(av_l2_test_d_aligned.transpose(), av_l2_test_s_aligned.transpose()) # p value of class accuracy being different from 50
         
-       
+
+
+#%%
+##################################################################################################
+################ Plots of aligned traces #########################################################
+##################################################################################################
+        
 #%% Plot the average of aligned traces across all days
 
 plt.figure(figsize=(4.5,3))
@@ -647,12 +657,17 @@ if savefigs:#% Save the figure
 #%% Plot class accur in the last time window for each day
 
 time2an = -1; # 1 bin before eventI
-a = av_l2_test_d_aligned[nPreMin,:] - av_l2_test_s_aligned[nPreMin,:]
-
+if chAl==1: # chAl: frame before choice
+    a = av_l2_test_d_aligned[nPreMin,:] - av_l2_test_s_aligned[nPreMin,:]
+    yl = 'class accuracy (testing data - shfl) %dms before choice' %(round(regressBins*frameLength))
+else: # stAl: last frame
+    a = av_l2_test_d_aligned[-1,:] - av_l2_test_s_aligned[-1,:]
+    yl = 'class accuracy (testing data - shfl) (last %d bin)' %(round(regressBins*frameLength))
+    
 plt.figure(figsize=(5.5,3))
 plt.plot(range(len(days)), a, marker='o')
-plt.xticks(range(len(days)), days, rotation='vertical')
-plt.ylabel('class accuracy (testing data - shfl) last 100ms before choice')
+plt.xticks(range(len(days)), [days[i][0:6] for i in range(len(days))], rotation='vertical')
+plt.ylabel(yl)
 
 makeNicePlots(plt.gca())
 
@@ -680,18 +695,50 @@ if savefigs:#% Save the figure
 from cycler import cycler
 plt.rcParams['axes.prop_cycle'] = cycler(color=colors)
 
-plt.figure(figsize=(5.5,3))
+plt.figure(figsize=(5.5,10))
+
+plt.subplot(311)
 lineObjects = plt.plot(time_aligned, av_l2_test_d_aligned - av_l2_test_s_aligned, label=days)
 plt.plot([0,0], [0,50], color='k', linestyle=':')
 plt.legend(iter(lineObjects), (days), bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-plt.ylabel('class accuracy (testing data - shfl)', fontsize=13)
+plt.ylabel('Class accuracy (testing data - shfl)', fontsize=13)
 if chAl==1:
     plt.xlabel('Time relative to choice onset (ms)', fontsize=13)
 else:
     plt.xlabel('Time relative stim onset (ms)', fontsize=13)
-
-
 makeNicePlots(plt.gca())
+
+
+##%%
+#plt.figure(figsize=(5.5,6))
+plt.subplot(312)
+lineObjects = plt.plot(time_aligned, av_l2_test_d_aligned, label=days)
+plt.plot([0,0], [50,100], color='k', linestyle=':')
+plt.ylabel('Class accuracy (data)', fontsize=13)
+#plt.legend(iter(lineObjects), (days), bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+#plt.ylabel('class accuracy (testing data - shfl)', fontsize=13)
+#if chAl==1:
+#    plt.xlabel('Time relative to choice onset (ms)', fontsize=13)
+#else:
+#    plt.xlabel('Time relative stim onset (ms)', fontsize=13)
+if chAl==1:
+    plt.xlabel('Time relative to choice onset (ms)', fontsize=13)
+else:
+    plt.xlabel('Time relative stim onset (ms)', fontsize=13)
+makeNicePlots(plt.gca())
+
+
+plt.subplot(313)
+lineObjects = plt.plot(time_aligned, av_l2_test_s_aligned, label=days)
+plt.plot([0,0], [50,100], color='k', linestyle=':')
+plt.ylabel('Class accuracy (shfl)', fontsize=13)
+if chAl==1:
+    plt.xlabel('Time relative to choice onset (ms)', fontsize=13)
+else:
+    plt.xlabel('Time relative stim onset (ms)', fontsize=13)
+makeNicePlots(plt.gca())
+
+plt.subplots_adjust(wspace=1, hspace=.5)
 
 
 ##%% Save the figure    
@@ -708,7 +755,6 @@ if savefigs:#% Save the figure
             
     fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
     plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
-
 
 
 

@@ -5,19 +5,45 @@ Created on Mon Feb  6 14:36:50 2017
 @author: farznaj
 """
 
+mousename = 'fni17' #'fni17'
+#ch_st_goAl = [0,1,0] # whether do analysis on traces aligned on choice, stim or go tone.
+if mousename == 'fni18':
+    allDays = 1 # all 7 days will be used (last 3 days have z motion!)
+    noZmotionDays = 0 # 4 days that dont have z motion will be used.
+    noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
+if mousename == 'fni19':    
+    allDays = 1
+    noExtraStimDays = 0   
+    
+trialHistAnalysis = 0;
+iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
+execfile("defFuns.py")
+execfile("svm_plots_setVars_n.py")  
+
+#chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
+#chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
+#stAl = ch_st_goAl[1]
+#goToneAl = ch_st_goAl[2]
+#doPlots = 0 #1 # plot c path of each day 
+#savefigs = 1
+
 # Go to svm_plots_setVars and define vars!
-execfile("svm_plots_setVars.py")    
+#execfile("svm_plots_setVars.py")    
 # if you want to remove some days:
 #del(days[0])
 #numDays = len(days)
 
-savefigs = 1
+savefigs = 0
 
 eps = sys.float_info.epsilon #2.2204e-16
 plotEachDay = 0 # if 1, when loading each day a plot of angles between decoders will be made too.
 #doData = 0 # if 1, data file will be loaded; if 0, shuffle file will be loaded. Once run with doData=1 and then with doData=0, to get all data and shuffle vars ... then make plots.
 #doShuffles = 1
 #do_srChAl = 1 # vars for stimulus decoder on choice-aligned traces are saved in a separate mat file
+
+
+
+
 
 #%%
 dnow = '/stability'

@@ -21,7 +21,7 @@ end
 
 frame0s = NaN(size(eventTime));
 for tr = 1:length(frame0s)
-    [~, frame0s(tr)] = min(abs(eventTime(tr) - traceTimeVec{tr}));
+    [~, frame0s(tr)] = min(abs(eventTime(tr) - traceTimeVec{tr})); % since traceTime includes the center time of frames, eventTime is within [-frameLength/2  +frameLength/2] of frame0  % eventTime is closest in time to frame0's center time (ie time at the middle of the frame)
 end
 frame0s(isnan(eventTime)) = NaN;
 

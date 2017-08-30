@@ -205,8 +205,22 @@ def makeNicePlots(ax, rmv2ndXtickLabel=0, rmv2ndYtickLabel=0):
 
 #    plt.xticks(x, labels, rotation='vertical')
     
-    
-        
+
+#%%    
+     #import matplotlib.pyplot as plt
+from mpl_toolkits import axes_grid1
+
+def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
+    """Add a vertical color bar to an image plot."""
+    divider = axes_grid1.make_axes_locatable(im.axes)
+    width = axes_grid1.axes_size.AxesY(im.axes, aspect=1./aspect)
+    pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
+    current_ax = plt.gca()
+    cax = divider.append_axes("right", size=width, pad=pad)
+    plt.sca(current_ax)
+    return im.axes.figure.colorbar(im, cax=cax, **kwargs)    
+   
+   
 #%% PLOTS; define functions
 
 def histerrbar(a,b,binEvery,p,colors = ['g','k']):
@@ -422,11 +436,13 @@ def findBestC(perClassErrorTest, cvect, regType, smallestC=1):
 import numpy as np
 def setClassErrAtBestc(cbestFrs, cvect, doPlots, perClassErrorTrain=np.nan, perClassErrorTest=np.nan, perClassErrorTest_shfl=np.nan, perClassErrorTest_chance=np.nan, wAllC=np.nan, bAllC=np.nan):
     import numpy as np
-    
+    '''
     if np.isnan(bAllC).all():
         numSamples = perClassErrorTest.shape[0] 
         numFrs = perClassErrorTest.shape[2]
     else:
+        numSamples = bAllC.shape[0] 
+        numFrs = bAllC.shape[2]
         classErr_bestC_train_data = []
         classErr_bestC_test_data = []
         classErr_bestC_test_shfl = []
@@ -436,12 +452,34 @@ def setClassErrAtBestc(cbestFrs, cvect, doPlots, perClassErrorTrain=np.nan, perC
         numSamples = bAllC.shape[0] 
         numFrs = bAllC.shape[2]
     else:
+        numSamples = perClassErrorTest.shape[0] 
+        numFrs = perClassErrorTest.shape[2]        
         w_bestc_data = [] 
         b_bestc_data = []
+    '''        
         
-        
-    #%% Compute average of class errors across numSamples
+    if ~np.isnan(bAllC).all(): # bAllC is valid
+        numSamples = bAllC.shape[0] 
+        numFrs = bAllC.shape[2]
+            
+    elif ~np.isnan(perClassErrorTest).all(): # perClassErrorTest is valid
+        numSamples = perClassErrorTest.shape[0] 
+        numFrs = perClassErrorTest.shape[2]        
+
+
+    if np.isnan(bAllC).all(): # bAllC is nan
+        w_bestc_data = [] 
+        b_bestc_data = []    
+
+    if np.isnan(perClassErrorTest).all(): # perClassErrorTest is nan
+        classErr_bestC_train_data = []
+        classErr_bestC_test_data = []
+        classErr_bestC_test_shfl = []
+        classErr_bestC_test_chance = []
+
     
+    #%% Compute average of class errors across numSamples
+    '''
     if np.isnan(perClassErrorTest).all():
         w_bestc_data = np.full((numSamples, wAllC.shape[2], numFrs), np.nan)
         b_bestc_data = np.full((numSamples, numFrs), np.nan)
@@ -451,9 +489,23 @@ def setClassErrAtBestc(cbestFrs, cvect, doPlots, perClassErrorTrain=np.nan, perC
         classErr_bestC_test_data = np.full((numSamples, numFrs), np.nan)
         classErr_bestC_test_shfl = np.full((numSamples, numFrs), np.nan)
         classErr_bestC_test_chance = np.full((numSamples, numFrs), np.nan)
+    '''
 #    cbestFrs = np.full((numFrs), np.nan)
 #    numNon0SampData = np.full((numFrs), np.nan)       
-        
+       
+    if ~np.isnan(perClassErrorTest).all():  # perClassErrorTest is valid
+        classErr_bestC_train_data = np.full((numSamples, numFrs), np.nan)
+        classErr_bestC_test_data = np.full((numSamples, numFrs), np.nan)
+        classErr_bestC_test_shfl = np.full((numSamples, numFrs), np.nan)
+        classErr_bestC_test_chance = np.full((numSamples, numFrs), np.nan)
+    
+    if ~np.isnan(bAllC).all():  # bAllC is valid  
+        w_bestc_data = np.full((numSamples, wAllC.shape[2], numFrs), np.nan)
+        b_bestc_data = np.full((numSamples, numFrs), np.nan)
+
+       
+       
+    #%%        
     for ifr in range(numFrs):
         
         #%% Set the decoder and class errors at best c         
@@ -463,12 +515,12 @@ def setClassErrAtBestc(cbestFrs, cvect, doPlots, perClassErrorTrain=np.nan, perC
         # we just get the values of perClassErrorTrain and perClassErrorTest at cbest (we already computed these values above when training on all values of c)
         indBestC = np.in1d(cvect, cbest)
 
-        if np.isnan(perClassErrorTest).all():        
+        if ~np.isnan(bAllC).all():  # bAllC is valid   # np.isnan(perClassErrorTest).all():        
             w_bestc_data[:,:,ifr] = wAllC[:,indBestC,:,ifr].squeeze() # numSamps x neurons
             b_bestc_data[:,ifr] = bAllC[:,indBestC,ifr].squeeze()           
      
      
-        if np.isnan(bAllC).all():  
+        if ~np.isnan(perClassErrorTest).all():  # perClassErrorTest is valid  # np.isnan(bAllC).all():  
             classErr_bestC_train_data[:,ifr] = perClassErrorTrain[:,indBestC,ifr].squeeze() # numSamps           
             classErr_bestC_test_data[:,ifr] = perClassErrorTest[:,indBestC,ifr].squeeze()
             classErr_bestC_test_shfl[:,ifr] = perClassErrorTest_shfl[:,indBestC,ifr].squeeze()
