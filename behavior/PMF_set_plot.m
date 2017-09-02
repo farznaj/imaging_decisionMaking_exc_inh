@@ -50,8 +50,8 @@ for ri = 1:length(vec_rates)
     nSamples(ri) = length(validout);
     
     if length(validout)>th
-%         HRchoicePerc(ri) = nanmean(validout==1); % success rate
-        HRchoicePerc(ri) = nanmean(validout); % success rate
+%         HRchoicePerc(ri) = nanmean(validout==1); 
+        HRchoicePerc(ri) = nanmean(validout); 
     end
 end
 

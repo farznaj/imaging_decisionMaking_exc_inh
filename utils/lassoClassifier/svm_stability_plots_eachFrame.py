@@ -93,18 +93,18 @@ def setSVMname(pnevFileName, trialHistAnalysis, chAl, regressBins=3, svmfold='sv
 #%% 
 '''
 #####################################################################################################################################################   
-############################ stimulus-aligned, SVR (trained on trials of 1 choice to avoid variations in neural response due to animal's choice... we only want stimulus rate to be different) ###################################################################################################     
+###############################################################################################################################     
 #####################################################################################################################################################
 '''
 
 #%%
 
-angle_all_allMice = []
-angleInh_all_allMice = []
-angleExc_all_allMice = []
 eventI_allDays_allMice = []
 numDaysAll = np.full(len(mice), np.nan)
 time_trace_all_allMice = []
+angle_all_allMice = []
+angleInh_all_allMice = []
+angleExc_all_allMice = []
 classErr_bestC_test_data_all = []
 classErr_bestC_test_shfl_all = []
 classErr_bestC_test_chance_all = []
@@ -397,10 +397,10 @@ for im in range(len(mice)):
     angle_all = np.array(angle_all)
     angleInh_all = np.array(angleInh_all)
     angleExc_all = np.array(angleExc_all)
-    eventI_allDays = eventI_allDays.astype('int')
-    numDaysAll = numDaysAll.astype(int)
-    time_trace_all = np.array(time_trace_all)
     cbestFrs_all = np.array(cbestFrs_all)    
+    numDaysAll = numDaysAll.astype(int)    
+    eventI_allDays = eventI_allDays.astype('int')    
+    time_trace_all = np.array(time_trace_all)
     
     
     angle_all_allMice.append(angle_all)

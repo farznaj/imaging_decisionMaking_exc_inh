@@ -2,7 +2,7 @@
 
 %% Compute HRchoicePerc for each session of each mouse.
 
-miceNames = {'fn03', 'fn04', 'fn05', 'fn06', 'fni16', 'fni17', 'fni18', 'fni19', 'hni01', 'hni04'};
+miceNames = {'fni16', 'fni17', 'fni18', 'fni19'}; %{'fn03', 'fn04', 'fn05', 'fn06', 'fni16', 'fni17', 'fni18', 'fni19', 'hni01', 'hni04'};
 allowCorrectResp = 'change';
 uncommittedResp = 'nothing'; % 'change'; %'remove'; % % 'remove', 'change', 'nothing';
 excludeShortWaitDur = true; % waitdur_th = .032; % sec  % trials w waitdur less than this will be excluded.
@@ -11,7 +11,7 @@ excludeExtraStim = false;
 doplots = 0;
 plotPMF = false;
 shownumtrs = false; %true;
-% only use difficult stimuli
+% only use easy stimuli
 clear vecr
 vecr{1} = [4 6];
 vecr{2} = [26 28];
@@ -79,7 +79,7 @@ for imouse = 1:length(miceNames)
                 validout = allout(allout>=0); % only consider trials that were correct, incorrect, noDecision, and noSideLickAgain trials. (exclude non valid trials).
                 nSamples(ri) = length(validout);                
 %                 if length(validout)>th
-                    HRchoicePerc(ri) = nanmean(validout); % success rate
+                    HRchoicePerc(ri) = nanmean(validout); 
 %                 end
             end
             

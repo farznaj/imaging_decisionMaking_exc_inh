@@ -7,6 +7,8 @@
 
 subject = 'fn07';
 days = {'18-Feb-2015'};
+
+%%
 savefigs = 0;
 n_days = 1; %15; % specify number of days back (from days{1}) that you want to analyze. if you don't specify this, only days mentioned in days will be analyzed.
 
@@ -25,6 +27,7 @@ if ispc
 elseif isunix
     server_address = '/Volumes/Churchland/data'; % your mac
     server_address = '~/Shares/Churchland/data';
+    server_address = '~/Shares/Churchland_hpc_home/space_managed_data/'; % fni18,fni19
 end
 
 if ~exist('hpmf', 'var') || ~ishandle(hpmf)
