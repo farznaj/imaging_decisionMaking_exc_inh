@@ -46,8 +46,8 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni17' #'fni16'
-    imagingFolder = '151023' #'151001'
+    mousename = 'fni19' #'fni16'
+    imagingFolder = '150901' #'151001'
     mdfFileNumber = [1] #[1] 
 
     choiceAligned = 1 # use choice-aligned traces for analyses?
@@ -58,7 +58,7 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     doBagging = 0 # BAGGING will be performed (in addition to l2) for svm/svr
 
     trialHistAnalysis = 0;    
-    roundi = 1; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
+#    roundi = 1; # For the same dataset we run the code multiple times, each time we select a random subset of neurons (of size n, n=.95*numTrials)
 
     iTiFlg = 1; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
     setNsExcluded = 1; # if 1, NsExcluded will be set even if it is already saved.

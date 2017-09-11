@@ -55,17 +55,14 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
     mousename = 'fni19' #'fni17' #'fni16' #
-    imagingFolder = '151020' #'151023' #'151001' #
+    imagingFolder = '150903' #'151023' #'151001' #
     mdfFileNumber = [1] #[1] 
 
-    ch_st_goAl = [0,1,0] # whether do analysis on traces aligned on choice, stim or go tone.
-    chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
-    stAl = ch_st_goAl[1]
-    goToneAl = ch_st_goAl[2]
-    
+    ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone.
+    outcome2ana = 'corr' # 'all' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.            
+     
     numSamples = 10 #100; # number of iterations for finding the best c (inverse of regularization parameter)
 #    nRandCorrSel = 10
-
     softNorm = 1 # if 1, no neurons will be excluded, bc we do soft normalization of FRs, so non-active neurons wont be problematic. if softNorm = 0, NsExcluded will be found
     useEqualTrNums = 1 # Make sure both classes have the same number of trials when training the classifier
     ch_st_goAl[0]
@@ -73,7 +70,6 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
 #    earliestGoTone = 50 # 32 (relative to end of stim (after a single repetition)) # In X matrix ideally we don't want trials with go tone within stim (bc we dont want neural activity to be influenced by go tone); however
     # we relax the conditions a bit and allow trials in which go tone happened within the last 50ms of stimulus. (if go tone happened earlier than 50ms, trial will be excluded.)
     
-    outcome2ana = 'all' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
 #    stimAligned = 1 # use stimulus-aligned traces for analyses?
 #    doSVM = 1 # use SVM to decode stim category.
 #    epAllStim = 1 # when doing svr on stim-aligned traces, if 1, svr will computed on X_svr (ave pop activity during the entire stim presentation); Otherwise it will be computed on X0 (ave pop activity during ep)
@@ -98,6 +94,10 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     # The following vars don't usually need to be changed    
     doPlots = 1; # Whether to make plots or not.
     saveHTML = 0; # whether to save the html file of notebook with all figures or not.
+
+    chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
+    stAl = ch_st_goAl[1]
+    goToneAl = ch_st_goAl[2]
 
 #    if trialHistAnalysis==1: # more parameters are specified in popClassifier_trialHistory.m
     #        iTiFlg = 1; # 0: short ITI, 1: long ITI, 2: all ITIs.
@@ -402,7 +402,8 @@ outcomes = (Data.pop('outcomes').astype('float'))[0,:]
 allResp_HR_LR = np.array(Data.pop('allResp_HR_LR')).flatten().astype('float')
 choiceVecAll = allResp_HR_LR+0;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
 # choiceVecAll = np.transpose(allResp_HR_LR);  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
-print 'Current outcome: %d correct choices; %d incorrect choices' %(sum(outcomes==1), sum(outcomes==0))
+print '%d correct choices; %d incorrect choices' %(sum(outcomes==1), sum(outcomes==0))
+#print 'Current outcome: %d correct choices; %d incorrect choices' %(sum(outcomes==1), sum(outcomes==0))
 
 
 if trialHistAnalysis:
@@ -573,7 +574,21 @@ else: # set choice for the current trial
     # Y = choiceVec0
     # print(choiceVec0.shape)
 print '%d correct trials; %d incorrect trials' %((outcomes==1).sum(), (outcomes==0).sum())
-print '%d HR trials; %d LR trials' %((choiceVec0==1).sum(), (choiceVec0==0).sum())
+
+if outcome2ana == 'corr':
+    print '\tcorrect trials: %d HR; %d LR' %((choiceVec0==1).sum(), (choiceVec0==0).sum())
+elif outcome2ana == 'incorr':
+    print '\tincorrect trials: %d HR; %d LR' %((choiceVec0==1).sum(), (choiceVec0==0).sum())
+else:
+    print '\tall trials: %d HR; %d LR' %((choiceVec0==1).sum(), (choiceVec0==0).sum())
+
+
+#%% Set Y for incorrect trials
+
+# set Y_incorr: vector of choices for incorrect trials
+Y_incorr0 = choiceVecAll+0
+Y_incorr0[outcomes!=0] = np.nan; # analyze only incorrect trials.
+print '\tincorrect trials: %d HR; %d LR' %((Y_incorr0==1).sum(), (Y_incorr0==0).sum())
 
 
 #%% Load spikes and time traces to set X for training SVM
@@ -584,7 +599,7 @@ if chAl==1:    #%% Use choice-aligned traces
     Data = scio.loadmat(postName, variable_names=['firstSideTryAl'],squeeze_me=True,struct_as_record=False)
     traces_al_1stSide = Data['firstSideTryAl'].traces.astype('float')
     time_aligned_1stSide = Data['firstSideTryAl'].time.astype('float')
-    #eventI_ch = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+    eventI = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
     # print(np.shape(traces_al_1stSide))
     
     trsExcluded = (np.isnan(np.sum(traces_al_1stSide, axis=(0,1))) + np.isnan(choiceVec0)) != 0
@@ -596,6 +611,11 @@ if chAl==1:    #%% Use choice-aligned traces
     
     time_trace = time_aligned_1stSide
 
+
+    ## incorrect trials
+    trsExcluded_incorr = (np.isnan(np.sum(traces_al_1stSide, axis=(0,1))) + np.isnan(Y_incorr0)) != 0
+    X_svm_incorr = traces_al_1stSide[:,:,~trsExcluded_incorr]      
+    
 
 ##%%
 elif goToneAl==1:   # Use go-tone-aligned traces
@@ -706,24 +726,51 @@ elif stAl==1:   #%% Use stimulus-aligned traces
     X_svm = traces_al_stim[:,:,~trsExcluded]  
 
 print 'frs x units x trials', X_svm.shape    
-
+print 'frs x units x trials (incorrect trials)', X_svm_incorr.shape    
 
 
 #%% Set Y for training SVM   
 
 Y_svm = choiceVec0[~trsExcluded];
-print Y_svm.shape
+print 'Y size: ', Y_svm.shape
+
+## incorrect trials
+Y_svm_incorr = Y_incorr0[~trsExcluded_incorr]
+print 'Y_incorr size: ', Y_svm_incorr.shape
 
 
+## print number of hr,lr trials after excluding trials
+if outcome2ana == 'corr':
+    print '\tcorrect trials: %d HR; %d LR' %((Y_svm==1).sum(), (Y_svm==0).sum())
+elif outcome2ana == 'incorr':
+    print '\tincorrect trials: %d HR; %d LR' %((Y_svm==1).sum(), (Y_svm==0).sum())
+else:
+    print '\tall trials: %d HR; %d LR' %((Y_svm==1).sum(), (Y_svm==0).sum())
+
+print '\tincorrect trials: %d HR; %d LR' %((Y_svm_incorr==1).sum(), (Y_svm_incorr==0).sum())
+
+
+#%% I think we need at the very least 3 trials of each class to train SVM. So exit the analysis if this condition is not met!
+
+if min((Y_svm==1).sum(), (Y_svm==0).sum()) < 3:
+    sys.exit('Too few trials to do SVM training! HR=%d, LR=%d' %((Y_svm==1).sum(), (Y_svm==0).sum()))
     
+
+
 #%% Downsample X: average across multiple times (downsampling, not a moving average. we only average every regressBins points.)
 
 #regressBins = 2 # number of frames to average for downsampling X
 #regressBins = int(np.round(100/frameLength)) # 100ms
 
 if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
-    print 'Downsampling traces ....'    
+    print 'Downsampling traces ....'        
+    # keep values before downsampling
+    X_svmo = X_svm+0
+    time_traceo = time_trace+0    
+    X_svm_incorro = X_svm_incorr+0
     
+    ################################ There are problems with the method below: different sessions have different number of frames before eventI, so the downsampled frame0 will correspond to different time points in different days, and it will be of low time resolution!
+    '''
     # X_svm
     T1, N1, C1 = X_svm.shape
     tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X
@@ -740,9 +787,99 @@ if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
     print time_trace.shape
 
     eventI_ds = np.argwhere(np.sign(time_trace)>0)[0] # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
+    '''
+
+    ################################ Correct way of downsampling: we dont downsample the frame that includes eventI! (coded on 09/11/17)
+    # downsampling while keeping the resolution of frame0 intact (ie 32ms, ie not averaging frame0 with other frames)
+    # so all time bins before and after frame0 are frameLength*regressBins ms (~97ms)
+    # but the time bin that include eventI is frameLength ms (~32ms), because it was not averaged
+    # so the original time_trace looks like:
+#        -291.26213592,  -258.89967638,  -226.53721683,  -194.17475728,
+#        -161.81229773,  -129.44983819,   -97.08737864,   -64.72491909,
+#         -32.36245955,     0.        ,    32.36245955,    64.72491909,
+#          97.08737864,   129.44983819,   161.81229773,   194.17475728,
+#         226.53721683,   258.89967638,   291.26213592,
+    # and the downsampled time_trace looks like:     
+#        258.89967638,  -161.81229773,
+#        -64.72491909,     0.        ,    64.72491909,   161.81229773,
+#        258.89967638,
+         
+         
+    ##### X_svm
+    # set frames before frame0 (not including it)
+    f = (np.arange(eventI - regressBins*np.floor(eventI/float(regressBins)) , eventI)).astype(int) # 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)
+    x = X_svmo[f,:,:] # X_svmo including frames before frame0
+    T1, N1, C1 = x.shape
+    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames before frame0
+    xdb = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames before frame0
+    
+    
+    # set frames after frame0 (not including it)
+    f = (np.arange(eventI+1 , eventI+1+regressBins * np.floor((X_svmo.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+    x = X_svmo[f,:,:] # X_svmo including frames after frame0
+    T1, N1, C1 = x.shape
+    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
+    xda = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames after frame0
+    
+    # set the final downsampled X_svmo: concatenate downsampled X at frames before frame0, with x at frame0, and x at frames after frame0
+    X_svm_d = np.concatenate((xdb, [X_svmo[eventI,:,:]], xda))    
+    
+    X_svm = X_svm_d
+    print 'trace size--> original:',X_svmo.shape, 'downsampled:', X_svm_d.shape
+
+
+    ##### X_svm, incorrect trials
+    # set frames before frame0 (not including it)
+    f = (np.arange(eventI - regressBins*np.floor(eventI/float(regressBins)) , eventI)).astype(int) # 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)
+    x = X_svm_incorro[f,:,:] # X_svmo including frames before frame0
+    T1, N1, C1 = x.shape
+    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames before frame0
+    xdb = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames before frame0
+    
+    
+    # set frames after frame0 (not including it)
+    f = (np.arange(eventI+1 , eventI+1+regressBins * np.floor((X_svmo.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+    x = X_svm_incorro[f,:,:] # X_svmo including frames after frame0
+    T1, N1, C1 = x.shape
+    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
+    xda = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames after frame0
+    
+    # set the final downsampled X_svmo: concatenate downsampled X at frames before frame0, with x at frame0, and x at frames after frame0
+    X_svm_incorr_d = np.concatenate((xdb, [X_svm_incorro[eventI,:,:]], xda))    
+    
+    X_svm_incorr = X_svm_incorr_d
+    print 'trace size--> original:',X_svm_incorro.shape, 'downsampled:', X_svm_incorr_d.shape
+
+
+    ##### time_trace
+    # set frames before frame0 (not including it)
+    f = (np.arange(eventI - regressBins*np.floor(eventI/float(regressBins)) , eventI)).astype(int) # 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)
+    x = time_traceo[f] # time_trace including frames before frame0
+    T1 = x.shape[0]
+    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames before frame0
+    xdb = np.mean(np.reshape(x, (regressBins, tt), order = 'F'), axis=0) # downsampled X_svm inclusing frames before frame0
+    
+    
+    # set frames after frame0 (not including it)
+    f = (np.arange(eventI+1 , eventI+1+regressBins * np.floor((X_svmo.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+    x = time_traceo[f] # X_svm including frames after frame0
+    T1 = x.shape[0]
+    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
+    xda = np.mean(np.reshape(x, (regressBins, tt), order = 'F'), axis=0) # downsampled X_svm inclusing frames after frame0
+    
+    # set the final downsampled time_trace: concatenate downsampled X at frames before frame0, with x at frame0, and x at frames after frame0
+    time_trace_d = np.concatenate((xdb, [time_traceo[eventI]], xda))    
+    
+    time_trace = time_trace_d
+    print 'time trace size--> original:',time_traceo.shape, 'downsampled:', time_trace_d.shape
+    
+    
+    eventI_ds = np.argwhere(np.sign(time_trace_d)==0) # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
+
 
 else:
     print 'Not downsampling traces ....'
+    
 
 
 #%% Set NsExcluded : Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
@@ -787,13 +924,12 @@ else:
 
     
 #%% 
-
-numDataPoints = X_svm.shape[2] 
-print '# data points = %d' %numDataPoints
+#numDataPoints = X_svm.shape[2] 
+#print '# data points = %d' %numDataPoints
 # numTrials = (~trsExcluded).sum()
 # numNeurons = (~NsExcluded).sum()
-numTrials, numNeurons = X_svm.shape[2], X_svm.shape[1]
-print '%d trials; %d neurons' %(numTrials, numNeurons)
+#numTrials, numNeurons = X_svm.shape[2], X_svm.shape[1]
+print '%d trials; %d neurons' %(X_svm.shape[2], X_svm.shape[1])
 # print ' The data has %d frames recorded from %d neurons at %d trials' %Xt.shape    
 
 
@@ -815,18 +951,33 @@ X_svm = np.reshape(X_svm_N, (T1, C1, N1), order = 'F').transpose(0 ,2 ,1)
 
 # Normalize each frame separately (do soft normalization)
 X_svm_N = np.full(np.shape(X_svm), np.nan)
+X_svm_incorr_N = np.full(np.shape(X_svm_incorr), np.nan)
 meanX_fr = []
 stdX_fr = []
 for ifr in range(np.shape(X_svm)[0]):
-    m = np.mean(X_svm[ifr,:,:], axis=1)
-    s = np.std(X_svm[ifr,:,:], axis=1)   
+
+    ##### set mean and sd of neural activity across trials
+    if outcome2ana == 'corr': # make sure incorr trs are also used in the computation of mean and sd of the neuron across trials.
+        xtot = np.concatenate((X_svm, X_svm_incorr),axis=2)
+        xf = xtot[ifr,:,:]
+    elif outcome2ana == 'incorr': # see what trials you want to include for the computation of mean and sd.
+        sys.exit('think about what trials you want to include for the computation of mean and sd.!') 
+#        xf = X_svm[ifr,:,:]
+    else: # already all trials (corr,incorr) are included in X_svm
+        xf = X_svm[ifr,:,:]
+    
+    m = np.mean(xf, axis=1)
+    s = np.std(xf, axis=1)   
     meanX_fr.append(m) # frs x neurons
     stdX_fr.append(s)       
     
     if softNorm==1: # soft normalziation : neurons with sd<thAct wont have too large values after normalization
         s = s+thAct     
-
+    
+    ##### do normalization
     X_svm_N[ifr,:,:] = ((X_svm[ifr,:,:].T - m) / s).T
+    X_svm_incorr_N[ifr,:,:] = ((X_svm_incorr[ifr,:,:].T - m) / s).T        
+        
 
 meanX_fr = np.array(meanX_fr) # frames x neurons
 stdX_fr = np.array(stdX_fr) # frames x neurons
@@ -836,6 +987,9 @@ stdX_fr = np.array(stdX_fr) # frames x neurons
 
 X_svm00 = X_svm + 0
 X_svm = X_svm_N
+
+X_svm_incorr00 = X_svm_incorr + 0
+X_svm_incorr = X_svm_incorr_N
     
 #plt.plot(b[12,:])
 #plt.plot(c[12,:])
@@ -897,18 +1051,19 @@ if doPlots:
 # choice-aligned: classes: choices
 # Plot stim-aligned averages after centering and normalization
 if doPlots:
-    # Divide data into high-rate (modeled as 1) and low-rate (modeled as 0) trials
-    hr_trs = (Y_svm==1)
-    lr_trs = (Y_svm==0)
 
     plt.figure()
+    
+    # trials to be used for SVM training
     plt.subplot(1,2,1)
+    hr_trs = (Y_svm==1)     # Divide data into high-rate (modeled as 1) and low-rate (modeled as 0) trials
+    lr_trs = (Y_svm==0)    
     a1 = np.nanmean(X_svm[:, :, hr_trs],  axis=1) # frames x trials (average across neurons)
     tr1 = np.nanmean(a1,  axis = 1)
-    tr1_se = np.nanstd(a1,  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(a1,  axis = 1) / np.sqrt(hr_trs.sum());
     a0 = np.nanmean(X_svm[:, :, lr_trs],  axis=1) # frames x trials (average across neurons)
     tr0 = np.nanmean(a0,  axis = 1)
-    tr0_se = np.nanstd(a0,  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(a0,  axis = 1) / np.sqrt(lr_trs.sum());
     mn = np.concatenate([tr1,tr0]).min()
     mx = np.concatenate([tr1,tr0]).max()
 #    plt.plot([win[0], win[0]], [mn, mx], 'g-.') # mark the begining and end of training window
@@ -924,6 +1079,34 @@ if doPlots:
     plt.legend()
 
 
+    # incorrect trials
+    plt.subplot(1,2,2)
+    hr_trs = (Y_svm_incorr==1)
+    lr_trs = (Y_svm_incorr==0)    
+    a1 = np.nanmean(X_svm_incorr[:, :, hr_trs],  axis=1) # frames x trials (average across neurons)
+    tr1 = np.nanmean(a1,  axis = 1)
+    tr1_se = np.nanstd(a1,  axis = 1) / np.sqrt(hr_trs.sum());
+    a0 = np.nanmean(X_svm_incorr[:, :, lr_trs],  axis=1) # frames x trials (average across neurons)
+    tr0 = np.nanmean(a0,  axis = 1)
+    tr0_se = np.nanstd(a0,  axis = 1) / np.sqrt(lr_trs.sum());
+    mn = np.concatenate([tr1,tr0]).min()
+    mx = np.concatenate([tr1,tr0]).max()
+#    plt.plot([win[0], win[0]], [mn, mx], 'g-.') # mark the begining and end of training window
+#    plt.plot([win[-1], win[-1]], [mn, mx], 'g-.')
+    plt.fill_between(time_trace, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
+    plt.fill_between(time_trace, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
+    plt.plot(time_trace, tr1, 'b', label = 'high rate')
+    plt.plot(time_trace, tr0, 'r', label = 'low rate')
+    # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, lr_trs],  axis = (1, 2)), 'r', label = 'high rate')
+    # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, hr_trs],  axis = (1, 2)), 'b', label = 'low rate')
+#    plt.xlabel('time aligned to stimulus onset (ms)')
+    plt.title('Incorrect trials - raw')
+    plt.legend()
+    
+    
+    
+################################################################
+################################################################
 #%% Train SVM on each frame (with 10-fold cross-validation repeated 100 times)
 
 shuffleTrs = False; # set to 0 so for each iteration of numSamples, all frames are trained and tested on the same trials# If 1 shuffle trials to break any dependencies on the sequence of trails 
@@ -939,16 +1122,22 @@ elif regType == 'l2':
 #    cvect = 10**(np.arange(-6, 6,0.2));
 print 'try the following regularization values: \n', cvect
 
+nfr = np.shape(X_svm)[0]
+wAllC = np.ones((numSamples, len(cvect), X_svm.shape[1], nfr))+np.nan;
+bAllC = np.ones((numSamples, len(cvect), nfr))+np.nan;
 
-wAllC = np.ones((numSamples, len(cvect), X_svm.shape[1], np.shape(X_svm)[0]))+np.nan;
-bAllC = np.ones((numSamples, len(cvect), np.shape(X_svm)[0]))+np.nan;
+perClassErrorTrain = np.ones((numSamples, len(cvect), nfr))+np.nan;
+perClassErrorTest = np.ones((numSamples, len(cvect), nfr))+np.nan;
 
-perClassErrorTrain = np.ones((numSamples, len(cvect), np.shape(X_svm)[0]))+np.nan;
-perClassErrorTest = np.ones((numSamples, len(cvect), np.shape(X_svm)[0]))+np.nan;
+perClassErrorTest_shfl = np.ones((numSamples, len(cvect), nfr))+np.nan
+perClassErrorTest_chance = np.ones((numSamples, len(cvect), nfr))+np.nan
 
-perClassErrorTest_shfl = np.ones((numSamples, len(cvect), np.shape(X_svm)[0]))+np.nan;
-perClassErrorTest_chance = np.ones((numSamples, len(cvect), np.shape(X_svm)[0]))+np.nan
-
+if outcome2ana == 'corr': # if SVM is trained on corr, we want to test it on incorr too.
+    perClassErrorTest_incorr = np.ones((numSamples, len(cvect), nfr))+np.nan
+    perClassErrorTest_incorr_shfl = np.ones((numSamples, len(cvect), nfr))+np.nan
+    perClassErrorTest_incorr_chance = np.ones((numSamples, len(cvect), nfr))+np.nan
+        
+        
 hrn = (Y_svm==1).sum()
 lrn = (Y_svm==0).sum()
 
@@ -995,7 +1184,18 @@ for s in range(numSamples): # permute trials to get numSamples different sets of
     a_corr[b] = 1
     
 
-
+    if outcome2ana == 'corr': # incorr
+        len_incorr = Y_svm_incorr.shape[0]
+        permIxs_incorr = rng.permutation(len_incorr)    
+        
+        a_incorr = np.zeros(len_incorr)
+        if rng.rand()>.5:
+            b = rng.permutation(len_incorr)[0:np.floor(len_incorr/float(2)).astype(int)]
+        else:
+            b = rng.permutation(len_incorr)[0:np.ceil(len_incorr/float(2)).astype(int)]
+        a_incorr[b] = 1
+    
+    
     #############
     for ifr in range(np.shape(X_svm)[0]): # train SVM on each frame
         print '\tFrame %d' %(ifr)            
@@ -1016,11 +1216,25 @@ for s in range(numSamples): # permute trials to get numSamples different sets of
             
             # Testing correct shuffled data: 
             # same decoder trained on correct trials, make predictions on correct with shuffled labels.
-            perClassErrorTest_shfl[s,i,ifr] = perClassError(summary.YTest[permIxs], summary.model.predict(summary.XTest));
-            perClassErrorTest_chance[s,i,ifr] = perClassError(a_corr, summary.model.predict(summary.XTest));
+            ypredict = summary.model.predict(summary.XTest)
+            perClassErrorTest_shfl[s,i,ifr] = perClassError(summary.YTest[permIxs], ypredict);
+            perClassErrorTest_chance[s,i,ifr] = perClassError(a_corr, ypredict);
     
     
-
+            #### Incorrect trials (using the decoder trained on correct trials)
+            if outcome2ana == 'corr':
+                #linear_svm.fit(XTrain, np.squeeze(YTrain))    # # linear_svm is trained using Xtrain and Ytrain... #train using Xtrain_corr... test on Xtest_corr and X_incorr.
+                #summary.model = linear_svm;
+                yincorrpredict = summary.model.predict(X_svm_incorr[ifr,:,:].transpose())
+                perClassErrorTest_incorr[s,i,ifr] = perClassError(Y_svm_incorr, yincorrpredict);
+                
+                # Null distribution for class error on incorr trials: 
+                # We want to use the same decoder (trained on correct trials) to predict the choice on incorrect trials with shuffled class labels.             
+                perClassErrorTest_incorr_shfl[s,i,ifr] = perClassError(Y_svm_incorr[permIxs_incorr], yincorrpredict);
+                perClassErrorTest_incorr_chance[s,i,ifr] = perClassError(a_incorr, yincorrpredict); # half of the trials assigned randomly to one choice and the other half to the other choice
+        
+    
+    
 #%% Find bestc for each frame, and plot the c path
 
 if doPlots:
@@ -1030,16 +1244,20 @@ if doPlots:
         #%% Compute average of class errors across numSamples
         
         meanPerClassErrorTrain = np.mean(perClassErrorTrain[:,:,ifr], axis = 0);
-        semPerClassErrorTrain = np.std(perClassErrorTrain[:,:,ifr], axis = 0)/np.sqrt(numSamples);
-        
+        semPerClassErrorTrain = np.std(perClassErrorTrain[:,:,ifr], axis = 0)/np.sqrt(numSamples);        
         meanPerClassErrorTest = np.mean(perClassErrorTest[:,:,ifr], axis = 0);
-        semPerClassErrorTest = np.std(perClassErrorTest[:,:,ifr], axis = 0)/np.sqrt(numSamples);
-        
+        semPerClassErrorTest = np.std(perClassErrorTest[:,:,ifr], axis = 0)/np.sqrt(numSamples);        
         meanPerClassErrorTest_shfl = np.mean(perClassErrorTest_shfl[:,:,ifr], axis = 0);
-        semPerClassErrorTest_shfl = np.std(perClassErrorTest_shfl[:,:,ifr], axis = 0)/np.sqrt(numSamples);
-        
+        semPerClassErrorTest_shfl = np.std(perClassErrorTest_shfl[:,:,ifr], axis = 0)/np.sqrt(numSamples);        
         meanPerClassErrorTest_chance = np.mean(perClassErrorTest_chance[:,:,ifr], axis = 0);
         semPerClassErrorTest_chance = np.std(perClassErrorTest_chance[:,:,ifr], axis = 0)/np.sqrt(numSamples);
+        if outcome2ana == 'corr': # incorr
+            meanPerClassErrorTest_incorr = np.mean(perClassErrorTest_incorr[:,:,ifr], axis = 0);
+            semPerClassErrorTest_incorr = np.std(perClassErrorTest_incorr[:,:,ifr], axis = 0)/np.sqrt(numSamples);        
+            meanPerClassErrorTest_incorr_shfl = np.mean(perClassErrorTest_incorr_shfl[:,:,ifr], axis = 0);
+            semPerClassErrorTest_incorr_shfl = np.std(perClassErrorTest_incorr_shfl[:,:,ifr], axis = 0)/np.sqrt(numSamples);        
+            meanPerClassErrorTest_incorr_chance = np.mean(perClassErrorTest_incorr_chance[:,:,ifr], axis = 0);
+            semPerClassErrorTest_incorr_chance = np.std(perClassErrorTest_incorr_chance[:,:,ifr], axis = 0)/np.sqrt(numSamples);        
         
         
         #%% Identify best c : 
@@ -1113,11 +1331,14 @@ if doPlots:
     #    plt.fill_between(cvect, meanPerClassErrorTest_shfl-semPerClassErrorTest_shfl, meanPerClassErrorTest_shfl+ semPerClassErrorTest_shfl, alpha=0.5, edgecolor='y', facecolor='y')        
         
         plt.plot(cvect, meanPerClassErrorTrain, 'k', label = 'training')
-        plt.plot(cvect, meanPerClassErrorTest, 'r', label = 'validation')
+        plt.plot(cvect, meanPerClassErrorTest, 'r', label = 'testing')
         plt.plot(cvect, meanPerClassErrorTest_chance, 'b', label = 'cv-chance')       
         plt.plot(cvect, meanPerClassErrorTest_shfl, 'y', label = 'cv-shfl')            
-    
-        plt.plot(cvect[cvect==cbest], meanPerClassErrorTest[cvect==cbest], 'bo')
+        if outcome2ana == 'corr':# incorr
+            plt.plot(cvect, meanPerClassErrorTest_incorr, color=[.5,0,0], label = 'incorr testing')
+            plt.plot(cvect, meanPerClassErrorTest_incorr_chance, color=[0,0,.5], label = 'incorr-chance')       
+            plt.plot(cvect, meanPerClassErrorTest_incorr_shfl, color=[.5,.8,0], label = 'incorr-shfl')                
+#        plt.plot(cvect[cvect==cbest], meanPerClassErrorTest[cvect==cbest], 'bo')
         
         plt.xlim([cvect[1], cvect[-1]])
         plt.xscale('log')
@@ -1167,14 +1388,28 @@ if saveResults:
     svmName = os.path.join(d, svmn+os.path.basename(pnevFileName))
     print(svmName)
     
-    scio.savemat(svmName, {'thAct':thAct, 'numSamples':numSamples, 'softNorm':softNorm, 'meanX_fr':meanX_fr, 'stdX_fr':stdX_fr,
-                           'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded,
-                           'regType':regType, 'cvect':cvect, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
-                           'wAllC':wAllC, 'bAllC':bAllC,
-                           'perClassErrorTrain':perClassErrorTrain,
-                           'perClassErrorTest':perClassErrorTest,
-                           'perClassErrorTest_shfl':perClassErrorTest_shfl,
-                           'perClassErrorTest_chance':perClassErrorTest_chance}) 
+    if outcome2ana == 'corr': # save incorr vars too bc SVM was trained on corr, and tested on icorr.
+        scio.savemat(svmName, {'thAct':thAct, 'numSamples':numSamples, 'softNorm':softNorm, 'meanX_fr':meanX_fr, 'stdX_fr':stdX_fr,
+                               'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded,
+                               'regType':regType, 'cvect':cvect, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
+                               'wAllC':wAllC, 'bAllC':bAllC,
+                               'perClassErrorTrain':perClassErrorTrain,
+                               'perClassErrorTest':perClassErrorTest,
+                               'perClassErrorTest_shfl':perClassErrorTest_shfl,
+                               'perClassErrorTest_chance':perClassErrorTest_chance,        
+                               'perClassErrorTest_incorr':perClassErrorTest_incorr,    
+                               'perClassErrorTest_incorr_shfl':perClassErrorTest_incorr_shfl,
+                               'perClassErrorTest_incorr_chance':perClassErrorTest_incorr_chance}) 
+    
+    else:
+        scio.savemat(svmName, {'thAct':thAct, 'numSamples':numSamples, 'softNorm':softNorm, 'meanX_fr':meanX_fr, 'stdX_fr':stdX_fr,
+                               'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded,
+                               'regType':regType, 'cvect':cvect, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
+                               'wAllC':wAllC, 'bAllC':bAllC,
+                               'perClassErrorTrain':perClassErrorTrain,
+                               'perClassErrorTest':perClassErrorTest,
+                               'perClassErrorTest_shfl':perClassErrorTest_shfl,
+                               'perClassErrorTest_chance':perClassErrorTest_chance}) 
     
 else:
     print 'Not saving .mat file'
