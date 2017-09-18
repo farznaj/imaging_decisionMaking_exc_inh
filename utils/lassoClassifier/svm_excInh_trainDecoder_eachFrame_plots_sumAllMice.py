@@ -111,44 +111,6 @@ def setSVMname(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc=[], regre
 
     return svmName
     
-
-
-#%%   
-def setTo50classErr(classError, w, thNon0Ws = .05, thSamps = 10, eps = 1e-10):
-#            classError = perClassErrorTest_data_inh 
-#            w = w_data_inh
-#            thNon0Ws = .05; thSamps = 10; eps = 1e-10
-#            thNon0Ws = 2 # For samples with <2 non0 weights, we manually set their class error to 50 ... the idea is that bc of difference in number of HR and LR trials, in these samples class error is not accurately computed!
-#            thSamps = 10  # Days that have <thSamps samples that satisfy >=thNon0W non0 weights will be manually set to 50 (class error of all their samples) ... bc we think <5 samples will not give us an accurate measure of class error of a day.
-
-#    d = scio.loadmat(svmName, variable_names=[wname])
-#    w = d.pop(wname)            
-    a = abs(w) > eps
-    # average abs(w) across neurons:
-    if w.ndim==4: #exc : average across excShuffles
-        a = np.mean(a, axis=0)
-    aa = np.mean(a, axis=1) # samples x frames; shows average number of neurons with non0 weights for each sample and frame 
-#        plt.imshow(aa), plt.colorbar()
-    goodSamps = aa > thNon0Ws # samples with >.05 of neurons having non-0 weight 
-#        sum(goodSamps) # for each frame, it shows number of samples with >.05 of neurons having non-0 weight        
-    
-    if sum(sum(~goodSamps))>0:
-        print 'All frames together have %d bad samples (samples w < %.2f non-0 weights)... setting their classErr to 50' %(sum(sum(~goodSamps)), thNon0Ws)
-        
-        if sum(sum(goodSamps)<thSamps)>0:
-            print 'There are %d frames with < %d good samples... setting all samples classErr to 50' %(sum(goodSamps)<thSamps, thSamps)
-    
-        if w.ndim==3: 
-            classError[~goodSamps] = 50 # set to 50 class error of samples which have <=.05 of non-0-weight neurons
-            classError[:,sum(goodSamps)<thSamps] = 50 # if fewer than 10 samples contributed to a frame, set the perClassError of all samples for that frame to 50...       
-        elif w.ndim==4: #exc : average across excShuffles
-            classError[:,~goodSamps] = 50 # set to 50 class error of samples which have <=.05 of non-0-weight neurons
-            classError[:,:,sum(goodSamps)<thSamps] = 50 # if fewer than 10 samples contributed to a frame, set the perClassError of all samples for that frame to 50...       
- 
-   
-    modClassError = classError+0
-    
-    return modClassError
     
 
 #%%

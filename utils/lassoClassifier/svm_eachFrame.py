@@ -856,19 +856,20 @@ if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
     f = (np.arange(eventI - regressBins*np.floor(eventI/float(regressBins)) , eventI)).astype(int) # 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)
     x = time_traceo[f] # time_trace including frames before frame0
     T1 = x.shape[0]
-    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames before frame0
+    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames before frame0 # same as eventI_ds
     xdb = np.mean(np.reshape(x, (regressBins, tt), order = 'F'), axis=0) # downsampled X_svm inclusing frames before frame0
     
     
     # set frames after frame0 (not including it)
-    f = (np.arange(eventI+1 , eventI+1+regressBins * np.floor((X_svmo.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+    f = (np.arange(eventI+1 , eventI+1+regressBins * np.floor((time_traceo.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
     x = time_traceo[f] # X_svm including frames after frame0
     T1 = x.shape[0]
     tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
     xda = np.mean(np.reshape(x, (regressBins, tt), order = 'F'), axis=0) # downsampled X_svm inclusing frames after frame0
     
     # set the final downsampled time_trace: concatenate downsampled X at frames before frame0, with x at frame0, and x at frames after frame0
-    time_trace_d = np.concatenate((xdb, [time_traceo[eventI]], xda))    
+    time_trace_d = np.concatenate((xdb, [0], xda))   # time_traceo[eventI] will be an array if eventI is an array, but if you load it from matlab as int, it wont be an array and you have to do [time_traceo[eventI]] to make it a list so concat works below:
+#    time_trace_d = np.concatenate((xdb, [time_traceo[eventI]], xda))    
     
     time_trace = time_trace_d
     print 'time trace size--> original:',time_traceo.shape, 'downsampled:', time_trace_d.shape
@@ -1149,7 +1150,13 @@ Y_svm0 = Y_svm + 0
 #    print 'Frame %d' %(ifr)
     
 for s in range(numSamples): # permute trials to get numSamples different sets of training and testing trials.
-    
+    # for each s, we will have a different set of trials 
+    # if hr and lr numbers are equal: for each s, the same dataset is used (including all hr and hr trials); out of which a random 90% group is used for training, and a random 10% is used for testing.
+    # if hr > lr: for each s, a random dataset is formed of all lr, and a subset of hr; out of which a random 90% group is used for training, and a random 10% is used for testing.
+    # if lr > hr: for each s, a random dataset is formed of all hr, and a subset of lr; out of which a random 90% group is used for training, and a random 10% is used for testing.
+
+    # shuffled trials have the same number as testing trials (ie 10% of all trials)
+
     print 'Iteration %d' %(s)
     
     ############ Make sure both classes have the same number of trials when training the classifier
@@ -1365,16 +1372,21 @@ if chAl==1:
 else:
     al = 'stAl'
     
+if outcome2ana == 'corr': # save incorr vars too bc SVM was trained on corr, and tested on icorr.
+    o2a = '_corr'
+else:
+    o2a = ''    
+    
 if trialHistAnalysis:
     if useEqualTrNums:
-        svmn = 'svmPrevChoice_eachFrame_%s_ds%d_eqTrs_%s_' %(al,regressBins,nowStr)
+        svmn = 'svmPrevChoice_eachFrame_%s%s_ds%d_eqTrs_%s_' %(al,o2a,regressBins,nowStr)
     else:
-        svmn = 'svmPrevChoice_eachFrame_%s_ds%d_%s_' %(al,regressBins,nowStr)
+        svmn = 'svmPrevChoice_eachFrame_%s%s_ds%d_%s_' %(al,o2a,regressBins,nowStr)
 else:
     if useEqualTrNums:
-        svmn = 'svmCurrChoice_eachFrame_%s_ds%d_eqTrs_%s_' %(al,regressBins,nowStr)
+        svmn = 'svmCurrChoice_eachFrame_%s%s_ds%d_eqTrs_%s_' %(al,o2a,regressBins,nowStr)
     else:
-        svmn = 'svmCurrChoice_eachFrame_%s_ds%d_%s_' %(al,regressBins,nowStr)
+        svmn = 'svmCurrChoice_eachFrame_%s%s_ds%d_%s_' %(al,o2a,regressBins,nowStr)
 print '\n', svmn[:-1]
 
 
@@ -1390,7 +1402,7 @@ if saveResults:
     
     if outcome2ana == 'corr': # save incorr vars too bc SVM was trained on corr, and tested on icorr.
         scio.savemat(svmName, {'thAct':thAct, 'numSamples':numSamples, 'softNorm':softNorm, 'meanX_fr':meanX_fr, 'stdX_fr':stdX_fr,
-                               'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded,
+                               'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'trsExcluded_incorr':trsExcluded_incorr,
                                'regType':regType, 'cvect':cvect, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
                                'wAllC':wAllC, 'bAllC':bAllC,
                                'perClassErrorTrain':perClassErrorTrain,
