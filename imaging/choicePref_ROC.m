@@ -1,7 +1,10 @@
-function choicePref_all = choicePref_ROC(traces_al_sm, ipsiTrs, contraTrs, makeplots, eventI_stimOn, useEqualNumTrs)
+function choicePref_all = choicePref_ROC(traces_al_sm, ipsiTrs, contraTrs, makeplots, eventI_stimOn, useEqualNumTrs, doChoicePref)
 % choicePref_all: frames x neurons
 % compute choice preference (2*(auc-0.5)) for each neuron at each frame.
 % use avetrialAlign_setVars to get the input vars.
+% ipsi is asigned 0 and contra is asigned 1 in "targets". so assumption is ipsi response is lower than contra. 
+% so auc>.5 (choicePref>0) happens when ipsi resp<contra, and auc<.5 (choicePref<0) happens when ipsi>contra.
+% choicePref: frames x neurons
 
 %%
 if ~exist('makeplots', 'var')
@@ -10,6 +13,10 @@ end
 
 if ~exist('useEqualNumTrs', 'var')
     useEqualNumTrs = false; % if true, equal number of trials for HR and LR will be used to compute ROC.
+end
+
+if ~exist('doChoicePref', 'var')
+    doChoicePref = 1; % if 1 we are interested in choicePref values; otherwise we want the AUC values. % otherwise we go with values of auc.
 end
 
 
@@ -84,7 +91,11 @@ for in = 1:size(traces_al_sm, 2)
             auc = trapz([0, fpr, 1], [0, tpr, 1]);
         end
         
-        choicePref =  2*(auc-0.5);
+        if doChoicePref==1 % otherwise we go with values of auc.
+            choicePref =  2*(auc-0.5);
+        else % we are interested in auc values 
+            choicePref = auc;
+        end
         %     figure; plot(choicePref) % look at choicePref for neuron in over time (all frames)
         choicePref_all(:,in) = choicePref; % frames x neurons
         

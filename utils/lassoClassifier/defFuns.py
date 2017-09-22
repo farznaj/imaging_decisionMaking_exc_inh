@@ -1050,15 +1050,21 @@ def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNum
 
 
 
-#%% Define a colormap
+#%% Change color order to jet 
 
-from matplotlib import cm
-from numpy import linspace
-start = 0.0
-stop = 1.0
-number_of_lines= len(days)
-cm_subsection = linspace(start, stop, number_of_lines) 
-colors = [ cm.jet(x) for x in cm_subsection ]
+def colorOrder(nlines=30):
+    ##%% Define a colormap
+    from matplotlib import cm
+    from numpy import linspace
+    start = 0.0
+    stop = 1.0
+    number_of_lines = nlines #len(days)
+    cm_subsection = linspace(start, stop, number_of_lines) 
+    colors = [ cm.jet(x) for x in cm_subsection ]
+    
+    #% Change color order to jet 
+    from cycler import cycler
+    plt.rcParams['axes.prop_cycle'] = cycler(color=colors)
 
 
         

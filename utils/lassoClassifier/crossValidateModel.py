@@ -35,7 +35,7 @@ def crossValidateModel(X, Y, modelFn, **options):
     cls = [0]
     while len(cls)<2: # make sure both classes exist in YTrain
     
-        if shflTrs: # shuffle trials to break any dependencies on the sequence of trails 
+        if shflTrs: # shuffle trials to break any dependencies on the sequence of trails; Also since we take the first 90% of trials as training and the last 10% as testing, for each run of this code we want to make sure we use different sets of trials as testing and training.
             shfl = rng.permutation(np.arange(0, numObservations));
             Ys = Y[shfl];
             Xs = X[shfl, :]; 

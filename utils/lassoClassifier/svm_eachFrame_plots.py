@@ -467,8 +467,9 @@ eventI_ds_allDays = eventI_ds_allDays.astype(int)
 
 ############################%%%%%%%%%%%%%%%%%%
 #%%
-import matplotlib as mpl
-mpl.style.use('default')
+#import matplotlib as mpl
+#mpl.style.use('default')
+plt.style.use('default')
 
 
 #%% Decide what days to analyze: exclude days with too few trials used for training SVM, also exclude incorr from days with too few incorr trials.
@@ -1574,12 +1575,12 @@ if savefigs:#% Save the figure
 
 
 
+#%% Change color order to jet 
+
+colorOrder(nlines=len(days))
+
 
 #%% Plot all days testing real data - shuffle
-
-# change color order to jet 
-from cycler import cycler
-plt.rcParams['axes.prop_cycle'] = cycler(color=colors)
 
 plt.figure(figsize=(5.5,10))
 

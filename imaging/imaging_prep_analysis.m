@@ -153,6 +153,8 @@ alldata_fileNames = alldata_fileNames(isf);
 [all_data, ~] = loadBehavData(alldata_fileNames(mdfFileNumber)); % , defaultHelpedTrs, saveHelpedTrs); % it removes the last trial too.
 fprintf('Total number of behavioral trials: %d\n', length(all_data))
 
+hrChoiceSide = all_data(1).highRateChoicePort;
+
 
 % begTrs = [0 cumsum(trials_per_session)]+1;
 % begTrs = begTrs(1:end-1);
@@ -710,7 +712,7 @@ allResp_HR_LR(trs2rmv) = NaN;
 postName = fullfile(pd, sprintf('post_%s.mat', pnev_n));
 if ~exist(postName, 'file')
     warning('creating postFile and saving vars in it')
-    save(postName, 'outcomes', 'allResp_HR_LR', 'stimrate', 'rmvTrsStimRateChanged')
+    save(postName, 'hrChoiceSide', 'outcomes', 'allResp_HR_LR', 'stimrate', 'rmvTrsStimRateChanged')
 end
 
 % save('151102_001.mat', '-append', 'trs2rmv')  % Do this!
