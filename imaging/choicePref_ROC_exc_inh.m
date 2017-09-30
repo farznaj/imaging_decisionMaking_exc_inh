@@ -307,13 +307,14 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-cod = get(groot,'defaultAxesColorOrder'); % default value
-set(groot,'defaultAxesColorOrder',cod)
- 
-
 %% 
+
+mice = {'fni16','fni17','fni18','fni19'};
 savefigs = 0;
-doChoicePref = 0;
+doChoicePref = 2; 
+% doChoicePref=0;  % use area under ROC curve % cares about ipsi bigger than contra or vice versa
+% doChoicePref=1;  % use choice pref = 2(AUC-.5) % cares about ipsi bigger than contra or vice versa
+% doChoicePref=2;  % Compute abs deviation of AUC from chance (.5); % doesnt care about ipsi bigger than contra or vice versa
 thMinTrs = 10; % days with fewer than this number wont go into analysis      
     
 chAl = 1;
@@ -321,45 +322,59 @@ outcome2ana = 'corr';
 thStimStrength = 0;
 frameLength = 1000/30.9; % sec.
 regressBins = round(100/frameLength); % 100ms # set to nan if you don't want to downsample.
-mice = {'fni16','fni17','fni18','fni19'};
+
+% cod = get(groot,'defaultAxesColorOrder'); 
+% set(groot,'defaultAxesColorOrder',cod)
+% default color order
+cod = [0    0.4470    0.7410
+    0.8500    0.3250    0.0980
+    0.9290    0.6940    0.1250
+    0.4940    0.1840    0.5560
+    0.4660    0.6740    0.1880
+    0.3010    0.7450    0.9330
+    0.6350    0.0780    0.1840];
+
 
 choicePref_exc_aligned_allMice = cell(1, length(mice));
 choicePref_inh_aligned_allMice = cell(1, length(mice));
 nPreMin_allMice = nan(1, length(mice));
 
+% im = 1;
 for im = 1:length(mice)
 
     %%% Set days for each mouse
     mouse = mice{im};
 
     if strcmp(mouse, 'fni16')
-        % you use the ep of each day to compute ROC ave for setting ROC histograms.    
-    %     days = {'150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2'};
         days = {'150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2'}; %'150914_1-2' : don't analyze!
-
+        % you use the ep of each day to compute ROC ave for setting ROC histograms.    
+        % days = {'150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2'};
+    
     elseif strcmp(mouse, 'fni17')
-        ep_ms = [800, 1100]; % window to compute ROC distributions ... for fni17 you used [800 1100] to compute svm which does not include choice... this is not the case for fni16.    
-    %     days = {'151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'};
         days = {'150814_1', '150817_1', '150824_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'};
-
+        % ep_ms = [800, 1100]; % window to compute ROC distributions ... for fni17 you used [800 1100] to compute svm which does not include choice... this is not the case for fni16.    
+        % days = {'151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'};
+    
     elseif strcmp(mouse, 'fni18')
         days = {'151209_1', '151210_1', '151211_1', '151214_1-2', '151215_1-2', '151216_1', '151217_1-2'}; % alldays
 
     elseif strcmp(mouse, 'fni19')    
         days = {'150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'};
+    
     end
     
     
-    %% Load roc vars
+    %% Set dir and load ROC vars
     
-    d = fullfile('/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/ROC', mouse);
+    dirn = fullfile('/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/ROC', mouse);
+    cd(dirn)
     if chAl==1, al = 'chAl'; else, al = 'stAl'; end        
     if strcmp(outcome2ana, 'corr'), o2a = '_corr'; else, o2a = '';  end    
     namv = sprintf('ROC_curr_%s%s_stimstr%d_%s_*.mat', al,o2a,thStimStrength,mouse);    
-    a = dir(fullfile(d,namv));
+    a = dir(fullfile(dirn,namv));
     fprintf('%s\n',a.name)    
 
-    load(fullfile(d,a.name), 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'choicePref_all_alld_exc', 'choicePref_all_alld_inh')  
+    load(fullfile(dirn,a.name), 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'choicePref_all_alld_exc', 'choicePref_all_alld_inh')  
 
     % min number of trials of the 2 class
     mnTrNum = min(corr_ipsi_contra,[],2);
@@ -417,19 +432,31 @@ for im = 1:length(mice)
     size(time_aligned)
 
 
-    %% Align choice pref traces of all days on the common eventI
+    %% Align choice pref traces of all days on the common eventI, exclude days with too few trials.
     
-    choicePref_exc_aligned = cell(1,length(days)); % each cell: nFrames_aligned x neurons
+    choicePref_exc_aligned = cell(1,length(days)); % each cell: nFrames_aligned x neurons (for days with few trials, we use nans and arbitrarily 3 neurons!)
     choicePref_inh_aligned = cell(1,length(days)); % nan(nPreMin + nPostMin + 1, length(days));
     % thMinTrs = 0;
     for iday = 1:length(days)
         if mnTrNum(iday,:) >= thMinTrs            
-            choicePref_exc_aligned{iday} = -choicePref_all_alld_exc{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :); % now ipsi is positive bc we do 1 minus, in the original model contra is positive
-            choicePref_inh_aligned{iday} = -choicePref_all_alld_inh{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :);
-            if doChoicePref==0  % use area under ROC curve
+
+            if doChoicePref==1  % use area under ROC curve % care about ipsi bigger than contra or vice versa
+                choicePref_exc_aligned{iday} = -choicePref_all_alld_exc{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :); % now ipsi is positive bc we do 1 minus, in the original model contra is positive
+                choicePref_inh_aligned{iday} = -choicePref_all_alld_inh{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :);
+                namc = 'choicePref';
+                yy = 0;
+            elseif doChoicePref==2  % Compute abs deviation of AUC from chance (.5); we want to compute
+                % |AUC-.5|, since choice pref = 2*(auc-.5), therefore |auc-.5| = 1/2 * |choice pref|
+                choicePref_exc_aligned{iday} = .5*abs(-choicePref_all_alld_exc{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :)); % now ipsi is positive bc we do 1 minus, in the original model contra is positive
+                choicePref_inh_aligned{iday} = .5*abs(-choicePref_all_alld_inh{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :));
+                namc = 'absDevAUC';
+                yy = [];
+            elseif doChoicePref==0  % use area under ROC curve
                 % choice pref = 2*(auc-.5)
                 choicePref_exc_aligned{iday} = (0.5 + choicePref_exc_aligned{iday}/2); % now ipsi auc will be above 0.5 bc we do - above
                 choicePref_inh_aligned{iday} = (0.5 + choicePref_inh_aligned{iday}/2); % frames x neurons
+                namc = 'AUC';
+                yy = .5;
             end
         else
             choicePref_exc_aligned{iday} = nan(nPreMin + nPostMin + 1 , 3); % set to nan so number of neurons doesnt matter... I just picked 3.
@@ -445,7 +472,7 @@ for im = 1:length(mice)
     nPreMin_allMice(im) = nPreMin;
     
     
-    %% Average AUC across neurons for each day and each frame
+    %% Average and se of AUC across neurons for each day and each frame
 
     aveexc = cellfun(@(x)mean(x,2), choicePref_exc_aligned, 'uniformoutput',0); % average across neurons
     aveexc = cell2mat(aveexc); % frs x days
@@ -458,37 +485,38 @@ for im = 1:length(mice)
     seinh = cell2mat(seinh); % frs x days        
 
     
-    %% Plots of ave-neuron AUC    
+    %% Plots
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    %% Plot hist of ROC values, averaged across neurons for each session, pool all session and all days, compare exc and inh
+    set(groot,'defaultAxesColorOrder',cod)
     
-%     figure; hold on;
-%     histogram(aveexc);
-%     histogram(aveinh);
-
+    
+    %% Dist of neuron-averaged ROC, pooled across all days and frames, compare exc and inh
+    
     y1 = aveexc(:);
     y2 = aveinh(:);
-    xlab = 'ROC AUC';
+    xlab = namc;
     ylab = 'Fraction days*frames';
     leg = {'exc','inh'};
-
-    plotHist(y1,y2,xlab,ylab,leg)    
-
+    cols = {'b','r'};
+    
+    plotHist(y1,y2,xlab,ylab,leg, cols, yy)    
 
     if savefigs
-        cd(fullfile('/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/ROC', mouse))
-        savefig(fullfile(d, 'ROC_curr_chAl_excInh_dist_aveNeurs_frsDaysPooled.fig'))
+        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_aveNeurs_frsDaysPooled.fig']))
+        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_aveNeurs_frsDaysPooled']))
     end
     
+    
     % run ttest across days for each frame
-    [h,p] = ttest2(aveexc',aveinh');
+    % ttest: is exc (neuron-averaged ROC pooled across days) ROC
+    % different from inh ROC? Do it for each time bin seperately.
+    [h,p] = ttest2(aveexc',aveinh'); % 1 x nFrs
     hh0 = h;
     hh0(h==0) = nan;
-    
-    
+        
     % abs
     %{
     aveexc = cellfun(@(x)mean(abs(x),2), choicePref_exc_aligned, 'uniformoutput',0); % average of neurons across each day
@@ -498,12 +526,25 @@ for im = 1:length(mice)
     aveinh = cell2mat(aveinh);
     %}
     
+
+    %% For each day compare exc and inh ROC during the trial timecourse
+
+    if isempty(yy)
+        figure('name', 'numTrs (ipsi contra)'); 
+    else
+        figure('name', 'ipsi>contra; numTrs (ipsi contra)'); 
+    end
+    set(gcf, 'position',[680    85   699   891])
+    c = 7;
+    minNrows = 3;
+    if minNrows > ceil(size(aveexc,2)/c)
+        r = minNrows;
+        c = ceil(c/minNrows);
+    else
+        r = ceil(size(aveexc,2)/c);
+    end
+    ha = tight_subplot(r, c, [.04 .04],[.03 .03],[.1 .03]);
     
-
-    %% For each day compare exc and inh ROC across time
-
-    figure('name', 'ipsi>contra; numTrs (ipsi contra)'); 
-    ha = tight_subplot(ceil(size(aveexc,2)/10), 10, [.04 .04],[.03 .03],[.03 .03]);
     for iday = 1:size(aveexc,2)        
         if mnTrNum(iday) >= thMinTrs             
 %             subplot(ceil(size(aveexc,2)/10), 10, iday)                                    
@@ -513,7 +554,9 @@ for im = 1:length(mice)
             hold(ha(iday),'on')
             yl = get(ha(iday),'ylim');
             plot(ha(iday), [0, 0], [yl(1), yl(2)], 'k:')
-            plot(ha(iday), [time_aligned(1), time_aligned(end)], [.5,.5], 'k:')
+            if ~isempty(yy)
+                plot(ha(iday), [time_aligned(1), time_aligned(end)], [yy,yy], 'k:')
+            end
             ylim(ha(iday), yl)
             da = days{iday};
             s = sprintf('%s (%d %d)', da(1:6), corr_ipsi_contra(iday,1), corr_ipsi_contra(iday,2));
@@ -522,20 +565,20 @@ for im = 1:length(mice)
     end
 %     subplot(ceil(size(aveexc,2)/10), 10, 1)
     xlabel(ha(1), 'Time')
-    ylabel(ha(1), 'ROC')
+    ylabel(ha(1), namc)
     legend(ha(1), [h1,h2], 'exc','inh')
     
 
     if savefigs
-%         cd(fullfile('/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/ROC', mouse))
-        savefig(fullfile(d, 'ROC_curr_chAl_excInh_timeCourse_aveNeurs_eachDay.fig'))
+        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_eachDay.fig']))
+        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_eachDay']))
     end
      
     
-    %% learning figure: For each frame, compare exc/inh neuron-averaged ROC across days
+    %% Learning figure: Compare how exc/inh neuron-averaged ROC change across days, do it separately for each frame
     
-    figure(); 
-    ha = tight_subplot(ceil((size(aveexc,1)+1)/4), 4, [.04 .04],[.03 .03],[.03 .03]);
+    figure('position', [680   131   714   845]); 
+    ha = tight_subplot(ceil((size(aveexc,1)+1)/4), 4, [.04 .04],[.03 .03],[.1 .03]);
 %     subplot(ceil((size(aveexc,1)+1)/4), 4, 1)
     h = plot(ha(1), corr_ipsi_contra);
     legend(h, 'ipsi', 'contra')
@@ -547,124 +590,176 @@ for im = 1:length(mice)
         [h1] = boundedline(ha(fr+1), 1:size(aveexc,2), aveexc(fr,:), seexc(fr,:), 'b', 'alpha', 'nan', 'remove');
         [h2] = boundedline(ha(fr+1), 1:size(aveinh,2), aveinh(fr,:), seinh(fr,:), 'r', 'alpha', 'nan', 'remove');
         hold(ha(fr+1),'on')
-        plot(ha(fr+1), [0,length(days)+1], [.5,.5], 'k:')
+        if ~isempty(yy)
+            plot(ha(fr+1), [0,length(days)+1], [yy,yy], 'k:')
+        end
         title(ha(fr+1), sprintf('%d ms',round(time_aligned(fr))))
     end
 %     subplot(ceil((size(aveexc,1)+1)/4), 4, 2)
     xlabel(ha(2), 'days')
-    ylabel(ha(2), 'ROC')
+    ylabel(ha(2), namc)
     legend(ha(2), [h1,h2], 'exc','inh')
     title(ha(2), sprintf('time rel2 choice = %d ms',round(time_aligned(1))))
     
     if savefigs
-%         cd(fullfile('/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/ROC', mouse))
-        savefig(fullfile(d, 'ROC_curr_chAl_excInh_trainingDays_aveNeurs_eachFrame.fig'))
+        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveNeurs_eachFrame.fig']))
+        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveNeurs_eachFrame']))
     end
+   
     
-    
-    
-    %% Superimpose all days ROC vs. frame
+    %% Superimpose all days ROC vs. time
   
-
     co = jet(size(aveexc,2));
     set(groot,'defaultAxesColorOrder',co)
     
-    figure
+    figure('position', [424   253   434   687])
     subplot(211)
-    plot(time_aligned, aveexc)
-    hold on
-    plot([time_aligned(1),time_aligned(end)], [.5,.5], 'k:')
+    plot(time_aligned, aveexc);     hold on
+    if ~isempty(yy)
+        plot([time_aligned(1),time_aligned(end)], [yy,yy], 'k:')
+    end
     yl = get(gca,'ylim');
     plot([0,0], yl, 'k:')
     ylim(yl)
     title('exc')
-    legend(days)
+    legend(days, 'Position', [0.6434 -0.7195 0.3153 1.3991]);
     xlabel('time')
-    ylabel('ROC')
+    ylabel(namc)
     
     subplot(212)
-    plot(time_aligned, aveinh)
-    hold on
-    plot([time_aligned(1),time_aligned(end)], [.5,.5], 'k:')
+    plot(time_aligned, aveinh);     hold on
+    if ~isempty(yy)
+        plot([time_aligned(1),time_aligned(end)], [yy,yy], 'k:')
+    end
     yl = get(gca,'ylim');
     plot([0,0], yl, 'k:')
     ylim(yl)    
-    title('inh')
-    
+    title('inh')    
 %     figure
 %     imagesc(aveexc)
 
     if savefigs
-%         cd(fullfile('/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/ROC', mouse))
-        savefig(fullfile(d, 'ROC_curr_chAl_excInh_allDaysSup_timeCourse_aveNeurs.fig'))
+        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_allDaysSup.fig']))
+        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_allDaysSup']))
     end
     
+    % go back to default color order
+    set(groot,'defaultAxesColorOrder',cod)
     
-    %%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    Finish below, plotHist....
-        
     
-    %% Pool AUC of all neurons of all days
+    %% Dist of AUC pooled across all neurons of all days and all time bins
 
-    excall = cell2mat(choicePref_exc_aligned); % aligned_frs x sum_exc_neurons
-    inhall = cell2mat(choicePref_inh_aligned); % aligned_frs x sum_inh_neurons
+    excall = cell2mat(choicePref_exc_aligned); % nFrs x exc_all
+    inhall = cell2mat(choicePref_inh_aligned); % nFrs x inh_all
     size(excall), size(inhall)
     
-    figure; hold on;
-    histogram(excall)%, 'Normalization', 'probability');
-    histogram(inhall)%, 'Normalization', 'probability')
+    y1 = excall(:);
+    y2 = inhall(:);
+    xlab = namc;
+    ylab = 'Fraction neurons*days*frames';
+    leg = {'exc','inh'};
+    cols = {'b','r'};
+
+    plotHist(y1,y2,xlab,ylab,leg, cols, yy)    
+
+
+    if savefigs        
+        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_frsDaysNeursPooled.fig']))
+        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_frsDaysNeursPooled']))
+    end            
     
-    h = ttest2(excall', inhall');
+    % ttest: is exc (single neuron ROC pooled across days) ROC
+    % different from inh ROC? Do it for each time bin seperately.
+    h = ttest2(excall', inhall'); % h: 1 x nFrs
     hh = h;
     hh(h==0) = nan;
 
 
-    %% Plots
+    %% Plot AUC timecourse averaged across days
 
     figure('position',[10   556   792   383]);
-    % average and se across days; each day is already averaged across neurons.
-    subplot(121); hold on
-    h1 = boundedline(time_aligned, nanmean(aveexc,2), nanstd(aveexc,0,2)/sqrt(size(aveexc,2)), 'b', 'alpha');
-    h2 = boundedline(time_aligned, nanmean(aveinh,2), nanstd(aveinh,0,2)/sqrt(size(aveinh,2)), 'r', 'alpha');
-    a = get(gca, 'ylim');
-    plot(time_aligned, hh0*(a(2)-.05*diff(a)), 'k')
-    legend([h1,h2], 'Excitatory', 'Inhibitory')
-    xlabel('Time since choice onset (ms)')
-    ylabel('ROC AUC')
-    title('mean+se days')
 
-    %%%
+    % Average and se across days; each day is already averaged across neurons; done seperately for each time bin
+    subplot(121); hold on
+    h1 = boundedline(time_aligned, nanmean(aveexc,2), nanstd(aveexc,0,2)/sqrt(sum(mnTrNum>=thMinTrs)), 'b', 'alpha');
+    h2 = boundedline(time_aligned, nanmean(aveinh,2), nanstd(aveinh,0,2)/sqrt(sum(mnTrNum>=thMinTrs)), 'r', 'alpha');
+    a = get(gca, 'ylim');    
+    plot(time_aligned, hh0*(a(2)-.05*diff(a)), 'k.')    
+    plot([0,0],a,'k:')
+    b = get(gca, 'xlim');
+    if ~isempty(yy)
+        plot(b, [yy,yy],'k:')
+    end
+    legend([h1,h2], {'Excitatory', 'Inhibitory'}, 'position', [0.1347    0.8177    0.1414    0.0901]);
+    xlabel('Time since choice onset (ms)')
+    ylabel(namc)
+    title('mean+se days (Ns aved per day)')
+
+    
+    %%% Average and se across all neurons of all days; done seperately for each time bin
     subplot(122); hold on
-    h1 = boundedline(time_aligned, nanmean(excall,2), nanstd(excall,0,2)/sqrt(size(excall,2)), 'b', 'alpha');
-    h2 = boundedline(time_aligned, nanmean(inhall,2), nanstd(inhall,0,2)/sqrt(size(inhall,2)), 'r', 'alpha');
+    h1 = boundedline(time_aligned, nanmean(excall,2), nanstd(excall,0,2)/sqrt(sum(~isnan(excall(1,:)))), 'b', 'alpha');
+    h2 = boundedline(time_aligned, nanmean(inhall,2), nanstd(inhall,0,2)/sqrt(sum(~isnan(inhall(1,:)))), 'r', 'alpha');
     a = get(gca, 'ylim');
-    plot(time_aligned, hh*(a(2)-.05*diff(a)), 'k')
-    legend([h1,h2], 'Excitatory', 'Inhibitory')
+    plot(time_aligned, hh*(a(2)-.05*diff(a)), 'k.')
+    plot([0,0],a,'k:')
+    b = get(gca, 'xlim');
+    if ~isempty(yy)
+        plot(b, [yy,yy],'k:')    
+    end
+    legend([h1,h2], {'Excitatory', 'Inhibitory'}, 'position', [0.5741    0.8281    0.1414    0.0901])
     if chAl==1
         xlabel('Time since choice onset (ms)')
     else
         xlabel('Time since stim onset (ms)')
     end
-    ylabel('ROC performance')
+    ylabel(namc)
     title('mean+se all neurons of all days')
 
 
-    if savefigs
-        cd(fullfile('/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/ROC', mouse))
-        if trialHistAnalysis==0
-            savefig('curr_ave_ROC.fig')
-        else
-            savefig('prev_ave_ROC.fig')        
+    if savefigs        
+        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveDays.fig']))
+        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveDays']))
+    end
+
+    
+    %% Compare exc/inh ROC dist for each frame, all days pooled
+
+    xlab = namc;
+    ylab = 'Fraction neurons*days';
+    leg = {'exc','inh'};
+    cols = {'b','r'};
+    
+    fign = figure('position', [680   197   696   779]);
+    c = 4;        
+    ha = tight_subplot(ceil(length(time_aligned)/c), c, [.1 .04],[.03 .03],[.1 .03]);
+    for ifr = 1:length(time_aligned)        
+        y1 = excall(ifr,:);
+        y2 = inhall(ifr,:);
+        tit = round(time_aligned(ifr));
+        plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, ha(ifr), yy)
+        
+        if ifr==1
+            xlabel(ha(ifr), xlab)
+            ylabel(ha(ifr), ylab)
+            legend(ha(ifr), leg)
         end
     end
 
 
+    if savefigs        
+        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_eachFr_daysNeursPooled.fig']))
+        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_eachFr_daysNeursPooled']))
+    end               
+    
 end
 
 
+
+
+
+%%
+%{
     %% Set vars for ROC histogram: average of ROC performance in the window [800 1100]ms for each neuron (to compare it with SVM performance in this same window)
 
     eventI = nPreMin+1;
@@ -763,8 +858,7 @@ end
             savefig('prev_dist_ROC.fig')        
         end
     end
-
-end
+%}
 
     
     

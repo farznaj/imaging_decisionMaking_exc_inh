@@ -1,4 +1,4 @@
-function plotHist(y1,y2,xlab,ylab,leg)
+function plotHist(y1,y2,xlab,ylab,leg, cols, yy) % draw a vertical line at yy
 
     r1 = round(min([y1(:);y2(:)]),1); 
     r2 = round(max([y1(:);y2(:)])+.05,1);
@@ -14,25 +14,30 @@ function plotHist(y1,y2,xlab,ylab,leg)
     %     yi = smooth(yi);
 
     figure;
+    
     subplot(211), hold on
-    plot(x, ye)
-    plot(x, yi)
+    plot(x, ye, 'color', cols{1})
+    plot(x, yi, 'color', cols{2})
     xlabel(xlab)
     ylabel(ylab)
     legend(leg)
-    plot([.5 .5],[0 max([ye,yi])], 'k:')
+    if ~isempty(yy)
+        plot([yy yy],[0 max([ye,yi])], 'k:')
+    end
     a = gca;
     % print p value
     [h,p] = ttest2(y1(:),y2(:));
-    title(sprintf('ttest2 p = %.3f',round(p,3)))
+    title(sprintf('p(ttest2) = %.3f', round(p,3)))
     
     subplot(212), hold on
-    plot(x, cumsum(ye))
-    plot(x, cumsum(yi))
+    plot(x, cumsum(ye), 'color', cols{1})
+    plot(x, cumsum(yi), 'color', cols{2})
     xlabel(xlab)
     ylabel('Cumulative sum')
     legend(leg)
-    plot([.5 .5],[0 max([ye,yi])], 'k:')
+    if ~isempty(yy)
+        plot([yy yy],[0 1], 'k:')
+    end
     a = [a, gca];
 
     linkaxes(a, 'x')

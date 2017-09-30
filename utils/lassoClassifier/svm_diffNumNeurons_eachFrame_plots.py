@@ -13,7 +13,7 @@ Created on Sun Mar 12 15:12:29 2017
 
 #%% Change the following vars:
 
-mousename = 'fni19' #'fni17'
+mousename = 'fni17' #'fni17'
 savefigs = 1
 types2an = [0,1,2]#[0,1] # inh,allN,exc; range(3) # normally we want all, unless exc is not ready yet!
 
