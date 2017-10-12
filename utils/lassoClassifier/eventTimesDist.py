@@ -101,6 +101,10 @@ for iday in range(len(days)):
     imfilename, pnevFileName, dataPath = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided, nOuts=3)   
     postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
     
+    # no need for the following bc we load trsExcluded later
+#    Data = scio.loadmat(postName, variable_names=['outcomes'])
+#    outcomes = (Data.pop('outcomes').astype('float'))[0,:]
+    
     
     ######### Load time of some trial events    
     Data = scio.loadmat(postName, variable_names=['timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'time1stSideTry', 'timeReward', 'timeCommitIncorrResp', 'time1stCorrectTry', 'time1stIncorrectTry'])
@@ -245,7 +249,7 @@ for iday in range(len(days)):
 
 #############################################################################################
         
-#%% For each session subtract stimOnset times from the other event times
+#%% For each session subtract all event times from stimOnset times
 
 timeStimOffset0_all_relOn = np.array([timeStimOffset0_all[iday] - timeStimOnset_all[iday] for iday in range(len(days))])
 timeStimOffset_all_relOn = np.array([timeStimOffset_all[iday] - timeStimOnset_all[iday] for iday in range(len(days))])
@@ -428,6 +432,7 @@ plt.subplots_adjust(hspace=0.65)
 
 
 
+#%%
 ############################### Relative to choice onset ###############################
 
 #%%

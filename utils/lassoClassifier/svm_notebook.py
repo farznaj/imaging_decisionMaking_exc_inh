@@ -1475,9 +1475,9 @@ if doPlots:
     plt.figure()
     plt.subplot(1,2,1)
     tr1 = np.nanmean(Xti_w[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xti_w[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xti_w[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xti_w[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xti_w[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xti_w[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_init, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_init, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_init, tr1, 'b', label = 'high rate')
@@ -1511,9 +1511,9 @@ if doPlots:
     plt.figure()
     plt.subplot(1,2,1)
     tr1 = np.nanmean(Xt_w[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xt_w[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xt_w[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xt_w[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xt_w[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xt_w[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_stim, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_stim, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_stim, tr1, 'b', label = 'high rate')
@@ -1549,9 +1549,9 @@ if doPlots:
     plt.figure()
     plt.subplot(1,2,1)
     tr1 = np.nanmean(Xtg_w[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xtg_w[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xtg_w[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xtg_w[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xtg_w[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xtg_w[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_go, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_go, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_go, tr1, 'b', label = 'high rate')
@@ -1586,9 +1586,9 @@ if doPlots:
     plt.figure()
     plt.subplot(1,2,1)
     tr1 = np.nanmean(Xtc_w[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xtc_w[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xtc_w[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xtc_w[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xtc_w[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xtc_w[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_1stSide, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_1stSide, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_1stSide, tr1, 'b', label = 'high rate')
@@ -1620,9 +1620,9 @@ if doPlots:
     plt.figure()
     plt.subplot(1,2,1)
     tr1 = np.nanmean(Xtr_w[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xtr_w[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xtr_w[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xtr_w[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xtr_w[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xtr_w[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_rew, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_rew, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_rew, tr1, 'b', label = 'high rate')
@@ -1654,9 +1654,9 @@ if doPlots:
     plt.figure()
     plt.subplot(1,2,1)
     tr1 = np.nanmean(Xtp_w[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xtp_w[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xtp_w[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xtp_w[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xtp_w[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xtp_w[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_incorrResp, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_incorrResp, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_incorrResp, tr1, 'b', label = 'high rate')
@@ -1885,9 +1885,9 @@ if compExcInh and doPlots and neuronType==2:
     plt.figure()
     plt.subplot(1,2,1)
     tr1 = np.nanmean(Xti_w_e[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xti_w_e[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xti_w_e[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xti_w_e[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xti_w_e[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xti_w_e[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_init, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_init, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_init, tr1, 'b', label = 'high rate')
@@ -1902,9 +1902,9 @@ if compExcInh and doPlots and neuronType==2:
 
     plt.subplot(1,2,2)
     tr1 = np.nanmean(Xti_w_i[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xti_w_i[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xti_w_i[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xti_w_i[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xti_w_i[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xti_w_i[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_init, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_init, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_init, tr1, 'b', label = 'high rate')
@@ -1923,9 +1923,9 @@ if compExcInh and doPlots and neuronType==2:
     plt.figure()
     plt.subplot(1,2,1)
     tr1 = np.nanmean(Xt_w_e[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xt_w_e[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xt_w_e[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xt_w_e[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xt_w_e[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xt_w_e[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_stim, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_stim, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_stim, tr1, 'b', label = 'high rate')
@@ -1940,9 +1940,9 @@ if compExcInh and doPlots and neuronType==2:
 
     plt.subplot(1,2,2)
     tr1 = np.nanmean(Xt_w_i[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xt_w_i[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xt_w_i[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xt_w_i[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xt_w_i[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xt_w_i[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_stim, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_stim, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_stim, tr1, 'b', label = 'high rate')
@@ -1961,9 +1961,9 @@ if compExcInh and doPlots and neuronType==2:
     plt.figure()
     plt.subplot(1,2,1)
     tr1 = np.nanmean(Xtg_w_e[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xtg_w_e[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xtg_w_e[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xtg_w_e[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xtg_w_e[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xtg_w_e[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_go, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_go, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_go, tr1, 'b', label = 'high rate')
@@ -1979,9 +1979,9 @@ if compExcInh and doPlots and neuronType==2:
 
     plt.subplot(1,2,2)
     tr1 = np.nanmean(Xtg_w_i[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xtg_w_i[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xtg_w_i[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xtg_w_i[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xtg_w_i[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xtg_w_i[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_go, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_go, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_go, tr1, 'b', label = 'high rate')
@@ -2000,9 +2000,9 @@ if compExcInh and doPlots and neuronType==2:
     plt.figure()
     plt.subplot(1,2,1)
     tr1 = np.nanmean(Xtc_w_e[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xtc_w_e[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xtc_w_e[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xtc_w_e[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xtc_w_e[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xtc_w_e[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_1stSide, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_1stSide, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_1stSide, tr1, 'b', label = 'high rate')
@@ -2014,9 +2014,9 @@ if compExcInh and doPlots and neuronType==2:
 
     plt.subplot(1,2,2)
     tr1 = np.nanmean(Xtc_w_i[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xtc_w_i[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xtc_w_i[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xtc_w_i[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xtc_w_i[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xtc_w_i[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_1stSide, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_1stSide, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_1stSide, tr1, 'b', label = 'high rate')
@@ -2032,9 +2032,9 @@ if compExcInh and doPlots and neuronType==2:
     plt.figure()
     plt.subplot(1,2,1)
     tr1 = np.nanmean(Xtr_w_e[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xtr_w_e[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xtr_w_e[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xtr_w_e[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xtr_w_e[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xtr_w_e[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_rew, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_rew, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_rew, tr1, 'b', label = 'high rate')
@@ -2046,9 +2046,9 @@ if compExcInh and doPlots and neuronType==2:
 
     plt.subplot(1,2,2)
     tr1 = np.nanmean(Xtr_w_i[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xtr_w_i[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xtr_w_i[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xtr_w_i[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xtr_w_i[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xtr_w_i[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_rew, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_rew, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_rew, tr1, 'b', label = 'high rate')
@@ -2064,9 +2064,9 @@ if compExcInh and doPlots and neuronType==2:
     plt.figure()
     plt.subplot(1,2,1)
     tr1 = np.nanmean(Xtp_w_e[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xtp_w_e[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xtp_w_e[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xtp_w_e[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xtp_w_e[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xtp_w_e[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_incorrResp, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_incorrResp, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_incorrResp, tr1, 'b', label = 'high rate')
@@ -2078,9 +2078,9 @@ if compExcInh and doPlots and neuronType==2:
 
     plt.subplot(1,2,2)
     tr1 = np.nanmean(Xtp_w_i[:, hr_trs],  axis = 1)
-    tr1_se = np.nanstd(Xtp_w_i[:, hr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr1_se = np.nanstd(Xtp_w_i[:, hr_trs],  axis = 1) / np.sqrt(sum(hr_trs));
     tr0 = np.nanmean(Xtp_w_i[:, lr_trs],  axis = 1)
-    tr0_se = np.nanstd(Xtp_w_i[:, lr_trs],  axis = 1) / np.sqrt(numTrials);
+    tr0_se = np.nanstd(Xtp_w_i[:, lr_trs],  axis = 1) / np.sqrt(sum(lr_trs));
     plt.fill_between(time_aligned_incorrResp, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_aligned_incorrResp, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
     plt.plot(time_aligned_incorrResp, tr1, 'b', label = 'high rate')

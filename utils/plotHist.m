@@ -1,4 +1,4 @@
-function plotHist(y1,y2,xlab,ylab,leg, cols, yy) % draw a vertical line at yy
+function fh = plotHist(y1,y2,xlab,ylab,leg, cols, yy) % draw a vertical line at yy
 
     r1 = round(min([y1(:);y2(:)]),1); 
     r2 = round(max([y1(:);y2(:)])+.05,1);
@@ -13,7 +13,7 @@ function plotHist(y1,y2,xlab,ylab,leg, cols, yy) % draw a vertical line at yy
     %     ye = smooth(ye);
     %     yi = smooth(yi);
 
-    figure;
+    fh = figure;
     
     subplot(211), hold on
     plot(x, ye, 'color', cols{1})

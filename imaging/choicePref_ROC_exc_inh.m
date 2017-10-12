@@ -1,5 +1,5 @@
 saveVars = 1; % if 1, vars will be saved.
-savefigs = 0;
+savefigs = 1;
 
 outcome2ana = 'corr';
 chAl = 1;
@@ -11,7 +11,7 @@ makeplots = 0;
 frameLength = 1000/30.9; % sec.
 regressBins = round(100/frameLength); % 100ms # set to nan if you don't want to downsample.
 
-for mice = {'fni16','fni17','fni18','fni19'}
+for mice = {'fni16','fni17','fni18','fni19'} % mice = {'fni16'}
     
     mouse = mice{1};
 
@@ -161,16 +161,18 @@ for mice = {'fni16','fni17','fni18','fni19'}
 
 
 
-            % set frames after frame0 (not including it)
+            % set frames after frame0 (including it)
             lenPost = size(X_svmo,1) - eventI;
-            f = eventI+1 : eventI + regressBins * floor(lenPost/regressBins); % total length is a multiplicaion of regressBins    
+            f = eventI : eventI-1 + regressBins * floor(lenPost/regressBins); % total length is a multiplicaion of regressBins    
+%             f = eventI+1 : eventI + regressBins * floor(lenPost/regressBins); % total length is a multiplicaion of regressBins    
             x = X_svmo(f,:,:); % X_svmo including frames after frame0
             [T1, N1, C1] = size(x);
             tt = floor(T1 / regressBins); % number of time points in the downsampled X including frames after frame0
             xda = squeeze(mean(reshape(x, [regressBins, tt, N1, C1]), 1)); % downsampled X_svmo inclusing frames after frame0
 
             % set the final downsampled X_svmo: concatenate downsampled X at frames before frame0, with x at frame0, and x at frames after frame0
-            X_svm_d = cat(1, xdb, X_svmo(eventI,:,:), xda);    
+            X_svm_d = cat(1, xdb, xda);    
+%             X_svm_d = cat(1, xdb, X_svmo(eventI,:,:), xda);    
 
             X_svm = X_svm_d;
     %             print 'trace size--> original:',X_svmo.shape, 'downsampled:', X_svm_d.shape
@@ -310,13 +312,14 @@ end
 %% 
 
 mice = {'fni16','fni17','fni18','fni19'};
-savefigs = 0;
+savefigs = 1;
 doChoicePref = 2; 
 % doChoicePref=0;  % use area under ROC curve % cares about ipsi bigger than contra or vice versa
 % doChoicePref=1;  % use choice pref = 2(AUC-.5) % cares about ipsi bigger than contra or vice versa
 % doChoicePref=2;  % Compute abs deviation of AUC from chance (.5); % doesnt care about ipsi bigger than contra or vice versa
 thMinTrs = 10; % days with fewer than this number wont go into analysis      
-    
+
+nowStr = datestr(now, 'yymmdd-HHMMSS');
 chAl = 1;
 outcome2ana = 'corr';
 thStimStrength = 0;
@@ -372,6 +375,7 @@ for im = 1:length(mice)
     if strcmp(outcome2ana, 'corr'), o2a = '_corr'; else, o2a = '';  end    
     namv = sprintf('ROC_curr_%s%s_stimstr%d_%s_*.mat', al,o2a,thStimStrength,mouse);    
     a = dir(fullfile(dirn,namv));
+    a = a(end); % use the latest saved file
     fprintf('%s\n',a.name)    
 
     load(fullfile(dirn,a.name), 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'choicePref_all_alld_exc', 'choicePref_all_alld_inh')  
@@ -502,11 +506,11 @@ for im = 1:length(mice)
     leg = {'exc','inh'};
     cols = {'b','r'};
     
-    plotHist(y1,y2,xlab,ylab,leg, cols, yy)    
+    fh = plotHist(y1,y2,xlab,ylab,leg, cols, yy);
 
     if savefigs
-        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_aveNeurs_frsDaysPooled.fig']))
-        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_aveNeurs_frsDaysPooled']))
+        savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_aveNeurs_frsDaysPooled_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_aveNeurs_frsDaysPooled_', nowStr]))
     end
     
     
@@ -530,9 +534,9 @@ for im = 1:length(mice)
     %% For each day compare exc and inh ROC during the trial timecourse
 
     if isempty(yy)
-        figure('name', 'numTrs (ipsi contra)'); 
+        fh=figure('name', 'numTrs (ipsi contra)'); 
     else
-        figure('name', 'ipsi>contra; numTrs (ipsi contra)'); 
+        fh=figure('name', 'ipsi>contra; numTrs (ipsi contra)'); 
     end
     set(gcf, 'position',[680    85   699   891])
     c = 7;
@@ -570,14 +574,14 @@ for im = 1:length(mice)
     
 
     if savefigs
-        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_eachDay.fig']))
-        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_eachDay']))
+        savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_eachDay_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_eachDay_', nowStr]))
     end
      
     
     %% Learning figure: Compare how exc/inh neuron-averaged ROC change across days, do it separately for each frame
     
-    figure('position', [680   131   714   845]); 
+    fh=figure('position', [680   131   714   845]); 
     ha = tight_subplot(ceil((size(aveexc,1)+1)/4), 4, [.04 .04],[.03 .03],[.1 .03]);
 %     subplot(ceil((size(aveexc,1)+1)/4), 4, 1)
     h = plot(ha(1), corr_ipsi_contra);
@@ -602,8 +606,8 @@ for im = 1:length(mice)
     title(ha(2), sprintf('time rel2 choice = %d ms',round(time_aligned(1))))
     
     if savefigs
-        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveNeurs_eachFrame.fig']))
-        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveNeurs_eachFrame']))
+        savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveNeurs_eachFrame_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveNeurs_eachFrame_', nowStr]))
     end
    
     
@@ -612,7 +616,7 @@ for im = 1:length(mice)
     co = jet(size(aveexc,2));
     set(groot,'defaultAxesColorOrder',co)
     
-    figure('position', [424   253   434   687])
+    fh=figure('position', [424   253   434   687]);
     subplot(211)
     plot(time_aligned, aveexc);     hold on
     if ~isempty(yy)
@@ -639,8 +643,8 @@ for im = 1:length(mice)
 %     imagesc(aveexc)
 
     if savefigs
-        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_allDaysSup.fig']))
-        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_allDaysSup']))
+        savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_allDaysSup_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_allDaysSup_', nowStr]))
     end
     
     % go back to default color order
@@ -660,12 +664,12 @@ for im = 1:length(mice)
     leg = {'exc','inh'};
     cols = {'b','r'};
 
-    plotHist(y1,y2,xlab,ylab,leg, cols, yy)    
+    fh = plotHist(y1,y2,xlab,ylab,leg, cols, yy);
 
 
     if savefigs        
-        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_frsDaysNeursPooled.fig']))
-        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_frsDaysNeursPooled']))
+        savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_frsDaysNeursPooled_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_frsDaysNeursPooled_', nowStr]))
     end            
     
     % ttest: is exc (single neuron ROC pooled across days) ROC
@@ -677,7 +681,7 @@ for im = 1:length(mice)
 
     %% Plot AUC timecourse averaged across days
 
-    figure('position',[10   556   792   383]);
+    fh=figure('position',[10   556   792   383]);
 
     % Average and se across days; each day is already averaged across neurons; done seperately for each time bin
     subplot(121); hold on
@@ -718,8 +722,8 @@ for im = 1:length(mice)
 
 
     if savefigs        
-        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveDays.fig']))
-        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveDays']))
+        savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveDays_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveDays_', nowStr]))
     end
 
     
@@ -748,8 +752,8 @@ for im = 1:length(mice)
 
 
     if savefigs        
-        savefig(fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_eachFr_daysNeursPooled.fig']))
-        print('-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_eachFr_daysNeursPooled']))
+        savefig(fign, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_eachFr_daysNeursPooled_', nowStr,'.fig']))
+        print(fign, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_eachFr_daysNeursPooled_', nowStr]))
     end               
     
 end

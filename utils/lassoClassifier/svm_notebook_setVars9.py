@@ -57,8 +57,8 @@ def svm_notebook_setVars9(mousename, imagingFolder, mdfFileNumber, chAl, doInhAl
     thAct = 5e-4 #5e-4; # 1e-5 # neurons whose average activity during ep is less than thAct will be called non-active and will be excluded.
 #    thTrsWithSpike = 1; # 3 % remove neurons that are active in <thSpTr trials.
     pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
-    neuronType=2    	 
-    setNsExcluded=1
+    neuronType = 2    	 
+    setNsExcluded = 1
     saveHTML = 0; # whether to save the html file of notebook with all figures or not.
 
 

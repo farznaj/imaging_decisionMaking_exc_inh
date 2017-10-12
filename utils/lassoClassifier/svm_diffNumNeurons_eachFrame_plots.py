@@ -13,8 +13,8 @@ Created on Sun Mar 12 15:12:29 2017
 
 #%% Change the following vars:
 
-mousename = 'fni17' #'fni17'
-savefigs = 1
+mousename = 'fni19' #'fni17'
+savefigs = 0
 types2an = [0,1,2]#[0,1] # inh,allN,exc; range(3) # normally we want all, unless exc is not ready yet!
 
 ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone.
@@ -618,17 +618,20 @@ def alFrs_exc(CAav_all):
 # output array size: numDays; each day: nNeurons x nAlignedFrs x nExcShfl
     
 CAav_test_inh_alig = alFrs(CAav_test_inh_all)
+CAsd_test_inh_alig = alFrs(CAsd_test_inh_all)
 #CAav_test_shfl_inh_alig = alFrs(CAav_test_shfl_inh_all)
 #CAav_test_chance_inh_alig = alFrs(CAav_test_chance_inh_all)
 #CAav_train_inh_alig = alFrs(CAav_train_inh_all)
 
 CAav_test_allN_alig = alFrs(CAav_test_allN_all)
+CAsd_test_allN_alig = alFrs(CAsd_test_allN_all)
 #CAav_test_shfl_allN_alig = alFrs(CAav_test_shfl_allN_all)
 #CAav_test_chance_allN_alig = alFrs(CAav_test_chance_allN_all)
 #CAav_train_allN_alig = alFrs(CAav_train_allN_all)
 
 # exc: output array size: numDays; each day: nNeurons x nAlignedFrs x nExcShfl
 CAav_test_exc_alig = alFrs_exc(CAav_test_exc_all)
+CAsd_test_exc_alig = alFrs_exc(CAsd_test_exc_all)
 #CAav_test_shfl_exc_alig = alFrs(CAav_test_shfl_exc_all)
 #CAav_test_chance_exc_alig = alFrs(CAav_test_chance_exc_all)
 #CAav_train_exc_alig = alFrs(CAav_train_exc_all)
@@ -687,20 +690,25 @@ def sameMaxNs_exc(CAav_alig, mxNumNeur):
 #mxNumNeur = max(numInh).astype(int)    
 mxNumNeur = np.percentile(numInh,20).astype(int) # dont go with max, bc only very few sessions will have that many neurons, also dont go with min so you dont loose all data from sessions with more neurons, instead go with the 20th percentile of neuron numbers across days, so we can see how CA changes with nN using higher values of nN, but still making sure most days contributed to the plot.
 CAav_test_inh_alig_sameMaxN = sameMaxNs(CAav_test_inh_alig, mxNumNeur)
+CAsd_test_inh_alig_sameMaxN = sameMaxNs(CAsd_test_inh_alig, mxNumNeur)
 
 #mxNumNeur = max(numInh).astype(int)    
 mxNumNeur = np.percentile(numInh,20).astype(int)
 CAav_test_exc_alig_sameMaxN = sameMaxNs_exc(CAav_test_exc_alig, mxNumNeur)
+CAsd_test_exc_alig_sameMaxN = sameMaxNs_exc(CAsd_test_exc_alig, mxNumNeur)
 
 # allN    
 #mxNumNeur = max(numAlln).astype(int)    
 mxNumNeur = np.percentile(numAlln,20).astype(int)
 CAav_test_allN_alig_sameMaxN = sameMaxNs(CAav_test_allN_alig, mxNumNeur)
+CAsd_test_allN_alig_sameMaxN = sameMaxNs(CAsd_test_allN_alig, mxNumNeur)
 
 
 #%% Keep original vals of exc before averaging across nExcShfl
 
 CAav_test_exc_alig_sameMaxN0 = CAav_test_exc_alig_sameMaxN+0
+CAsd_test_exc_alig_sameMaxN0 = CAsd_test_exc_alig_sameMaxN+0 # this is sd for each day (across samps)
+
 
 #%% for each excSamp compute std across days
 
@@ -714,6 +722,7 @@ sdCA_allExcSamps_maxN_ave = np.mean(sdCA_allExcSamps_maxN, axis=2) # max_nNeurs_
 # input array size for exc: numDays x min_nNeurs_used_for_training x nAlignedFrs x nExcShfl
 
 CAav_test_exc_alig_sameMaxN = np.mean(CAav_test_exc_alig_sameMaxN0, axis=3)
+CAsd_test_exc_alig_sameMaxN = np.mean(CAsd_test_exc_alig_sameMaxN0, axis=3)
 
 
 
@@ -863,10 +872,208 @@ cols = 'k', 'r', 'b'
 CA = CAav_test_allN_alig_sameMaxN[days2use,:,:], CAav_test_inh_alig_sameMaxN[days2use,:,:], CAav_test_exc_alig_sameMaxN[days2use,:,:] # each ones len:  numDays x min_nNeurs_used_for_training x nAlignedFrs
 plotCA_nN(CA, labs, cols, excInd=2, sdD=sdCA_allExcSamps_maxN_ave)
 
+
+
+
+
+
+#%% #%% Learning-related fig: For each timebin, see each day's CA vs nN plot...  
+#each frame, all days
+
+def plotCA_nN_eachDay(CA, CS, labs, cols, doP=0): # excInd is the index of exc in array CAav_alig_sameN... default is -1 so assuming we will get sd across days and not have it as an input
     
+    nDays = np.shape(CA[0])[0] # size CAav_alig_sameN[0]: numDays x max_nNeurs x nAlignedFrs
+    nNcommon = np.shape(CA[0])[1]
+    nTimeBins = np.shape(CA[0])[2]
+
+    if doP: # compute p value
+        pwmt = np.full((3,nNcommon,nTimeBins), np.nan)  # 3 x max_nNeurs x nAlignedFrs
+        
+#    plt.figure(figsize=(2,30))    
+    c = nTimeBins #1.
+    r = nDays #np.ceil(nDays/c)    
+    plt.figure(figsize=(2*nTimeBins , 2*nDays))    
+    
+    for f in range(nTimeBins): # loop over frames
+        for iday in range(nDays): # loop over frames
+                
+            nsp = nTimeBins*iday + f+1
+            plt.subplot(r,c,nsp)
+            for ntyp in range(len(CA)): 
+                avD = CA[ntyp][iday,:,f]
+                sdD = CS[ntyp][iday,:,f]
+            #    plt.imshow(a); plt.colorbar()                  
+                # plot errorbar
+    #            plt.errorbar(range(a.shape[1]), avD, sdD, label=labs[ntyp], color=cols[ntyp])        
+                
+                # fill bounds            
+                plt.fill_between(range(nNcommon), avD-sdD, avD+sdD, alpha=0.5, edgecolor=cols[ntyp], facecolor=cols[ntyp])
+                plt.plot(range(nNcommon), avD, color=cols[ntyp], linewidth=2, label=labs[ntyp])
+    
+            plt.title('%s' %(days[iday][0:6]))
+            makeNicePlots(plt.gca())  
+            
+            if iday==0:            
+                plt.title('%.0f ms; %s' %(np.round(time_aligned[f]), days[iday][0:6]))                
+            
+            if iday==0 and f==0:        
+                plt.xlabel('#Neurons used in decoder')
+                plt.ylabel('Class accuracy (testing data)')        
+                plt.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=False) 
+#            if iday==nTimeBins-1:                 
+            
+            # plot sig p vals
+            '''
+            if doP: # compute p value between exc and inh
+                a = CA[0][:,:,f] # nDays x nNerus
+                b = CA[1][:,:,f]
+                p = pwmt_frs(a,b) # 3 x nNeurons
+                
+                yl = plt.gca().get_ylim()
+                pp = np.full(np.shape(p), np.nan)
+                pp[p<=.05] = yl[1] - (yl[1]-yl[0])/10
+                pp2p = pp[2] # whether to use wilcoxon, mann-whitney, or ttest
+                plt.plot(range(a.shape[1]), pp2p, marker='o', markersize=5, color='k') #, linestyle=':')            
+                
+                pwmt[:,:,f] = p # 3 x nNeurons x nfrs # 3 is the 3 tests: wilcoxon, mann-whitney, or ttest
+            '''
+    plt.subplots_adjust(hspace=.5, wspace=.5)
+    
+    # Save the figure
+    if savefigs:#% Save the figure
+           
+        if chAl==1:
+            dd = 'chAl_CAvsNnum_eachDay_' + '_'.join(labs)+'_' + days[0][0:6] + '-to-' + days[-1][0:6]
+        else:
+            dd = 'stAl_CAvsNnum_eachDay_' + '_'.join(labs)+'_' + days[0][0:6] + '-to-' + days[-1][0:6]
+                
+        d = os.path.join(svmdir+dnow)
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+                
+        fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
+        plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+  
+  
+    if doP==0:
+        pwmt = []
+    else:
+        pwmt = np.array(pwmt)
+        
+    return pwmt
+    
+                
+#%% Learning-related fig: For each timebin, see each day's CA vs nN plot...  
+
+labs = 'inh', 'exc'
+cols = 'r', 'b'
+CA = CAav_test_inh_alig_sameMaxN[days2use,:,:], CAav_test_exc_alig_sameMaxN[days2use,:,:] # each ones len:  numDays x min_nNeurs_used_for_training x nAlignedFrs
+CS = CAsd_test_inh_alig_sameMaxN[days2use,:,:], CAsd_test_exc_alig_sameMaxN[days2use,:,:] # each ones len:  numDays x min_nNeurs_used_for_training x nAlignedFrs
+#plotCA_nN(CA, labs, cols)
+pwmt = plotCA_nN_eachDay(CA, CS, labs, cols, doP=1) # for exc use sdCA_allExcSamps_ave as sd instead of taking sd across days (this is more comparable to sd of inh, bc sdCA_allExcSamps_ave is sd across days for each nExcShfl, then averaged across nExcShfl, if we get sd acorr excShfl-averaged traces it will be much lower than inh sd)
+
+'''
+iday = 0    
+
+labs = 'inh', 'exc'
+cols = 'r', 'b'
+CA = CAav_test_inh_alig_sameMaxN[iday], CAav_test_exc_alig_sameMaxN[iday] # each ones len:  numDays x min_nNeurs_used_for_training x nAlignedFrs
+CS = CAsd_test_inh_alig_sameMaxN[iday], CAsd_test_exc_alig_sameMaxN[iday] # each ones len:  numDays x min_nNeurs_used_for_training x nAlignedFrs
+#plotCA_nN(CA, labs, cols)
+pwmt = plotCA_nN_eachDay(CA, CS, labs, cols, excInd=1, sdD=sdCA_allExcSamps_maxN_ave, doP=1) # for exc use sdCA_allExcSamps_ave as sd instead of taking sd across days (this is more comparable to sd of inh, bc sdCA_allExcSamps_ave is sd across days for each nExcShfl, then averaged across nExcShfl, if we get sd acorr excShfl-averaged traces it will be much lower than inh sd)
+    
+    
+f = 0    
+CA = CAav_test_inh_alig_sameMaxN[:,:,f], CAav_test_exc_alig_sameMaxN[:,:,f] # each ones len:  numDays x min_nNeurs_used_for_training x nAlignedFrs
+CS = CAsd_test_inh_alig_sameMaxN[:,:,f], CAsd_test_exc_alig_sameMaxN[:,:,f] # each ones len:  numDays x min_nNeurs_used_for_training x nAlignedFrs
+#plotCA_nN(CA, labs, cols)
+pwmt = plotCA_nN_eachDay(CA, CS, labs, cols, excInd=1, sdD=sdCA_allExcSamps_maxN_ave, doP=1) # for exc use sdCA_allExcSamps_ave as sd instead of taking sd across days (this is more comparable to sd of inh, bc sdCA_allExcSamps_ave is sd across days for each nExcShfl, then averaged across nExcShfl, if we get sd acorr excShfl-averaged traces it will be much lower than inh sd)
+''' 
+
+
 
     
+#%% Across day changes (learning related changes)
+'''
+def plotCA_nN_eachDay(CA, CS, labs, cols, excInd=-1, sdD=None, doP=0): # excInd is the index of exc in array CAav_alig_sameN... default is -1 so assuming we will get sd across days and not have it as an input
+       
+    nNcommon = np.shape(CA[0])[0]
+    nTimeBins = np.shape(CA[0])[1] # size CAav_alig_sameN[0]: numDays x max_nNeurs x nAlignedFrs
 
+
+    if doP: # compute p value
+        pwmt = np.full((3,nNcommon,nTimeBins), np.nan)  # 3 x max_nNeurs x nAlignedFrs
+        
+    plt.figure(figsize=(2,30))    
+    c = 1.
+    r = np.ceil(nTimeBins/c)    
+
+    for f in range(nTimeBins): # loop over frames
+            
+        plt.subplot(r,c,f+1)
+        for ntyp in range(len(CA)): 
+            avD = CA[ntyp][:,f]
+            sdD = CS[ntyp][:,f]
+        #    plt.imshow(a); plt.colorbar()                  
+            # plot errorbar
+#            plt.errorbar(range(a.shape[1]), avD, sdD, label=labs[ntyp], color=cols[ntyp])        
+            
+            # fill bounds            
+            plt.fill_between(range(nNcommon), avD-sdD, avD+sdD, alpha=0.5, edgecolor=cols[ntyp], facecolor=cols[ntyp])
+            plt.plot(range(nNcommon), avD, color=cols[ntyp], linewidth=2, label=labs[ntyp])
+
+        plt.title('%.0f ms' %(np.round(time_aligned[f])))
+        makeNicePlots(plt.gca())  
+        
+        if f==0:        
+            plt.xlabel('#Neurons used in decoder')
+            plt.ylabel('Class accuracy (testing data)')        
+        if f==nTimeBins-1: 
+            plt.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=False) 
+        
+        # plot sig p vals
+        """
+        if doP: # compute p value between exc and inh
+            a = CA[0][:,:,f] # nDays x nNerus
+            b = CA[1][:,:,f]
+            p = pwmt_frs(a,b) # 3 x nNeurons
+            
+            yl = plt.gca().get_ylim()
+            pp = np.full(np.shape(p), np.nan)
+            pp[p<=.05] = yl[1] - (yl[1]-yl[0])/10
+            pp2p = pp[2] # whether to use wilcoxon, mann-whitney, or ttest
+            plt.plot(range(a.shape[1]), pp2p, marker='o', markersize=5, color='k') #, linestyle=':')            
+            
+            pwmt[:,:,f] = p # 3 x nNeurons x nfrs # 3 is the 3 tests: wilcoxon, mann-whitney, or ttest
+        """
+    plt.subplots_adjust(hspace=.5)
+    
+    # Save the figure
+    if savefigs:#% Save the figure
+            
+        if chAl==1:
+            dd = 'chAl_CAvsNnum_' + '_'.join(labs)+'_' + days[0][0:6] + '-to-' + days[-1][0:6]
+        else:
+            dd = 'stAl_CAvsNnum_' + '_'.join(labs)+'_' + days[0][0:6] + '-to-' + days[-1][0:6]
+                
+        d = os.path.join(svmdir+dnow)
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+                
+        fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
+        plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+  
+  
+    if doP==0:
+        pwmt = []
+    else:
+        pwmt = np.array(pwmt)
+        
+    return pwmt
+                
+'''                
 #################### #################### #################### #################### 
 #%%
 #################### same as above but using min nNeuron across days as the max value of x axis ####################

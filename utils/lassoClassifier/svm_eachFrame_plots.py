@@ -24,10 +24,14 @@ Created on Sun Mar 12 15:12:29 2017
 #%% Change the following vars:
 
 mousename = 'fni18' #'fni17'
+
 savefigs = 0
-corrTrained = 1 # whether svm was trained using only correct trials (set to 1) or all trials (set to 0).
+
 thTrained = 30#10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
 thIncorr = 4#10 # number of trials of the fewer class in incorr trials, min acceptable value to include a day in analysis of incorr trials.
+lastTimeBinMissed = 1 # if 0, things were run fine; if 1: by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
+corrTrained = 1 # whether svm was trained using only correct trials (set to 1) or all trials (set to 0).
+doIncorr = 1 # plot incorr class accur too
 loadWeights = 0
 
 
@@ -43,7 +47,6 @@ if mousename == 'fni19':
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
 execfile("svm_plots_setVars_n.py")  
-execfile("defFuns.py")
 
 #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
@@ -57,7 +60,6 @@ doPlots = 0 #1 # plot c path of each day
 #setTo50 = 1 # if 1, the above two jobs will be done.
 
 
-#%% 
 import numpy as np
 frameLength = 1000/30.9; # sec.
 regressBins = int(np.round(100/frameLength)) # must be same regressBins used in svm_eachFrame. 100ms # set to nan if you don't want to downsample.
@@ -65,8 +67,7 @@ regressBins = int(np.round(100/frameLength)) # must be same regressBins used in 
 dnow = '/classAccurTraces_eachFrame_timeDists/'+mousename+'/'
 if corrTrained:
     dnow = dnow+'corrTrained/'
-    
-    
+        
 smallestC = 0 # Identify best c: if 1: smallest c whose CV error falls below 1 se of min CV error will be used as optimal C; if 0: c that gives min CV error will be used as optimal c.
 if smallestC==1:
     print 'bestc = smallest c whose cv error is less than 1se of min cv error'
@@ -74,178 +75,11 @@ else:
     print 'bestc = c that gives min cv error'
 #I think we should go with min c as the bestc... at least we know it gives the best cv error... and it seems like it has nothing to do with whether the decoder generalizes to other data or not.
 
+from datetime import datetime
+nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 
-#%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
+execfile("defFuns.py")
 
-def setSVMname(pnevFileName, trialHistAnalysis, chAl, regressBins=3, corrTrained=0):
-    import glob
-
-    if chAl==1:
-        al = 'chAl'
-    else:
-        al = 'stAl'
-
-    if corrTrained==1: 
-        o2a = '_corr'
-    else:
-        o2a = '' 
-    
-    if trialHistAnalysis:
-        svmn = 'svmPrevChoice_eachFrame_%s%s_ds%d_*' %(al,o2a,regressBins)
-    else:
-        svmn = 'svmCurrChoice_eachFrame_%s%s_ds%d_*' %(al,o2a,regressBins)
-    
-    svmn = svmn + os.path.basename(pnevFileName) #pnevFileName[-32:]    
-    svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
-    svmName = sorted(svmName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
-    
-#    if len(svmName)>0:
-#        svmName = svmName[0] # get the latest file
-#    else:
-#        svmName = ''
-#    
-    return svmName
-    
-
-#%% function to set best c and get the class error values at best C
-
-def setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_shfl, perClassErrorTest_chance, cvect, regType, doPlots, corrTrained=0, wAllC=[]):
-    
-    numSamples = perClassErrorTest.shape[0] 
-    numFrs = perClassErrorTest.shape[2]
-    
-    ###%% Compute average of class errors across numSamples
-    
-    classErr_bestC_train_data = np.full((numSamples, numFrs), np.nan)
-    classErr_bestC_test_data = np.full((numSamples, numFrs), np.nan)
-    classErr_bestC_test_shfl = np.full((numSamples, numFrs), np.nan)
-    classErr_bestC_test_chance = np.full((numSamples, numFrs), np.nan)
-    cbestFrs = np.full((numFrs), np.nan)
-#    numNon0SampData = np.full((numFrs), np.nan)       
-    classErr_bestC_test_incorr = np.full((numSamples, numFrs), np.nan)
-    classErr_bestC_test_incorr_shfl = np.full((numSamples, numFrs), np.nan)
-    classErr_bestC_test_incorr_chance = np.full((numSamples, numFrs), np.nan)
-    if len(wAllC)>0:
-        w_bestc_data = np.full((numSamples, wAllC.shape[2], numFrs), np.nan)
-    else:
-        w_bestc_data = []
-    
-    for ifr in range(numFrs):
-                
-        meanPerClassErrorTrain = np.mean(perClassErrorTrain[:,:,ifr], axis = 0);
-        semPerClassErrorTrain = np.std(perClassErrorTrain[:,:,ifr], axis = 0)/np.sqrt(numSamples);
-        
-        meanPerClassErrorTest = np.mean(perClassErrorTest[:,:,ifr], axis = 0);
-        semPerClassErrorTest = np.std(perClassErrorTest[:,:,ifr], axis = 0)/np.sqrt(numSamples);
-        
-        meanPerClassErrorTest_shfl = np.mean(perClassErrorTest_shfl[:,:,ifr], axis = 0);
-#        semPerClassErrorTest_shfl = np.std(perClassErrorTest_shfl[:,:,ifr], axis = 0)/np.sqrt(numSamples);
-        
-        meanPerClassErrorTest_chance = np.mean(perClassErrorTest_chance[:,:,ifr], axis = 0);
-#        semPerClassErrorTest_chance = np.std(perClassErrorTest_chance[:,:,ifr], axis = 0)/np.sqrt(numSamples);
-        
-        
-        
-        ################### Identify best c        
-        # Use all range of c... it may end up a value at which all weights are 0.
-        ix = np.argmin(meanPerClassErrorTest)
-        if smallestC==1:
-            cbest = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix])];
-            cbest = cbest[0]; # best regularization term based on minError+SE criteria
-            cbestAll = cbest
-        else:
-            cbestAll = cvect[ix]
-        print 'best c = %.10f' %cbestAll
-        
-        
-        
-        #################### Make sure at bestc at least one weight is non-zero (ie pick bestc from only those values of c that give non-0 average weights.)
-        if regType == 'l1': # in l2, we don't really have 0 weights!
-            sys.exit('Needs work! below wAllC has to be for 1 frame') 
-            
-            a = abs(wAllC)>eps # non-zero weights
-            b = np.mean(a, axis=(0,2,3)) # Fraction of non-zero weights (averaged across shuffles)
-            c1stnon0 = np.argwhere(b)[0].squeeze() # first element of c with at least 1 non-0 w in 1 shuffle
-            cvectnow = cvect[c1stnon0:]
-            
-            meanPerClassErrorTestnow = np.mean(perClassErrorTest[:,c1stnon0:,ifr], axis = 0);
-            semPerClassErrorTestnow = np.std(perClassErrorTest[:,c1stnon0:,ifr], axis = 0)/np.sqrt(numSamples);
-            ix = np.argmin(meanPerClassErrorTestnow)
-            if smallestC==1:
-                cbest = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
-                cbest = cbest[0]; # best regularization term based on minError+SE criteria    
-            else:
-                cbest = cvectnow[ix]
-    
-            print 'best c (at least 1 non-0 weight) = ', cbest
-            
-        else:
-            cbest = cbestAll            
-        
-    
-        cbestFrs[ifr] = cbest
-        
-        
-        
-        #################### Set the decoder and class errors at best c         
-        # you don't need to again train classifier on data bc you already got it above when you found bestc. You just need to do it for shuffled. ... [you already have access to test/train error as well as b and w of training SVM with bestc.)]
-        # we just get the values of perClassErrorTrain and perClassErrorTest at cbest (we already computed these values above when training on all values of c)
-        indBestC = np.in1d(cvect, cbest)
-
-        classErr_bestC_train_data[:,ifr] = perClassErrorTrain[:,indBestC,ifr].squeeze() # numSamps           
-        classErr_bestC_test_data[:,ifr] = perClassErrorTest[:,indBestC,ifr].squeeze()
-        classErr_bestC_test_shfl[:,ifr] = perClassErrorTest_shfl[:,indBestC,ifr].squeeze()
-        classErr_bestC_test_chance[:,ifr] = perClassErrorTest_chance[:,indBestC,ifr].squeeze()        
-        if corrTrained==1:
-            classErr_bestC_test_incorr[:,ifr] = perClassErrorTest_incorr[:,indBestC,ifr].squeeze()        
-            classErr_bestC_test_incorr_shfl[:,ifr] = perClassErrorTest_incorr_shfl[:,indBestC,ifr].squeeze()        
-            classErr_bestC_test_incorr_chance[:,ifr] = perClassErrorTest_incorr_chance[:,indBestC,ifr].squeeze()                
-        if len(wAllC)>0:
-            w_bestc_data[:,:,ifr] = wAllC[:,indBestC,:,ifr].squeeze() # numSamps x neurons
-    #            b_bestc_data = bAllC[:,indBestC,ifr]            
-
-       # check the number of non-0 weights
-    #       for ifr in range(numFrs):
-    #        w_data = wAllC[:,indBestC,:,ifr].squeeze()
-    #        print np.sum(w_data > eps,axis=1)
-    #        ada = np.sum(w_data > eps,axis=1) < thNon0Ws # samples w fewer than 2 non-0 weights        
-    #        ada = ~ada # samples w >=2 non0 weights
-    #        numNon0SampData[ifr] = ada.sum() # number of cv samples with >=2 non-0 weights
-    
-        
-        
-        #################### Plot C path                   
-        if doPlots:
-    #            print 'Best c (inverse of regularization parameter) = %.2f' %cbest
-            plt.figure()
-            plt.subplot(1,2,1)
-            plt.fill_between(cvect, meanPerClassErrorTrain-semPerClassErrorTrain, meanPerClassErrorTrain+ semPerClassErrorTrain, alpha=0.5, edgecolor='k', facecolor='k')
-            plt.fill_between(cvect, meanPerClassErrorTest-semPerClassErrorTest, meanPerClassErrorTest+ semPerClassErrorTest, alpha=0.5, edgecolor='r', facecolor='r')
-        #    plt.fill_between(cvect, meanPerClassErrorTest_chance-semPerClassErrorTest_chance, meanPerClassErrorTest_chance+ semPerClassErrorTest_chance, alpha=0.5, edgecolor='b', facecolor='b')        
-        #    plt.fill_between(cvect, meanPerClassErrorTest_shfl-semPerClassErrorTest_shfl, meanPerClassErrorTest_shfl+ semPerClassErrorTest_shfl, alpha=0.5, edgecolor='y', facecolor='y')        
-            
-            plt.plot(cvect, meanPerClassErrorTrain, 'k', label = 'training')
-            plt.plot(cvect, meanPerClassErrorTest, 'r', label = 'validation')
-            plt.plot(cvect, meanPerClassErrorTest_chance, 'b', label = 'cv-chance')       
-            plt.plot(cvect, meanPerClassErrorTest_shfl, 'y', label = 'cv-shfl')            
-        
-            plt.plot(cvect[cvect==cbest], meanPerClassErrorTest[cvect==cbest], 'bo')
-            
-            plt.xlim([cvect[1], cvect[-1]])
-            plt.xscale('log')
-            plt.xlabel('c (inverse of regularization parameter)')
-            plt.ylabel('classification error (%)')
-            plt.legend(loc='center left', bbox_to_anchor=(1, .7))
-            
-            cl = 'r' if ifr==eventI_ds else 'k' # show frame number of eventI in red :)
-            plt.title('Frame %d' %(ifr), color=cl)
-            plt.tight_layout()          
-           
-
-    return classErr_bestC_train_data, classErr_bestC_test_data, classErr_bestC_test_shfl, classErr_bestC_test_chance, cbestFrs, classErr_bestC_test_incorr, classErr_bestC_test_incorr_shfl, classErr_bestC_test_incorr_chance, w_bestc_data
-    
-    
-    
     
 #%% 
 '''
@@ -291,160 +125,41 @@ for iday in range(len(days)):
 
 
     #%%
-    svmName = setSVMname(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained) # for chAl: the latest file is with soft norm; earlier file is 
-
+    svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained) # for chAl: the latest file is with soft norm; earlier file is 
     svmName = svmName[0]
     print os.path.basename(svmName)    
 
 
-    #%% Set eventI
+    #%% Set eventI_ds (downsampled eventI)
+
+    eventI, eventI_ds = setEventIds(postName, chAl, regressBins=3, trialHistAnalysis=0)
     
-    if chAl==1:    #%% Use choice-aligned traces 
-        # Load 1stSideTry-aligned traces, frames, frame of event of interest
-        # use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
-        Data = scio.loadmat(postName, variable_names=['firstSideTryAl'],squeeze_me=True,struct_as_record=False)
-        traces_al_1stSide = Data['firstSideTryAl'].traces.astype('float')
-        time_aligned_1stSide = Data['firstSideTryAl'].time.astype('float')
-        time_trace = time_aligned_1stSide
-        eventI = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+    eventI_allDays[iday] = eventI
+    eventI_ds_allDays[iday] = eventI_ds    
+
+    
+    #%% Get number of hr, lr trials that were used for svm training
         
-    else:   #%% Use stimulus-aligned traces           
-        # Load stim-aligned_allTrials traces, frames, frame of event of interest
-        if trialHistAnalysis==0:
-            Data = scio.loadmat(postName, variable_names=['stimAl_noEarlyDec'],squeeze_me=True,struct_as_record=False)
-#            eventI = Data['stimAl_noEarlyDec'].eventI - 1 # remember difference indexing in matlab and python!
-#            traces_al_stimAll = Data['stimAl_noEarlyDec'].traces.astype('float')
-            time_aligned_stim = Data['stimAl_noEarlyDec'].time.astype('float')        
-        else:
-            Data = scio.loadmat(postName, variable_names=['stimAl_allTrs'],squeeze_me=True,struct_as_record=False)
-#            eventI = Data['stimAl_allTrs'].eventI - 1 # remember difference indexing in matlab and python!
-#            traces_al_stimAll = Data['stimAl_allTrs'].traces.astype('float')
-            time_aligned_stim = Data['stimAl_allTrs'].time.astype('float')
-            # time_aligned_stimAll = Data['stimAl_allTrs'].time.astype('float') # same as time_aligned_stim        
-        
-        time_trace = time_aligned_stim
-        
-    print(np.shape(time_trace))
-    eventI_allDays[iday] = eventI  
-    
-    ##%% Downsample traces: average across multiple times (downsampling, not a moving average. we only average every regressBins points.)
-    
-    if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
-        print 'Downsampling traces ....'    
-          
-        if corrTrained==0:  
-            # below has problems, as mentioned in svm_eachframe. But if svm file was run with the old codes, you need to run below
-            T1 = time_trace.shape[0]
-            tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X            
-    
-            time_trace_d = time_trace[0:regressBins*tt]
-            time_trace_d = np.round(np.mean(np.reshape(time_trace_d, (regressBins, tt), order = 'F'), axis=0), 2)
-            print time_trace_d.shape
-        
-            eventI_ds = np.argwhere(np.sign(time_trace_d)>0)[0] # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
-        
-        else: # right method, svm ran only on corr used this method.        
-            # set frames before frame0 (not including it)
-            f = (np.arange(eventI - regressBins*np.floor(eventI/float(regressBins)) , eventI)).astype(int) # 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)            
-            T1 = f.shape[0]
-            eventI_ds = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames before frame0
-            # eventI_ds computed here is of type int (ie scalar), but the once computed above is of type list (ie array); to conver scalar to list do [scalar]    
-    else:
-        print 'Not downsampling traces ....'        
-#        eventI_ch = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
-#        eventI_ds = eventI_ch
-    
-    eventI_ds_allDays[iday] = eventI_ds
-    
-    #%% Get number of hr, lr trials that were used for svm training and for incorr testing
-    
-    Data = scio.loadmat(postName, variable_names=['outcomes', 'allResp_HR_LR'])
-    outcomes = (Data.pop('outcomes').astype('float'))[0,:]
-    allResp_HR_LR = np.array(Data.pop('allResp_HR_LR')).flatten().astype('float')
-#    print '%d correct choices; %d incorrect choices' %(sum(outcomes==1), sum(outcomes==0))
-    
-    
-    Data = scio.loadmat(svmName, variable_names=['trsExcluded'])
-    trsExcluded = Data.pop('trsExcluded').flatten().astype('bool')
-    
-    corr_hr = sum(np.logical_and(allResp_HR_LR==1 , ~trsExcluded)).astype(int)
-    corr_lr = sum(np.logical_and(allResp_HR_LR==0 , ~trsExcluded)).astype(int)    
-#    print min(corr_hr, corr_lr) # number of trials of each class used in svm training
+    corr_hr, corr_lr, incorr_hr, incorr_lr = set_corr_hr_lr(postName, svmName, doIncorr)
     corr_hr_lr[iday,:] = [corr_hr, corr_lr]        
-    
-    
-    # incorrect trials
-    Y_incorr0 = allResp_HR_LR+0
-    Y_incorr0[outcomes!=0] = np.nan; # analyze only incorrect trials.
-#    print '\tincorrect trials: %d HR; %d LR' %((Y_incorr0==1).sum(), (Y_incorr0==0).sum())    
-    trsExcluded_incorr = (np.isnan(np.sum(traces_al_1stSide, axis=(0,1))) + np.isnan(Y_incorr0)) != 0
-    
-    incorr_hr = sum(np.logical_and(allResp_HR_LR==1 , ~trsExcluded_incorr)).astype(int)
-    incorr_lr = sum(np.logical_and(allResp_HR_LR==0 , ~trsExcluded_incorr)).astype(int)
-#    print incorr_hr, incorr_lr # number of trials of incorr, hr and lr classes used for incorr testing
     incorr_hr_lr[iday,:] = [incorr_hr, incorr_lr]    
     
     
     #%% Load SVM vars
-        
-    Data = scio.loadmat(svmName, variable_names=['regType','cvect','perClassErrorTrain','perClassErrorTest','perClassErrorTest_chance','perClassErrorTest_shfl'])
-    
-    regType = Data.pop('regType').astype('str')
-    cvect = Data.pop('cvect').squeeze()
-    perClassErrorTrain = Data.pop('perClassErrorTrain') # numSamples x len(cvect) x nFrames
-    perClassErrorTest = Data.pop('perClassErrorTest')
-    perClassErrorTest_chance = Data.pop('perClassErrorTest_chance')
-    perClassErrorTest_shfl = Data.pop('perClassErrorTest_shfl')
 
-    numSamples = perClassErrorTest.shape[0] 
-    numFrs = perClassErrorTest.shape[2]
-
-    if corrTrained==1:        
-        Data = scio.loadmat(svmName, variable_names=['perClassErrorTest_incorr','perClassErrorTest_incorr_chance','perClassErrorTest_incorr_shfl'])
-        
-        perClassErrorTest_incorr = Data.pop('perClassErrorTest_incorr') # numSamples x len(cvect) x nFrames
-        perClassErrorTest_incorr_chance = Data.pop('perClassErrorTest_incorr_chance')
-        perClassErrorTest_incorr_shfl = Data.pop('perClassErrorTest_incorr_shfl')
-
-    if loadWeights==1:            
-        Data = scio.loadmat(svmName, variable_names=['wAllC']) #,'bAllC'])
-        wAllC = Data.pop('wAllC')  # samps x len(cvect) x neurons x nFrs
+    if doIncorr==1:
+        classErr_bestC_train_data, classErr_bestC_test_data, classErr_bestC_test_shfl, classErr_bestC_test_chance, cbestFrs, w_bestc_data, b_bestc_data, classErr_bestC_test_incorr, classErr_bestC_test_incorr_shfl, classErr_bestC_test_incorr_chance = loadSVM_allN(svmName, doPlots, doIncorr, loadWeights)
     else:
-         wAllC = []
+        classErr_bestC_train_data, classErr_bestC_test_data, classErr_bestC_test_shfl, classErr_bestC_test_chance, cbestFrs, w_bestc_data, b_bestc_data = loadSVM_allN(svmName, doPlots, doIncorr, loadWeights)
+    
         
-    #%% Set class error values at best C (also find bestc for each frame and plot c path)
-
-    classErr_bestC_train_data, classErr_bestC_test_data, classErr_bestC_test_shfl, classErr_bestC_test_chance, cbestFrs, classErr_bestC_test_incorr, classErr_bestC_test_incorr_shfl, classErr_bestC_test_incorr_chance, w_bestc_data = setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_shfl, perClassErrorTest_chance, cvect, regType, doPlots, corrTrained, wAllC)
-    '''    
-    # compare cbest between frames
-    plt.figure(figsize=(3,2))    
-    plt.plot(cbestFrs); plt.xlabel('frames'); plt.ylabel('best C'); 
-    r = max(cbestFrs)-min(cbestFrs)
-    plt.ylim([-r/10, max(cbestFrs)+r/10])
-    plt.vlines(eventI_ds, -r/10, max(cbestFrs)+r/10, color='r') # mark eventI_ds
-    '''
-    print 'CE values for testing data:', np.unique(classErr_bestC_test_data.flatten())
-    print 'CE values for incorr:', np.unique(classErr_bestC_test_incorr.flatten())
-    
-    
-    #%% Set class errors to 50 if less than .05 fraction of neurons in a sample have non-0 weights, and set all samples class error to 50, if less than 10 samples satisfy this condition.
-
-    if loadWeights==1:            
-        thNon0Ws = .05; # fraction non0 neurons to accept a sample (ie good sample, which we wont turn all its CA values to 50) 
-        thSamps = 10; # min number of good samples to accept a frame (ie not to turn all its CA values to 50)
-        eps = 1e-10 # below which is considered 0
-        classErr_bestC_test_data = setTo50classErr(classErr_bestC_test_data, w_bestc_data, thNon0Ws, thSamps, eps)
-        classErr_bestC_test_shfl = setTo50classErr(classErr_bestC_test_shfl, w_bestc_data, thNon0Ws, thSamps, eps)
-        classErr_bestC_test_incorr = setTo50classErr(classErr_bestC_test_incorr, w_bestc_data, thNon0Ws, thSamps, eps)
-        classErr_bestC_test_incorr_shfl = setTo50classErr(classErr_bestC_test_incorr_shfl, w_bestc_data, thNon0Ws, thSamps, eps)
-            
             
     #%% Once done with all frames, save vars for all days
            
     # Delete vars before starting the next day           
-    del eventI, time_trace, perClassErrorTrain, perClassErrorTest, perClassErrorTest_shfl, perClassErrorTest_chance, perClassErrorTest_incorr, perClassErrorTest_incorr_shfl, perClassErrorTest_incorr_chance
-    if loadWeights==1:
-        del wAllC
+#    del eventI, time_trace, perClassErrorTrain, perClassErrorTest, perClassErrorTest_shfl, perClassErrorTest_chance, perClassErrorTest_incorr, perClassErrorTest_incorr_shfl, perClassErrorTest_incorr_chance
+#    if loadWeights==1:
+#        del wAllC
         
     classErr_bestC_train_data_all.append(classErr_bestC_train_data) # each day: samps x numFrs
     classErr_bestC_test_data_all.append(classErr_bestC_test_data)
@@ -462,10 +177,16 @@ eventI_ds_allDays = eventI_ds_allDays.astype(int)
 #classErr_bestC_test_data_all = np.array(classErr_bestC_test_data_all)
 #classErr_bestC_test_shfl_all = np.array(classErr_bestC_test_shfl_all)
 #classErr_bestC_test_chance_all = np.array(classErr_bestC_test_chance_all)
+numSamples = classErr_bestC_train_data[0].shape[0] 
+numFrs = classErr_bestC_train_data[0].shape[1]
 
 
+#%%
+############################%%%%%%%%%%%%%%%%%%############################%%%%%%%%%%%%%%%%%%############################%%%%%%%%%%%%%%%%%%############################%%%%%%%%%%%%%%%%%%
+############################%%%%%%%%%%%%%%%%%%############################%%%%%%%%%%%%%%%%%%############################%%%%%%%%%%%%%%%%%%############################%%%%%%%%%%%%%%%%%%
+############################%%%%%%%%%%%%%%%%%%############################%%%%%%%%%%%%%%%%%%############################%%%%%%%%%%%%%%%%%%############################%%%%%%%%%%%%%%%%%%
+############################%%%%%%%%%%%%%%%%%%############################%%%%%%%%%%%%%%%%%%############################%%%%%%%%%%%%%%%%%%############################%%%%%%%%%%%%%%%%%%
 
-############################%%%%%%%%%%%%%%%%%%
 #%%
 #import matplotlib as mpl
 #mpl.style.use('default')
@@ -543,43 +264,15 @@ print 'Number of frames before = %d, and after = %d the common eventI' %(nPreMin
 
 
 #%% Set the time array for the across-day aligned traces
-
-# totLen_ds = len(av_l2_test_diday)
-def set_time_al(totLen_ds, eventI):
-    # totLen_ds: length of downsample trace
-    # eventI : eventI on the original trace (non-downsampled)
-#    eventI = eventI_allDaysiday #np.argwhere(time_trace==0).flatten()
-    time_trace = frameLength * (np.arange(0, np.ceil(regressBins*totLen_ds)) - eventI) # time_trace = time_aligned_1stSide
-    
-    f = (np.arange(eventI - regressBins*np.floor(eventI/float(regressBins)) , eventI)).astype(int) # 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)
-    x = time_trace[f] # time_trace including frames before frame0
-    T1 = x.shape[0]
-    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames before frame0 # same as eventI_ds
-    xdb = np.mean(np.reshape(x, (regressBins, tt), order = 'F'), axis=0) # downsampled X_svm inclusing frames before frame0
-    
-    
-    # set frames after frame0 (not including it)
-    f = (np.arange(eventI+1 , eventI+1+regressBins * np.floor((time_trace.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
-    x = time_trace[f] # X_svm including frames after frame0
-    T1 = x.shape[0]
-    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
-    xda = np.mean(np.reshape(x, (regressBins, tt), order = 'F'), axis=0) # downsampled X_svm inclusing frames after frame0
-    
-    # set the final downsampled time_trace: concatenate downsampled X at frames before frame0, with x at frame0, and x at frames after frame0
-    time_trace_d = np.concatenate((xdb, [0], xda))    
-    time_al = time_trace_d[0:int(totLen_ds)]
-
-    return time_al
-    
-    
-#######################################    
+'''
 if corrTrained==0: # remember below has issues...
     a = -(np.asarray(frameLength*regressBins) * range(nPreMin+1)[::-1])
     b = (np.asarray(frameLength*regressBins) * range(1, nPostMin+1))
     time_aligned = np.concatenate((a,b))
 else:
-    totLen = nPreMin + nPostMin +1
-    time_aligned = set_time_al(totLen, min(eventI_allDays))
+'''
+totLen = nPreMin + nPostMin +1
+time_aligned = set_time_al(totLen, min(eventI_allDays), lastTimeBinMissed)
 
 print time_aligned
 
@@ -611,7 +304,7 @@ for ave in [0,1]: # whether to compute average or median across samples
         else:    
             classAcc_bestC_test_dms_all[iday] = -classErr_bestC_test_data_all[iday] + np.median(classErr_bestC_test_shfl_all[iday],axis=0)
     
-    if corrTrained==1:    
+    if doIncorr==1:    
         classAcc_bestC_test_incorr_dms_all = classErr_bestC_test_data_all+[0]
         for iday in range(len(days)):    
             if ave==1:
@@ -631,7 +324,7 @@ for ave in [0,1]: # whether to compute average or median across samples
     classAcc_test_s_aligned = np.ones((numSamples, nPreMin + nPostMin + 1, numDays)) + np.nan
     classAcc_test_c_aligned = np.ones((numSamples, nPreMin + nPostMin + 1, numDays)) + np.nan
     classAcc_test_dms_aligned = np.ones((numSamples, nPreMin + nPostMin + 1, numDays)) + np.nan # samps x frames x days, aligned on common eventI (equals nPreMin)
-    if corrTrained==1:    
+    if doIncorr==1:    
         classAcc_test_incorr_d_aligned = np.ones((numSamples, nPreMin + nPostMin + 1, numDays)) + np.nan # samps x frames x days, aligned on common eventI (equals nPreMin)
         classAcc_test_incorr_s_aligned = np.ones((numSamples, nPreMin + nPostMin + 1, numDays)) + np.nan
         classAcc_test_incorr_c_aligned = np.ones((numSamples, nPreMin + nPostMin + 1, numDays)) + np.nan
@@ -644,7 +337,7 @@ for ave in [0,1]: # whether to compute average or median across samples
             classAcc_test_s_aligned[:,:, iday] = 100-classErr_bestC_test_shfl_all[iday][: , eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]
             classAcc_test_c_aligned[:,:, iday] = 100-classErr_bestC_test_chance_all[iday][: , eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]        
             classAcc_test_dms_aligned[:,:, iday] = classAcc_bestC_test_dms_all[iday][: , eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]
-        if corrTrained==1 and mn_incorr[iday] >= thIncorr:
+        if doIncorr==1 and mn_incorr[iday] >= thIncorr:
             classAcc_test_incorr_d_aligned[:,:, iday] = 100-classErr_bestC_test_incorr_all[iday][: , eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]
             classAcc_test_incorr_s_aligned[:,:, iday] = 100-classErr_bestC_test_incorr_shfl_all[iday][: , eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]
             classAcc_test_incorr_c_aligned[:,:, iday] = 100-classErr_bestC_test_incorr_chance_all[iday][: , eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]        
@@ -668,12 +361,6 @@ for ave in [0,1]: # whether to compute average or median across samples
             plt.title('p_wmt=%.3f %.3f %.3f'%(p[0], p[1], p[2]))
         plt.legend(loc=0)
     
-    def pwm(a,b):
-        _,p0  = sci.stats.ranksums(np.array(a)[~np.isnan(a)], np.array(b)[~np.isnan(b)]); 
-        _,p1  = sci.stats.mannwhitneyu(np.array(a)[~np.isnan(a)], np.array(b)[~np.isnan(b)])
-        _,p2  = sci.stats.ttest_ind(np.array(a)[~np.isnan(a)], np.array(b)[~np.isnan(b)])
-        p = [p0,p1,p2]
-        return p
         
     # samples are not averaged, pool all samples and all frames of all days
     plt.figure()
@@ -734,31 +421,7 @@ for ave in [0,1]: # whether to compute average or median across samples
     
     
     #%% for each day, compute whether each frame (acorss all samples) is diff btwn test and shfl (or test and incorr)
-    
-    def rmvNans(a): # remove nans
-        mask = ~np.isnan(a)
-        a = np.array([d[m] for d, m in zip(a, mask)])
-        return a
-            
-    def pwmt_frs(a,b):
-        nfr = a.shape[1]
-        
-        a = rmvNans(a)
-        b = rmvNans(b)    
-        
-        if np.shape(a)[1]>0 and np.shape(b)[1]>0:
-            p0  = np.array([sci.stats.ranksums(a[:,f], b[:,f])[1] for f in range(b.shape[1])])
-            p1  = np.array([sci.stats.mannwhitneyu(a[:,f], b[:,f])[1] for f in range(b.shape[1])])
-            _,p2  = sci.stats.ttest_ind(a, b)
-            p = [p0,p1,p2]
-            p = np.array(p)
-        else:
-            p = np.full((3,nfr),np.nan)
-        
-        return p
-        
-    
-    ################    
+     
     pwmt_testIncorr_eachDay = []
     for iday in range(len(days)):
         #a = classAcc_test_d_aligned[:,:, iday] # classErr_bestC_test_data_all[iday]
@@ -826,7 +489,7 @@ for ave in [0,1]: # whether to compute average or median across samples
     av_l2_test_dms = np.array([funcentdisp(classAcc_bestC_test_dms_all[iday], ave)[0] for iday in range(len(days))]) # numDays
     sd_l2_test_dms = [funcentdisp(classAcc_bestC_test_dms_all[iday], ave)[[1,2]].T for iday in range(len(days))]
     
-    if corrTrained==1:
+    if doIncorr==1:
         av_l2_test_incorr_d = np.array([funcentdisp(100-classErr_bestC_test_incorr_all[iday], ave)[0] for iday in range(len(days))]) # numDays
         sd_l2_test_incorr_d = [funcentdisp(100-classErr_bestC_test_incorr_all[iday], ave)[[1,2]].T for iday in range(len(days))]
         
@@ -850,6 +513,41 @@ for ave in [0,1]: # whether to compute average or median across samples
     '''
     #print 'num days to be excluded:\n\tlow trained trs:', sum(mn_corr<thTrained), '\n\tlow incorr trs', sum(mn_incorr<thIncorr)
     
+    def alCAavSamp(av_l2_train_d, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained):
+        av_l2_train_d_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)
+
+        for iday in range(numDays):
+            if mn_corr[iday] >= thTrained:
+                av_l2_train_d_aligned[:, iday] = av_l2_train_d[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]
+                
+        return av_l2_train_d_aligned
+
+    
+    av_l2_train_d_aligned = alCAavSamp(av_l2_train_d, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+    av_l2_test_d_aligned = alCAavSamp(av_l2_test_d, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+    av_l2_test_s_aligned = alCAavSamp(av_l2_test_s, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+    av_l2_test_c_aligned = alCAavSamp(av_l2_test_c, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+    av_l2_test_dms_aligned = alCAavSamp(av_l2_test_dms, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+    
+    sd_l2_train_d_aligned = alCAavSamp(sd_l2_train_d, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+    sd_l2_test_d_aligned = alCAavSamp(sd_l2_test_d, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+    sd_l2_test_s_aligned = alCAavSamp(sd_l2_test_s, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+    sd_l2_test_c_aligned = alCAavSamp(sd_l2_test_c, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+    sd_l2_test_dms_aligned = alCAavSamp(sd_l2_test_dms, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+
+    if doIncorr==1:
+        av_l2_test_incorr_d_aligned = alCAavSamp(av_l2_test_incorr_d, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+        av_l2_test_incorr_s_aligned = alCAavSamp(av_l2_test_incorr_s, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+        av_l2_test_incorr_c_aligned = alCAavSamp(av_l2_test_incorr_c, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+        av_l2_test_incorr_dms_aligned = alCAavSamp(av_l2_test_incorr_dms, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+    
+        sd_l2_test_incorr_d_aligned = alCAavSamp(sd_l2_test_incorr_d, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+        sd_l2_test_incorr_s_aligned = alCAavSamp(sd_l2_test_incorr_s, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+        sd_l2_test_incorr_c_aligned = alCAavSamp(sd_l2_test_incorr_c, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+        sd_l2_test_incorr_dms_aligned = alCAavSamp(sd_l2_test_incorr_dms, eventI_ds_allDays, nPreMin, nPostMin, numDays, mn_corr, thTrained)
+       
+    # delete below once the function above is confirmed to work       
+    '''    
     av_l2_train_d_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)
     av_l2_test_d_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)
     av_l2_test_s_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan
@@ -862,7 +560,7 @@ for ave in [0,1]: # whether to compute average or median across samples
     sd_l2_test_c_aligned = np.ones((nPreMin + nPostMin + 1, 2, numDays)) + np.nan
     sd_l2_test_dms_aligned = np.ones((nPreMin + nPostMin + 1, 2, numDays)) + np.nan # data-shfl
     
-    if corrTrained==1:
+    if doIncorr==1:
         av_l2_test_incorr_d_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)
         av_l2_test_incorr_s_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan
         av_l2_test_incorr_c_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan
@@ -887,7 +585,7 @@ for ave in [0,1]: # whether to compute average or median across samples
             sd_l2_test_c_aligned[:,:, iday] = sd_l2_test_c[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]
             sd_l2_test_dms_aligned[:,:, iday] = sd_l2_test_dms[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]
             
-        if corrTrained==1 and mn_incorr[iday] >= thIncorr:    
+        if doIncorr==1 and mn_incorr[iday] >= thIncorr:    
             av_l2_test_incorr_d_aligned[:, iday] = av_l2_test_incorr_d[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]
             av_l2_test_incorr_s_aligned[:, iday] = av_l2_test_incorr_s[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]
             av_l2_test_incorr_c_aligned[:, iday] = av_l2_test_incorr_c[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]    
@@ -898,7 +596,7 @@ for ave in [0,1]: # whether to compute average or median across samples
             sd_l2_test_incorr_c_aligned[:,:, iday] = sd_l2_test_incorr_c[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]    
             sd_l2_test_incorr_dms_aligned[:,:, iday] = sd_l2_test_incorr_dms[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1] #av_l2_test_incorr_dms_aligned[:, iday] = av_l2_test_incorr_d_aligned[:, iday] - av_l2_test_incorr_s_aligned[:, iday]
             
-    
+    '''
     
     ####### compute p values for each frame across days whether samp-averaged traces of testing data are diff from shfl, also whether testing is diff from incorr: 
     
@@ -906,7 +604,7 @@ for ave in [0,1]: # whether to compute average or median across samples
     # test vs shfl
     _,pcorrtrace = stats.ttest_ind(av_l2_test_d_aligned.transpose(), av_l2_test_s_aligned.transpose(), nan_policy='omit') 
     # incorr vs test
-    if corrTrained==1:
+    if doIncorr==1:
         _,pincorrtrace = stats.ttest_ind(av_l2_test_d_aligned.transpose(), av_l2_test_incorr_d_aligned.transpose(), nan_policy='omit')         
         _,pincorrtracedms = stats.ttest_ind(av_l2_test_dms_aligned.transpose(), av_l2_test_incorr_dms_aligned.transpose(), nan_policy='omit')             
     #_,pcorrtrace0 = stats.ttest_1samp(av_l2_test_d_aligned.transpose(), 50) # p value of class accuracy being different from 50
@@ -953,7 +651,7 @@ for ave in [0,1]: # whether to compute average or median across samples
     av_l2_test_dms_aligned_ave = funcentdisp(av_l2_test_dms_aligned, ave, ax=1, sd=1)[0] #a
     av_l2_test_dms_aligned_std = funcentdisp(av_l2_test_dms_aligned, ave, ax=1, sd=1)[[1,2]].T #b  # sd = b.T-a
        
-    if corrTrained==1:
+    if doIncorr==1:
         av_l2_test_incorr_d_aligned_ave = funcentdisp(av_l2_test_incorr_d_aligned, ave, ax=1, sd=1)[0] #a
         av_l2_test_incorr_d_aligned_std = funcentdisp(av_l2_test_incorr_d_aligned, ave, ax=1, sd=1)[[1,2]].T #b  # sd = b.T-a
     
@@ -1008,9 +706,9 @@ for ave in [0,1]: # whether to compute average or median across samples
     ##%% Save the figure of each day   
     if savefigs:#% Save the figure
         if chAl==1:
-            dd = 'chAl_dispersionCA_'+ avmd1
+            dd = 'chAl_dispersionCA_'+ avmd1 + '_' + nowStr
         else:
-            dd = 'stAl_dispersionCA_'+ avmd1
+            dd = 'stAl_dispersionCA_'+ avmd1 + '_' + nowStr
             
         d = os.path.join(svmdir+dnow)
         if not os.path.exists(d):
@@ -1083,9 +781,9 @@ for ave in [0,1]: # whether to compute average or median across samples
     ##%% Save the figure of each day   
     if savefigs:#% Save the figure
         if chAl==1:
-            dd = 'chAl_distCA_%sSamps' %(avmd0)
+            dd = 'chAl_distCA_%sSamps' %(avmd0) + '_' + nowStr
         else:
-            dd = 'stAl_distCA_%sSamps' %(avmd0)
+            dd = 'stAl_distCA_%sSamps' %(avmd0) + '_' + nowStr
             
         d = os.path.join(svmdir+dnow)
         if not os.path.exists(d):
@@ -1162,7 +860,7 @@ for ave in [0,1]: # whether to compute average or median across samples
                 b = (np.asarray(frameLength*regressBins) * range(1, nPost+1))
                 time_al = np.concatenate((a,b))
             else:
-                time_al = set_time_al(totLen, eventI_allDays[iday])
+                time_al = set_time_al(totLen, eventI_allDays[iday], lastTimeBinMissed)
                     
     #        print time_al.shape
     #        print av1[iday].shape
@@ -1217,7 +915,7 @@ for ave in [0,1]: # whether to compute average or median across samples
                 # figure out what would be the variance of two dists subtracted from each other, so you can add error bars
     #            plt.plot(time_al, av1[iday]-av2[iday], label=tits[0]+'-'+tits[1], color='b')   
                 plt.errorbar(time_al, av5[iday], yerr = abs(sd5[iday].T - av5[iday]), label=tits[0]+'-'+tits[1], color='b')    
-                if corrTrained==1:
+                if doIncorr==1:
     #                plt.plot(time_al, av3[iday]-av4[iday], label=tits[2]+'-'+tits[3], color='r')   # av_l2_test_incorr_d[iday]-av_l2_test_incorr_s[iday]
                     plt.errorbar(time_al, av6[iday], yerr = abs(sd6[iday].T - av6[iday]), label=tits[2]+'-'+tits[3], color='r')
                 plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False) 
@@ -1323,9 +1021,9 @@ for ave in [0,1]: # whether to compute average or median across samples
             ##%% Save the figure    
             if savefigs:#% Save the figure
                 if chAl==1:
-                    dd = 'chAl_testTrain_'+avmd0 + '_' + days[0][0:6] + '-to-' + days[-1][0:6]
+                    dd = 'chAl_testTrain_'+avmd0 + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                 else:
-                    dd = 'stAl_testTrain_'+avmd0 + '_' + days[0][0:6] + '-to-' + days[-1][0:6]
+                    dd = 'stAl_testTrain_'+avmd0 + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                     
                 d = os.path.join(svmdir+dnow)
                 if not os.path.exists(d):
@@ -1361,7 +1059,7 @@ for ave in [0,1]: # whether to compute average or median across samples
     
     #tits = 'Train', 'Test', 'Test_shfl', 'Test_chance' # labels of traces in order given to plotClassAll
     #plotClassAll(av_l2_train_d, sd_l2_train_d, av_l2_test_d, sd_l2_test_d, av_l2_test_s, sd_l2_test_s, av_l2_test_c, sd_l2_test_c, tits)
-    if corrTrained==1:
+    if doIncorr==1:
     #    tits = 'Test', 'Incorr', 'Incorr_shfl', 'Incorr_chance'
     #    plotClassAll(av_l2_test_d, sd_l2_test_d, av_l2_test_incorr_d, sd_l2_test_incorr_d, av_l2_test_incorr_s, sd_l2_test_incorr_s, av_l2_test_incorr_c, sd_l2_test_incorr_c, tits)
         tin = np.concatenate((corr_hr_lr,incorr_hr_lr),axis=1)
@@ -1390,7 +1088,7 @@ for ave in [0,1]: # whether to compute average or median across samples
     plt.plot(time_aligned, av_l2_test_d_aligned_ave, 'b', label='testing data')
     
     # incorr
-    if corrTrained==1:    
+    if doIncorr==1:    
     #    plt.fill_between(time_aligned, av_l2_test_incorr_d_aligned_ave - av_l2_test_incorr_d_aligned_std, av_l2_test_incorr_d_aligned_ave + av_l2_test_incorr_d_aligned_std, alpha=0.5, edgecolor='r', facecolor='r')
         plt.fill_between(time_aligned, av_l2_test_incorr_d_aligned_std[:,0], av_l2_test_incorr_d_aligned_std[:,1], alpha=0.5, edgecolor='r', facecolor='r')
         plt.plot(time_aligned, av_l2_test_incorr_d_aligned_ave, 'r', label='incorr')
@@ -1406,7 +1104,7 @@ for ave in [0,1]: # whether to compute average or median across samples
     plt.plot(time_aligned, av_l2_test_s_aligned_ave, 'g', label='shfl')
     
     # incorr
-    if corrTrained==1:    
+    if doIncorr==1:    
         # test_incorr_chance
     #    plt.fill_between(time_aligned, av_l2_test_incorr_c_aligned_ave - av_l2_test_incorr_c_aligned_std, av_l2_test_incorr_c_aligned_ave + av_l2_test_incorr_c_aligned_std, alpha=0.5, edgecolor='k', facecolor='k')
         plt.fill_between(time_aligned, av_l2_test_incorr_c_aligned_std[:,0], av_l2_test_incorr_c_aligned_std[:,1], alpha=0.5, edgecolor='k', facecolor='k')
@@ -1424,7 +1122,7 @@ for ave in [0,1]: # whether to compute average or median across samples
     ymin, ymax = ax.get_ylim()
     pp = pcorrtrace+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax
     plt.plot(time_aligned, pp, color='k')
-    if corrTrained==1:
+    if doIncorr==1:
         pp = pincorrtrace+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax-3
         plt.plot(time_aligned, pp, color='g')
     plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
@@ -1443,7 +1141,7 @@ for ave in [0,1]: # whether to compute average or median across samples
     plt.plot(time_aligned, av_l2_test_dms_aligned_ave, 'b', label='testing data-shfl')
     
     # incorr
-    if corrTrained==1:    
+    if doIncorr==1:    
     #    plt.fill_between(time_aligned, av_l2_test_incorr_dms_aligned_ave - av_l2_test_incorr_dms_aligned_std, av_l2_test_incorr_dms_aligned_ave + av_l2_test_incorr_dms_aligned_std, alpha=0.5, edgecolor='r', facecolor='r')
         plt.fill_between(time_aligned, av_l2_test_incorr_dms_aligned_std[:,0], av_l2_test_incorr_dms_aligned_std[:,1], alpha=0.5, edgecolor='r', facecolor='r')
         plt.plot(time_aligned, av_l2_test_incorr_dms_aligned_ave, 'r', label='incorr data-shfl')
@@ -1456,7 +1154,7 @@ for ave in [0,1]: # whether to compute average or median across samples
     ax = plt.gca()
     # mark significant time points
     ymin, ymax = ax.get_ylim()
-    if corrTrained==1:
+    if doIncorr==1:
         pp = pincorrtracedms+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax-3
         plt.plot(time_aligned, pp, color='g')
     makeNicePlots(ax,0,1)
@@ -1466,9 +1164,9 @@ for ave in [0,1]: # whether to compute average or median across samples
     ##%% Save the figure    
     if savefigs:#% Save the figure
         if chAl==1:
-            dd = 'chAl_'+avmd0+ 'Days_' + days[0][0:6] + '-to-' + days[-1][0:6]
+            dd = 'chAl_'+avmd0+ 'Days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
         else:
-            dd = 'stAl_'+avmd0+ 'Days_' + days[0][0:6] + '-to-' + days[-1][0:6]
+            dd = 'stAl_'+avmd0+ 'Days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
             
         d = os.path.join(svmdir+dnow)
         if not os.path.exists(d):
@@ -1537,7 +1235,7 @@ for t2an in range(av_l2_test_s_aligned.shape[0]):
     if chAl==1: # chAl: frame before choice
         a = av_l2_test_d_aligned[t2an,:] - av_l2_test_s_aligned[t2an,:] # same as av_l2_test_dms_aligned[t2an,:]
         yl = 'class accuracy (testing data - shfl) %dms before choice' %(round(regressBins*frameLength))
-        if corrTrained==1:
+        if doIncorr==1:
             ain = av_l2_test_incorr_d_aligned[t2an,:] - av_l2_test_incorr_s_aligned[t2an,:]
     else: # stAl: last frame # needs work
         a = av_l2_test_d_aligned[-1,:] - av_l2_test_s_aligned[-1,:]
@@ -1546,7 +1244,7 @@ for t2an in range(av_l2_test_s_aligned.shape[0]):
     plt.figure(figsize=(3,1.5))
     
     plt.plot(range(len(days)), a, marker='o', color='b', markersize=5)
-    if corrTrained==1:
+    if doIncorr==1:
         plt.plot(range(len(days)), ain, marker='o', color='r', markersize=5)
 #    plt.xticks(range(len(days)), [days[i][0:6] for i in range(len(days))], rotation='vertical')
 #    plt.ylabel(yl)    
@@ -1557,9 +1255,9 @@ for t2an in range(av_l2_test_s_aligned.shape[0]):
 ##%% Save the figure    
 if savefigs:#% Save the figure
     if chAl==1:
-        dd = 'chAl_time' + str(time2an) + '_' + days[0][0:6] + '-to-' + days[-1][0:6]
+        dd = 'chAl_time' + str(time2an) + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
     else:
-        dd = 'stAl_time' + str(time2an) + '_' + days[0][0:6] + '-to-' + days[-1][0:6]
+        dd = 'stAl_time' + str(time2an) + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
         
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
@@ -1628,7 +1326,7 @@ makeNicePlots(plt.gca())
 plt.subplots_adjust(wspace=1, hspace=.5)
 
 
-if corrTrained==1:
+if doIncorr==1:
     plt.figure(figsize=(5.5,3))
 #    plt.subplot(311)
     lineObjects = plt.plot(time_aligned, av_l2_test_incorr_d_aligned - av_l2_test_incorr_s_aligned, label=days)
@@ -1645,9 +1343,9 @@ if corrTrained==1:
 ##%% Save the figure    
 if savefigs:#% Save the figure
     if chAl==1:
-        dd = 'chAl_testMshfl_' + days[0][0:6] + '-to-' + days[-1][0:6]
+        dd = 'chAl_testMshfl_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
     else:
-        dd = 'stAl_testMshfl_' + days[0][0:6] + '-to-' + days[-1][0:6]
+        dd = 'stAl_testMshfl_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
         
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
@@ -1678,7 +1376,7 @@ if chAl==1:
     sd_l2_test_s_ch = sd_l2_test_s + 0    
     av_l2_test_c_ch = av_l2_test_c + 0
     sd_l2_test_c_ch = sd_l2_test_c + 0
-    if corrTrained==1:
+    if doIncorr==1:
         av_l2_test_incorr_d_ch = av_l2_test_incorr_d + 0
         sd_l2_test_incorr_d_ch = sd_l2_test_incorr_d + 0        
         av_l2_test_incorr_s_ch = av_l2_test_incorr_s + 0

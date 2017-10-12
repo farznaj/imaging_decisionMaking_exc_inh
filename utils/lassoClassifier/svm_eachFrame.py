@@ -788,7 +788,10 @@ if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
 
     eventI_ds = np.argwhere(np.sign(time_trace)>0)[0] # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
     '''
-
+    
+    # final way of downsampling: every 3 frames averaged before frame0. Then every 3 frame averaged including frame 0 and frames after.
+    # (it doesnt make sense to use a different time resolution for frame 0 than for other frames like we described below)
+    
     ################################ Correct way of downsampling: we dont downsample the frame that includes eventI! (coded on 09/11/17)
     # downsampling while keeping the resolution of frame0 intact (ie 32ms, ie not averaging frame0 with other frames)
     # so all time bins before and after frame0 are frameLength*regressBins ms (~97ms)
@@ -814,18 +817,21 @@ if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
     xdb = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames before frame0
     
     
-    # set frames after frame0 (not including it)
-    f = (np.arange(eventI+1 , eventI+1+regressBins * np.floor((X_svmo.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+    # set frames after frame0 (including it)
+    f = (np.arange(eventI , eventI + regressBins * np.floor((X_svmo.shape[0] - eventI) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+#    f = (np.arange(eventI+1 , eventI+1+regressBins * np.floor((X_svmo.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
     x = X_svmo[f,:,:] # X_svmo including frames after frame0
     T1, N1, C1 = x.shape
     tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
     xda = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames after frame0
     
+    X_svm_d = np.concatenate((xdb, xda))    
     # set the final downsampled X_svmo: concatenate downsampled X at frames before frame0, with x at frame0, and x at frames after frame0
-    X_svm_d = np.concatenate((xdb, [X_svmo[eventI,:,:]], xda))    
+#    X_svm_d = np.concatenate((xdb, [X_svmo[eventI,:,:]], xda))    
     
     X_svm = X_svm_d
     print 'trace size--> original:',X_svmo.shape, 'downsampled:', X_svm_d.shape
+
 
 
     ##### X_svm, incorrect trials
@@ -837,15 +843,17 @@ if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
     xdb = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames before frame0
     
     
-    # set frames after frame0 (not including it)
-    f = (np.arange(eventI+1 , eventI+1+regressBins * np.floor((X_svmo.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+    # set frames after frame0 (including it)
+    f = (np.arange(eventI , eventI + regressBins * np.floor((X_svmo.shape[0] - eventI) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins        
+#    f = (np.arange(eventI+1 , eventI+1+regressBins * np.floor((X_svmo.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
     x = X_svm_incorro[f,:,:] # X_svmo including frames after frame0
     T1, N1, C1 = x.shape
     tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
     xda = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames after frame0
     
+    X_svm_incorr_d = np.concatenate((xdb, xda))    
     # set the final downsampled X_svmo: concatenate downsampled X at frames before frame0, with x at frame0, and x at frames after frame0
-    X_svm_incorr_d = np.concatenate((xdb, [X_svm_incorro[eventI,:,:]], xda))    
+#    X_svm_incorr_d = np.concatenate((xdb, [X_svm_incorro[eventI,:,:]], xda))    
     
     X_svm_incorr = X_svm_incorr_d
     print 'trace size--> original:',X_svm_incorro.shape, 'downsampled:', X_svm_incorr_d.shape
@@ -860,22 +868,26 @@ if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
     xdb = np.mean(np.reshape(x, (regressBins, tt), order = 'F'), axis=0) # downsampled X_svm inclusing frames before frame0
     
     
-    # set frames after frame0 (not including it)
-    f = (np.arange(eventI+1 , eventI+1+regressBins * np.floor((time_traceo.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+    # set frames after frame0 (including it)
+    f = (np.arange(eventI , eventI + regressBins * np.floor((time_trace.shape[0] - eventI) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+#    f = (np.arange(eventI , eventI+regressBins * np.floor((time_traceo.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+#    f = (np.arange(eventI+1 , eventI+1+regressBins * np.floor((time_traceo.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
     x = time_traceo[f] # X_svm including frames after frame0
     T1 = x.shape[0]
     tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
     xda = np.mean(np.reshape(x, (regressBins, tt), order = 'F'), axis=0) # downsampled X_svm inclusing frames after frame0
     
+    time_trace_d = np.concatenate((xdb, xda))
     # set the final downsampled time_trace: concatenate downsampled X at frames before frame0, with x at frame0, and x at frames after frame0
-    time_trace_d = np.concatenate((xdb, [0], xda))   # time_traceo[eventI] will be an array if eventI is an array, but if you load it from matlab as int, it wont be an array and you have to do [time_traceo[eventI]] to make it a list so concat works below:
+#    time_trace_d = np.concatenate((xdb, [0], xda))   # time_traceo[eventI] will be an array if eventI is an array, but if you load it from matlab as int, it wont be an array and you have to do [time_traceo[eventI]] to make it a list so concat works below:
 #    time_trace_d = np.concatenate((xdb, [time_traceo[eventI]], xda))    
     
     time_trace = time_trace_d
     print 'time trace size--> original:',time_traceo.shape, 'downsampled:', time_trace_d.shape
     
     
-    eventI_ds = np.argwhere(np.sign(time_trace_d)==0) # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
+    eventI_ds = np.argwhere(np.sign(time_trace_d)>0)[0]
+#    eventI_ds = np.argwhere(np.sign(time_trace_d)==0) # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
 
 
 else:
