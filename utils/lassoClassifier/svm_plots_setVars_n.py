@@ -22,6 +22,7 @@ if mousename=='fni16':
                 days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
             else:
                 days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
+        
         elif ch_st_goAl[1]==1: # stAl           
             days = ['150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
 
@@ -71,8 +72,6 @@ elif mousename=='fni19':
         
         
         
-        
-#savefigs = False
 
 fmt = ['pdf', 'svg', 'eps'] #'png', 'pdf': preserve transparency # Format of figures for saving
 
@@ -88,10 +87,6 @@ elif platform.system()=='Darwin':
 import sys
 eps = sys.float_info.epsilon #10**-10 # tiny number below which weight is considered 0
 palpha = .05 # p <= palpha is significant
-#thR = 2 # Exclude days with only <=thR rounds with non-0 weights
-#numRounds = 10; # number of times svm analysis was ran for the same dataset but sampling different sets of neurons.    
-
-##%%
 import os
 #import glob
 import numpy as np   
@@ -109,14 +104,7 @@ plt.rc('font', family='helvetica')
 
 
 frameLength = 1000/30.9; # sec.  # np.diff(time_aligned_stim)[0];
-'''
-if neuronType==0:
-    ntName = 'excit'
-elif neuronType==1:
-    ntName = 'inhibit'
-elif neuronType==2:
-    ntName = 'all'     
-'''
+
 if trialHistAnalysis==1:    
     if iTiFlg==0:
         itiName = 'short'
@@ -125,23 +113,9 @@ if trialHistAnalysis==1:
     elif iTiFlg==2:
         itiName = 'all'
 else: # wont be used, only not to get error when running setSVMname
-        itiName = 'all'
+    itiName = 'all'
 
-'''
-if trialHistAnalysis==1: # more parameters are specified in popClassifier_trialHistory.m
-#        iTiFlg = 1; # 0: short ITI, 1: long ITI, 2: all ITIs.
-    epEnd_rel2stimon_fr = 0 # 3; # -2 # epEnd = eventI + epEnd_rel2stimon_fr
-else:
-    # not needed to set ep_ms here, later you define it as [choiceTime-300 choiceTime]ms # we also go 30ms back to make sure we are not right on the choice time!
-#         ep_ms = [425, 725] # optional, it will be set according to min choice time if not provided.# training epoch relative to stimOnset % we want to decode animal's upcoming choice by traninig SVM for neural average responses during ep ms after stimulus onset. [1000, 1300]; #[700, 900]; # [500, 700]; 
-    # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.
-    outcome2ana = 'corr' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials)
-    strength2ana = 'all' # 'all', easy', 'medium', 'hard' % What stim strength to use for training?
-#    thStimStrength = 3; # 2; # threshold of stim strength for defining hard, medium and easy trials.
-#    th_stim_dur = 800; # min stim duration to include a trial in timeStimOnset
 
-trs4project = 'trained' # 'trained', 'all', 'corr', 'incorr' # trials that will be used for projections and the class accuracy trace; if 'trained', same trials that were used for SVM training will be used. "corr" and "incorr" refer to current trial's outcome, so they don't mean much if trialHistAnalysis=1. 
-'''
 # Set fig names
 if trialHistAnalysis:
 #     ep_ms = np.round((ep-eventI)*frameLength)
@@ -165,6 +139,43 @@ daysOrig = days
 numDays = len(days)
 print 'Analyzing mouse',mousename,'-', len(days), 'days'
         
+
+
+
+#%%
+#savefigs = False
+
+#thR = 2 # Exclude days with only <=thR rounds with non-0 weights
+#numRounds = 10; # number of times svm analysis was ran for the same dataset but sampling different sets of neurons.    
+
+##%%
+
+'''
+if neuronType==0:
+    ntName = 'excit'
+elif neuronType==1:
+    ntName = 'inhibit'
+elif neuronType==2:
+    ntName = 'all'     
+'''
+
+
+'''
+if trialHistAnalysis==1: # more parameters are specified in popClassifier_trialHistory.m
+#        iTiFlg = 1; # 0: short ITI, 1: long ITI, 2: all ITIs.
+    epEnd_rel2stimon_fr = 0 # 3; # -2 # epEnd = eventI + epEnd_rel2stimon_fr
+else:
+    # not needed to set ep_ms here, later you define it as [choiceTime-300 choiceTime]ms # we also go 30ms back to make sure we are not right on the choice time!
+#         ep_ms = [425, 725] # optional, it will be set according to min choice time if not provided.# training epoch relative to stimOnset % we want to decode animal's upcoming choice by traninig SVM for neural average responses during ep ms after stimulus onset. [1000, 1300]; #[700, 900]; # [500, 700]; 
+    # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.
+    outcome2ana = 'corr' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials)
+    strength2ana = 'all' # 'all', easy', 'medium', 'hard' % What stim strength to use for training?
+#    thStimStrength = 3; # 2; # threshold of stim strength for defining hard, medium and easy trials.
+#    th_stim_dur = 800; # min stim duration to include a trial in timeStimOnset
+
+trs4project = 'trained' # 'trained', 'all', 'corr', 'incorr' # trials that will be used for projections and the class accuracy trace; if 'trained', same trials that were used for SVM training will be used. "corr" and "incorr" refer to current trial's outcome, so they don't mean much if trialHistAnalysis=1. 
+'''
+
     
 #    return days, suffn 
 

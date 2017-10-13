@@ -218,24 +218,20 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
    
 #%% PLOTS; define functions
 
-def histerrbar(a,b,binEvery,p,colors = ['g','k']):
-#    import matplotlib.gridspec as gridspec
-    
+def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1='exc',lab2='inh'):
+#    import matplotlib.gridspec as gridspec    
 #    r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
 #    binEvery = r/float(10)
-
 #    _, p = stats.ttest_ind(a, b, nan_policy='omit')
-
 #    plt.figure(figsize=(5,3))    
 #    gs = gridspec.GridSpec(2, 4)#, width_ratios=[2, 1]) 
 #    h1 = gs[0,0:2]
 #    h2 = gs[0,2:3]
-
 #    lab1 = 'exc'
 #    lab2 = 'inh'
-
 #    colors = ['g','k']
-    
+
+    ################### hist
     # set bins
     bn = np.arange(np.min(np.concatenate((a,b))), np.max(np.concatenate((a,b))), binEvery)
     bn[-1] = np.max([np.max(a),np.max(b)]) # unlike digitize, histogram doesn't count the right most value
@@ -256,7 +252,7 @@ def histerrbar(a,b,binEvery,p,colors = ['g','k']):
     
     
     plt.legend(loc=0, frameon=False)
-    plt.ylabel('Prob (all days & N shuffs at bestc)')
+    plt.ylabel(ylab) #('Prob (all days & N shuffs at bestc)')
 #    plt.title('mean diff= %.3f, p=%.3f' %(np.mean(a)-np.mean(b), p))
     plt.title('mean diff= %.3f' %(np.mean(a)-np.mean(b)))
     #plt.xlim([-.5,.5])
@@ -264,7 +260,7 @@ def histerrbar(a,b,binEvery,p,colors = ['g','k']):
     makeNicePlots(ax1,0,1)
 
     
-    # errorbar: mean and st error
+    ################ errorbar: mean and st error
     ax2 = plt.subplot(h2) #(gs[0,2:3])
     plt.errorbar([0,1], [a.mean(),b.mean()], [a.std()/np.sqrt(len(a)), b.std()/np.sqrt(len(b))], marker='o',color='k', fmt='.')
     plt.xlim([-1,2])
@@ -281,7 +277,7 @@ def histerrbar(a,b,binEvery,p,colors = ['g','k']):
 
     
 #%%
-def errbarAllDays(a,b,p,colors = ['g','k']):
+def errbarAllDays(a,b,p,gs,colors = ['g','k'],lab1='exc',lab2='inh'):
     if a.ndim==1:
         eav = [np.mean(a[i]) for i in range(len(a))] #np.nanmean(a, axis=1) # average across shuffles
         iav = [np.mean(b[i]) for i in range(len(b))] #np.nanmean(b, axis=1)
@@ -302,27 +298,28 @@ def errbarAllDays(a,b,p,colors = ['g','k']):
     pp[p<=.05] = np.max((eav,iav))
     x = np.arange(np.shape(eav)[0])
     
-    ax = plt.subplot(gs[1,0:2])
+    ax1 = plt.subplot(gs[1,0:2])
     plt.errorbar(x, eav, esd, color=colors[0])
     plt.errorbar(x, iav, isd, color=colors[1])
     plt.plot(x, pp, marker='*',color='r', linestyle='')
     plt.xlim([-1, x[-1]+1])
     plt.xlabel('Days')
     plt.ylabel(lab)
-    makeNicePlots(ax,0,1)
+    makeNicePlots(ax1,0,1)
 
-    ax = plt.subplot(gs[1,2:3])
+    ax2 = plt.subplot(gs[1,2:3])
     plt.errorbar(0, np.nanmean(eav), np.nanstd(eav)/np.sqrt(len(eav)), marker='o', color='k')
     plt.errorbar(1, np.nanmean(iav), np.nanstd(iav)/np.sqrt(len(eav)), marker='o', color='k')
     plt.xticks([0,1], (lab1, lab2), rotation='vertical')
     plt.xlim([-1,2])
-    makeNicePlots(ax,0,1)
+    makeNicePlots(ax2,0,1)
 
     _, p = stats.ttest_ind(eav, iav, nan_policy='omit')
     plt.title('p=%.3f' %(p))
 
     plt.subplots_adjust(wspace=1, hspace=.5)
-
+    
+    return ax1,ax2
     
 
 #%%   
