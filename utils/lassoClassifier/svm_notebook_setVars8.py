@@ -30,13 +30,16 @@ Created on Fri Oct 28 12:48:43 2016
 #ch_st_goAl = [0,1,0] # whether do analysis on traces aligned on choice, stim or go tone.
 def svm_notebook_setVars8(mousename, imagingFolder, mdfFileNumber, ch_st_goAl, numSamples=50, trialHistAnalysis=0, iTiFlg=2):
 
+    shflTrsEachNeuron = 1  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
+    outcome2ana = 'corr' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
+    
+    winLen = 100 # ms, length of window for downsampling; svm will be trained in non-overlapping windows of size winLen ms.
     chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
     stAl = ch_st_goAl[1]
     goToneAl = ch_st_goAl[2]
 #    chAl = 0 # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
     softNorm = 1 # if 1, no neurons will be excluded, bc we do soft normalization of FRs, so non-active neurons wont be problematic. if softNorm = 0, NsExcluded will be found
     useEqualTrNums = 1 # Make sure both classes have the same number of trials when training the classifier
-    outcome2ana = 'all' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
 #    stimAligned = 1 # use stimulus-aligned traces for analyses?
 #    doSVM = 1 # use SVM to decode stim category.
 #    epAllStim = 1 # when doing svr on stim-aligned traces, if 1, svr will computed on X_svr (ave pop activity during the entire stim presentation); Otherwise it will be computed on X0 (ave pop activity during ep)
@@ -47,7 +50,7 @@ def svm_notebook_setVars8(mousename, imagingFolder, mdfFileNumber, ch_st_goAl, n
     saveResults=1
     doPlots = 0; # Whether to make plots or not.
     
-    neuronType=2    	 
+#    neuronType=2    	 
     setNsExcluded=1
     saveHTML = 0; # whether to save the html file of notebook with all figures or not.
     

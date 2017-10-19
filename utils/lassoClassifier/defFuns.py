@@ -1204,13 +1204,24 @@ def colorOrder(nlines=30):
 
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
 
-def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc=[], regressBins=3, useEqualTrNums=1):
+def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc=[], regressBins=3, useEqualTrNums=1, corrTrained=0, shflTrsEachNeuron=0):
     import glob
 
     if chAl==1:
         al = 'chAl'
     else:
         al = 'stAl'
+    
+    if corrTrained:
+        o2a = 'corr_'
+    else:
+        o2a = ''
+
+    if shflTrsEachNeuron:
+        shflname = 'shflTrsPerN_'
+    else:
+        shflname = ''
+            
     ''' 
     if len(doInhAllexcEqexc)==0: # 1st run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc at the same time, also for all days (except a few days of fni18), inhRois was used (not the new inhRois_pix)       
         if trialHistAnalysis:
@@ -1235,14 +1246,14 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
         
     if trialHistAnalysis:
         if useEqualTrNums:
-            svmn = 'excInh_SVMtrained_eachFrame_%s_prevChoice_%s_ds%d_eqTrs_*' %(ntype, al,regressBins)
+            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s_prevChoice_%s_ds%d_eqTrs_*' %(o2a, shflname, ntype, al,regressBins)
         else:
-            svmn = 'excInh_SVMtrained_eachFrame_%s_prevChoice_%s_ds%d_*' %(ntype, al,regressBins)
+            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s_prevChoice_%s_ds%d_*' %(o2a, shflname, ntype, al,regressBins)
     else:
         if useEqualTrNums:
-            svmn = 'excInh_SVMtrained_eachFrame_%s_currChoice_%s_ds%d_eqTrs_*' %(ntype, al,regressBins)
+            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s_currChoice_%s_ds%d_eqTrs_*' %(o2a, shflname, ntype, al,regressBins)
         else:
-            svmn = 'excInh_SVMtrained_eachFrame_%s_currChoice_%s_ds%d_*' %(ntype, al,regressBins)
+            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s_currChoice_%s_ds%d_*' %(o2a, shflname, ntype, al,regressBins)
         
         
         
@@ -1256,7 +1267,7 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
 
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
 
-def setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins=3, corrTrained=0):
+def setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins=3, corrTrained=0, shflTrsEachNeuron=0):
     import glob
 
     if chAl==1:
@@ -1268,11 +1279,16 @@ def setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins
         o2a = '_corr'
     else:
         o2a = '' 
+
+    if shflTrsEachNeuron:
+    	shflname = '_shflTrsPerN'
+    else:
+    	shflname = ''        
     
     if trialHistAnalysis:
-        svmn = 'svmPrevChoice_eachFrame_%s%s_ds%d_*' %(al,o2a,regressBins)
+        svmn = 'svmPrevChoice_eachFrame_%s%s%s_ds%d_*' %(al,o2a,shflname,regressBins)
     else:
-        svmn = 'svmCurrChoice_eachFrame_%s%s_ds%d_*' %(al,o2a,regressBins)
+        svmn = 'svmCurrChoice_eachFrame_%s%s%s_ds%d_*' %(al,o2a,shflname,regressBins)
     
     svmn = svmn + os.path.basename(pnevFileName) #pnevFileName[-32:]    
     svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
@@ -1588,7 +1604,7 @@ def loadSVM_allN(svmName, doPlots, doIncorr, loadWeights):
         
 #%% Load exc,inh SVM vars
         
-def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, doPlots, doIncorr, loadWeights, doAllN):
+def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, doPlots, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron):
     # loadWeights: 
     # 0: don't load weights, only load class accur
     # 1 : load weights and class cccur
@@ -1611,7 +1627,10 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
         
         doInhAllexcEqexc = np.full((3), False)
         doInhAllexcEqexc[idi] = True 
-        svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins)        
+        if idi==1 and doAllN: # plot allN, instead of allExc
+            svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, shflTrsEachNeuron) # for chAl: the latest file is with soft norm; earlier file is 
+        else:        
+            svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)        
         svmName = svmName[0] # use [0] for the latest file; use [-1] for the earliest file
         print os.path.basename(svmName)    
 
@@ -1627,12 +1646,7 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
         ######### allN or allExc
         elif doInhAllexcEqexc[1] == 1: 
             if doAllN: # plot allN, instead of allExc
-                svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained) # for chAl: the latest file is with soft norm; earlier file is 
-                svmName = svmName[0]
-                print os.path.basename(svmName)    
-
-                _, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, _, w_data_allExc, b_data_allExc = loadSVM_allN(svmName, doPlots, doIncorr, 1)
-    
+                _, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, _, w_data_allExc, b_data_allExc = loadSVM_allN(svmName, doPlots, doIncorr, 1)   
             else: # plot allExc
                 if loadWeights==1:
                     Dataae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_allExc', 'perClassErrorTest_shfl_allExc', 'perClassErrorTest_chance_allExc', 'w_data_allExc', 'b_data_allExc'])
@@ -1713,7 +1727,7 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
 #        numInh[iday] = w_data_inh.shape[1]
 #        numAllexc[iday] = w_data_allExc.shape[1]
 
-    if loadWeights!=2:   # 2: only download weights, no CA                                     
+    if loadWeights==2:   # 2: only download weights, no CA                                     
         perClassErrorTest_data_inh = []
         perClassErrorTest_shfl_inh = []
         perClassErrorTest_chance_inh = []

@@ -13,15 +13,19 @@ Created on Sun Mar 12 15:12:29 2017
 
 #%% Change the following vars:
 
-mousename = 'fni18' #'fni17'
+mousename = 'fni17' #'fni17'
 
-savefigs = 0
+shflTrsEachNeuron = 1  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
+lastTimeBinMissed = 0 #1# if 0, things were ran fine; if 1: by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
+savefigs = 1
+
 doAllN = 1 # plot allN, instead of allExc
-thTrained = 10#10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
-lastTimeBinMissed = 1 # if 0, things were ran fine; if 1: by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
 corrTrained = 1
 doIncorr = 0
+
+thTrained = 10#10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
 loadWeights = 0
+useEqualTrNums = 1
     
 if mousename == 'fni18': #set one of the following to 1:
     allDays = 1# all 7 days will be used (last 3 days have z motion!)
@@ -35,8 +39,8 @@ ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or 
 #loadInhAllexcEqexc = 1 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)       
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
-
 superimpose = 1 # the averaged aligned traces of testing and shuffled will be plotted on the same figure
+
 chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
 stAl = ch_st_goAl[1]
 goToneAl = ch_st_goAl[2]
@@ -46,11 +50,10 @@ if doAllN==1:
 else:
     labAll = 'allExc'
 
-frameLength = 1000/30.9; # sec.
-regressBins = int(np.round(100/frameLength)) # must be same regressBins used in svm_eachFrame. 100ms # set to nan if you don't want to downsample.
-
 #if loadInhAllexcEqexc==1:
 dnow = '/excInh_trainDecoder_eachFrame/'+mousename+'/'
+if shflTrsEachNeuron:
+    dnow = dnow+'trsShfledPerNeuron/'
 #else: # old svm files
 #    dnow = '/excInh_trainDecoder_eachFrame/'+mousename+'/inhRois/'
 if doAllN==1:
@@ -63,6 +66,8 @@ if doAllN==1:
 execfile("defFuns.py")
 execfile("svm_plots_setVars_n.py")  
 
+frameLength = 1000/30.9; # sec.
+regressBins = int(np.round(100/frameLength)) # must be same regressBins used in svm_eachFrame. 100ms # set to nan if you don't want to downsample.
 
    
 #%% 
@@ -113,7 +118,7 @@ for iday in range(len(days)):  #
 
     #%% Get number of hr, lr trials that were used for svm training
     
-    svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, [1,0,0], regressBins)[0]   
+    svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, [1,0,0], regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]   
     
     corr_hr, corr_lr = set_corr_hr_lr(postName, svmName)
 
@@ -130,7 +135,7 @@ for iday in range(len(days)):  #
     
     #%% Load SVM vars
 
-    perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN)
+    perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron)
     
     ##%% Get number of inh and exc        
     if loadWeights==1:
@@ -158,16 +163,6 @@ for iday in range(len(days)):  #
 
 eventI_allDays = eventI_allDays.astype(int)   
 eventI_ds_allDays = eventI_ds_allDays.astype(int)
-numExcSamples = perClassErrorTest_data_exc_all[iday].shape[0]
-#perClassErrorTest_data_inh_all = np.array(perClassErrorTest_data_inh_all)
-#perClassErrorTest_shfl_inh_all = np.array(perClassErrorTest_shfl_inh_all)
-#perClassErrorTest_chance_inh_all = np.array(perClassErrorTest_chance_inh_all)
-#perClassErrorTest_data_allExc_all = np.array(perClassErrorTest_data_allExc_all)
-#perClassErrorTest_shfl_allExc_all = np.array(perClassErrorTest_shfl_allExc_all)
-#perClassErrorTest_chance_allExc_all = np.array(perClassErrorTest_chance_allExc_all)
-#perClassErrorTest_data_exc_all = np.array(perClassErrorTest_data_exc_all) # numShufflesExc x numSamples x numFrames
-#perClassErrorTest_shfl_exc_all = np.array(perClassErrorTest_shfl_exc_all)
-#perClassErrorTest_chance_exc_all = np.array(perClassErrorTest_chance_exc_all)
 
 
 #%%    

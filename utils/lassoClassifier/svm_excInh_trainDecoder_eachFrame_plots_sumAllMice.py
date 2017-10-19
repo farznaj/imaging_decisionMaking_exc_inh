@@ -18,7 +18,9 @@ Created on Sun Mar 12 15:12:29 2017
 #%%
 mice = 'fni16', 'fni17', 'fni18', 'fni19' # if you want to use only one mouse, make sure you put comma at the end; eg. mice = 'fni19',
 
-savefigs = 0
+shflTrsEachNeuron = 1  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
+savefigs = 1
+
 doAllN = 1 # plot allN, instead of allExc
 time2an = -1; # relative to eventI, look at classErr in what time stamp.
 thTrained = 10#10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
@@ -30,6 +32,7 @@ loadWeights = 0
 num2AnInhAllexcEqexc = 3 # if 3, all 3 types (inh, allExc, exc) will be analyzed. If 2, inh and allExc will be analyzed. if 1, inh will be analyzed. # if you have all svm files saved, set it to 3.
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
+useEqualTrNums = 1
 
 import numpy as np
 frameLength = 1000/30.9; # sec.
@@ -103,6 +106,8 @@ for im in range(len(mice)):
     #%% 
 #    if loadInhAllexcEqexc==1:
     dnow = '/excInh_trainDecoder_eachFrame/'+mousename+'/'
+    if shflTrsEachNeuron:
+        dnow = dnow+'trsShfledPerNeuron/'
 #    else:
 #        dnow = '/excInh_trainDecoder_eachFrame/'+mousename+'/inhRois/' # old inhibit ROI identification... 
         
@@ -156,7 +161,7 @@ for im in range(len(mice)):
         
         #%% Set number of hr, lr trials that were used for svm training
         
-        svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, [1,0,0], regressBins)[0]   
+        svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, [1,0,0], regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]   
         
         corr_hr, corr_lr = set_corr_hr_lr(postName, svmName)    
         corr_hr_lr[iday,:] = [corr_hr, corr_lr]        
@@ -172,7 +177,7 @@ for im in range(len(mice)):
         
         #%% Load SVM vars
     
-        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN)
+        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron)
         
         ##%% Get number of inh and exc        
         if loadWeights==1:
@@ -327,8 +332,6 @@ for im in range(len(mice)):
         sd_test_chance_exc_allMice.append(sd_test_chance_exc)
 
 
-    
-    
     #%%
     ######################## PLOTS ########################
     
@@ -489,10 +492,15 @@ for im in range(len(mice)):
     
 
 if savefigs:#% Save the figure
-    if chAl==1:
-        dd = 'chAl_eachDay_time' + str(time2an) + '_' + labAll + '_' + '_'.join(mice) + '_' + nowStr # + days[0][0:6] + '-to-' + days[-1][0:6]
+    if shflTrsEachNeuron:
+        sn = 'shflTrsPerN_'
     else:
-        dd = 'stAl_eachDay_time' + str(time2an) + '_' + labAll + '_' + '_'.join(mice) + '_' + nowStr # + days[0][0:6] + '-to-' + days[-1][0:6]
+        sn = ''
+        
+    if chAl==1:
+        dd = 'chAl_aveDays_time' + str(time2an) + '_' + labAll + '_' + sn + '_'.join(mice) + '_' + nowStr # + days[0][0:6] + '-to-' + days[-1][0:6]
+    else:
+        dd = 'stAl_aveDays_time' + str(time2an) + '_' + labAll + '_' + sn + '_'.join(mice) + '_' + nowStr # + days[0][0:6] + '-to-' + days[-1][0:6]
         
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
