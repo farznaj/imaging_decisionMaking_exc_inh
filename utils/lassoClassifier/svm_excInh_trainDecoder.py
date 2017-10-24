@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """
+# NOTE: this is an old code... you switched to svm_excInh_trainDecoder_eachFrame.py ... where you train SVM for each frame... here you only train it on a time window before the choice.
 # Trains decoder using only inh or only exc neurons after finding bestc for each decoder separately.
 
 

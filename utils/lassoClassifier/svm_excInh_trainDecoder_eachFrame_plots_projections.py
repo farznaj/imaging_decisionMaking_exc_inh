@@ -12,6 +12,7 @@ Created on Mon Oct  2 19:44:08 2017
 #%% Change the following vars:
 
 mousename = 'fni17' #'fni17'
+lastTimeBinMissed = 0 #1# if 0, things were ran fine; if 1: by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
 #days = [151101_1] --> you picked this day!
 savefigs = 0
 useB = [1,1] # useB_useGuassianB if 0, no intercept will be added to the decoder projections. 
@@ -325,92 +326,16 @@ for iday in range(len(days)):
         
     print '%d HR trials; %d LR trials' %(sum(hr_trs), sum(lr_trs))
     
+
+    #%% I think we need at the very least 3 trials of each class to train SVM. So exit the analysis if this condition is not met!
+    
+    if min((Y_svm==1).sum(), (Y_svm==0).sum()) < 3:
+        sys.exit('Too few trials to do SVM training! HR=%d, LR=%d' %((Y_svm==1).sum(), (Y_svm==0).sum()))
+        
         
     #%% Downsample X: average across multiple times (downsampling, not a moving average. we only average every regressBins points.)
     
-    #regressBins = 2 # number of frames to average for downsampling X
-    #regressBins = int(np.round(100/frameLength)) # 100ms
-    
-    if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
-        print 'Downsampling traces ....'            
-        
-        # below is problematic when it comes to aligning all sessions... they have different number of frames before eventI, so time bin 0 might be average of frames eventI-1:eventI+1 or eventI:eventI+2, etc.
-        # on 10/4/17 I added the version below, where we average every 3 frames before eventI, also we average every 3 frames including eventI and after. Then we concat them.
-        # this way we make sure that time bin 0, always includes eventI and 2 frames after. and time bin -1 always includes average of 3 frames before eventI.
-        
-        '''
-        # X_svm
-        T1, N1, C1 = X_svm.shape
-        tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X
-        X_svm = X_svm[0:regressBins*tt,:,:]
-        #X_svm_d.shape
-        
-        X_svm = np.mean(np.reshape(X_svm, (regressBins, tt, N1, C1), order = 'F'), axis=0)
-        print 'downsampled choice-aligned trace: ', X_svm.shape
-            
-            
-        time_trace = time_trace[0:regressBins*tt]
-    #    print time_trace_d.shape
-        time_trace = np.round(np.mean(np.reshape(time_trace, (regressBins, tt), order = 'F'), axis=0), 2)
-    #    print time_trace.shape
-    
-        eventI_ds = np.argwhere(np.sign(time_trace)>0)[0] # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
-        '''
-    
-        # new method, started on 10/4/17
-    
-        ##### x_svm
-        # set frames before frame0 (not including it)
-        f = (np.arange(eventI - regressBins*np.floor(eventI/float(regressBins)) , eventI)).astype(int) # 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)
-        x = X_svm[f,:,:] # X_svmo including frames before frame0
-        T1, N1, C1 = x.shape
-        tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames before frame0
-        xdb = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames before frame0
-        
-        
-        # set frames after frame0 (including it)
-        f = (np.arange(eventI , eventI+regressBins * np.floor((X_svm.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
-        x = X_svm[f,:,:] # X_svmo including frames after frame0
-        T1, N1, C1 = x.shape
-        tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
-        xda = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames after frame0
-        
-        # set the final downsampled X_svmo: concatenate downsampled X at frames before frame0, with x at frames after (and including) frame0
-        X_svm_d = np.concatenate((xdb, xda))    
-        print 'trace size--> original:',X_svm.shape, 'downsampled:', X_svm_d.shape
-        X_svm = X_svm_d
-        
-        
-        
-        ##### time_trace
-        # set frames before frame0 (not including it)
-        f = (np.arange(eventI - regressBins*np.floor(eventI/float(regressBins)) , eventI)).astype(int) # 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)
-        x = time_trace[f] # time_trace including frames before frame0
-        T1 = x.shape[0]
-        tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames before frame0 # same as eventI_ds
-        xdb = np.mean(np.reshape(x, (regressBins, tt), order = 'F'), axis=0) # downsampled X_svm inclusing frames before frame0
-        
-        
-        # set frames after frame0 (not including it)
-        f = (np.arange(eventI , eventI+regressBins * np.floor((time_trace.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
-        x = time_trace[f] # X_svm including frames after frame0
-        T1 = x.shape[0]
-        tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
-        xda = np.mean(np.reshape(x, (regressBins, tt), order = 'F'), axis=0) # downsampled X_svm inclusing frames after frame0
-        
-        # set the final downsampled time_trace: concatenate downsampled X at frames before frame0, with x at frames after (including) frame0
-        time_trace_d = np.concatenate((xdb, xda))   # time_traceo[eventI] will be an array if eventI is an array, but if you load it from matlab as int, it wont be an array and you have to do [time_traceo[eventI]] to make it a list so concat works below:
-    #    time_trace_d = np.concatenate((xdb, [time_traceo[eventI]], xda))    
-        print 'time trace size--> original:',time_trace.shape, 'downsampled:', time_trace_d.shape    
-        time_trace = time_trace_d
-    
-        
-        eventI_ds = np.argwhere(np.sign(time_trace_d)>0)[0]  # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
-        
-    
-    
-    else:
-        print 'Not downsampling traces ....'
+    X_svm, time_trace, eventI_ds = downsampXsvmTime(X_svm, time_trace, eventI, regressBins, lastTimeBinMissed)    
     
     
     #%% Set NsExcluded : Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.

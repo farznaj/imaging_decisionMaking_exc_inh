@@ -127,15 +127,13 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     else:
         return imfilename, pnevFileName, dataPath
  
-    
-    
+        
 #%% Define perClassError: percent difference between Y and Yhat, ie classification error
 
 def perClassError(Y, Yhat):
     import numpy as np
     perClassEr = np.sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
     return perClassEr
-
 
 
 #%% Deine prediction error for SVR .... 
@@ -156,8 +154,7 @@ def perClassError_sr(y,yhat):
 #def perClassError_sr(Y,Yhat,eps0=10**-5):    
 #    ce = np.mean(np.logical_and(abs(Y-Yhat) > eps0 , ~np.isnan(Yhat - Y)))*100
 #    return ce
-
-    
+  
     
 #%% Function to predict class labels
 # Lets check how predict works.... Result: for both SVM and SVR, classfier.predict equals xw+b. For SVM, xw+b gives -1 and 1, that should be changed to 0 and 1 to match svm.predict.
@@ -168,9 +165,6 @@ def predictMan(X,w,b,th=0): # set th to nan if you are predicting on svr (since 
         yhat[yhat<th] = 0
         yhat[yhat>th] = 1    
     return yhat
-
-           
-
 
 
 #%% Function to only show left and bottom axes of plots, make tick directions outward, remove every other tick label if requested.
@@ -199,7 +193,9 @@ def makeNicePlots(ax, rmv2ndXtickLabel=0, rmv2ndYtickLabel=0):
 #    ax.tick_params(axis='x', pad=30)
 
 #    plt.xticks(x, labels, rotation='vertical')
-    
+    #ax.xaxis.label.set_color('red')    
+#    plt.gca().spines['left'].set_color('white')
+    #plt.gca().yaxis.set_visible(False)
 
 #%%    
      #import matplotlib.pyplot as plt
@@ -216,9 +212,9 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     return im.axes.figure.colorbar(im, cax=cax, **kwargs)    
    
    
-#%% PLOTS; define functions
+#%% Plot histogram of verctors a and b on axes h1 and h2
 
-def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1='exc',lab2='inh'):
+def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1='exc',lab2='inh',plotCumsum=0):
 #    import matplotlib.gridspec as gridspec    
 #    r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
 #    binEvery = r/float(10)
@@ -235,22 +231,32 @@ def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1=
     # set bins
     bn = np.arange(np.min(np.concatenate((a,b))), np.max(np.concatenate((a,b))), binEvery)
     bn[-1] = np.max([np.max(a),np.max(b)]) # unlike digitize, histogram doesn't count the right most value
-    # set hist of a
+    
+    # plt hist of a
     hist, bin_edges = np.histogram(a, bins=bn)
     hist = hist/float(np.sum(hist))    
-    # Plot hist of a
+    if plotCumsum:
+        hist = np.cumsum(hist)
     ax1 = plt.subplot(h1) #(gs[0,0:2])
-#    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[0], alpha=.4, label=lab1)
-    plt.plot(bin_edges[0:-1], hist, color=colors[0], label=lab1)    
+    # plot the center of bins
+    plt.plot(bin_edges[0:-1]+binEvery/2., hist, color=colors[0], label=lab1)    #    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[0], alpha=.4, label=lab1)
     
-    # set his of b
+    # plot his of b
     hist, bin_edges = np.histogram(b, bins=bn)
     hist = hist/float(np.sum(hist));     #d = stats.mode(np.diff(bin_edges))[0]/float(2)
-    # Plot hist of b
-#    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[1], alpha=.4, label=lab2)
-    plt.plot(bin_edges[0:-1], hist, color=colors[1], label=lab2)    
-    
-    
+    if plotCumsum:
+        hist = np.cumsum(hist)
+    plt.plot(bin_edges[0:-1]+binEvery/2., hist, color=colors[1], label=lab2)        #    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[1], alpha=.4, label=lab2)
+
+    # set labels, etc
+    yl = plt.gca().get_ylim()
+    ry = np.diff(yl)
+    plt.ylim([yl[0]-ry/20 , yl[1]])   
+    #
+    xl = plt.gca().get_xlim()
+    rx = np.diff(xl)
+    plt.xlim([xl[0]-rx/20 , xl[1]])   
+    #    
     plt.legend(loc=0, frameon=False)
     plt.ylabel(ylab) #('Prob (all days & N shuffs at bestc)')
 #    plt.title('mean diff= %.3f, p=%.3f' %(np.mean(a)-np.mean(b), p))
@@ -276,9 +282,16 @@ def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1=
 
 
     
-#%%
-def errbarAllDays(a,b,p,gs,colors = ['g','k'],lab1='exc',lab2='inh'):
-    if a.ndim==1:
+#%% each element of a and b contras vars for a days. Here we compute and plot ave and se across those vars.
+    
+def errbarAllDays(a,b,p,gs,colors = ['g','k'],lab1='exc',lab2='inh',lab='ave(CA)', h1=[], h2=[]):
+    
+    if type(h1)==list: # h1 is not provided; otherwise h1 is provided as a matplotlib.gridspec.SubplotSpec
+        h1 = gs[1,0:2]
+    if type(h1)==list:
+        h2 = gs[1,2:3]
+    
+    if np.ndim(a)==1:
         eav = [np.mean(a[i]) for i in range(len(a))] #np.nanmean(a, axis=1) # average across shuffles
         iav = [np.mean(b[i]) for i in range(len(b))] #np.nanmean(b, axis=1)
         ele = [len(a[i]) for i in range(len(a))] #np.shape(a)[1] - np.sum(np.isnan(a),axis=1) # number of non-nan shuffles of each day
@@ -298,16 +311,16 @@ def errbarAllDays(a,b,p,gs,colors = ['g','k'],lab1='exc',lab2='inh'):
     pp[p<=.05] = np.max((eav,iav))
     x = np.arange(np.shape(eav)[0])
     
-    ax1 = plt.subplot(gs[1,0:2])
+    ax1 = plt.subplot(h1)
     plt.errorbar(x, eav, esd, color=colors[0])
     plt.errorbar(x, iav, isd, color=colors[1])
-    plt.plot(x, pp, marker='*',color='r', linestyle='')
+    plt.plot(x, pp, marker='*',color='r', markeredgecolor='r', linestyle='', markersize=3)
     plt.xlim([-1, x[-1]+1])
     plt.xlabel('Days')
     plt.ylabel(lab)
     makeNicePlots(ax1,0,1)
 
-    ax2 = plt.subplot(gs[1,2:3])
+    ax2 = plt.subplot(h2)
     plt.errorbar(0, np.nanmean(eav), np.nanstd(eav)/np.sqrt(len(eav)), marker='o', color='k')
     plt.errorbar(1, np.nanmean(iav), np.nanstd(iav)/np.sqrt(len(eav)), marker='o', color='k')
     plt.xticks([0,1], (lab1, lab2), rotation='vertical')
@@ -1436,11 +1449,58 @@ def set_corr_hr_lr(postName, svmName, doIncorr=0):
         return corr_hr, corr_lr
 
 
+#%% Find number of frames before and after eventI for each day, and the the min numbers across days; 
+# this is to find common eventI (among a number of session)
 
+##%% Find the common eventI, number of frames before and after the common eventI for the alignment of traces of all days.
+# By common eventI, we  mean the index on which all traces will be aligned.
+
+def set_nprepost(trace, eventI_ds_allDays, mn_corr, thTrained=10, regressBins=3):
+    # trace: each element is for one day
+            
+    numDays = len(trace)
+    nPost = (np.ones((numDays,1))+np.nan).flatten()
+    for iday in range(numDays):
+        if mn_corr[iday] >= thTrained: # dont include days with too few svm trained trials.
+            nPost[iday] = (len(trace[iday]) - eventI_ds_allDays[iday] - 1)
+    nPostMin = np.nanmin(nPost).astype('int')
+    
+    nPreMin = np.nanmin(eventI_ds_allDays).astype('int') # number of frames before the common eventI, also the index of common eventI.     
+    print 'Number of frames before = %d, and after = %d the common eventI' %(nPreMin, nPostMin)
+    
+    ## Set the time array for the across-day aligned traces
+    totLen = nPreMin + nPostMin +1
+
+    # Get downsampled time trace, without using the non-downsampled eventI
+    # you need nPreMin and totLen
+    a = frameLength*np.arange(-regressBins*nPreMin,0)
+    b = frameLength*np.arange(0,regressBins*(totLen-nPreMin))
+    aa = np.mean(np.reshape(a,(regressBins,nPreMin), order='F'), axis=0)
+    bb = np.mean(np.reshape(b,(regressBins,totLen-nPreMin), order='F'), axis=0)
+    time_al = np.concatenate((aa,bb))
+
+    return time_al, nPreMin, nPostMin
+        
+
+#%% Align traces of each day on the common eventI
+
+def alTrace(trace, eventI_ds_allDays, nPreMin, nPostMin, mn_corr, thTrained=10):    
+    # mn_corr: min number of HR and LR trials 
+    
+    trace= np.array(trace)
+    trace_aligned = []
+#    trace_aligned = np.ones((nPreMin + nPostMin + 1, trace.shape[0])) + np.nan # frames x days, aligned on common eventI (equals nPreMin)     
+    for iday in range(trace.shape[0]):
+        if mn_corr[iday] >= thTrained: # dont include days with too few svm trained trials.
+            trace_aligned.append(trace[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1])
+#            trace_aligned[:, iday] = trace[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]    
+    return trace_aligned
+
+        
 #%% Set the time array for the across-day aligned traces
 
 # totLen_ds = len(av_l2_test_diday)
-def set_time_al(totLen_ds, eventI, lastTimeBinMissed):
+def set_time_al(totLen_ds, eventI, lastTimeBinMissed, regressBins=3):
     # totLen_ds: length of downsample trace
     # eventI : eventI on the original trace (non-downsampled)
 #    eventI = eventI_allDaysiday #np.argwhere(time_trace==0).flatten()
@@ -1472,7 +1532,103 @@ def set_time_al(totLen_ds, eventI, lastTimeBinMissed):
 
     return time_al
 
+
+
+
+#%%
+def downsampXsvmTime(X_svm, time_trace, eventI, regressBins, lastTimeBinMissed):
+
+    #regressBins = 2 # number of frames to average for downsampling X
+    #regressBins = int(np.round(100/frameLength)) # 100ms        
+    if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
+        print 'Downsampling traces ....'            
+        
+        # below is problematic when it comes to aligning all sessions... they have different number of frames before eventI, so time bin 0 might be average of frames eventI-1:eventI+1 or eventI:eventI+2, etc.
+        # on 10/4/17 I added the version below, where we average every 3 frames before eventI, also we average every 3 frames including eventI and after. Then we concat them.
+        # this way we make sure that time bin 0, always includes eventI and 2 frames after. and time bin -1 always includes average of 3 frames before eventI.
+        
+        '''
+        # X_svm
+        T1, N1, C1 = X_svm.shape
+        tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X
+        X_svm = X_svm[0:regressBins*tt,:,:]
+        #X_svm_d.shape
+        
+        X_svm = np.mean(np.reshape(X_svm, (regressBins, tt, N1, C1), order = 'F'), axis=0)
+        print 'downsampled choice-aligned trace: ', X_svm.shape
+            
+            
+        time_trace = time_trace[0:regressBins*tt]
+    #    print time_trace_d.shape
+        time_trace = np.round(np.mean(np.reshape(time_trace, (regressBins, tt), order = 'F'), axis=0), 2)
+    #    print time_trace.shape
     
+        eventI_ds = np.argwhere(np.sign(time_trace)>0)[0] # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
+        '''
+    
+        # new method, started on 10/4/17
+    
+        ##### x_svm
+        # set frames before frame0 (not including it)
+        f = (np.arange(eventI - regressBins*np.floor(eventI/float(regressBins)) , eventI)).astype(int) # 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)
+        x = X_svm[f,:,:] # X_svmo including frames before frame0
+        T1, N1, C1 = x.shape
+        tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames before frame0
+        xdb = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames before frame0        
+        
+        # set frames after frame0 (including it)
+        if lastTimeBinMissed==0: # if 0, things were run fine; if 1: by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)        
+            f = (np.arange(eventI , eventI+regressBins * np.floor((X_svm.shape[0] - (eventI)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+        else: # by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)        
+            f = (np.arange(eventI , eventI+regressBins * np.floor((X_svm.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+        x = X_svm[f,:,:] # X_svmo including frames after frame0
+        T1, N1, C1 = x.shape
+        tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
+        xda = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames after frame0
+        
+        # set the final downsampled X_svmo: concatenate downsampled X at frames before frame0, with x at frames after (and including) frame0
+        X_svm_d = np.concatenate((xdb, xda))    
+        print 'trace size--> original:',X_svm.shape, 'downsampled:', X_svm_d.shape
+        X_svm = X_svm_d
+        
+        
+        
+        ##### time_trace
+        # set frames before frame0 (not including it)
+        f = (np.arange(eventI - regressBins*np.floor(eventI/float(regressBins)) , eventI)).astype(int) # 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)
+        x = time_trace[f] # time_trace including frames before frame0
+        T1 = x.shape[0]
+        tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames before frame0 # same as eventI_ds
+        xdb = np.mean(np.reshape(x, (regressBins, tt), order = 'F'), axis=0) # downsampled X_svm inclusing frames before frame0      
+
+        # set frames after frame0 (including it)
+        if lastTimeBinMissed==0: # if 0, things were run fine; if 1: by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
+            f = (np.arange(eventI , eventI + regressBins * np.floor((time_trace.shape[0] - eventI) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+        else: # by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
+            f = (np.arange(eventI , eventI + regressBins * np.floor((time_trace.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins            
+        x = time_trace[f] # X_svm including frames after frame0
+        T1 = x.shape[0]
+        tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
+        xda = np.mean(np.reshape(x, (regressBins, tt), order = 'F'), axis=0) # downsampled X_svm inclusing frames after frame0
+        
+        # set the final downsampled time_trace: concatenate downsampled X at frames before frame0, with x at frames after (including) frame0
+        time_trace_d = np.concatenate((xdb, xda))   # time_traceo[eventI] will be an array if eventI is an array, but if you load it from matlab as int, it wont be an array and you have to do [time_traceo[eventI]] to make it a list so concat works below:
+    #    time_trace_d = np.concatenate((xdb, [time_traceo[eventI]], xda))    
+        print 'time trace size--> original:',time_trace.shape, 'downsampled:', time_trace_d.shape    
+        time_trace = time_trace_d
+    
+        
+        eventI_ds = np.argwhere(np.sign(time_trace_d)>0)[0]  # frame in downsampled trace within which event_I happened (eg time1stSideTry)    
+        
+    
+    else:
+        print 'Not downsampling traces ....'
+
+    
+    return X_svm, time_trace, eventI_ds
+    
+    
+        
 #%%    
 def rmvNans(a): # remove nans
     mask = ~np.isnan(a)
@@ -1480,7 +1636,8 @@ def rmvNans(a): # remove nans
     return a
 
  
-#%%    
+#%% compute p value between vectors a,b (wilcoxon, MW, ttest)  
+ 
 def pwm(a,b):
     _,p0  = sci.stats.ranksums(np.array(a)[~np.isnan(a)], np.array(b)[~np.isnan(b)]); 
     _,p1  = sci.stats.mannwhitneyu(np.array(a)[~np.isnan(a)], np.array(b)[~np.isnan(b)])
@@ -1489,7 +1646,11 @@ def pwm(a,b):
     return p    
    
    
-#%%
+#%% Compute p value between each column of matrix a and each column of matrix b (wilcoxon, MW, ttest)  
+# different columns could be different days or different frames
+   # a,b:   samps x days    or      samps x frames
+   # output: 3 x days    or     3 x frames
+   
 def pwmt_frs(a,b):
     nfr = a.shape[1]
     

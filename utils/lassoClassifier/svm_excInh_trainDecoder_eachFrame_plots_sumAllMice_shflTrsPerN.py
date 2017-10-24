@@ -23,8 +23,8 @@ Created on Sun Mar 12 15:12:29 2017
 
 
 #%%
-
 mice = 'fni16', 'fni17', 'fni18', 'fni19' # if you want to use only one mouse, make sure you put comma at the end; eg. mice = 'fni19',
+
 savefigs = 0
 doAllN = 1 # plot allN, instead of allExc
 time2an = -1; # relative to eventI, look at classErr in what time stamp.
@@ -67,9 +67,10 @@ execfile("defFuns.py") # Define common funcitons
 
 
 #%%
-
+    
 for shflTrsEachNeuron in [1,0]:  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
-
+    
+    ###
     av_test_data_inh_allMice = []
     sd_test_data_inh_allMice = []
     av_test_data_exc_allMice = []
@@ -91,7 +92,33 @@ for shflTrsEachNeuron in [1,0]:  # Set to 0 for normal SVM training. # Shuffle t
     av_test_chance_allExc_allMice = []
     sd_test_chance_allExc_allMice = []
     
-    corr_hr_lr_allMice = []
+    av_test_dms_inh_allMice = []
+    sd_test_dms_inh_allMice = []
+    av_test_dms_exc_allMice = []
+    sd_test_dms_exc_allMice = []
+    av_test_dms_allExc_allMice = []
+    sd_test_dms_allExc_allMice = []    
+
+    ###    
+    perClassErrorTest_data_inh_all_allMice = []
+    perClassErrorTest_shfl_inh_all_allMice = []
+    perClassErrorTest_chance_inh_all_allMice = []
+    test_dms_inh_allMice = []
+    
+    perClassErrorTest_data_allExc_all_allMice = []
+    perClassErrorTest_shfl_allExc_all_allMice = []
+    perClassErrorTest_chance_allExc_all_allMice = []
+    test_dms_allExc_allMice = []
+    
+    perClassErrorTest_data_exc_all_allMice = []
+    perClassErrorTest_shfl_exc_all_allMice = []
+    perClassErrorTest_chance_exc_all_allMice = []    
+    test_dms_exc_allMice = []
+
+    ###
+    corr_hr_lr_allMice = []    
+    eventI_ds_allDays_allMice = []
+    eventI_allDays_allMice = []
     
     
     #%% Loop through mice
@@ -280,13 +307,19 @@ for shflTrsEachNeuron in [1,0]:  # Set to 0 for normal SVM training. # Shuffle t
         sd_test_shfl_inh = np.std(perClassErrorTest_shfl_inh_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
         av_test_chance_inh = 100-np.mean(perClassErrorTest_chance_inh_all[mn_corr >= thTrained,:], axis=1)
         sd_test_chance_inh = np.std(perClassErrorTest_chance_inh_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
-        
+        test_dms_inh = (100-perClassErrorTest_data_inh_all[mn_corr >= thTrained,:].T - av_test_shfl_inh).T # subtract samp-ave shfl from each samp of data # dimensions: just like perClassErrorTest_data_inh_all
+        av_test_dms_inh = np.mean(test_dms_inh, axis=1) 
+        sd_test_dms_inh = np.std(test_dms_inh, axis=1) / np.sqrt(numSamples)  # same as sd_test_data_inh bc sd_test_dms_inh = sd(test_data_inh - ave(test_shfl_inh))
+                
         av_test_data_allExc = 100-np.mean(perClassErrorTest_data_allExc_all[mn_corr >= thTrained,:], axis=1) # numDays
         sd_test_data_allExc = np.std(perClassErrorTest_data_allExc_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
         av_test_shfl_allExc = 100-np.mean(perClassErrorTest_shfl_allExc_all[mn_corr >= thTrained,:], axis=1)
         sd_test_shfl_allExc = np.std(perClassErrorTest_shfl_allExc_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
         av_test_chance_allExc = 100-np.mean(perClassErrorTest_chance_allExc_all[mn_corr >= thTrained,:], axis=1)
         sd_test_chance_allExc = np.std(perClassErrorTest_chance_allExc_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
+        test_dms_allExc = (100-perClassErrorTest_data_allExc_all[mn_corr >= thTrained,:].T - av_test_shfl_allExc).T # subtract samp-ave shfl from each samp of data
+        av_test_dms_allExc = np.mean(test_dms_allExc, axis=1) 
+        sd_test_dms_allExc = np.std(test_dms_allExc, axis=1) / np.sqrt(numSamples) 
         
         if num2AnInhAllexcEqexc == 3:
             av_test_data_exc = 100-np.mean(perClassErrorTest_data_exc_all[mn_corr >= thTrained,:,:], axis=(1,2)) # numDays  # average across cv samples and excShuffles
@@ -295,11 +328,16 @@ for shflTrsEachNeuron in [1,0]:  # Set to 0 for normal SVM training. # Shuffle t
             sd_test_shfl_exc = np.std(perClassErrorTest_shfl_exc_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
             av_test_chance_exc = 100-np.mean(perClassErrorTest_chance_exc_all[mn_corr >= thTrained,:,:], axis=(1,2))
             sd_test_chance_exc = np.std(perClassErrorTest_chance_exc_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
+            test_dms_exc = (100-perClassErrorTest_data_exc_all[mn_corr >= thTrained,:].T - av_test_shfl_exc).T # subtract samp-ave shfl from each samp of data
+            av_test_dms_exc = np.mean(test_dms_exc, axis=(1,2)) 
+            sd_test_dms_exc = np.std(test_dms_exc, axis=(1,2)) / np.sqrt(numSamples) 
         
         
         #%% Keep values of all mice (cvSample-averages for each session)
         
         corr_hr_lr_allMice.append(corr_hr_lr)
+        eventI_ds_allDays_allMice.append(eventI_ds_allDays)
+        eventI_allDays_allMice.append(eventI_allDays)
         
         av_test_data_inh_allMice.append(av_test_data_inh)
         sd_test_data_inh_allMice.append(sd_test_data_inh)
@@ -307,14 +345,18 @@ for shflTrsEachNeuron in [1,0]:  # Set to 0 for normal SVM training. # Shuffle t
         sd_test_shfl_inh_allMice.append(sd_test_shfl_inh)
         av_test_chance_inh_allMice.append(av_test_chance_inh)
         sd_test_chance_inh_allMice.append(sd_test_chance_inh)
-    
+        av_test_dms_inh_allMice.append(av_test_dms_inh)
+        sd_test_dms_inh_allMice.append(sd_test_dms_inh)
+        
         av_test_data_allExc_allMice.append(av_test_data_allExc)
         sd_test_data_allExc_allMice.append(sd_test_data_allExc)
         av_test_shfl_allExc_allMice.append(av_test_shfl_allExc)
         sd_test_shfl_allExc_allMice.append(sd_test_shfl_allExc)
         av_test_chance_allExc_allMice.append(av_test_chance_allExc)
         sd_test_chance_allExc_allMice.append(sd_test_chance_allExc)
-    
+        av_test_dms_allExc_allMice.append(av_test_dms_allExc)
+        sd_test_dms_allExc_allMice.append(sd_test_dms_allExc)
+        
         if num2AnInhAllexcEqexc == 3:
             av_test_data_exc_allMice.append(av_test_data_exc)
             sd_test_data_exc_allMice.append(sd_test_data_exc)
@@ -322,36 +364,31 @@ for shflTrsEachNeuron in [1,0]:  # Set to 0 for normal SVM training. # Shuffle t
             sd_test_shfl_exc_allMice.append(sd_test_shfl_exc)
             av_test_chance_exc_allMice.append(av_test_chance_exc)
             sd_test_chance_exc_allMice.append(sd_test_chance_exc)
+            av_test_dms_exc_allMice.append(av_test_dms_exc)
+            sd_test_dms_exc_allMice.append(sd_test_dms_exc)    
     
-    
+
+        #
+        perClassErrorTest_data_inh_all_allMice.append(perClassErrorTest_data_inh_all) # days x samps
+        perClassErrorTest_shfl_inh_all_allMice.append(perClassErrorTest_shfl_inh_all) 
+        perClassErrorTest_chance_inh_all_allMice.append(perClassErrorTest_chance_inh_all)
+        test_dms_inh_allMice.append(test_dms_inh) # remember dms already includes good days: [mn_corr >= thTrained,ies,:]
         
+        perClassErrorTest_data_allExc_all_allMice.append(perClassErrorTest_data_allExc_all) # days x samps
+        perClassErrorTest_shfl_allExc_all_allMice.append(perClassErrorTest_shfl_allExc_all)
+        perClassErrorTest_chance_allExc_all_allMice.append(perClassErrorTest_chance_allExc_all)
+        test_dms_allExc_allMice.append(test_dms_allExc)
+        
+        if num2AnInhAllexcEqexc == 3:
+            perClassErrorTest_data_exc_all_allMice.append(perClassErrorTest_data_exc_all) # days x numShufflesExc x numSamples
+            perClassErrorTest_shfl_exc_all_allMice.append(perClassErrorTest_shfl_exc_all)
+            perClassErrorTest_chance_exc_all_allMice.append(perClassErrorTest_chance_exc_all)
+            test_dms_exc_allMice.append(test_dms_exc)            
+            
+            
         #%% keep shflTrsPerN values vs non shuffled.
     
         if shflTrsEachNeuron:
-            # 
-            av_test_data_inh_shflTrsPerN = av_test_data_inh
-            sd_test_data_inh_shflTrsPerN = sd_test_data_inh
-            av_test_shfl_inh_shflTrsPerN = av_test_shfl_inh
-            sd_test_shfl_inh_shflTrsPerN = sd_test_shfl_inh
-            av_test_chance_inh_shflTrsPerN = av_test_chance_inh
-            sd_test_chance_inh_shflTrsPerN = sd_test_chance_inh
-            
-            av_test_data_allExc_shflTrsPerN = av_test_data_allExc
-            sd_test_data_allExc_shflTrsPerN = sd_test_data_allExc
-            av_test_shfl_allExc_shflTrsPerN = av_test_shfl_allExc
-            sd_test_shfl_allExc_shflTrsPerN = sd_test_shfl_allExc
-            av_test_chance_allExc_shflTrsPerN = av_test_chance_allExc
-            sd_test_chance_allExc_shflTrsPerN = sd_test_chance_allExc
-            
-            if num2AnInhAllexcEqexc == 3:
-                av_test_data_exc_shflTrsPerN = av_test_data_exc
-                sd_test_data_exc_shflTrsPerN = sd_test_data_exc
-                av_test_shfl_exc_shflTrsPerN = av_test_shfl_exc
-                sd_test_shfl_exc_shflTrsPerN = sd_test_shfl_exc
-                av_test_chance_exc_shflTrsPerN = av_test_chance_exc
-                sd_test_chance_exc_shflTrsPerN = sd_test_chance_exc
-                
-        
             #
             av_test_data_inh_allMice_shflTrsPerN = av_test_data_inh_allMice
             sd_test_data_inh_allMice_shflTrsPerN = sd_test_data_inh_allMice
@@ -359,14 +396,18 @@ for shflTrsEachNeuron in [1,0]:  # Set to 0 for normal SVM training. # Shuffle t
             sd_test_shfl_inh_allMice_shflTrsPerN = sd_test_shfl_inh_allMice
             av_test_chance_inh_allMice_shflTrsPerN = av_test_chance_inh_allMice
             sd_test_chance_inh_allMice_shflTrsPerN = sd_test_chance_inh_allMice
-        
+            av_test_dms_inh_allMice_shflTrsPerN = av_test_dms_inh_allMice
+            sd_test_dms_inh_allMice_shflTrsPerN = sd_test_dms_inh_allMice
+            
             av_test_data_allExc_allMice_shflTrsPerN = av_test_data_allExc_allMice
             sd_test_data_allExc_allMice_shflTrsPerN = sd_test_data_allExc_allMice
             av_test_shfl_allExc_allMice_shflTrsPerN = av_test_shfl_allExc_allMice
             sd_test_shfl_allExc_allMice_shflTrsPerN = sd_test_shfl_allExc_allMice
             av_test_chance_allExc_allMice_shflTrsPerN = av_test_chance_allExc_allMice
             sd_test_chance_allExc_allMice_shflTrsPerN = sd_test_chance_allExc_allMice
-        
+            av_test_dms_allExc_allMice_shflTrsPerN = av_test_dms_allExc_allMice
+            sd_test_dms_allExc_allMice_shflTrsPerN = sd_test_dms_allExc_allMice
+            
             if num2AnInhAllexcEqexc == 3:
                 av_test_data_exc_allMice_shflTrsPerN = av_test_data_exc_allMice
                 sd_test_data_exc_allMice_shflTrsPerN = sd_test_data_exc_allMice
@@ -374,12 +415,85 @@ for shflTrsEachNeuron in [1,0]:  # Set to 0 for normal SVM training. # Shuffle t
                 sd_test_shfl_exc_allMice_shflTrsPerN = sd_test_shfl_exc_allMice
                 av_test_chance_exc_allMice_shflTrsPerN = av_test_chance_exc_allMice
                 sd_test_chance_exc_allMice_shflTrsPerN = sd_test_chance_exc_allMice
+                av_test_dms_exc_allMice_shflTrsPerN = av_test_dms_exc_allMice
+                sd_test_dms_exc_allMice_shflTrsPerN = sd_test_dms_exc_allMice                
 
-
+            
+            #
+            perClassErrorTest_data_inh_all_allMice_shflTrsPerN = perClassErrorTest_data_inh_all_allMice
+            perClassErrorTest_shfl_inh_all_allMice_shflTrsPerN = perClassErrorTest_shfl_inh_all_allMice
+            perClassErrorTest_chance_inh_all_allMice_shflTrsPerN = perClassErrorTest_chance_inh_all_allMice
+            test_dms_inh_allMice_shflTrsPerN = test_dms_inh_allMice
+            
+            perClassErrorTest_data_allExc_all_allMice_shflTrsPerN = perClassErrorTest_data_allExc_all_allMice
+            perClassErrorTest_shfl_allExc_all_allMice_shflTrsPerN = perClassErrorTest_shfl_allExc_all_allMice
+            perClassErrorTest_chance_allExc_all_allMice_shflTrsPerN = perClassErrorTest_chance_allExc_all_allMice
+            test_dms_allExc_allMice_shflTrsPerN = test_dms_allExc_allMice
+            
+            if num2AnInhAllexcEqexc == 3:
+                perClassErrorTest_data_exc_all_allMice_shflTrsPerN = perClassErrorTest_data_exc_all_allMice
+                perClassErrorTest_shfl_exc_all_allMice_shflTrsPerN = perClassErrorTest_shfl_exc_all_allMice
+                perClassErrorTest_chance_exc_all_allMice_shflTrsPerN = perClassErrorTest_chance_exc_all_allMice
+                test_dms_exc_allMice_shflTrsPerN = test_dms_exc_allMice
+                
+                        
+            
 ######################################################################################################################################################        
 ######################################################################################################################################################        
 #     Done with all mice
 ######################################################################################################################################################                
+            
+#%% Compute pvalue for each day of each mouse (using all samps, time bin -1)
+
+pwmt_data_inh_allMice = []
+pwmt_data_exc_allMice = []
+pwmt_data_allExc_allMice = []
+
+pwmt_shfl_inh_allMice = []
+pwmt_shfl_exc_allMice = []
+pwmt_shfl_allExc_allMice = []
+
+pwmt_chance_inh_allMice = []
+pwmt_chance_exc_allMice = []
+pwmt_chance_allExc_allMice = []
+
+pwmt_dms_inh_allMice = []
+pwmt_dms_exc_allMice = []
+pwmt_dms_allExc_allMice = []
+                
+for im in range(len(mice)):
+    corr_hr_lr = corr_hr_lr_allMice[im]
+    mn_corr = np.min(corr_hr_lr,axis=1) # number of trials of each class. 90% of this was used for training, and 10% for testing.
+    
+    ### data ###
+    pwmt_data_inh_allMice.append(pwmt_frs(perClassErrorTest_data_inh_all_allMice[im][mn_corr >= thTrained,:].T, perClassErrorTest_data_inh_all_allMice_shflTrsPerN[im][mn_corr >= thTrained,:].T)) # nMice # each mouse: 3 x days  
+    pwmt_data_allExc_allMice.append(pwmt_frs(perClassErrorTest_data_allExc_all_allMice[im][mn_corr >= thTrained,:].T,  perClassErrorTest_data_allExc_all_allMice_shflTrsPerN[im][mn_corr >= thTrained,:].T))
+    # compute p for each excShfl, then compute ave across excShfl (do this for each day separately)
+    c = np.mean([pwmt_frs(perClassErrorTest_data_exc_all_allMice[im][mn_corr >= thTrained,ies,:].T,  perClassErrorTest_data_exc_all_allMice_shflTrsPerN[im][mn_corr >= thTrained,ies,:].T) for ies in range(numExcSamples)], axis=0)
+    pwmt_data_exc_allMice.append(c)
+    
+    ### shfl ###
+    pwmt_shfl_inh_allMice.append(pwmt_frs(perClassErrorTest_shfl_inh_all_allMice[im][mn_corr >= thTrained,:].T,  perClassErrorTest_shfl_inh_all_allMice_shflTrsPerN[im][mn_corr >= thTrained,:].T))            
+    pwmt_shfl_allExc_allMice.append(pwmt_frs(perClassErrorTest_shfl_allExc_all_allMice[im][mn_corr >= thTrained,:].T,  perClassErrorTest_shfl_allExc_all_allMice_shflTrsPerN[im][mn_corr >= thTrained,:].T))
+    # compute p for each excShfl, then compute ave across excShfl (do this for each day separately)
+    c = np.mean([pwmt_frs(perClassErrorTest_shfl_exc_all_allMice[im][mn_corr >= thTrained,ies,:].T,  perClassErrorTest_shfl_exc_all_allMice_shflTrsPerN[im][mn_corr >= thTrained,ies,:].T) for ies in range(numExcSamples)], axis=0)
+    pwmt_shfl_exc_allMice.append(c)            
+
+    ### chance ###
+    pwmt_chance_inh_allMice.append(pwmt_frs(perClassErrorTest_chance_inh_all_allMice[im][mn_corr >= thTrained,:].T,  perClassErrorTest_chance_inh_all_allMice_shflTrsPerN[im][mn_corr >= thTrained,:].T))            
+    pwmt_chance_allExc_allMice.append(pwmt_frs(perClassErrorTest_chance_allExc_all_allMice[im][mn_corr >= thTrained,:].T,  perClassErrorTest_chance_allExc_all_allMice_shflTrsPerN[im][mn_corr >= thTrained,:].T))
+    # compute p for each excShfl, then compute ave across excShfl (do this for each day separately)
+    c = np.mean([pwmt_frs(perClassErrorTest_chance_exc_all_allMice[im][mn_corr >= thTrained,ies,:].T,  perClassErrorTest_chance_exc_all_allMice_shflTrsPerN[im][mn_corr >= thTrained,ies,:].T) for ies in range(numExcSamples)], axis=0)
+    pwmt_chance_exc_allMice.append(c)
+    
+    ### dms ### (remember dms already includes good days: [mn_corr >= thTrained,ies,:])
+    pwmt_dms_inh_allMice.append(pwmt_frs(test_dms_inh_allMice[im].T, test_dms_inh_allMice_shflTrsPerN[im].T))            
+    pwmt_dms_allExc_allMice.append(pwmt_frs(test_dms_allExc_allMice[im].T, test_dms_allExc_allMice_shflTrsPerN[im].T))
+    # compute p for each excShfl, then compute ave across excShfl (do this for each day separately)
+    c = np.mean([pwmt_frs(test_dms_exc_allMice[im][:,ies,:].T,  test_dms_exc_allMice_shflTrsPerN[im][:,ies,:].T) for ies in range(numExcSamples)], axis=0)
+    pwmt_dms_exc_allMice.append(c)
+
+
 #%% each element is ave and se across cv samps. (we dont really use se across cv samps below... below we plot ave and sd of cv-samped averages across sessions)
     
 av_test_data_inh_allMice = np.array(av_test_data_inh_allMice) #numMice; each mouse: numDays
@@ -427,9 +541,9 @@ if num2AnInhAllexcEqexc == 3:
     sd_test_shfl_exc_allMice_shflTrsPerN = np.array(sd_test_shfl_exc_allMice_shflTrsPerN)
     av_test_chance_exc_allMice_shflTrsPerN = np.array(av_test_chance_exc_allMice_shflTrsPerN)
     sd_test_chance_exc_allMice_shflTrsPerN = np.array(sd_test_chance_exc_allMice_shflTrsPerN)
-    
-
-
+  
+eventI_ds_allDays_allMice = np.array(eventI_ds_allDays_allMice)
+eventI_allDays_allMice = np.array(eventI_allDays_allMice)
 
 
 #%%
@@ -437,35 +551,48 @@ if num2AnInhAllexcEqexc == 3:
 
 # Plot class accuracy in the frame before the choice onset for each day
 # Class accuracy vs day number
-def plotnow(top, tops, e, es, lab, labs, ylab, col):
+def plotnow(top, tops, e, es, lab, labs, ylab, col, p):
     numDays = len(top)
     plt.errorbar(range(numDays), top, e, label=lab, color=col)
     plt.errorbar(range(numDays), tops, es, label=labs, color='g')#, linestyle='--')
     plt.xlabel('Days')
     plt.ylabel('Classification accuracy (%%)\n%s' %(ylab))
     plt.xlim([-1,numDays-1+1])
-    makeNicePlots(plt.gca())
+    ax = plt.gca()
+    makeNicePlots(ax)
 #    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)
 
-
+    pp = p
+    pp[p>.05] = np.nan
+    yl = np.max(np.concatenate((top,tops))) #ax.get_ylim()[1]
+    pp[p<=.05] = yl
+    plt.plot(range(numDays), pp, marker='*',color=col, linestyle='')
+    
+    
 #%% Plots of individual mice
+
+pn = 2 # which p value to use: wilcoxon, MW, ttest  
 
 for im in range(len(mice)):
 
     ##%%
     av_test_data_inh = av_test_data_inh_allMice[im]
-    sd_test_data_inh = sd_test_data_inh_allMice[im]
+    sd_test_data_inh = sd_test_data_inh_allMice[im] 
     av_test_shfl_inh = av_test_shfl_inh_allMice[im]
     sd_test_shfl_inh = sd_test_shfl_inh_allMice[im]
     av_test_chance_inh = av_test_chance_inh_allMice[im]
     sd_test_chance_inh = sd_test_chance_inh_allMice[im]
-    
+    av_test_dms_inh = av_test_dms_inh_allMice[im]
+    sd_test_dms_inh = sd_test_dms_inh_allMice[im]
+        
     av_test_data_allExc = av_test_data_allExc_allMice[im]
     sd_test_data_allExc = sd_test_data_allExc_allMice[im]
     av_test_shfl_allExc = av_test_shfl_allExc_allMice[im]
     sd_test_shfl_allExc = sd_test_shfl_allExc_allMice[im]
     av_test_chance_allExc = av_test_chance_allExc_allMice[im]
     sd_test_chance_allExc = sd_test_chance_allExc_allMice[im]
+    av_test_dms_allExc = av_test_dms_allExc_allMice[im]
+    sd_test_dms_allExc = sd_test_dms_allExc_allMice[im]
     
     if num2AnInhAllexcEqexc == 3:
         av_test_data_exc = av_test_data_exc_allMice[im]
@@ -474,14 +601,18 @@ for im in range(len(mice)):
         sd_test_shfl_exc = sd_test_shfl_exc_allMice[im]
         av_test_chance_exc = av_test_chance_exc_allMice[im]
         sd_test_chance_exc = sd_test_chance_exc_allMice[im]
+        av_test_dms_exc = av_test_dms_exc_allMice[im]
+        sd_test_dms_exc = sd_test_dms_exc_allMice[im]
                 
-    #
+    # _shflTrsPerN
     av_test_data_inh_shflTrsPerN = av_test_data_inh_allMice_shflTrsPerN[im]
     sd_test_data_inh_shflTrsPerN = sd_test_data_inh_allMice_shflTrsPerN[im]
     av_test_shfl_inh_shflTrsPerN = av_test_shfl_inh_allMice_shflTrsPerN[im]
     sd_test_shfl_inh_shflTrsPerN = sd_test_shfl_inh_allMice_shflTrsPerN[im]
     av_test_chance_inh_shflTrsPerN = av_test_chance_inh_allMice_shflTrsPerN[im]
     sd_test_chance_inh_shflTrsPerN = sd_test_chance_inh_allMice_shflTrsPerN[im]
+    av_test_dms_inh_shflTrsPerN = av_test_dms_inh_allMice_shflTrsPerN[im]
+    sd_test_dms_inh_shflTrsPerN = sd_test_dms_inh_allMice_shflTrsPerN[im]
     
     av_test_data_allExc_shflTrsPerN = av_test_data_allExc_allMice_shflTrsPerN[im]
     sd_test_data_allExc_shflTrsPerN = sd_test_data_allExc_allMice_shflTrsPerN[im]
@@ -489,6 +620,8 @@ for im in range(len(mice)):
     sd_test_shfl_allExc_shflTrsPerN = sd_test_shfl_allExc_allMice_shflTrsPerN[im]
     av_test_chance_allExc_shflTrsPerN = av_test_chance_allExc_allMice_shflTrsPerN[im]
     sd_test_chance_allExc_shflTrsPerN = sd_test_chance_allExc_allMice_shflTrsPerN[im]
+    av_test_dms_allExc_shflTrsPerN = av_test_dms_allExc_allMice_shflTrsPerN[im]
+    sd_test_dms_allExc_shflTrsPerN = sd_test_dms_allExc_allMice_shflTrsPerN[im]
     
     if num2AnInhAllexcEqexc == 3:
         av_test_data_exc_shflTrsPerN = av_test_data_exc_allMice_shflTrsPerN[im]
@@ -497,81 +630,110 @@ for im in range(len(mice)):
         sd_test_shfl_exc_shflTrsPerN = sd_test_shfl_exc_allMice_shflTrsPerN[im]
         av_test_chance_exc_shflTrsPerN = av_test_chance_exc_allMice_shflTrsPerN[im]
         sd_test_chance_exc_shflTrsPerN = sd_test_chance_exc_allMice_shflTrsPerN[im]
+        av_test_dms_exc_shflTrsPerN = av_test_dms_exc_allMice_shflTrsPerN[im]
+        sd_test_dms_exc_shflTrsPerN = sd_test_dms_exc_allMice_shflTrsPerN[im]
 
 
+    # p(act,shfl) at time2an
+    pwmt_data_inh_t2an = pwmt_data_inh_allMice[im][pn,:].squeeze()
+    pwmt_shfl_inh_t2an = pwmt_shfl_inh_allMice[im][pn,:].squeeze()
+    pwmt_chance_inh_t2an = pwmt_chance_inh_allMice[im][pn,:].squeeze()    
+    pwmt_dms_inh_t2an = pwmt_dms_inh_allMice[im][pn,:].squeeze()    
+
+    pwmt_data_exc_t2an = pwmt_data_exc_allMice[im][pn,:].squeeze()
+    pwmt_shfl_exc_t2an = pwmt_shfl_exc_allMice[im][pn,:].squeeze()
+    pwmt_chance_exc_t2an = pwmt_chance_exc_allMice[im][pn,:].squeeze()    
+    pwmt_dms_exc_t2an = pwmt_dms_exc_allMice[im][pn,:].squeeze()    
+
+    pwmt_data_allExc_t2an = pwmt_data_allExc_allMice[im][pn,:].squeeze()
+    pwmt_shfl_allExc_t2an = pwmt_shfl_allExc_allMice[im][pn,:].squeeze()
+    pwmt_chance_allExc_t2an = pwmt_chance_allExc_allMice[im][pn,:].squeeze()    
+    pwmt_dms_allExc_t2an = pwmt_dms_allExc_allMice[im][pn,:].squeeze()    
+
+    
     ###############
     ##%% Compare class accuracies of actual with trsShuffledPerNeuron
     # Plot class accuracy in the frame before the choice onset for each day
     # Class accuracy vs day number
 
-    plt.figure(figsize=(6,20))    
-    
-    ############ data - shuffle ############ 
+    plt.figure(figsize=(6,20))           
     ylab = 'data-shfl , shfl, data'    
     
+    ############ data - shuffle ############ 
     ##### inh
-    top = av_test_data_inh - av_test_shfl_inh
-    tops = av_test_data_inh_shflTrsPerN - av_test_shfl_inh_shflTrsPerN
-    e = sd_test_data_inh ### note this sd is not indeed correct... 
-    es = sd_test_data_inh_shflTrsPerN
+    top = av_test_dms_inh #av_test_data_inh - av_test_shfl_inh
+    tops = av_test_dms_inh_shflTrsPerN #av_test_data_inh_shflTrsPerN - av_test_shfl_inh_shflTrsPerN
+    e = sd_test_dms_inh # same as sd_test_data_inh bc sd_test_dms_inh = sd(test_data_inh - ave(test_shfl_inh))
+    es = sd_test_dms_inh_shflTrsPerN
+    p = pwmt_dms_inh_t2an + 0
     lab = 'inh'
     labs = 'inh_shflTrsPerN'    
     col = 'r'
     plt.subplot(311)
-    plotnow(top, tops, e, es, lab, labs, ylab, col)
+    plotnow(top, tops, e, es, lab, labs, ylab, col,p)
     plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)
 
+
     ##### exc
-    top = av_test_data_exc - av_test_shfl_exc
-    tops = av_test_data_exc_shflTrsPerN - av_test_shfl_exc_shflTrsPerN
-    e = sd_test_data_exc
-    es = sd_test_data_exc_shflTrsPerN
+    top = av_test_dms_exc #av_test_data_exc - av_test_shfl_exc
+    tops = av_test_dms_exc_shflTrsPerN #av_test_data_exc_shflTrsPerN - av_test_shfl_exc_shflTrsPerN
+    e = sd_test_dms_exc #sd_test_data_exc
+    es = sd_test_dms_exc_shflTrsPerN #sd_test_data_exc_shflTrsPerN
+    p = pwmt_dms_exc_t2an + 0
     lab = 'exc'
     labs = 'exc_shflTrsPerN'
     col = 'b'
     plt.subplot(312)
-    plotnow(top, tops, e, es, lab, labs, ylab, col)
+    plotnow(top, tops, e, es, lab, labs, ylab, col,p)
     plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)
 
+
     ##### allN
-    top = av_test_data_allExc - av_test_shfl_allExc
-    tops = av_test_data_allExc_shflTrsPerN - av_test_shfl_allExc_shflTrsPerN
-    e = sd_test_data_allExc
-    es = sd_test_data_allExc_shflTrsPerN
+    top = av_test_dms_allExc #av_test_data_allExc - av_test_shfl_allExc
+    tops = av_test_dms_allExc_shflTrsPerN #av_test_data_allExc_shflTrsPerN - av_test_shfl_allExc_shflTrsPerN
+    e = sd_test_dms_allExc
+    es = sd_test_dms_allExc_shflTrsPerN
+    p = pwmt_dms_allExc_t2an + 0
     lab = 'allN'
     labs = 'allN_shflTrsPerN'
-    col = 'k'
-    
+    col = 'k'    
     plt.subplot(313)
-    plotnow(top, tops, e, es, lab, labs, ylab, col)
+    plotnow(top, tops, e, es, lab, labs, ylab, col,p)
     plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)
+
 
 
     ############ data ############ 
-#    ylab = 'data'
-        
+#    ylab = 'data'        
     ##### inh
     top = av_test_data_inh
     tops = av_test_data_inh_shflTrsPerN
     e = sd_test_data_inh
     es = sd_test_data_inh_shflTrsPerN
+    p = pwmt_data_inh_t2an + 0
     lab = 'inh'
     labs = 'inh_shflTrsPerN'    
     col = 'r'
     plt.subplot(311)
-    plotnow(top, tops, e, es, lab, labs, ylab, col)
-
+    plotnow(top, tops, e, es, lab, labs, ylab, col,p)
+    ax = plt.gca()
+    ylim = ax.get_ylim()
+    plt.ylim([ylim[0], ylim[1]+5])    
 
     ##### exc
     top = av_test_data_exc
     tops = av_test_data_exc_shflTrsPerN
     e = sd_test_data_exc
     es = sd_test_data_exc_shflTrsPerN
+    p = pwmt_data_exc_t2an + 0
     lab = 'exc'
     labs = 'exc_shflTrsPerN'
     col = 'b'
     plt.subplot(312)
-    plotnow(top, tops, e, es, lab, labs, ylab, col)
+    plotnow(top, tops, e, es, lab, labs, ylab, col,p)
+    ax = plt.gca()
+    ylim = ax.get_ylim()
+    plt.ylim([ylim[0], ylim[1]+5])    
 
 
     ##### allN
@@ -579,53 +741,57 @@ for im in range(len(mice)):
     tops = av_test_data_allExc_shflTrsPerN
     e = sd_test_data_allExc
     es = sd_test_data_allExc_shflTrsPerN
+    p = pwmt_data_allExc_t2an + 0
     lab = 'allN'
     labs = 'allN_shflTrsPerN'
-    col = 'k'
-    
+    col = 'k'    
     plt.subplot(313)
-    plotnow(top, tops, e, es, lab, labs, ylab, col)
+    plotnow(top, tops, e, es, lab, labs, ylab, col,p)
+    ax = plt.gca()
+    ylim = ax.get_ylim()
+    plt.ylim([ylim[0], ylim[1]+5])    
 
 
 
     ############ shfl ############ 
-#    ylab = 'shfl'
-        
+#    ylab = 'shfl'        
     ##### inh
     top = av_test_shfl_inh
     tops = av_test_shfl_inh_shflTrsPerN
     e = sd_test_shfl_inh
     es = sd_test_shfl_inh_shflTrsPerN
+    p = pwmt_shfl_inh_t2an + 0
     lab = 'inh'
     labs = 'inh_shflTrsPerN'    
     col = 'r'
     plt.subplot(311)
-    plotnow(top, tops, e, es, lab, labs, ylab, col)
-
+    plotnow(top, tops, e, es, lab, labs, ylab, col,p)
+    
 
     ##### exc
     top = av_test_shfl_exc
     tops = av_test_shfl_exc_shflTrsPerN
     e = sd_test_shfl_exc
     es = sd_test_shfl_exc_shflTrsPerN
+    p = pwmt_shfl_exc_t2an + 0
     lab = 'exc'
     labs = 'exc_shflTrsPerN'
     col = 'b'
     plt.subplot(312)
-    plotnow(top, tops, e, es, lab, labs, ylab, col)
-
+    plotnow(top, tops, e, es, lab, labs, ylab, col,p)
+    
 
     ##### allN
     top = av_test_shfl_allExc
     tops = av_test_shfl_allExc_shflTrsPerN
     e = sd_test_shfl_allExc
     es = sd_test_shfl_allExc_shflTrsPerN
+    p = pwmt_shfl_allExc_t2an + 0
     lab = 'allN'
     labs = 'allN_shflTrsPerN'
-    col = 'k'
-    
+    col = 'k'   
     plt.subplot(313)
-    plotnow(top, tops, e, es, lab, labs, ylab, col)
+    plotnow(top, tops, e, es, lab, labs, ylab, col,p)
     
 
 
@@ -651,66 +817,117 @@ for im in range(len(mice)):
 
 
 
+
 #%%
 ###################### Plots of all mice ######################   
+#%% Compute p values among sessions (samp aved) for each mouse
 
-#%% Average and se of classErr across sessions for each mouse
+pwm_data_inh_mouse = np.full((3,len(mice)), np.nan)
+pwm_data_exc_mouse = np.full((3,len(mice)), np.nan)
+pwm_data_allExc_mouse = np.full((3,len(mice)), np.nan)
+pwm_shfl_inh_mouse = np.full((3,len(mice)), np.nan)
+pwm_shfl_exc_mouse = np.full((3,len(mice)), np.nan)
+pwm_shfl_allExc_mouse = np.full((3,len(mice)), np.nan)
+pwm_chance_inh_mouse = np.full((3,len(mice)), np.nan)
+pwm_chance_exc_mouse = np.full((3,len(mice)), np.nan)
+pwm_chance_allExc_mouse = np.full((3,len(mice)), np.nan)
+pwm_dms_inh_mouse = np.full((3,len(mice)), np.nan)
+pwm_dms_exc_mouse = np.full((3,len(mice)), np.nan)
+pwm_dms_allExc_mouse = np.full((3,len(mice)), np.nan)
+
+for im in range(len(mice)):
+    pwm_data_inh_mouse[:,im] = pwm(av_test_data_inh_allMice[im], av_test_data_inh_allMice_shflTrsPerN[im])
+    pwm_data_exc_mouse[:,im] = pwm(av_test_data_exc_allMice[im], av_test_data_exc_allMice_shflTrsPerN[im])
+    pwm_data_allExc_mouse[:,im] = pwm(av_test_data_allExc_allMice[im], av_test_data_allExc_allMice_shflTrsPerN[im])
+    pwm_shfl_inh_mouse[:,im] = pwm(av_test_shfl_inh_allMice[im], av_test_shfl_inh_allMice_shflTrsPerN[im])
+    pwm_shfl_exc_mouse[:,im] = pwm(av_test_shfl_exc_allMice[im], av_test_shfl_exc_allMice_shflTrsPerN[im])
+    pwm_shfl_allExc_mouse[:,im] = pwm(av_test_shfl_allExc_allMice[im], av_test_shfl_allExc_allMice_shflTrsPerN[im])
+    pwm_chance_inh_mouse[:,im] = pwm(av_test_chance_inh_allMice[im], av_test_chance_inh_allMice_shflTrsPerN[im])
+    pwm_chance_exc_mouse[:,im] = pwm(av_test_chance_exc_allMice[im], av_test_chance_exc_allMice_shflTrsPerN[im])
+    pwm_chance_allExc_mouse[:,im] = pwm(av_test_chance_allExc_allMice[im], av_test_chance_allExc_allMice_shflTrsPerN[im])
+    pwm_dms_inh_mouse[:,im] = pwm(av_test_dms_inh_allMice[im], av_test_dms_inh_allMice_shflTrsPerN[im])
+    pwm_dms_exc_mouse[:,im] = pwm(av_test_dms_exc_allMice[im], av_test_dms_exc_allMice_shflTrsPerN[im])
+    pwm_dms_allExc_mouse[:,im] = pwm(av_test_dms_allExc_allMice[im], av_test_dms_allExc_allMice_shflTrsPerN[im])
+
+
+#%% Average and sd (not se) of classErr across sessions for each mouse
 
 numMice = len(mice)
+numDays_allMice = np.array([len(av_test_data_inh_allMice[im]) for im in range(numMice)])
 
-av_av_test_data_inh_allMice = np.array([np.nanmean(av_test_data_inh_allMice[im], axis=0) for im in range(numMice)]) # numMice; each mouse: numDays
-sd_av_test_data_inh_allMice = np.array([np.nanstd(av_test_data_inh_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+av_av_test_data_inh_allMice = np.array([np.nanmean(av_test_data_inh_allMice[im], axis=0) for im in range(numMice)]) # numMice
+sd_av_test_data_inh_allMice = np.array([np.nanstd(av_test_data_inh_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
 av_av_test_shfl_inh_allMice = np.array([np.nanmean(av_test_shfl_inh_allMice[im], axis=0) for im in range(numMice)])
-sd_av_test_shfl_inh_allMice = np.array([np.nanstd(av_test_shfl_inh_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_shfl_inh_allMice = np.array([np.nanstd(av_test_shfl_inh_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
 av_av_test_chance_inh_allMice = np.array([np.nanmean(av_test_chance_inh_allMice[im], axis=0) for im in range(numMice)])
-sd_av_test_chance_inh_allMice = np.array([np.nanstd(av_test_chance_inh_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_chance_inh_allMice = np.array([np.nanstd(av_test_chance_inh_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
+av_av_test_dms_inh_allMice = np.array([np.nanmean(av_test_dms_inh_allMice[im], axis=0) for im in range(numMice)])
+sd_av_test_dms_inh_allMice = np.array([np.nanstd(av_test_dms_inh_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
+#av_test_dms_inh_allMice = np.array([av_test_data_inh_allMice[im] - np.mean(av_av_test_shfl_inh_allMice[im]) for im in range(numMice)]) # for each mouse subtract day-ave-shfl from individual day data
+
 
 av_av_test_data_allExc_allMice = np.array([np.nanmean(av_test_data_allExc_allMice[im], axis=0) for im in range(numMice)])
-sd_av_test_data_allExc_allMice = np.array([np.nanstd(av_test_data_allExc_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_data_allExc_allMice = np.array([np.nanstd(av_test_data_allExc_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
 av_av_test_shfl_allExc_allMice = np.array([np.nanmean(av_test_shfl_allExc_allMice[im], axis=0) for im in range(numMice)])
-sd_av_test_shfl_allExc_allMice = np.array([np.nanstd(av_test_shfl_allExc_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_shfl_allExc_allMice = np.array([np.nanstd(av_test_shfl_allExc_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
 av_av_test_chance_allExc_allMice = np.array([np.nanmean(av_test_chance_allExc_allMice[im], axis=0) for im in range(numMice)])
-sd_av_test_chance_allExc_allMice = np.array([np.nanstd(av_test_chance_allExc_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_chance_allExc_allMice = np.array([np.nanstd(av_test_chance_allExc_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
+av_av_test_dms_allExc_allMice = np.array([np.nanmean(av_test_dms_allExc_allMice[im], axis=0) for im in range(numMice)])
+sd_av_test_dms_allExc_allMice = np.array([np.nanstd(av_test_dms_allExc_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
 
 if num2AnInhAllexcEqexc == 3:
     av_av_test_data_exc_allMice = np.array([np.nanmean(av_test_data_exc_allMice[im], axis=0) for im in range(numMice)])
-    sd_av_test_data_exc_allMice = np.array([np.nanstd(av_test_data_exc_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+    sd_av_test_data_exc_allMice = np.array([np.nanstd(av_test_data_exc_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
     av_av_test_shfl_exc_allMice = np.array([np.nanmean(av_test_shfl_exc_allMice[im], axis=0) for im in range(numMice)])
-    sd_av_test_shfl_exc_allMice = np.array([np.nanstd(av_test_shfl_exc_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+    sd_av_test_shfl_exc_allMice = np.array([np.nanstd(av_test_shfl_exc_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
     av_av_test_chance_exc_allMice = np.array([np.nanmean(av_test_chance_exc_allMice[im], axis=0) for im in range(numMice)])
-    sd_av_test_chance_exc_allMice = np.array([np.nanstd(av_test_chance_exc_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+    sd_av_test_chance_exc_allMice = np.array([np.nanstd(av_test_chance_exc_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
+    av_av_test_dms_exc_allMice = np.array([np.nanmean(av_test_dms_exc_allMice[im], axis=0) for im in range(numMice)])    
+    sd_av_test_dms_exc_allMice = np.array([np.nanstd(av_test_dms_exc_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
+    
 
-
-##
-av_av_test_data_inh_allMice_shflTrsPerN = np.array([np.nanmean(av_test_data_inh_allMice_shflTrsPerN[im], axis=0) for im in range(numMice)]) # numMice; each mouse: numDays
-sd_av_test_data_inh_allMice_shflTrsPerN = np.array([np.nanstd(av_test_data_inh_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+##### shflTrsPerNeur
+av_av_test_data_inh_allMice_shflTrsPerN = np.array([np.nanmean(av_test_data_inh_allMice_shflTrsPerN[im], axis=0) for im in range(numMice)]) # numMice
+sd_av_test_data_inh_allMice_shflTrsPerN = np.array([np.nanstd(av_test_data_inh_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
 av_av_test_shfl_inh_allMice_shflTrsPerN = np.array([np.nanmean(av_test_shfl_inh_allMice_shflTrsPerN[im], axis=0) for im in range(numMice)])
-sd_av_test_shfl_inh_allMice_shflTrsPerN = np.array([np.nanstd(av_test_shfl_inh_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_shfl_inh_allMice_shflTrsPerN = np.array([np.nanstd(av_test_shfl_inh_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
 av_av_test_chance_inh_allMice_shflTrsPerN = np.array([np.nanmean(av_test_chance_inh_allMice_shflTrsPerN[im], axis=0) for im in range(numMice)])
-sd_av_test_chance_inh_allMice_shflTrsPerN = np.array([np.nanstd(av_test_chance_inh_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_chance_inh_allMice_shflTrsPerN = np.array([np.nanstd(av_test_chance_inh_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
+av_av_test_dms_inh_allMice_shflTrsPerN = np.array([np.nanmean(av_test_dms_inh_allMice_shflTrsPerN[im], axis=0) for im in range(numMice)])
+sd_av_test_dms_inh_allMice_shflTrsPerN = np.array([np.nanstd(av_test_dms_inh_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
+
 
 av_av_test_data_allExc_allMice_shflTrsPerN = np.array([np.nanmean(av_test_data_allExc_allMice_shflTrsPerN[im], axis=0) for im in range(numMice)])
-sd_av_test_data_allExc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_data_allExc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_data_allExc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_data_allExc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
 av_av_test_shfl_allExc_allMice_shflTrsPerN = np.array([np.nanmean(av_test_shfl_allExc_allMice_shflTrsPerN[im], axis=0) for im in range(numMice)])
-sd_av_test_shfl_allExc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_shfl_allExc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_shfl_allExc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_shfl_allExc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
 av_av_test_chance_allExc_allMice_shflTrsPerN = np.array([np.nanmean(av_test_chance_allExc_allMice_shflTrsPerN[im], axis=0) for im in range(numMice)])
-sd_av_test_chance_allExc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_chance_allExc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_chance_allExc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_chance_allExc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
+av_av_test_dms_allExc_allMice_shflTrsPerN = np.array([np.nanmean(av_test_dms_allExc_allMice_shflTrsPerN[im], axis=0) for im in range(numMice)])
+sd_av_test_dms_allExc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_dms_allExc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
 
 if num2AnInhAllexcEqexc == 3:
     av_av_test_data_exc_allMice_shflTrsPerN = np.array([np.nanmean(av_test_data_exc_allMice_shflTrsPerN[im], axis=0) for im in range(numMice)])
-    sd_av_test_data_exc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_data_exc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+    sd_av_test_data_exc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_data_exc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
     av_av_test_shfl_exc_allMice_shflTrsPerN = np.array([np.nanmean(av_test_shfl_exc_allMice_shflTrsPerN[im], axis=0) for im in range(numMice)])
-    sd_av_test_shfl_exc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_shfl_exc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+    sd_av_test_shfl_exc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_shfl_exc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
     av_av_test_chance_exc_allMice_shflTrsPerN = np.array([np.nanmean(av_test_chance_exc_allMice_shflTrsPerN[im], axis=0) for im in range(numMice)])
-    sd_av_test_chance_exc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_chance_exc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
-
+    sd_av_test_chance_exc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_chance_exc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
+    av_av_test_dms_exc_allMice_shflTrsPerN = np.array([np.nanmean(av_test_dms_exc_allMice_shflTrsPerN[im], axis=0) for im in range(numMice)])
+    sd_av_test_dms_exc_allMice_shflTrsPerN = np.array([np.nanstd(av_test_dms_exc_allMice_shflTrsPerN[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
+    
 
 #%% Plot classErr (averaged across all sessions) for each mouse
 # compare actual with shflTrsPerNeuron
 
-plt.figure(figsize=(2,3))
 x = np.arange(numMice)*2.5
 a = .7
+
+plt.figure(figsize=(4.8,3))
+
+
+############### data and shfl ###############
+plt.subplot(121)
 
 # testing data
 plt.errorbar(x, av_av_test_data_inh_allMice, sd_av_test_data_inh_allMice, fmt='o', label='inh', color='r')
@@ -733,8 +950,7 @@ plt.errorbar(x+a, av_av_test_shfl_inh_allMice_shflTrsPerN, sd_av_test_shfl_inh_a
 plt.errorbar(x+a, av_av_test_shfl_exc_allMice_shflTrsPerN, sd_av_test_shfl_exc_allMice_shflTrsPerN, color='b', fmt='o', alpha=.3, markerfacecolor='w', markeredgecolor='b')
 plt.errorbar(x+a, av_av_test_shfl_allExc_allMice_shflTrsPerN, sd_av_test_shfl_allExc_allMice_shflTrsPerN, color='k', fmt='o', alpha=.3, markerfacecolor='w', markeredgecolor='k')
 
-
-plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)#, frameon=False) 
+#plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)#, frameon=False) 
 plt.xlabel('Mice', fontsize=11)
 plt.ylabel('Classification accuracy (%)\n[-97 0] ms rel. choice', fontsize=11)
 plt.xlim([x[0]-a, x[-1]+a+a])
@@ -742,7 +958,80 @@ plt.xticks(x+a/2.,mice)
 ax = plt.gca()
 makeNicePlots(ax)
 
+# p values: data (act vs shftTrsPerN)
+print pwm_data_inh_mouse, pwm_data_exc_mouse, pwm_data_allExc_mouse
+# p values: shfl (act vs shftTrsPerN)
+print pwm_shfl_inh_mouse, pwm_shfl_exc_mouse, pwm_shfl_allExc_mouse
+#### Mark mice with sig p (inh: act vs shflTrsPerN)
+b = 0#.1
+# inh
+pp = np.full(len(pwm_data_inh_mouse[pn,:]), np.nan)
+pp[pwm_data_inh_mouse[pn,:]<=.05] = av_av_test_data_inh_allMice_shflTrsPerN[pwm_data_inh_mouse[pn,:]<=.05]
+plt.plot(x+a+b, pp, 'g', marker='.', linestyle='')
+
+# exc
+pp = np.full(len(pwm_data_exc_mouse[pn,:]), np.nan)
+pp[pwm_data_exc_mouse[pn,:]<=.05] = av_av_test_data_exc_allMice_shflTrsPerN[pwm_data_exc_mouse[pn,:]<=.05]
+plt.plot(x+a+b, pp, 'g', marker='.', linestyle='')
+
+# allExc
+pp = np.full(len(pwm_data_allExc_mouse[pn,:]), np.nan)
+pp[pwm_data_allExc_mouse[pn,:]<=.05] = av_av_test_data_allExc_allMice_shflTrsPerN[pwm_data_allExc_mouse[pn,:]<=.05]
+plt.plot(x+a+b, pp, 'g', marker='.', linestyle='')
+
+
     
+############### data - shfl ###############
+plt.subplot(122)
+
+# testing data
+plt.errorbar(x, av_av_test_dms_inh_allMice , sd_av_test_dms_inh_allMice, fmt='o', label='inh', color='r')
+plt.errorbar(x, av_av_test_dms_exc_allMice , sd_av_test_dms_exc_allMice, fmt='o', label='exc', color='b')
+plt.errorbar(x, av_av_test_dms_allExc_allMice, sd_av_test_dms_allExc_allMice, fmt='o', label=labAll, color='k')
+#plt.errorbar(x, av_av_test_data_inh_allMice - av_av_test_shfl_inh_allMice , sd_av_test_data_inh_allMice, fmt='o', label='inh', color='r')
+#plt.errorbar(x, av_av_test_data_exc_allMice - av_av_test_shfl_exc_allMice , sd_av_test_data_exc_allMice, fmt='o', label='exc', color='b')
+#plt.errorbar(x, av_av_test_data_allExc_allMice - av_av_test_shfl_allExc_allMice, sd_av_test_data_allExc_allMice, fmt='o', label=labAll, color='k')
+
+
+## shflTrsPerNeuron
+plt.errorbar(x+a, av_av_test_dms_inh_allMice_shflTrsPerN , sd_av_test_dms_inh_allMice_shflTrsPerN, fmt='o', label='inh', color='r', markerfacecolor='w', markeredgecolor='r')
+plt.errorbar(x+a, av_av_test_dms_exc_allMice_shflTrsPerN , sd_av_test_dms_exc_allMice_shflTrsPerN, fmt='o', label='exc', color='b', markerfacecolor='w', markeredgecolor='b')
+plt.errorbar(x+a, av_av_test_dms_allExc_allMice_shflTrsPerN, sd_av_test_dms_allExc_allMice_shflTrsPerN, fmt='o', label=labAll, color='k', markerfacecolor='w', markeredgecolor='k')
+#plt.errorbar(x+a, av_av_test_data_inh_allMice_shflTrsPerN - av_av_test_shfl_inh_allMice_shflTrsPerN, sd_av_test_data_inh_allMice_shflTrsPerN, fmt='o', color='r', markerfacecolor='w', markeredgecolor='r') #, label='inh'
+#plt.errorbar(x+a, av_av_test_data_exc_allMice_shflTrsPerN - av_av_test_shfl_exc_allMice_shflTrsPerN, sd_av_test_data_exc_allMice_shflTrsPerN, fmt='o', color='b', markerfacecolor='w', markeredgecolor='b') # , label='exc'
+#plt.errorbar(x+a, av_av_test_data_allExc_allMice_shflTrsPerN - av_av_test_shfl_allExc_allMice_shflTrsPerN, sd_av_test_data_allExc_allMice_shflTrsPerN, fmt='o', color='k', markerfacecolor='w', markeredgecolor='k') # , label=labAll
+
+plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)#, frameon=False) 
+plt.xlabel('Mice', fontsize=11)
+#plt.ylabel('Classification accuracy (%)\n[-97 0] ms rel. choice', fontsize=11)
+plt.title('Data - Shfl')
+plt.xlim([x[0]-a, x[-1]+a+a])
+plt.xticks(x+a/2.,mice)
+ax = plt.gca()
+makeNicePlots(ax)
+
+# p values: data-shfl (act vs shftTrsPerN)
+print pwm_dms_inh_mouse, pwm_dms_exc_mouse, pwm_dms_allExc_mouse
+#### Mark mice with sig p (inh: act vs shflTrsPerN)
+# inh
+pp = np.full(len(pwm_dms_inh_mouse[pn,:]), np.nan)
+pp[pwm_dms_inh_mouse[pn,:]<=.05] = av_av_test_dms_inh_allMice_shflTrsPerN[pwm_dms_inh_mouse[pn,:]<=.05]
+plt.plot(x+a+b, pp, 'g', marker='.', linestyle='')
+
+# exc
+pp = np.full(len(pwm_dms_exc_mouse[pn,:]), np.nan)
+pp[pwm_dms_exc_mouse[pn,:]<=.05] = av_av_test_dms_exc_allMice_shflTrsPerN[pwm_dms_exc_mouse[pn,:]<=.05]
+plt.plot(x+a+b, pp, 'g', marker='.', linestyle='')
+
+# allExc
+pp = np.full(len(pwm_dms_allExc_mouse[pn,:]), np.nan)
+pp[pwm_dms_allExc_mouse[pn,:]<=.05] = av_av_test_dms_allExc_allMice_shflTrsPerN[pwm_dms_allExc_mouse[pn,:]<=.05]
+plt.plot(x+a+b, pp, 'g', marker='.', linestyle='')
+
+
+
+plt.subplots_adjust(wspace=0.5)    
+
 
 if savefigs:#% Save the figure
     sn = '_shflTrsPerN'

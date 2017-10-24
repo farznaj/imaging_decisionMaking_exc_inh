@@ -59,7 +59,7 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     imagingFolder = '150930'#'150923' #'151023' #'151023' #'151001' #
     mdfFileNumber = [1] #[1] 
 
-    shflTrsEachNeuron = 1  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
+    shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
     outcome2ana = 'corr' #'all' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
     doInhAllexcEqexc = [0,1,0]
     #    1st element: analyze inhibitory neurons (train SVM for numSamples for each value of C)
@@ -144,7 +144,7 @@ if chAl==1:
 else:
     print 'Using stimulus-aligned traces'    
 if trialHistAnalysis==0:
-    print 'Training %s trials of strength %s' %(outcome2ana, strength2ana)
+    print 'Training %s outcome trials of strength %s' %(outcome2ana, strength2ana)
 print 'trialHistAnalysis = %i' %(trialHistAnalysis)
 print 'Analyzing %s neurons' %(ntName)
 if trialHistAnalysis==1:

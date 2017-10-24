@@ -21,7 +21,7 @@ Created on Sun Mar 12 15:12:29 2017
 #%%
 mice = 'fni16', 'fni17', 'fni18', 'fni19'
 
-savefigs = 1
+savefigs = 0
 useAllNdecoder = 1 # if 1: use the decoder that was trained on all neurons; # if 0: Use the decoder that was trained only on inh or only exc.
 normWeights = 0 # if 1, weights will be normalized to unity length.
 
@@ -163,15 +163,15 @@ wexcAve_all_allMice = []
 winhAve_all2_allMice = []
 wexcAve_all2_allMice = []
 cbestFrs_all_allMice = []
-eventI_allDays_allMice = []
-eventI_ds_allDays_allMice = []
-corr_hr_lr_allMice = []
 numDaysAll = np.full(len(mice), np.nan)
 numDaysAll_good = np.full(len(mice), np.nan)
 normw_allN_allD_allMice = []
 normw_inh_allD_allMice = []
 normw_exc_allD_allMice = []
 dpmAllm = []
+eventI_allDays_allMice = []
+eventI_ds_allDays_allMice = []
+corr_hr_lr_allMice = []
 
 #%%
 for im in range(len(mice)):
@@ -340,8 +340,15 @@ for im in range(len(mice)):
         '''
         winh_all.append(winh0) # each samp (numSamples x nNeurons x nFrames)
         wexc_all.append(wexc0)     
-        '''                
-
+        '''    
+        # time course of weights for each day            
+        '''
+        plt.figure()
+        plt.plot(np.mean(wexcAve,axis=0),'b'); 
+        plt.plot(np.mean(winhAve,axis=0),'r'); 
+        plt.title(days[iday])
+        '''
+        
     #%%
     ######################################################################    
     ######################### DONE WITH ALL DAYS #########################
@@ -487,148 +494,144 @@ def plotHistErrBarWsEI_allMice(we_allM, wi_allM, ne, ni, lab, colors):
 
 #%% Hist of w at frame -1 --> at the end of this page you compute inha and exca, which are a general version of _all2 vars.... ie they include w values for all frames instead of just frame -1.
 
-if len(mice) > 1:
-    
-    ##### weights        
-    lab = 'w'
-    plotHistErrBarWsEI_allMice(wexcAve_all2_allMice, winhAve_all2_allMice, numExcEachMouse, numInhEachMouse, lab, colors)
-    
-    ##### Abs weights        
-    lab = 'abs w'
-    plotHistErrBarWsEI_allMice([abs(wexcAve_all2_allMice[im]) for im in range(len(mice))], [abs(winhAve_all2_allMice[im]) for im in range(len(mice))], numExcEachMouse, numInhEachMouse, lab, colors)
-    
-    
-   
-        
+##### weights        
+lab = 'w'
+plotHistErrBarWsEI_allMice(wexcAve_all2_allMice, winhAve_all2_allMice, numExcEachMouse, numInhEachMouse, lab, colors)
 
-    #%% Plot time course of w (above we just plotted time -1) 
-    ####################################################################################    
-    ####################################################################################      
-    ####################################################################################      
-         
-    #%%  Compute average weights across neurons for each frame
-    # input: winhAve_all_allMice: nMice; each mouse: nAllDays (not just good days); each day: nNeurons x n Frs (ie weights at all times)  
-    # output: winhAve_all_allMice_eachFr: nMice; each mouse: nAllDays (not just good days); each day: n Frs (ie neuron_averaged weights at all times)          
-         
-    # average weights across neurons for each frame ... for each session of each mouse    
-    winhAve_all_allMice_eachFr = []
-    wexcAve_all_allMice_eachFr = []
-    winhAbsAve_all_allMice_eachFr = []
-    wexcAbsAve_all_allMice_eachFr = []
-    for im in range(len(mice)):
-        # average across neurons for each frame
-        winhAve_all_allMice_eachFr.append(np.array([np.mean(winhAve_all_allMice[im][iday], axis=0) for iday in range(numDaysAll[im])]))
-        wexcAve_all_allMice_eachFr.append(np.array([np.mean(wexcAve_all_allMice[im][iday], axis=0) for iday in range(numDaysAll[im])]))    
-         # ABS w: average across neurons for each frame
-        winhAbsAve_all_allMice_eachFr.append(np.array([np.mean(abs(winhAve_all_allMice[im][iday]), axis=0) for iday in range(numDaysAll[im])]))
-        wexcAbsAve_all_allMice_eachFr.append(np.array([np.mean(abs(wexcAve_all_allMice[im][iday]), axis=0) for iday in range(numDaysAll[im])]))    
+##### Abs weights        
+lab = 'abs w'
+plotHistErrBarWsEI_allMice([abs(wexcAve_all2_allMice[im]) for im in range(len(mice))], [abs(winhAve_all2_allMice[im]) for im in range(len(mice))], numExcEachMouse, numInhEachMouse, lab, colors)
 
-    winhAve_all_allMice_eachFr = np.array(winhAve_all_allMice_eachFr) # nMice; each mouse: nAllDays (not just good days); each day: n Frs (ie neuron-averaged weights at all times)   
-    wexcAve_all_allMice_eachFr = np.array(wexcAve_all_allMice_eachFr)
-    winhAbsAve_all_allMice_eachFr = np.array(winhAbsAve_all_allMice_eachFr)
-    wexcAbsAve_all_allMice_eachFr = np.array(wexcAbsAve_all_allMice_eachFr)
-    
-    
-    
-    #%% Now aligned the traces created above (ie neuron-averaged time course of weights)
-    
-    ############## FOR ALL MICE: Align weights at all frames of all days to make a final average trace ##############
-    ##%% 
-    ##%% Find the common eventI, number of frames before and after the common eventI for the alignment of traces of all days.
-    # By common eventI, we  mean the index on which all traces will be aligned.
 
-    ##### nPreMin : index of eventI on aligned traces ####
+#%% Plot time course of w (above we just plotted time -1) 
+####################################################################################    
+####################################################################################      
+####################################################################################      
+     
+#%%  Compute average weights across neurons for each frame
+# input: winhAve_all_allMice: nMice; each mouse: nAllDays (not just good days); each day: nNeurons x n Frs (ie weights at all times)  
+# output: winhAve_all_allMice_eachFr: nMice; each mouse: nAllDays (not just good days); each day: n Frs (ie neuron_averaged weights at all times)          
+     
+# average weights across neurons for each frame ... for each session of each mouse    
+winhAve_all_allMice_eachFr = []
+wexcAve_all_allMice_eachFr = []
+winhAbsAve_all_allMice_eachFr = []
+wexcAbsAve_all_allMice_eachFr = []
+for im in range(len(mice)):
+    # average across neurons for each frame
+    winhAve_all_allMice_eachFr.append(np.array([np.mean(winhAve_all_allMice[im][iday], axis=0) for iday in range(numDaysAll[im])]))
+    wexcAve_all_allMice_eachFr.append(np.array([np.mean(wexcAve_all_allMice[im][iday], axis=0) for iday in range(numDaysAll[im])]))    
+     # ABS w: average across neurons for each frame
+    winhAbsAve_all_allMice_eachFr.append(np.array([np.mean(abs(winhAve_all_allMice[im][iday]), axis=0) for iday in range(numDaysAll[im])]))
+    wexcAbsAve_all_allMice_eachFr.append(np.array([np.mean(abs(wexcAve_all_allMice[im][iday]), axis=0) for iday in range(numDaysAll[im])]))    
+
+winhAve_all_allMice_eachFr = np.array(winhAve_all_allMice_eachFr) # nMice; each mouse: nAllDays (not just good days); each day: n Frs (ie neuron-averaged weights at all times)   
+wexcAve_all_allMice_eachFr = np.array(wexcAve_all_allMice_eachFr)
+winhAbsAve_all_allMice_eachFr = np.array(winhAbsAve_all_allMice_eachFr)
+wexcAbsAve_all_allMice_eachFr = np.array(wexcAbsAve_all_allMice_eachFr)
+
+
+
+#%% Now aligned the traces created above (ie neuron-averaged time course of weights)
+
+############## FOR ALL MICE: Align weights at all frames of all days to make a final average trace ##############
+##%% 
+##%% Find the common eventI, number of frames before and after the common eventI for the alignment of traces of all days.
+# By common eventI, we  mean the index on which all traces will be aligned.
+
+##### nPreMin : index of eventI on aligned traces ####
+
+nPostAll = []
+for im in range(len(mice)):
+    numDays = numDaysAll[im]
+    nPost = (np.ones((numDays,1))+np.nan).flatten().astype('int')
+    for iday in range(numDays):
+        nPost[iday] = (len(winhAve_all_allMice_eachFr[im][iday]) - eventI_ds_allDays_allMice[im][iday] - 1)
+    nPostAll.append(nPost)
     
-    nPostAll = []
-    for im in range(len(mice)):
-        numDays = numDaysAll[im]
-        nPost = (np.ones((numDays,1))+np.nan).flatten().astype('int')
-        for iday in range(numDays):
-            nPost[iday] = (len(winhAve_all_allMice_eachFr[im][iday]) - eventI_ds_allDays_allMice[im][iday] - 1)
-        nPostAll.append(nPost)
-        
-    nPreMin = np.min(np.concatenate((eventI_ds_allDays_allMice))) #min(eventI_allDays) # number of frames before the common eventI, also the index of common eventI. 
-    nPostMin = min(np.concatenate((nPostAll)))
-    print 'Number of frames before = %d, and after = %d the common eventI' %(nPreMin, nPostMin)
+nPreMin = np.min(np.concatenate((eventI_ds_allDays_allMice))) #min(eventI_allDays) # number of frames before the common eventI, also the index of common eventI. 
+nPostMin = min(np.concatenate((nPostAll)))
+print 'Number of frames before = %d, and after = %d the common eventI' %(nPreMin, nPostMin)
+
+
+#%% Set the time array for the across-day aligned traces
+'''
+if corrTrained==0: # remember below has issues...
+    a = -(np.asarray(frameLength*regressBins) * range(nPreMin+1)[::-1])
+    b = (np.asarray(frameLength*regressBins) * range(1, nPostMin+1))
+    time_aligned = np.concatenate((a,b))
+else:
+'''
+totLen = nPreMin + nPostMin +1
+time_aligned = set_time_al(totLen, np.min(np.concatenate((eventI_allDays_allMice))), lastTimeBinMissed)
+
+print time_aligned
+
+
+#%% Align neuron-averaged weight traces of all days on the common eventI
+# only include days with enough svm-trained trials    
+
+# input: winhAve_all_allMice_eachFr: nMice; each mouse: nAllDays (not just good days); each day: n Frs (ie neuron_averaged weights at all times)        
+# output: winhAve_all_allMice_eachFr_aligned_all: # nMice; each mouse is nAlignedFrames x days(all, but bad is set to nan)
+
+##### average-neuron weights
+winhAve_all_allMice_eachFr_aligned_all = [] # nMice; each mouse is nAlignedFrames x days(all, but bad is set to nan)
+wexcAve_all_allMice_eachFr_aligned_all = []
+winhAbsAve_all_allMice_eachFr_aligned_all = [] 
+wexcAbsAve_all_allMice_eachFr_aligned_all = []    
+for im in range(len(mice)):
+    numDays = numDaysAll[im]
     
+    winhAve_all_allMice_eachFr_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)
+    wexcAve_all_allMice_eachFr_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)    
+    winhAbsAve_all_allMice_eachFr_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)
+    wexcAbsAve_all_allMice_eachFr_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)    
     
-    #%% Set the time array for the across-day aligned traces
-    '''
-    if corrTrained==0: # remember below has issues...
-        a = -(np.asarray(frameLength*regressBins) * range(nPreMin+1)[::-1])
-        b = (np.asarray(frameLength*regressBins) * range(1, nPostMin+1))
-        time_aligned = np.concatenate((a,b))
-    else:
-    '''
-    totLen = nPreMin + nPostMin +1
-    time_aligned = set_time_al(totLen, np.min(np.concatenate((eventI_allDays_allMice))), lastTimeBinMissed)
-    
-    print time_aligned
-    
-    
-    #%% Align neuron-averaged weight traces of all days on the common eventI
-    # only include days with enough svm-trained trials    
-    
-    # input: winhAve_all_allMice_eachFr: nMice; each mouse: nAllDays (not just good days); each day: n Frs (ie neuron_averaged weights at all times)        
-    # output: winhAve_all_allMice_eachFr_aligned_all: # nMice; each mouse is nAlignedFrames x days(all, but bad is set to nan)
-    
-    ##### average-neuron weights
-    winhAve_all_allMice_eachFr_aligned_all = [] # nMice; each mouse is nAlignedFrames x days(all, but bad is set to nan)
-    wexcAve_all_allMice_eachFr_aligned_all = []
-    winhAbsAve_all_allMice_eachFr_aligned_all = [] 
-    wexcAbsAve_all_allMice_eachFr_aligned_all = []    
-    for im in range(len(mice)):
-        numDays = numDaysAll[im]
-        
-        winhAve_all_allMice_eachFr_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)
-        wexcAve_all_allMice_eachFr_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)    
-        winhAbsAve_all_allMice_eachFr_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)
-        wexcAbsAve_all_allMice_eachFr_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)    
-        
-        # set to nan days with too few svm-trained trials    
-        corr_hr_lr = corr_hr_lr_allMice[im]
-        mn_corr = np.min(corr_hr_lr,axis=1)        
-        for iday in range(numDays):
-            if mn_corr[iday] >= thTrained:
-                winhAve_all_allMice_eachFr_aligned[:, iday] = winhAve_all_allMice_eachFr[im][iday][eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1]
-                wexcAve_all_allMice_eachFr_aligned[:, iday] = wexcAve_all_allMice_eachFr[im][iday][eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1]
-                winhAbsAve_all_allMice_eachFr_aligned[:, iday] = winhAbsAve_all_allMice_eachFr[im][iday][eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1]
-                wexcAbsAve_all_allMice_eachFr_aligned[:, iday] = wexcAbsAve_all_allMice_eachFr[im][iday][eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1]
-    
-        winhAve_all_allMice_eachFr_aligned_all.append(winhAve_all_allMice_eachFr_aligned) # nMice; each mouse is nAlignedFrames x days(all, but bad is set to nan)
-        wexcAve_all_allMice_eachFr_aligned_all.append(wexcAve_all_allMice_eachFr_aligned)    
-        winhAbsAve_all_allMice_eachFr_aligned_all.append(winhAbsAve_all_allMice_eachFr_aligned)
-        wexcAbsAve_all_allMice_eachFr_aligned_all.append(wexcAbsAve_all_allMice_eachFr_aligned)    
-    
-    
-        
-    #%% Average across sessions for each mouse:
-        # Set average and se of neuron-averaged weights across sessions (only good sessions) for each mouse ... 
-        # these vars will be used if poolDaysOfMice = 0 
-    # input: winhAve_all_allMice_eachFr_aligned_all: # nMice; each mouse is nAlignedFrames x days(all, but bad is set to nan)
-    # output: winhAveDay_aligned: # numMouse x numFrames
-        
-    # ave
-    winhAveDay_aligned = np.array([np.nanmean(winhAve_all_allMice_eachFr_aligned_all[im], axis=1) for im in range(len(mice))]) # numMouse x numFrames
-    wexcAveDay_aligned = np.array([np.nanmean(wexcAve_all_allMice_eachFr_aligned_all[im], axis=1) for im in range(len(mice))]) # numMouse x numFrames
-    
-    winhAbsAveDay_aligned = np.array([np.nanmean(winhAbsAve_all_allMice_eachFr_aligned_all[im], axis=1) for im in range(len(mice))]) # numMouse x numFrames
-    wexcAbsAveDay_aligned = np.array([np.nanmean(wexcAbsAve_all_allMice_eachFr_aligned_all[im], axis=1) for im in range(len(mice))]) # numMouse x numFrames
-    
-    # se
-    winhSdDay_aligned = np.array([np.nanstd(winhAve_all_allMice_eachFr_aligned_all[im], axis=1)/np.sqrt(numDaysAll_good[im]) for im in range(len(mice))]) # numMouse x numFrames
-    wexcSdDay_aligned = np.array([np.nanstd(wexcAve_all_allMice_eachFr_aligned_all[im], axis=1)/np.sqrt(numDaysAll_good[im]) for im in range(len(mice))]) # numMouse x numFrames
-    
-    winhAbsSdDay_aligned = np.array([np.nanstd(winhAbsAve_all_allMice_eachFr_aligned_all[im], axis=1)/np.sqrt(numDaysAll_good[im]) for im in range(len(mice))]) # numMouse x numFrames
-    wexcAbsSdDay_aligned = np.array([np.nanstd(wexcAbsAve_all_allMice_eachFr_aligned_all[im], axis=1)/np.sqrt(numDaysAll_good[im]) for im in range(len(mice))]) # numMouse x numFrames
+    # set to nan days with too few svm-trained trials    
+    corr_hr_lr = corr_hr_lr_allMice[im]
+    mn_corr = np.min(corr_hr_lr,axis=1)        
+    for iday in range(numDays):
+        if mn_corr[iday] >= thTrained:
+            winhAve_all_allMice_eachFr_aligned[:, iday] = winhAve_all_allMice_eachFr[im][iday][eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1]
+            wexcAve_all_allMice_eachFr_aligned[:, iday] = wexcAve_all_allMice_eachFr[im][iday][eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1]
+            winhAbsAve_all_allMice_eachFr_aligned[:, iday] = winhAbsAve_all_allMice_eachFr[im][iday][eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1]
+            wexcAbsAve_all_allMice_eachFr_aligned[:, iday] = wexcAbsAve_all_allMice_eachFr[im][iday][eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1]
+
+    winhAve_all_allMice_eachFr_aligned_all.append(winhAve_all_allMice_eachFr_aligned) # nMice; each mouse is nAlignedFrames x days(all, but bad is set to nan)
+    wexcAve_all_allMice_eachFr_aligned_all.append(wexcAve_all_allMice_eachFr_aligned)    
+    winhAbsAve_all_allMice_eachFr_aligned_all.append(winhAbsAve_all_allMice_eachFr_aligned)
+    wexcAbsAve_all_allMice_eachFr_aligned_all.append(wexcAbsAve_all_allMice_eachFr_aligned)    
+
 
     
-    #%% Pool sessions of all mice
-        # Pool neuron-average weights across sessions and mice ... 
-        # these vars will be used if poolDaysOfMice = 1
-    # input: winhAve_all_allMice_eachFr_aligned_all: # nMice; each mouse is nAlignedFrames x days(all, but bad is set to nan)
-    # output: winhAllDaysMice_aligned: (pooled sessions of all mice) x frames
+#%% Average across sessions for each mouse:
+    # Set average and se of neuron-averaged weights across sessions (only good sessions) for each mouse ... 
+    # these vars will be used if poolDaysOfMice = 0 
+# input: winhAve_all_allMice_eachFr_aligned_all: # nMice; each mouse is nAlignedFrames x days(all, but bad is set to nan)
+# output: winhAveDay_aligned: # numMouse x numFrames
     
+# ave
+winhAveDay_aligned = np.array([np.nanmean(winhAve_all_allMice_eachFr_aligned_all[im], axis=1) for im in range(len(mice))]) # numMouse x numFrames
+wexcAveDay_aligned = np.array([np.nanmean(wexcAve_all_allMice_eachFr_aligned_all[im], axis=1) for im in range(len(mice))]) # numMouse x numFrames
+
+winhAbsAveDay_aligned = np.array([np.nanmean(winhAbsAve_all_allMice_eachFr_aligned_all[im], axis=1) for im in range(len(mice))]) # numMouse x numFrames
+wexcAbsAveDay_aligned = np.array([np.nanmean(wexcAbsAve_all_allMice_eachFr_aligned_all[im], axis=1) for im in range(len(mice))]) # numMouse x numFrames
+
+# se
+winhSdDay_aligned = np.array([np.nanstd(winhAve_all_allMice_eachFr_aligned_all[im], axis=1)/np.sqrt(numDaysAll_good[im]) for im in range(len(mice))]) # numMouse x numFrames
+wexcSdDay_aligned = np.array([np.nanstd(wexcAve_all_allMice_eachFr_aligned_all[im], axis=1)/np.sqrt(numDaysAll_good[im]) for im in range(len(mice))]) # numMouse x numFrames
+
+winhAbsSdDay_aligned = np.array([np.nanstd(winhAbsAve_all_allMice_eachFr_aligned_all[im], axis=1)/np.sqrt(numDaysAll_good[im]) for im in range(len(mice))]) # numMouse x numFrames
+wexcAbsSdDay_aligned = np.array([np.nanstd(wexcAbsAve_all_allMice_eachFr_aligned_all[im], axis=1)/np.sqrt(numDaysAll_good[im]) for im in range(len(mice))]) # numMouse x numFrames
+
+
+#%% Pool sessions of all mice
+    # Pool neuron-average weights across sessions and mice ... 
+    # these vars will be used if poolDaysOfMice = 1
+# input: winhAve_all_allMice_eachFr_aligned_all: # nMice; each mouse is nAlignedFrames x days(all, but bad is set to nan)
+# output: winhAllDaysMice_aligned: (pooled sessions of all mice) x frames
+
+if len(mice)>1:
     winhAllDaysMouse = [] # (numFrs x numMice) ... first all frames of mouse 0, then all frames of mouse 1, then all frames of mouse 2
     wexcAllDaysMouse = []
     winhAbsAllDaysMouse = [] # (numFrs x numMice) ... first all frames of mouse 0, then all frames of mouse 1, then all frames of mouse 2
@@ -639,9 +642,9 @@ if len(mice) > 1:
             wexcAllDaysMouse.append(wexcAve_all_allMice_eachFr_aligned_all[im][ifr])
             winhAbsAllDaysMouse.append(winhAbsAve_all_allMice_eachFr_aligned_all[im][ifr]) # weights for all sessions of mouse im, and frame ifr
             wexcAbsAllDaysMouse.append(wexcAbsAve_all_allMice_eachFr_aligned_all[im][ifr])    
-    #if len(mice)==1:
-    #    winhAllDaysMouse[0] = winhAllDaysMouse
-    #    wexcAllDaysMouse[0] = wexcAllDaysMouse
+#    if len(mice)==1:
+#        winhAllDaysMouse = [winhAllDaysMouse]
+#        wexcAllDaysMouse = [wexcAllDaysMouse]
             
     # now pool sessions of all mice for each frame; so we get : (sessions of all mice) x frames            
     a = np.reshape(winhAllDaysMouse, (len(time_aligned), len(mice)), order = 'F') # frames x mice, each contains all sessions of a mouse
@@ -654,46 +657,109 @@ if len(mice) > 1:
     a = np.reshape(wexcAbsAllDaysMouse, (len(time_aligned), len(mice)), order = 'F') # frames x mice, each contains all sessions of a mouse
     wexcAbsAllDaysMice_aligned = np.array([np.concatenate(a[ifr]) for ifr in range(len(time_aligned))]).transpose() # (sessions of all mice) x frames
     
-    ### Abs
-#    winhAbsAllDaysMice_aligned = abs(winhAllDaysMice_aligned)
-#    wexcAbsAllDaysMice_aligned = abs(wexcAllDaysMice_aligned)
-    
-    
-    #%% Plot the final average and sd across mice (poolDaysOfMice=0) also across pooled sessions (poolDaysOfMice=1)
-    # remember neurons of each sessions are already averaged for each frame
-    
-    #############%% Define function ot plot the average of aligned traces across all days
-    def plotwTraces(ye,ee, yi, ei, p, ylab):
 
-        plt.fill_between(time_aligned, ye - ee, ye + ee, alpha=0.5, edgecolor=colors[0], facecolor=colors[0])
-        plt.plot(time_aligned, ye, colors[0], label='exc')
-        
-        plt.fill_between(time_aligned, yi - ei, yi + ei, alpha=0.5, edgecolor=colors[1], facecolor=colors[1])
-        plt.plot(time_aligned, yi, colors[1], label='inh')
-            
-        if chAl==1:
-            plt.xlabel('Time since choice onset (ms)', fontsize=13)
-        else:
-            plt.xlabel('Time since stim onset (ms)', fontsize=13)
-        plt.ylabel(ylab, fontsize=11)
-        
-        #plt.title('SVM trained on non-overlapping %.2f ms windows' %(regressBins*frameLength), fontsize=13)
-        plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)     
-        ax = plt.gca()        
-        makeNicePlots(ax,1,1)
-        
-        # Plot a dot for significant time points
-        ymin, ymax = ax.get_ylim()    
-        plt.vlines(0,ymin,ymax, color='k',linestyle=':')        
-        pp = p+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax
-        plt.plot(time_aligned, pp, color='k')
-            
-            
-    #%%
-    ############### Set vars ###############
-    nMice = len(mice)
-    nTotGoodSess = sum(numDaysAll_good)
+#%% Plot the final average and sd across mice (poolDaysOfMice=0) also across pooled sessions (poolDaysOfMice=1)
+# remember neurons of each sessions are already averaged for each frame
+
+#############%% Define function ot plot the average of aligned traces across all days
+def plotwTraces(ye,ee, yi, ei, p, ylab):
+
+    plt.fill_between(time_aligned, ye - ee, ye + ee, alpha=0.5, edgecolor=colors[0], facecolor=colors[0])
+    plt.plot(time_aligned, ye, colors[0], label='exc')
     
+    plt.fill_between(time_aligned, yi - ei, yi + ei, alpha=0.5, edgecolor=colors[1], facecolor=colors[1])
+    plt.plot(time_aligned, yi, colors[1], label='inh')
+        
+    if chAl==1:
+        plt.xlabel('Time since choice onset (ms)', fontsize=13)
+    else:
+        plt.xlabel('Time since stim onset (ms)', fontsize=13)
+    plt.ylabel(ylab, fontsize=11)
+    
+    #plt.title('SVM trained on non-overlapping %.2f ms windows' %(regressBins*frameLength), fontsize=13)
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)     
+    ax = plt.gca()        
+    makeNicePlots(ax,1,1)
+    
+    # Plot a dot for significant time points
+    ymin, ymax = ax.get_ylim()    
+    plt.vlines(0,ymin,ymax, color='k',linestyle=':')        
+    pp = p+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax
+    plt.plot(time_aligned, pp, color='k')
+        
+
+#%% call the above function
+
+def call_plotwTraces(av_wexc, sd_wexc, av_winh, sd_winh, pcorrtrace,av_wexc_abs, sd_wexc_abs, av_winh_abs, sd_winh_abs, pAbscorrtrace, dnowAM, dpp):
+    ############### PLOT ###############                
+    fig = plt.figure(figsize=(3,4))
+    gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
+    h1 = gs[0,0:3]
+    h2 = gs[1,0:3]
+    
+    ######## Weights
+    plt.subplot(h1)          
+    ylab = 'Classifier weights'
+    plotwTraces(av_wexc, sd_wexc, av_winh, sd_winh, pcorrtrace, ylab)
+
+    ######## Abs Weights
+    plt.subplot(h2)
+    ylab = 'Abs (classifier weights)'
+    plotwTraces(av_wexc_abs, sd_wexc_abs, av_winh_abs, sd_winh_abs, pAbscorrtrace, ylab)        
+    
+    plt.subplots_adjust(wspace=1, hspace=.8)
+    
+    
+    ##%% Save the figure    
+    if savefigs:#% Save the figure
+        d = os.path.join(svmdir+dnowAM)
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+        
+        if poolDaysOfMice==0:
+            fign = os.path.join(d, suffn[0:5]+cha+'timeCourse_w_absw_aveMice_aveDays_aveNs_excVSinh_'+dpp+'.'+fmt[0])
+        else:
+            fign = os.path.join(d, suffn[0:5]+cha+'timeCourse_w_absw_avePooledMiceDays_aveNs_excVSinh_'+dpp+'.'+fmt[0])    
+        fig.savefig(fign, bbox_inches='tight')
+    
+        
+#%%
+############### Set vars ###############
+nMice = len(mice)
+nTotGoodSess = sum(numDaysAll_good)
+
+for im in range(len(mice)):        
+    execfile("svm_plots_setVars_n.py")  # to get days
+    mousename = mice[im] # mousename = 'fni16' #'fni17'
+    dnow = os.path.join(dnow0,mousename,dect,nl)   
+    dpm = 'days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr   
+#        dpmAllm.append(dpm)
+                
+    #### weights            
+    av_winh = winhAveDay_aligned.flatten() # nFrames (average across sessions; each session: averaged across neurons)
+    sd_winh = winhSdDay_aligned.flatten()
+    
+    av_wexc = wexcAveDay_aligned.flatten()
+    sd_wexc = wexcSdDay_aligned.flatten()
+    
+    _,pcorrtrace = stats.ttest_ind(winhAve_all_allMice_eachFr_aligned_all[im].T, wexcAve_all_allMice_eachFr_aligned_all[im].T, nan_policy='omit') # p value of class accuracy being different from 50
+
+    #### Abs
+    av_winh_abs = winhAbsAveDay_aligned.flatten()
+    sd_winh_abs = winhAbsSdDay_aligned.flatten()
+    
+    av_wexc_abs = wexcAbsAveDay_aligned.flatten()
+    sd_wexc_abs = wexcAbsSdDay_aligned.flatten()
+    
+    _,pAbscorrtrace = stats.ttest_ind(winhAbsAve_all_allMice_eachFr_aligned_all[im].T, wexcAbsAve_all_allMice_eachFr_aligned_all[im].T, nan_policy='omit')
+    
+    poolDaysOfMice=0
+    call_plotwTraces(av_wexc, sd_wexc, av_winh, sd_winh, pcorrtrace,av_wexc_abs, sd_wexc_abs, av_winh_abs, sd_winh_abs, pAbscorrtrace, dnow, dpm)
+    
+    
+######################## Averages of all mice ########################        
+if len(mice)>1:
     for poolDaysOfMice in [0,1]: # for plotting w traces; if 0, average and sd across mice (each mouse has session-averaged weights); if 1, average and sd across all sessions of all mice           
         if poolDaysOfMice==0:
             # average and sd across mice (each mouse has session-averaged weights)
@@ -730,239 +796,159 @@ if len(mice) > 1:
         sd_wexc_abs = np.nanstd(bb, axis=0)/ np.sqrt(n)
         
         _,pAbscorrtrace = stats.ttest_ind(aa, bb, nan_policy='omit')
+    
+
+    call_plotwTraces(av_wexc, sd_wexc, av_winh, sd_winh, pcorrtrace,av_wexc_abs, sd_wexc_abs, av_winh_abs, sd_winh_abs, pAbscorrtrace, dnowAM, dpp)
+
         
 
-                
-        ############### PLOT ###############                
-        fig = plt.figure(figsize=(3,4))
-        gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
-        h1 = gs[0,0:3]
-        h2 = gs[1,0:3]
-        
-        ######## Weights
-        plt.subplot(h1)          
-        ylab = 'Classifier weights'
-        plotwTraces(av_wexc, sd_wexc, av_winh, sd_winh, pcorrtrace, ylab)
 
-        ######## Abs Weights
-        plt.subplot(h2)
-        ylab = 'Abs (classifier weights)'
-        plotwTraces(av_wexc_abs, sd_wexc_abs, av_winh_abs, sd_winh_abs, pAbscorrtrace, ylab)        
-        
-        plt.subplots_adjust(wspace=1, hspace=.8)
-        
-        
-        ##%% Save the figure    
-        if savefigs:#% Save the figure
-            d = os.path.join(svmdir+dnowAM)
-            if not os.path.exists(d):
-                print 'creating folder'
-                os.makedirs(d)
-            
-            if poolDaysOfMice==0:
-                fign = os.path.join(d, suffn[0:5]+cha+'timeCourse_w_absw_aveMice_aveDays_aveNs_excVSinh_'+dpp+'.'+fmt[0])
-            else:
-                fign = os.path.join(d, suffn[0:5]+cha+'timeCourse_w_absw_avePooledMiceDays_aveNs_excVSinh_'+dpp+'.'+fmt[0])    
-            fig.savefig(fign, bbox_inches='tight')
-        
-            
+#%% HERE we do not average neurons of each session anymore!!... we work with single neurons!
 
+############################################################################################
+############################################################################################
+####################################################################################      
+##########%%  Align all neuron's trace of weights
+####################################################################################
+# Above you took average of weights across neurons and sessions and mice; 
+# Here we take each neuron's weight (without any averaging) and look into the histograms of weights.       
+####################################################################################    
 
-    #%% HERE we do not average neurons of each session anymore!!... we work with single neurons!
+#%% Get values of w (for all neurons) at different time points from the aligned traces; (comapre w _all2 to make sure eveything is fine)
 
-    ############################################################################################
-    ############################################################################################
-    ####################################################################################      
-    ##########%%  Align all neuron's trace of weights
-    ####################################################################################
-    # Above you took average of weights across neurons and sessions and mice; 
-    # Here we take each neuron's weight (without any averaging) and look into the histograms of weights.       
-    ####################################################################################    
+# input: winhAve_all_allMice: nMice; each mouse: nAllDays (not just good days); each day: nNeurons x nFrs (ie weights at all times)  
+# output: winhAve_all_allMice_eachFr_aligned_allN: nMice; each mouse is nGoodDays; each day is: neurons x alignedFrames
 
-    #%% Get values of w (for all neurons) at different time points from the aligned traces; (comapre w _all2 to make sure eveything is fine)
+# winhAve_all_allMice_eachFr_aligned_allN is same as winhAve_all_allMice except it is aligned on the common eventI. Also it includes only good days.
+# (it includes all neurons' weights at all frames for all days and mice)
+
+###### Align traces of all days on the common eventI
+##### all neurons' weights    --->    Align traces of all days on the common eventI
+winhAve_all_allMice_eachFr_aligned_allN = [] # nMice; each mouse is nGoodDays; each day is: neurons x alignedFrames
+wexcAve_all_allMice_eachFr_aligned_allN = []
+
+for im in range(len(mice)):
+    winhAve_all_allMice_eachFr_aligned = [] # each day is neurons x alignedFrames, aligned on common eventI (equals nPreMin)
+    wexcAve_all_allMice_eachFr_aligned = [] 
     
-    # input: winhAve_all_allMice: nMice; each mouse: nAllDays (not just good days); each day: nNeurons x nFrs (ie weights at all times)  
-    # output: winhAve_all_allMice_eachFr_aligned_allN: nMice; each mouse is nGoodDays; each day is: neurons x alignedFrames
+    numDays = numDaysAll[im]        
+    corr_hr_lr = corr_hr_lr_allMice[im]
+    mn_corr = np.min(corr_hr_lr,axis=1)
     
-    # winhAve_all_allMice_eachFr_aligned_allN is same as winhAve_all_allMice except it is aligned on the common eventI. Also it includes only good days.
-    # (it includes all neurons' weights at all frames for all days and mice)
+    for iday in range(numDays):
+        if mn_corr[iday] >= thTrained:
+            winhAve_all_allMice_eachFr_aligned.append(winhAve_all_allMice[im][iday][:, eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1])
+            wexcAve_all_allMice_eachFr_aligned.append(wexcAve_all_allMice[im][iday][:, eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1])
+
+    winhAve_all_allMice_eachFr_aligned_allN.append(winhAve_all_allMice_eachFr_aligned)
+    wexcAve_all_allMice_eachFr_aligned_allN.append(wexcAve_all_allMice_eachFr_aligned)    
+
     
-    ###### Align traces of all days on the common eventI
-    ##### all neurons' weights    --->    Align traces of all days on the common eventI
-    winhAve_all_allMice_eachFr_aligned_allN = [] # nMice; each mouse is nGoodDays; each day is: neurons x alignedFrames
-    wexcAve_all_allMice_eachFr_aligned_allN = []
     
-    for im in range(len(mice)):
-        winhAve_all_allMice_eachFr_aligned = [] # each day is neurons x alignedFrames, aligned on common eventI (equals nPreMin)
-        wexcAve_all_allMice_eachFr_aligned = [] 
-        
-        numDays = numDaysAll[im]        
-        corr_hr_lr = corr_hr_lr_allMice[im]
-        mn_corr = np.min(corr_hr_lr,axis=1)
-        
-        for iday in range(numDays):
-            if mn_corr[iday] >= thTrained:
-                winhAve_all_allMice_eachFr_aligned.append(winhAve_all_allMice[im][iday][:, eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1])
-                wexcAve_all_allMice_eachFr_aligned.append(wexcAve_all_allMice[im][iday][:, eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1])
     
-        winhAve_all_allMice_eachFr_aligned_allN.append(winhAve_all_allMice_eachFr_aligned)
-        wexcAve_all_allMice_eachFr_aligned_allN.append(wexcAve_all_allMice_eachFr_aligned)    
     
-        
-        
-        
-        
-    #%% Set fraction non-zero weights for each time bin... to plot the timecourse
-    # intput: winhAve_all_allMice_eachFr_aligned_allN: nMice; each mouse is nGoodDays; each day is: neurons x alignedFrames    
-    # output: winh_fractnon0: nGoodDays x nAlignedFrames
-        
+#%% Set fraction non-zero weights for each time bin... to plot the timecourse
+# intput: winhAve_all_allMice_eachFr_aligned_allN: nMice; each mouse is nGoodDays; each day is: neurons x alignedFrames    
+# output: winh_fractnon0: nGoodDays x nAlignedFrames
+    
 #    eps = 1e-10
-    eps = sys.float_info.epsilon
-    
-    winh_fractnon0 = [] # daysOfAllMice x alignedFrames
-    wexc_fractnon0 = []
-    for im in range(len(mice)):
-        corr_hr_lr = corr_hr_lr_allMice[im]
-        mn_corr = np.min(corr_hr_lr,axis=1)
-    #    inh0 = []
-    #    exc0 = []
-        for iday in range(numDaysAll_good[im]):            
-    #        inh0.append(np.mean(abs(winhAve_all_allMice_eachFr_aligned_allN[im][iday]) > eps, axis=0)) # nFrames # fraction non0 weights for each frame
-    #        exc0.append(np.mean(abs(wexcAve_all_allMice_eachFr_aligned_allN[im][iday]) > eps, axis=0)) 
-            winh_fractnon0.append(np.mean(abs(winhAve_all_allMice_eachFr_aligned_allN[im][iday]) > eps, axis=0)) # nGoodDays x nFrames # fraction non0 weights for each frame
-            wexc_fractnon0.append(np.mean(abs(wexcAve_all_allMice_eachFr_aligned_allN[im][iday]) > eps, axis=0)) 
-    #    winh_fractnon0.append(inh0)
-    #    wexc_fractnon0.append(exc0)    
-        
-    
-    ########## Set ave and se of fract non-0 weights across sessions
-    a = winh_fractnon0
-    b = wexc_fractnon0
-    n = sum(numDaysAll_good) # np.shape(a)[0]
-        
-    av_winh = np.mean(a, axis=0)
-    sd_winh = np.std(a, axis=0)/ np.sqrt(n)
-    av_wexc = np.mean(b, axis=0)
-    sd_wexc = np.std(b, axis=0)/ np.sqrt(n)
-    
-    _,pcorrtrace = stats.ttest_ind(a, b) # p value of class accuracy being different from 50
-    
-           
-    ##### Plot the average fract non-0 ws of aligned traces across all days    
-    fig = plt.figure(figsize=(3,4))
-    gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
-    h1 = gs[0,0:3]
-    h2 = gs[1,0:3]
-    
-    plt.subplot(h1)          
-    ylab = 'Fract non-0 classifier weights'
-    plotwTraces(av_wexc, sd_wexc, av_winh, sd_winh, pcorrtrace, ylab)
-    
-    
-    ##%% Save the figure    
-    if savefigs:#% Save the figure
-        d = os.path.join(svmdir+dnowAM)
-        if not os.path.exists(d):
-            print 'creating folder'
-            os.makedirs(d)
-     
-        fign = os.path.join(d, suffn[0:5]+cha+'fractNon0w_timeCourse_aveMiceDays_aveNs_excVSinh_'+dpp+'.'+fmt[0])    
-        fig.savefig(fign, bbox_inches='tight')
-    
-        
+eps = sys.float_info.epsilon
 
-        
-#######################################################        
-#######################################################        
-    #%% Get values of winhAve_all_allMice_eachFr_aligned_allN for each frame    
-        
-    # input: winhAve_all_allMice_eachFr_aligned_allN: nMice; each mouse is nGoodDays; each day is: neurons x alignedFrames
-    # output: winhAve_allFrs_allMice: nMice x alignedFrames; each element: nGoodDays; each day: nNeurons
-        
-    # np.shape(winhAve_allFrs_allMice): nMice x alignedFrames
-    # np.shape(winhAve_allFrs_allMice[0]): alignedFrames x nGoodDays
-    # np.shape(winhAve_allFrs_allMice[0][0]): nGoodDays
-    # np.shape(winhAve_allFrs_allMice[0][0][0]): nNeurons
-    winhAve_allFrs_allMice = [] 
-    wexcAve_allFrs_allMice = [] 
-    for im in range(len(mice)):       
-        winhAve_allFrs = []
-        wexcAve_allFrs = []
-        for fr in range(len(time_aligned)):
-    #        nPreMin+fr2an
-            winhAve_allFrs.append(np.array([winhAve_all_allMice_eachFr_aligned_allN[im][iday][:,fr] for iday in range(numDaysAll_good[im])]))
-            wexcAve_allFrs.append(np.array([wexcAve_all_allMice_eachFr_aligned_allN[im][iday][:,fr] for iday in range(numDaysAll_good[im])]))
-        
-        winhAve_allFrs_allMice.append(winhAve_allFrs)
-        wexcAve_allFrs_allMice.append(wexcAve_allFrs)    
-    
-        
-    '''    
-    # get values at time point fr2an    
-    # inha is exactly like wexcAve_all2_allMice when fr2an = time2an
-    # winhAve_all2_allMice.append(winhAve_all2)  # nMice; each mouse: nGoodDays; each day: nNeurons (ie weights at time -1)
-    fr2an = -1
-    inha = []
-    exca = []
-    for im in range(len(mice)):    
-        inha.append(np.array([winhAve_allFrs_allMice[im][nPreMin+fr2an][iday] for iday in range(numDaysAll_good[im])]))
-        exca.append(np.array([wexcAve_allFrs_allMice[im][nPreMin+fr2an][iday] for iday in range(numDaysAll_good[im])]))
-        
-    '''
+winh_fractnon0 = [] # daysOfAllMice x alignedFrames
+wexc_fractnon0 = []
+for im in range(len(mice)):
+    corr_hr_lr = corr_hr_lr_allMice[im]
+    mn_corr = np.min(corr_hr_lr,axis=1)
+#    inh0 = []
+#    exc0 = []
+    for iday in range(numDaysAll_good[im]):            
+#        inh0.append(np.mean(abs(winhAve_all_allMice_eachFr_aligned_allN[im][iday]) > eps, axis=0)) # nFrames # fraction non0 weights for each frame
+#        exc0.append(np.mean(abs(wexcAve_all_allMice_eachFr_aligned_allN[im][iday]) > eps, axis=0)) 
+        winh_fractnon0.append(np.mean(abs(winhAve_all_allMice_eachFr_aligned_allN[im][iday]) > eps, axis=0)) # nGoodDays x nFrames # fraction non0 weights for each frame
+        wexc_fractnon0.append(np.mean(abs(wexcAve_all_allMice_eachFr_aligned_allN[im][iday]) > eps, axis=0)) 
+#    winh_fractnon0.append(inh0)
+#    wexc_fractnon0.append(exc0)    
     
 
-    #%% Plot hist of w and abs(w) for exc, inh for each time point relative to eventI (on the aligned trace)
-    # (pooled across all sessions and all mice and all neurons)
+########## Set ave and se of fract non-0 weights across sessions
+a = winh_fractnon0
+b = wexc_fractnon0
+n = sum(numDaysAll_good) # np.shape(a)[0]
+    
+av_winh = np.mean(a, axis=0)
+sd_winh = np.std(a, axis=0)/ np.sqrt(n)
+av_wexc = np.mean(b, axis=0)
+sd_wexc = np.std(b, axis=0)/ np.sqrt(n)
 
-    plt.figure(figsize=(5,70))    
-    gs = gridspec.GridSpec(2*len(time_aligned), 3)#, width_ratios=[2, 1]) 
+_,pcorrtrace = stats.ttest_ind(a, b) # p value of class accuracy being different from 50
+
        
+##### Plot the average fract non-0 ws of aligned traces across all days    
+fig = plt.figure(figsize=(3,4))
+gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
+h1 = gs[0,0:3]
+h2 = gs[1,0:3]
+
+plt.subplot(h1)          
+ylab = 'Fract non-0 classifier weights'
+plotwTraces(av_wexc, sd_wexc, av_winh, sd_winh, pcorrtrace, ylab)
+
+
+##%% Save the figure    
+if savefigs:#% Save the figure
+    d = os.path.join(svmdir+dnowAM)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+ 
+    fign = os.path.join(d, suffn[0:5]+cha+'fractNon0w_timeCourse_aveMiceDays_aveNs_excVSinh_'+dpp+'.'+fmt[0])    
+    fig.savefig(fign, bbox_inches='tight')
+
     
+
+    
+#######################################################        
+#######################################################        
+#%% Get values of winhAve_all_allMice_eachFr_aligned_allN for each frame    
+    
+# input: winhAve_all_allMice_eachFr_aligned_allN: nMice; each mouse is nGoodDays; each day is: neurons x alignedFrames
+# output: winhAve_allFrs_allMice: nMice x alignedFrames; each element: nGoodDays; each day: nNeurons
+    
+# np.shape(winhAve_allFrs_allMice): nMice x alignedFrames
+# np.shape(winhAve_allFrs_allMice[0]): alignedFrames x nGoodDays
+# np.shape(winhAve_allFrs_allMice[0][0]): nGoodDays
+# np.shape(winhAve_allFrs_allMice[0][0][0]): nNeurons
+winhAve_allFrs_allMice = [] 
+wexcAve_allFrs_allMice = [] 
+for im in range(len(mice)):       
+    winhAve_allFrs = []
+    wexcAve_allFrs = []
     for fr in range(len(time_aligned)):
-        # inha: nMice; each mouse: nGoodDays; each day: nNeurons (for a specific time point)
-        # just like : # winhAve_all2_allMice.append(winhAve_all2)         
-        inha = []
-        exca = []
-        for im in range(len(mice)):    
-            inha.append(np.array([winhAve_allFrs_allMice[im][fr][iday] for iday in range(numDaysAll_good[im])]))
-            exca.append(np.array([wexcAve_allFrs_allMice[im][fr][iday] for iday in range(numDaysAll_good[im])]))
+#        nPreMin+fr2an
+        winhAve_allFrs.append(np.array([winhAve_all_allMice_eachFr_aligned_allN[im][iday][:,fr] for iday in range(numDaysAll_good[im])]))
+        wexcAve_allFrs.append(np.array([wexcAve_all_allMice_eachFr_aligned_allN[im][iday][:,fr] for iday in range(numDaysAll_good[im])]))
+    
+    winhAve_allFrs_allMice.append(winhAve_allFrs)
+    wexcAve_allFrs_allMice.append(wexcAve_allFrs)    
 
-        
-        ### PLOT HISTS               
-        ##### weights        
-        h1 = gs[fr*2,0:2]
-        h2 = gs[fr*2,2:3]            
-        lab = 'w'
-        ylab = 'Fract neurons (all days,mice)'        
-        ax1 = plotHistErrBarWsEI(np.concatenate((exca)), np.concatenate((inha)), lab, ylab, 0,1,h1,h2)  
-        ax1.set_title('%.0f ms' %(time_aligned[fr]))
-        
-        ##### abs weights
-        h1 = gs[fr*2+1,0:2]
-        h2 = gs[fr*2+1,2:3]
-        lab = 'abs w'                
-        ax1 = plotHistErrBarWsEI(np.concatenate(([abs(exca[im]) for im in range(len(mice))])), np.concatenate(([abs(inha[im]) for im in range(len(mice))])), lab, '', 0,1,h1,h2)
-        ax1.set_title('%.0f ms' %(time_aligned[fr]))            
-#        ax1.set_title('')
-        
-    plt.subplots_adjust(wspace=1, hspace=.8)    
-        
+    
+'''    
+# get values at time point fr2an    
+# inha is exactly like wexcAve_all2_allMice when fr2an = time2an
+# winhAve_all2_allMice.append(winhAve_all2)  # nMice; each mouse: nGoodDays; each day: nNeurons (ie weights at time -1)
+fr2an = -1
+inha = []
+exca = []
+for im in range(len(mice)):    
+    inha.append(np.array([winhAve_allFrs_allMice[im][nPreMin+fr2an][iday] for iday in range(numDaysAll_good[im])]))
+    exca.append(np.array([wexcAve_allFrs_allMice[im][nPreMin+fr2an][iday] for iday in range(numDaysAll_good[im])]))        
+'''    
 
-    ##%% Save the figure    
-    if savefigs:#% Save the figure
-        d = os.path.join(svmdir+dnowAM)
-        if not os.path.exists(d):
-            print 'creating folder'
-            os.makedirs(d)
-        
-        fign = os.path.join(d, suffn[0:5]+cha+'dist_allFrs_w_absw_excVSinh_'+dpp+'.'+fmt[0])
-        
-        plt.savefig(fign, bbox_inches='tight')
-        
-        
-    #%% Plot weight traces again, this time pool all neurons of all days and all mice, then make ave and se...
-    # above we first averaged neurons of each session then made plots.
-        
+
+#%% Plot weight traces again, this time pool all neurons of all days and all mice, then make ave and se...
+# above we first averaged neurons of each session then made plots.
+
+def plotAllPooled(dnowAM, dpp):        
     ############### SET VARS ###############       
          
     wExcTraceAveall = np.full((len(time_aligned)), np.nan)
@@ -1036,111 +1022,172 @@ if len(mice) > 1:
         fign = os.path.join(d, suffn[0:5]+cha+'timeCourse_w_absw_avePooledMiceDaysNs_excVSinh_'+dpp+'.'+fmt[0])
         
         plt.savefig(fign, bbox_inches='tight')
+
+
+if len(mice)==1:            
+    for im in range(len(mice)):        
+        execfile("svm_plots_setVars_n.py")  # to get days
+        mousename = mice[im] # mousename = 'fni16' #'fni17'
+        dnow = os.path.join(dnow0,mousename,dect,nl)   
+        dpm = 'days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
+        
+        plotAllPooled(dnow, dpm)        
+
+else: # pool all mice
+    plotAllPooled(dnowAM, dpp)        
     
-        
-        
-    #%% Plot 2-norm of decoders       
-    ########################################################################################        
-    ########################################################################################
+
+#%% Plot hist of w and abs(w) for exc, inh for each time point relative to eventI (on the aligned trace)
+# (pooled across all sessions and all mice and all neurons)
+
+plt.figure(figsize=(5,70))    
+gs = gridspec.GridSpec(2*len(time_aligned), 3)#, width_ratios=[2, 1]) 
+   
+
+for fr in range(len(time_aligned)):
+    # inha: nMice; each mouse: nGoodDays; each day: nNeurons (for a specific time point)
+    # just like : # winhAve_all2_allMice.append(winhAve_all2)         
+    inha = []
+    exca = []
+    for im in range(len(mice)):    
+        inha.append(np.array([winhAve_allFrs_allMice[im][fr][iday] for iday in range(numDaysAll_good[im])]))
+        exca.append(np.array([wexcAve_allFrs_allMice[im][fr][iday] for iday in range(numDaysAll_good[im])]))
+
     
-    if normWeights:
+    ### PLOT HISTS               
+    ##### weights        
+    h1 = gs[fr*2,0:2]
+    h2 = gs[fr*2,2:3]            
+    lab = 'w'
+    ylab = 'Fract neurons (all days,mice)'        
+    ax1 = plotHistErrBarWsEI(np.concatenate((exca)), np.concatenate((inha)), lab, ylab, 0,1,h1,h2)  
+    ax1.set_title('%.0f ms' %(time_aligned[fr]))
+    
+    ##### abs weights
+    h1 = gs[fr*2+1,0:2]
+    h2 = gs[fr*2+1,2:3]
+    lab = 'abs w'                
+    ax1 = plotHistErrBarWsEI(np.concatenate(([abs(exca[im]) for im in range(len(mice))])), np.concatenate(([abs(inha[im]) for im in range(len(mice))])), lab, '', 0,1,h1,h2)
+    ax1.set_title('%.0f ms' %(time_aligned[fr]))            
+#        ax1.set_title('')
+    
+plt.subplots_adjust(wspace=1, hspace=.8)    
+    
+
+##%% Save the figure    
+if savefigs:#% Save the figure
+    d = os.path.join(svmdir+dnowAM)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+    
+    fign = os.path.join(d, suffn[0:5]+cha+'dist_allFrs_w_absw_excVSinh_'+dpp+'.'+fmt[0])
+    
+    plt.savefig(fign, bbox_inches='tight')
+    
+            
+    
+#%% Plot 2-norm of decoders       
+########################################################################################        
+########################################################################################
+
+if normWeights:        
+    #####%% average 2-norm ws across samps and align 2-norm traces of all days of all mice
+    
+    def alAv2NormW(normw_allN_allD_allMice):
         
-        #%% average 2-norm ws across samps and align 2-norm traces of all days of all mice
-        
-        def alAv2NormW(normw_allN_allD_allMice):
-            
-            ##%% Average 2-norm across samps
-                    
-            normw_allM = []
-            
-            for im in range(len(mice)):    
-                normw_allD = [np.mean(normw_allN_allD_allMice[im][iday], axis=0) for iday in range(numDaysAll[im])] 
-                normw_allM.append(normw_allD)  #nMice; each mouse: nAllDays; each day: nFrs (decoders 2-norm for each frame)
-            
-            
-            ##%% Align 2-norm traces of all days on the common eventI
-            # input: # nMice; each mouse is nGoodDays; each day is: nFrames
-            # output: # nMice; each mouse is nGoodDays x alignedFrames
-            
-            normw_allM_aligned = [] 
-            
-            for im in range(len(mice)):    
-                normw_aligned = np.full((numDaysAll[im], len(time_aligned)), np.nan)
-                mn_corr = np.min(corr_hr_lr_allMice[im], axis=1)
-                for iday in range(numDaysAll[im]):
-                    if mn_corr[iday]>=thTrained:
-                        normw_aligned[iday,:] = normw_allM[im][iday][eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1] 
-                normw_allM_aligned.append(normw_aligned)
+        ##%% Average 2-norm across samps
                 
-            
-            return normw_allM_aligned
+        normw_allM = []
+        
+        for im in range(len(mice)):    
+            normw_allD = [np.mean(normw_allN_allD_allMice[im][iday], axis=0) for iday in range(numDaysAll[im])] 
+            normw_allM.append(normw_allD)  #nMice; each mouse: nAllDays; each day: nFrs (decoders 2-norm for each frame)
         
         
+        ##%% Align 2-norm traces of all days on the common eventI
+        # input: # nMice; each mouse is nGoodDays; each day is: nFrames
+        # output: # nMice; each mouse is nGoodDays x alignedFrames
         
-        #%% Make plots of 2norm
+        normw_allM_aligned = [] 
         
-        def plot2normw(normw_allM_aligned, lab='_allN_'):
+        for im in range(len(mice)):    
+            normw_aligned = np.full((numDaysAll[im], len(time_aligned)), np.nan)
+            mn_corr = np.min(corr_hr_lr_allMice[im], axis=1)
+            for iday in range(numDaysAll[im]):
+                if mn_corr[iday]>=thTrained:
+                    normw_aligned[iday,:] = normw_allM[im][iday][eventI_ds_allDays_allMice[im][iday] - nPreMin  :  eventI_ds_allDays_allMice[im][iday] + nPostMin + 1] 
+            normw_allM_aligned.append(normw_aligned)
             
-            ##%% Plot 2-norm of decoder for each frame for each day ... each mouse    
-            step = 5
-            x = (np.unique(np.concatenate((np.arange(np.argwhere(time_aligned>=0)[0], -.5, -step), 
-                       np.arange(np.argwhere(time_aligned>=0)[0], len(time_aligned)+.5, step))))).astype(int)
-            
-            for im in range(len(mice)):    
-                plt.figure()
-                plt.imshow(normw_allM_aligned[im])
-                plt.xticks(x, np.round(time_aligned[x]).astype(int))
-                plt.xlabel('Time relative to choice onset')    
-                plt.ylabel('Days')
-                plt.colorbar(label='2-Norm of decoder')
-                makeNicePlots(plt.gca())
-                
-                ##%% Save the figure    
-                if savefigs:#% Save the figure
-                    mousename = mice[im] # mousename = 'fni16' #'fni17'
-                    dnow = os.path.join(dnow0,mousename,dect,nl)   
-                    
-                    d = os.path.join(svmdir+dnow)
-                    if not os.path.exists(d):
-                        print 'creating folder'
-                        os.makedirs(d)
-                    
-                    fign = os.path.join(d, suffn[0:5]+cha+'normW'+lab+dpmAllm[im]+'.'+fmt[0])            
-                    plt.savefig(fign, bbox_inches='tight')       
-            
-            
-            #######%% Plot average norm-w across days for each mouse        
+        
+        return normw_allM_aligned
+    
+    
+    
+    #%% Make plots of 2norm
+    
+    def plot2normw(normw_allM_aligned, lab='_allN_'):
+        
+        ##%% Plot 2-norm of decoder for each frame for each day ... each mouse    
+        step = 5
+        x = (np.unique(np.concatenate((np.arange(np.argwhere(time_aligned>=0)[0], -.5, -step), 
+                   np.arange(np.argwhere(time_aligned>=0)[0], len(time_aligned)+.5, step))))).astype(int)
+        
+        for im in range(len(mice)):    
             plt.figure()
-            for im in range(len(mice)):        
-                plt.errorbar(time_aligned, np.nanmean(normw_allM_aligned[im],axis=0), np.nanstd(normw_allM_aligned[im],axis=0), label=mice[im])   
-            plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)     
+            plt.imshow(normw_allM_aligned[im])
+            plt.xticks(x, np.round(time_aligned[x]).astype(int))
             plt.xlabel('Time relative to choice onset')    
-            plt.ylabel('2-Norm of decoder \nave +/- sd across days')
+            plt.ylabel('Days')
+            plt.colorbar(label='2-Norm of decoder')
             makeNicePlots(plt.gca())
-               
+            
             ##%% Save the figure    
             if savefigs:#% Save the figure
-                d = os.path.join(svmdir+dnowAM)
+                mousename = mice[im] # mousename = 'fni16' #'fni17'
+                dnow = os.path.join(dnow0,mousename,dect,nl)   
+                
+                d = os.path.join(svmdir+dnow)
                 if not os.path.exists(d):
                     print 'creating folder'
                     os.makedirs(d)
                 
-                fign = os.path.join(d, suffn[0:5]+cha+'normW'+lab+'aveDays_'+dpp+'.'+fmt[0])            
-                plt.savefig(fign, bbox_inches='tight')   
+                fign = os.path.join(d, suffn[0:5]+cha+'normW'+lab+dpmAllm[im]+'.'+fmt[0])            
+                plt.savefig(fign, bbox_inches='tight')       
         
-         
-        #%%
         
-        if useAllNdecoder:
-            normw_allM_aligned = alAv2NormW(normw_allN_allD_allMice)
-            plot2normw(normw_allM_aligned)
-        else:
-            # exc
-            normw_allM_aligned = alAv2NormW(normw_exc_allD_allMice)
-            plot2normw(normw_allM_aligned, '_exc_')
-        
-            # inh
-            normw_allM_aligned = alAv2NormW(normw_inh_allD_allMice)
-            plot2normw(normw_allM_aligned, '_inh_')
+        #######%% Plot average norm-w across days for each mouse        
+        plt.figure()
+        for im in range(len(mice)):        
+            plt.errorbar(time_aligned, np.nanmean(normw_allM_aligned[im],axis=0), np.nanstd(normw_allM_aligned[im],axis=0), label=mice[im])   
+        plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)     
+        plt.xlabel('Time relative to choice onset')    
+        plt.ylabel('2-Norm of decoder \nave +/- sd across days')
+        makeNicePlots(plt.gca())
+           
+        ##%% Save the figure    
+        if savefigs:#% Save the figure
+            d = os.path.join(svmdir+dnowAM)
+            if not os.path.exists(d):
+                print 'creating folder'
+                os.makedirs(d)
+            
+            fign = os.path.join(d, suffn[0:5]+cha+'normW'+lab+'aveDays_'+dpp+'.'+fmt[0])            
+            plt.savefig(fign, bbox_inches='tight')   
+    
+     
+    #%%
+    
+    if useAllNdecoder:
+        normw_allM_aligned = alAv2NormW(normw_allN_allD_allMice)
+        plot2normw(normw_allM_aligned)
+    else:
+        # exc
+        normw_allM_aligned = alAv2NormW(normw_exc_allD_allMice)
+        plot2normw(normw_allM_aligned, '_exc_')
+    
+        # inh
+        normw_allM_aligned = alAv2NormW(normw_inh_allD_allMice)
+        plot2normw(normw_allM_aligned, '_inh_')
         
     

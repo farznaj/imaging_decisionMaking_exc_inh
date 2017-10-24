@@ -1,432 +1,749 @@
 # -*- coding: utf-8 -*-
 """
-Compare FRs of exc vs inh neurons for choice-aligned X (traces averaged 300ms before choice) that went into SVM.
-Both single-trial FRs and trial-averaged FRs are plotted.
+Created on Fri Oct 20 10:52:31 2017
 
-Created on Tue Mar 14 18:27:36 2017
 @author: farznaj
 """
 
-mousename = 'fni16' #'fni17'
+#%% Change the following vars:
+
+mice = 'fni16', 'fni17', 'fni18', 'fni19'
+normX = 0 # normalize X (just how SVM was performed) before computing FRs
+outcome2ana = 'corr' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
+thTrained = 10 # if days have fewer than this number of hr and lr trials, they would be excluded from plots
+
+
+strength2ana = 'all' # 'all', easy', 'medium', 'hard' % What stim strength to use for training?
+
+lastTimeBinMissed = 0 #1# if 0, things were ran fine; if 1: by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
+savefigs = 0
+doPlots = 0 #[1,0] # make svm projection plots for aveTrs and single trs.
+#days = [151101_1] --> you picked this day!
 
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
-execfile("svm_plots_setVars.py")   
+ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 
-savefigs = 1
+execfile("defFuns.py")
 
-normX = 0 # normalize X (just how SVM was performed) before computing FRs
+chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
+stAl = ch_st_goAl[1]
+goToneAl = ch_st_goAl[2]
+softNorm = 1 # if 1, no neurons will be excluded, bc we do soft normalization of FRs, so non-active neurons wont be problematic. if softNorm = 0, NsExcluded will be found
+#neuronType = 2
+thAct = 5e-4 #5e-4; # 1e-5 # neurons whose average activity during ep is less than thAct will be called non-active and will be excluded.
 
+import numpy as np
+frameLength = 1000/30.9; # sec.
+regressBins = int(np.round(100/frameLength)) # must be same regressBins used in svm_eachFrame. 100ms # set to nan if you don't want to downsample.
 
-#%%
-allExc = 1
-dnow = '/excInh_FRs'
+dnow0 = '/excInh_FRs'
+from datetime import datetime
+nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 
 if normX==1:
-    dp = '_norm.'
+    dp = '_normed_'
 else:
-    dp = '.'
-
+    dp = '_'
     
-#%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
-def setSVMname(pnevFileName, trialHistAnalysis, allExc, itiName='all'):
-    import glob
- 
-    if allExc:
-        r = 'allExc'
-    else:
-        r = 'eqExcInh'
+    
+#%%
+Y_svm_allDays_allMice = []
+Xinh_allDays_allMice = []
+XallExc_allDays_allMice = []
+eventI_ds_allDays_allMice = []
+eventI_allDays_allMice = []
+dpmAllm = []
+numDaysAll = np.full(len(mice), np.nan).astype(int)     
+    
+#%%
+for im in range(len(mice)):
         
-    if trialHistAnalysis:
-        svmn = 'excInhC_chAl_%s_svmPrevChoice_%sITIs_*' %(r, itiName)
-    else:
-        svmn = 'excInhC_chAl_%s_svmCurrChoice_*' %(r)   
-#    print '\n', svmn[:-1]
-                           
-    svmn = svmn + pnevFileName[-32:]    
-    svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
-    svmName = sorted(svmName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
-    svmName = svmName[0] # get the latest file
-    
-    return svmName
+    #%%            
+    mousename = mice[im] # mousename = 'fni16' #'fni17'
+    if mousename == 'fni18': #set one of the following to 1:
+        allDays = 1# all 7 days will be used (last 3 days have z motion!)
+        noZmotionDays = 0 # 4 days that dont have z motion will be used.
+        noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
+    if mousename == 'fni19':    
+        allDays = 1
+        noExtraStimDays = 0   
+        
+    execfile("svm_plots_setVars_n.py")      
+    numDaysAll[im] = len(days)
+        
+    dnow = os.path.join(dnow0,mousename)   
+    dpm = 'days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr   
+    dpmAllm.append(dpm)
 
+    
+    #%% Loop over days
+    
+    Y_svm_allDays = []
+    Xinh_allDays = []
+    XallExc_allDays = []   
+    eventI_ds_allDays = np.full((len(days)), np.nan) # frame at which choice happened (if traces were downsampled in svm_eachFrame, it will be the downsampled frame number)
+    eventI_allDays = np.full((len(days)), np.nan)
+#    corr_hr_lr = np.full((len(days),2), np.nan) # number of hr, lr correct trials for each day
+    
+    for iday in range(len(days)): 
+    
+        #%%            
+        print '___________________'
+        imagingFolder = days[iday][0:6]; #'151013'
+        mdfFileNumber = map(int, (days[iday][7:]).split("-")); #[1,2] 
+            
+        ##%% Set .mat file names
+        pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
+        signalCh = [2] # since gcamp is channel 2, should be always 2.
+        postNProvided = 1; # If your directory does not contain pnevFile and instead it contains postFile, set this to 1 to get pnevFileName
+        
+        # from setImagingAnalysisNamesP import *
+        
+        imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
+        
+        postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
+        moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
+        
+        print(os.path.basename(imfilename))
+    
+    
+        ###########################################################################################################################################
+        #%% Load matlab variables: event-aligned traces, inhibitRois, outcomes,  choice, etc
+        #     - traces are set in set_aligned_traces.m matlab script.
+        
+        ################# Load outcomes and choice (allResp_HR_LR) for the current trial
+        # if trialHistAnalysis==0:
+        Data = scio.loadmat(postName, variable_names=['outcomes', 'allResp_HR_LR'])
+        outcomes = (Data.pop('outcomes').astype('float'))[0,:]
+        # allResp_HR_LR = (Data.pop('allResp_HR_LR').astype('float'))[0,:]
+        allResp_HR_LR = np.array(Data.pop('allResp_HR_LR')).flatten().astype('float')
+        choiceVecAll = allResp_HR_LR+0;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
+        # choiceVecAll = np.transpose(allResp_HR_LR);  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
+        #print 'Current outcome: %d correct choices; %d incorrect choices' %(sum(outcomes==1), sum(outcomes==0))
+        
+        
+        if trialHistAnalysis:
+            # Load trialHistory structure to get choice vector of the previous trial
+            Data = scio.loadmat(postName, variable_names=['trialHistory'],squeeze_me=True,struct_as_record=False)
+            choiceVec0All = Data['trialHistory'].choiceVec0.astype('float')
+        
+        
+            
+        ################## Set trials strength and identify trials with stim strength of interest
+        if trialHistAnalysis==0:
+            Data = scio.loadmat(postName, variable_names=['stimrate', 'cb'])
+            stimrate = np.array(Data.pop('stimrate')).flatten().astype('float')
+            cb = np.array(Data.pop('cb')).flatten().astype('float')
+        
+            s = stimrate-cb; # how far is the stimulus rate from the category boundary?
+            if strength2ana == 'easy':
+                str2ana = (abs(s) >= (max(abs(s)) - thStimStrength));
+            elif strength2ana == 'hard':
+                str2ana = (abs(s) <= thStimStrength);
+            elif strength2ana == 'medium':
+                str2ana = ((abs(s) > thStimStrength) & (abs(s) < (max(abs(s)) - thStimStrength))); 
+            else:
+                str2ana = np.full((1, np.shape(outcomes)[0]), True, dtype=bool).flatten();
+        
+            print 'Number of trials with stim strength of interest = %i' %(str2ana.sum())
+            print 'Stim rates for training = {}'.format(np.unique(stimrate[str2ana]))
+        
+            '''
+            # Set to nan those trials in outcomes and allRes that are nan in traces_al_stim
+            I = (np.argwhere((~np.isnan(traces_al_stim).sum(axis=0)).sum(axis=1)))[0][0] # first non-nan neuron
+            allTrs2rmv = np.argwhere(sum(np.isnan(traces_al_stim[:,I,:])))
+            print(np.shape(allTrs2rmv))
+        
+            outcomes[allTrs2rmv] = np.nan
+            allResp_HR_LR[allTrs2rmv] = np.nan
+            '''   
+            
+        
+        #%% Load inhibitRois
+        
+        Data = scio.loadmat(moreName, variable_names=['inhibitRois_pix'])
+        inhibitRois = Data.pop('inhibitRois_pix')[0,:]    
+        print '%d inhibitory, %d excitatory; %d unsure class' %(np.sum(inhibitRois==1), np.sum(inhibitRois==0), np.sum(np.isnan(inhibitRois)))
+        
+            
+        ###########################################################################################################################################
+        #%% Set choiceVec0  (Y: the response vector)
+            
+        if trialHistAnalysis:
+            choiceVec0 = choiceVec0All[:,iTiFlg] # choice on the previous trial for short (or long or all) ITIs
+            choiceVec0S = choiceVec0All[:,0]
+            choiceVec0L = choiceVec0All[:,1]
+        else: # set choice for the current trial
+            choiceVec0 = allResp_HR_LR;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
+            # choiceVec0 = np.transpose(allResp_HR_LR);  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
+            if outcome2ana == 'corr':
+                choiceVec0[outcomes!=1] = np.nan; # analyze only correct trials.
+            elif outcome2ana == 'incorr':
+                choiceVec0[outcomes!=0] = np.nan; # analyze only incorrect trials.   
+            
+            choiceVec0[~str2ana] = np.nan   
+            # Y = choiceVec0
+            # print(choiceVec0.shape)
+        print '%d correct trials; %d incorrect trials' %((outcomes==1).sum(), (outcomes==0).sum())
+        
+        
+        
+        #%% Load spikes and time traces to set X for training SVM
+        
+        if chAl==1:    #%% Use choice-aligned traces 
+            # Load 1stSideTry-aligned traces, frames, frame of event of interest
+            # use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
+            Data = scio.loadmat(postName, variable_names=['firstSideTryAl'],squeeze_me=True,struct_as_record=False)
+            traces_al_1stSide = Data['firstSideTryAl'].traces.astype('float')
+            time_aligned_1stSide = Data['firstSideTryAl'].time.astype('float')
+            eventI = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+            #eventI_ch = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+            # print(np.shape(traces_al_1stSide))
+            
+            trsExcluded = (np.isnan(np.sum(traces_al_1stSide, axis=(0,1))) + np.isnan(choiceVec0)) != 0
+            
+            X_svm = traces_al_1stSide[:,:,~trsExcluded]  
+            
+            time_trace = time_aligned_1stSide    
+        
+        print 'frs x units x trials', X_svm.shape    
+        
+        ##%%
+#        corr_hr = sum(np.logical_and(allResp_HR_LR==1 , ~trsExcluded)).astype(int)
+#        corr_lr = sum(np.logical_and(allResp_HR_LR==0 , ~trsExcluded)).astype(int)           
+        
+        
+        #%% Set Y for training SVM   
+        
+        Y_svm = choiceVec0[~trsExcluded]
+        #len(Y_svm)
+        # Divide data into high-rate (modeled as 1) and low-rate (modeled as 0) trials
+        hr_trs = (Y_svm==1)
+        lr_trs = (Y_svm==0)
+            
+        print '%d HR trials; %d LR trials' %(sum(hr_trs), sum(lr_trs))
+        
+        print 'Y size: ', Y_svm.shape
+        
+        ## print number of hr,lr trials after excluding trials
+        if outcome2ana == 'corr':
+            print '\tcorrect trials: %d HR; %d LR' %((Y_svm==1).sum(), (Y_svm==0).sum())
+        elif outcome2ana == 'incorr':
+            print '\tincorrect trials: %d HR; %d LR' %((Y_svm==1).sum(), (Y_svm==0).sum())
+        else:
+            print '\tall trials: %d HR; %d LR' %((Y_svm==1).sum(), (Y_svm==0).sum())
+    
+    
+        #%% I think we need at the very least 3 trials of each class to train SVM. So exit the analysis if this condition is not met!
+        
+    #    if min((Y_svm==1).sum(), (Y_svm==0).sum()) < 3:
+    #        sys.exit('Too few trials to do SVM training! HR=%d, LR=%d' %((Y_svm==1).sum(), (Y_svm==0).sum()))
+        
+           
+        #%% Downsample X: average across multiple times (downsampling, not a moving average. we only average every regressBins points.)
+        
+        X_svm_o = X_svm
+        time_trace_o = time_trace
+        
+        
+        #%%     
+        X_svm, time_trace, eventI_ds = downsampXsvmTime(X_svm_o, time_trace_o, eventI, regressBins, lastTimeBinMissed)
+        
+                
+        #%% Set NsExcluded : Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
+        # thAct and thTrsWithSpike are parameters that you can play with.
+        
+        if softNorm==0:    
+            if trialHistAnalysis==0:
+                # X_svm
+                T1, N1, C1 = X_svm.shape
+                X_svm_N = np.reshape(X_svm.transpose(0 ,2 ,1), (T1*C1, N1), order = 'F') # (frames x trials) x units
+                
+                # Define NsExcluded as neurons with low stdX
+                stdX_svm = np.std(X_svm_N, axis = 0);
+                NsExcluded = stdX_svm < thAct
+                # np.sum(stdX < thAct)
+                
+            print '%d = Final # non-active neurons' %(sum(NsExcluded))
+            # a = size(spikeAveEp0,2) - sum(NsExcluded);
+            print 'Using %d out of %d neurons; Fraction excluded = %.2f\n' %(np.shape(X_svm)[1]-sum(NsExcluded), np.shape(X_svm)[1], sum(NsExcluded)/float(np.shape(X_svm)[1]))
+            
+            """
+            print '%i, %i, %i: #original inh, excit, unsure' %(np.sum(inhibitRois==1), np.sum(inhibitRois==0), np.sum(np.isnan(inhibitRois)))
+            # Check what fraction of inhibitRois are excluded, compare with excitatory neurons.
+            if neuronType==2:    
+                print '%i, %i, %i: #excluded inh, excit, unsure' %(np.sum(inhibitRois[NsExcluded]==1), np.sum(inhibitRois[NsExcluded]==0), np.sum(np.isnan(inhibitRois[NsExcluded])))
+                print '%.2f, %.2f, %.2f: fraction excluded inh, excit, unsure\n' %(np.sum(inhibitRois[NsExcluded]==1)/float(np.sum(inhibitRois==1)), np.sum(inhibitRois[NsExcluded]==0)/float(np.sum(inhibitRois==0)), np.sum(np.isnan(inhibitRois[NsExcluded]))/float(np.sum(np.isnan(inhibitRois))))
+            """
+            ##%% Exclude non-active neurons from X and set inhRois (ie neurons that don't fire in any of the trials during ep)
+            
+            X_svm = X_svm[:,~NsExcluded,:]
+            print 'choice-aligned traces: ', np.shape(X_svm)
+            
+        else:
+            print 'Using soft normalization; so all neurons will be included!'
+            NsExcluded = np.zeros(np.shape(X_svm)[1]).astype('bool')  
+        
+        
+        # Set inhRois which is same as inhibitRois but with non-active neurons excluded. (it has same size as X)
+        inhRois = inhibitRois[~NsExcluded]
+        print 'Number: inhibit = %d, excit = %d, unsure = %d' %(np.sum(inhRois==1), np.sum(inhRois==0), np.sum(np.isnan(inhRois)))
+        #    print 'Fraction: inhibit = %.2f, excit = %.2f, unsure = %.2f' %(fractInh, fractExc, fractUn)
+        
+            
+        #%%    
+    #    numDataPoints = X_svm.shape[2] 
+    #    print '# data points = %d' %numDataPoints
+        # numTrials = (~trsExcluded).sum()
+        # numNeurons = (~NsExcluded).sum()
+        numTrials, numNeurons = X_svm.shape[2], X_svm.shape[1]
+        print '%d trials; %d neurons' %(numTrials, numNeurons)
+        # print ' The data has %d frames recorded from %d neurons at %d trials' %Xt.shape            
+           
+            
+        #%% Center and normalize X: feature normalization and scaling: to remove effects related to scaling and bias of each neuron, we need to zscore data (i.e., make data mean 0 and variance 1 for each neuron) 
+        
+        if normX:
+            #% Keep a copy of X_svm before normalization
+            X_svm00 = X_svm + 0        
+            
+            ##%%
+            # Normalize all frames to the same value (problem: some frames FRs may span a much larger range than other frames, hence svm solution will become slow)
+            """
+            # X_svm
+            T1, N1, C1 = X_svm.shape
+            X_svm_N = np.reshape(X_svm.transpose(0 ,2 ,1), (T1*C1, N1), order = 'F') # (frames x trials) x units
+                
+            meanX_svm = np.mean(X_svm_N, axis = 0);
+            stdX_svm = np.std(X_svm_N, axis = 0);
+            
+            # normalize X
+            X_svm_N = (X_svm_N - meanX_svm) / stdX_svm;
+            X_svm = np.reshape(X_svm_N, (T1, C1, N1), order = 'F').transpose(0 ,2 ,1)
+            """
+            
+            # Normalize each frame separately (do soft normalization)
+            X_svm_N = np.full(np.shape(X_svm), np.nan)
+            meanX_fr = []
+            stdX_fr = []
+            for ifr in range(np.shape(X_svm)[0]):
+                m = np.mean(X_svm[ifr,:,:], axis=1)
+                s = np.std(X_svm[ifr,:,:], axis=1)   
+                meanX_fr.append(m) # frs x neurons
+                stdX_fr.append(s)       
+                
+                if softNorm==1: # soft normalziation : neurons with sd<thAct wont have too large values after normalization
+                    s = s+thAct     
+            
+                X_svm_N[ifr,:,:] = ((X_svm[ifr,:,:].T - m) / s).T
+            
+            meanX_fr = np.array(meanX_fr) # frames x neurons
+            stdX_fr = np.array(stdX_fr) # frames x neurons
+            
+            
+            X_svm = X_svm_N
+        
+        
+        #%%
+        Xinh = X_svm[:, inhRois==1,:]              
+        XallExc = X_svm[:, inhRois==0,:]    
+        
+    #    Xinh_lr = Xinh[:,:,lr_trs]
+    #    Xinh_hr = Xinh[:,:,hr_trs]    
+    #    XallExc_lr = XallExc[:,:,lr_trs]
+    #    XallExc_hr = XallExc[:,:,hr_trs]    
+        # all frames pooled
+    #    a = XallExc.flatten()
+    #    b = Xinh.flatten()
+    
+        #plt.plot(np.mean(XallExc,axis=(1,2))); plt.plot(np.mean(Xinh,axis=(1,2)))
+    
+    
+        ###############%%    
+        #%% Keep vars of all days
+    
+        Y_svm_allDays.append(Y_svm)
+        Xinh_allDays.append(Xinh)
+        XallExc_allDays.append(XallExc)    
+        eventI_ds_allDays[iday] = eventI_ds.astype(int)
+        eventI_allDays[iday] = eventI.astype(int)
+        
+        
+        #%%
+        #############################################
+        if doPlots: 
+            def plotfr(a,b,hi,tlab):
+                h1 = gs[hi,0:2]
+                h2 = gs[hi,2:3]
+            
+                mx = np.max(np.concatenate((a,b))) 
+                mn = np.min(np.concatenate((a,b)))
+                r = mx - mn
+                binEvery = r/float(100)
+            
+                _, p = stats.ttest_ind(a, b, nan_policy='omit')    
+                
+                ax1, ax2 = histerrbar(h1,h2,a,b,binEvery,p,lab='FR (a.u.)',colors = ['b','r'],ylab='Fraction',lab1='exc',lab2='inh', plotCumsum=1)        
+                ax1.set_title('%d exc; %d inh' %(len(a),len(b)))
+                
+               
+            #%% hists at a particular time point
+        
+            fr = eventI_ds - 1
+            hr_trs = (Y_svm==1)
+            lr_trs = (Y_svm==0)
+            
+            trss = hr_trs+lr_trs, hr_trs, lr_trs
+            lls = 'AllTr','HR','LR'
+            tlab = '%dms,AllTr,HR,LR' %(time_trace[fr])    
+           
+            
+            fig = plt.figure(figsize=(5,6))    
+            gs = gridspec.GridSpec(3, 4)#, width_ratios=[2, 1]) 
+        
+            for hi in [0,1,2]: # all trials, hr, lr
+        
+        #        tlab = '%dms, %s' %(time_trace[fr], lls[hi])
+                a = XallExc[fr,:,trss[hi]].flatten()
+                b = Xinh[fr,:,trss[hi]].flatten()
+                
+                plotfr(a,b,hi,tlab)
+        
+            
+            plt.subplots_adjust(wspace=2, hspace=1)
+            fig.suptitle(tlab, fontsize=11)
+        
+        
+    #######################################################################################################################################        
+    #######################################################################################################################################                
+    #%% Keep vars of all mice
+
+    Y_svm_allDays = np.array(Y_svm_allDays)
+    Xinh_allDays = np.array(Xinh_allDays)
+    XallExc_allDays = np.array(XallExc_allDays)
+
+    Y_svm_allDays_allMice.append(Y_svm_allDays)
+    Xinh_allDays_allMice.append(Xinh_allDays)
+    XallExc_allDays_allMice.append(XallExc_allDays) 
+    eventI_ds_allDays_allMice.append(eventI_ds_allDays)    
+    eventI_allDays_allMice.append(eventI_allDays)    
+
+        
+Y_svm_allDays_allMice = np.array(Y_svm_allDays_allMice)
+Xinh_allDays_allMice = np.array(Xinh_allDays_allMice)
+XallExc_allDays_allMice = np.array(XallExc_allDays_allMice)
+eventI_ds_allDays_allMice = np.array(eventI_ds_allDays_allMice)
+eventI_allDays_allMice = np.array(eventI_allDays_allMice)
+ 
    
+#%%
+#numDaysAll = numDaysAll.astype(int)
+#eventI_ds_allDays_allMice = np.array([[int(i) for i in eventI_ds_allDays_allMice[im]] for im in range(len(mice))]) # convert eventIs to int
 
+
+#%% Set number of trials for each day
+
+corr_hr_lr_allMice = []
+for im in range(len(mice)):
     
-#%% PLOTS; define functions
+    corr_hr_lr = np.full((len(Y_svm_allDays_allMice[im]),2), np.nan)
+    for iday in range(len(Y_svm_allDays_allMice[im])):
+        corr_hr_lr[iday,:] = np.array([sum(Y_svm_allDays_allMice[im][iday]==1), sum(Y_svm_allDays_allMice[im][iday]==0)])
+    corr_hr_lr_allMice.append(corr_hr_lr)
+corr_hr_lr_allMice = np.array(corr_hr_lr_allMice)
 
-def histerrbar(a,b,binEvery,p,colors = ['g','k'],dosd=0):
-#    import matplotlib.gridspec as gridspec
+
+
+#%% PLOTS    
+#######################################################################################################################################        
+#######################################################################################################################################                
+
+
+#%% Align Xinh and XallExc traces of all days for each mouse
+# exclude low trial days
+
+Xinh_al_allMice = [] # nMice; #nDays; #nAlighnedFrames x units x trials
+XallExc_al_allMice = []
+time_al_allMice = []
+eventI_allMice = []
+
+for im in range(len(mice)):
+
+    ##%% Decide what days to analyze: exclude days with too few trials used for training SVM, also exclude incorr from days with too few incorr trials.
+    # th for min number of trs of each class    
+    mn_corr = np.min(corr_hr_lr_allMice[im], axis=1) # number of trials of each class. 90% of this was used for training, and 10% for testing.  
+    print 'num days to be excluded with few svm-trained trs:', sum(mn_corr < thTrained)
+    print np.array(days)[mn_corr < thTrained]
+
+    time_al, nPreMin, nPostMin = set_nprepost(Xinh_allDays_allMice[im], eventI_ds_allDays_allMice[im], mn_corr, thTrained=10, regressBins=3)    
+    time_al_allMice.append(time_al)
+    eventI_allMice.append(nPreMin)
+
+    # Align traces of all days   
+    Xinh_al_allMice.append(alTrace(Xinh_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr, thTrained))
+    XallExc_al_allMice.append(alTrace(XallExc_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr, thTrained))
     
-#    r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
-#    binEvery = r/float(10)
-
-#    _, p = stats.ttest_ind(a, b, nan_policy='omit')
-
-#    plt.figure(figsize=(5,3))    
-#    gs = gridspec.GridSpec(2, 4)#, width_ratios=[2, 1]) 
-#    h1 = gs[0,0:2]
-#    h2 = gs[0,2:3]
-
-#    lab1 = 'exc'
-#    lab2 = 'inh'
-
-#    colors = ['g','k']
     
-    # set bins
-    bn = np.arange(np.min(np.concatenate((a,b))), np.max(np.concatenate((a,b))), binEvery)
-    bn[-1] = np.max([np.max(a),np.max(b)]) # unlike digitize, histogram doesn't count the right most value
-    # set hist of a
-    hist, bin_edges = np.histogram(a, bins=bn)
-    hist = hist/float(np.sum(hist))    
-    # Plot hist of a
-    ax1 = plt.subplot(h1) #(gs[0,0:2])
-    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[0], alpha=.4, label=lab1)
-    
-    # set his of b
-    hist, bin_edges = np.histogram(b, bins=bn)
-    hist = hist/float(np.sum(hist));     #d = stats.mode(np.diff(bin_edges))[0]/float(2)
-    # Plot hist of b
-    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[1], alpha=.4, label=lab2)
-    
-    plt.legend(loc=0, frameon=False)
-    plt.ylabel(ylab)
-#    plt.title('mean diff= %.3f, p=%.3f' %(np.mean(a)-np.mean(b), p))
-    plt.title('mean diff= %.3f' %(np.mean(a)-np.mean(b)))
-    #plt.xlim([-.5,.5])
-    plt.xlabel(lab)
-    makeNicePlots(ax1,0,1)
-
-    
-    # errorbar: mean and st error
-    if dosd:
-        l1 = 1
-        l2 = 1
-    else:
-        l1 = len(a)
-        l2 = len(b)
-    ax2 = plt.subplot(h2) #(gs[0,2:3])
-    plt.errorbar([0,1], [a.mean(),b.mean()], [a.std()/np.sqrt(l1), b.std()/np.sqrt(l2)], marker='o',color='k', fmt='.')
-    plt.xlim([-1,2])
-#    plt.title('%.3f, %.3f' %(a.mean(), b.mean()))
-    plt.xticks([0,1], (lab1, lab2), rotation='vertical')
-    plt.ylabel(lab)
-    plt.title('p=%.3f' %(p))
-    makeNicePlots(ax2,0,1)
-#    plt.tick_params
-    
-    plt.subplots_adjust(wspace=1, hspace=.5)
-    return ax1,ax2
+Xinh_al_allMice = np.array(Xinh_al_allMice)
+XallExc_al_allMice = np.array(XallExc_al_allMice)
+time_al_allMice = np.array(time_al_allMice)
+eventI_allMice = np.array(eventI_allMice)
 
 
+# Plots of individual mice    
+#%% pool traces for all neurons and all trials for each day, each frame (each mouse)
 
-def errbarAllDays(a,b,p,dosd=0):
-    '''
-    eav = np.nanmean(a, axis=1) # average across shuffles
-    iav = np.nanmean(b, axis=1)
-    ele = np.shape(a)[1] - np.sum(np.isnan(a),axis=1) # number of non-nan shuffles of each day
-    ile = np.shape(b)[1] - np.sum(np.isnan(b),axis=1) # number of non-nan shuffles of each day
-    esd = np.divide(np.nanstd(a, axis=1), np.sqrt(ele))
-    isd = np.divide(np.nanstd(b, axis=1), np.sqrt(ile))
-    '''    
-    eav = [np.nanmean(a[i]) for i in range(len(a))] #np.nanmean(a, axis=1) # average across shuffles
-    iav = [np.nanmean(b[i]) for i in range(len(b))] #np.nanmean(b, axis=1)
-    ele = [len(a[i]) for i in range(len(a))] #np.shape(a)[1] - np.sum(np.isnan(a),axis=1) # number of non-nan shuffles of each day
-    ile = [len(b[i]) for i in range(len(b))] #np.shape(b)[1] - np.sum(np.isnan(b),axis=1) # number of non-nan shuffles of each day
-    if dosd:# if u want sd and not se
-        ele = 1
-        ile = 1
-    esd = np.divide([np.nanstd(a[i]) for i in range(len(a))], np.sqrt(ele))
-    isd = np.divide([np.nanstd(b[i]) for i in range(len(b))], np.sqrt(ile))    
+time2an = -1
+
+exc_allFr_allMice = [] # nMice; each mouse: frames x days; each element: pooled neurons and trials
+inh_allFr_allMice = []
+for im in range(len(mice)):
     
+    ndays = len(XallExc_al_allMice[im])    
+    nFrs = XallExc_al_allMice[im][0].shape[0]    
+        
+    exc_allFr = [] # frames x days; each element: pooled neurons and trials
+    inh_allFr = []
+    for fr in range(nFrs):
+        # For each day pool all neurons and trials at time point fr
+        a = []; b = []    
+        for iday in range(ndays):       
+            
+            XallExc = XallExc_al_allMice[im][iday]
+            Xinh = Xinh_al_allMice[im][iday]
+            # pool all neurons and trials
+            a0 = XallExc[fr,:,:].flatten()
+            b0 = Xinh[fr,:,:].flatten()        
+            
+            a.append(a0)
+            b.append(b0)
+        
+        exc_allFr.append(a)
+        inh_allFr.append(b)
+        
+    exc_allFr = np.array(exc_allFr)
+    inh_allFr = np.array(inh_allFr)
+    
+    exc_allFr_allMice.append(exc_allFr)
+    inh_allFr_allMice.append(inh_allFr)
+
+exc_allFr_allMice = np.array(exc_allFr_allMice)
+inh_allFr_allMice = np.array(inh_allFr_allMice)
+
+
+#%% Plot ave+/-se vs. days, each time bin separately
+
+colors = ['b','r']; lab1='exc'; lab2='inh'; lab='FR (a.u.)'
+
+for im in range(len(mice)):
+
+    mousename = mice[im]
+    execfile("svm_plots_setVars_n.py")      
+    dnow = os.path.join(dnow0, mousename)       
+
+    exc_allFr = exc_allFr_allMice[im]
+    inh_allFr = inh_allFr_allMice[im]    
+    
+    nFrs = exc_allFr.shape[0]
+    frBef = [eventI_allMice[im] + time2an]
+    frs2p = range(nFrs)    # plot all frames
+#    frs2p = frBef       # only plot the time bin before the choice
+    
+    plt.figure(figsize=(7,5*len(frs2p)))    
+    gs = gridspec.GridSpec(2*len(frs2p), 4)#, width_ratios=[2, 1])         
+
+    cnt = -1
+    for fr in frs2p:
+        cnt=cnt+1
+        
+        a = exc_allFr[fr]
+        b = inh_allFr[fr]    
+        
+        p = np.full((len(a)), np.nan)
+        for iday in range(len(p)):        
+            _, p[iday] = stats.ttest_ind(a[iday], b[iday], nan_policy='omit')    
+        
+        
+        ####%% Plot average and se of FRs (across pooled neurons and trials) for each day       
+    #    plt.figure(figsize=(7,5))    
+    #    gs = gridspec.GridSpec(2, 4)#, width_ratios=[2, 1])         
+        h1 = gs[cnt,0:2]
+        h2 = gs[cnt,2:3]
+        
+        ax1,ax2 = errbarAllDays(a,b,p,gs, colors, lab1, lab2, lab, h1, h2)
+        ax1.set_title(('%.0f ms' %time_al_allMice[im][fr]))
+        
+    plt.subplots_adjust(wspace=1, hspace=.7)    
+    
+    
+    #% Save the figure           
+    if savefigs:
+        if chAl:
+            cha = 'chAl_'
+            
+        d = os.path.join(svmdir+dnow)        
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+        
+        fign = os.path.join(d, suffn[0:5]+cha+'FR_allFrs_eachDay_allTrsNeursPooled'+dp+dpm+'.'+fmt[0])
+        plt.savefig(fign, bbox_inches='tight')        
+
+        
+#%% Plot timecourse of ave exc vs ave inh FR (ave across days; each day was averaged across all neurons and trials)
+
+def plottimecourse(exc_allFr, time_al, col='b', lab=''):
+    nF = np.shape(exc_allFr)[0] #nFrs
+    nD = np.shape(exc_allFr)[1] #nDays
+    # For each frame average across all neurons and trials
+    avFR = np.full((nF,nD), np.nan) # frames x days
+    sdFR = np.full((nF,nD), np.nan)
+    seFR = np.full((nF,nD), np.nan)
+    for fr in range(nF):
+        avFR[fr,:] = np.array([np.mean(exc_allFr[fr,iday]) for iday in range(nD)])
+        sdFR[fr,:] = np.array([np.std(exc_allFr[fr,iday]) for iday in range(nD)])
+        seFR[fr,:] = np.array([np.std(exc_allFr[fr,iday]) / np.sqrt(len(exc_allFr[fr,iday])) for iday in range(nD)])
+        
+    
+    # average and se across days 
+    av = np.mean(avFR,axis=1) 
+    sd = np.std(avFR,axis=1)/np.sqrt(avFR.shape[1]) 
+    
+    plt.errorbar(time_al, av, sd, color=col, label=lab)
+   
+    return avFR
+        
+        
+#%% Plot timecourse of ave exc vs ave inh FR (ave across days; each day was averaged across all neurons and trials)
+
+for im in range(len(mice)):
+
+    mousename = mice[im]
+    execfile("svm_plots_setVars_n.py")      
+    dnow = os.path.join(dnow0, mousename)       
+
+    exc_allFr = exc_allFr_allMice[im]
+    inh_allFr = inh_allFr_allMice[im]    
+    time_al = time_al_allMice[im]
+        
+    plt.figure(figsize=(3,2))        
+    
+    avFRexc = plottimecourse(exc_allFr, time_al, col='b', lab='exc')
+    avFRinh = plottimecourse(inh_allFr, time_al, col='r', lab='inh')
+    
+    p = np.full((avFRexc.shape[0]), np.nan)
+    for fr in range(avFRexc.shape[0]):
+        _,p[fr] = stats.ttest_ind(avFRexc[fr], avFRinh[fr], nan_policy='omit')    
+    
+    yl = plt.gca().get_ylim()
     pp = p
     pp[p>.05] = np.nan
-    pp[p<=.05] = np.max((eav,iav))
-    x = np.arange(np.shape(eav)[0])
+    pp[p<=.05] = yl[1]
+    plt.plot(time_al, pp, marker='*',color='r', markeredgecolor='r', linestyle='', markersize=3)
     
-    ax = plt.subplot(gs[1,0:2])
-    plt.errorbar(x, eav, esd, color='k')
-    plt.errorbar(x, iav, isd, color='r')
-    plt.plot(x, pp, marker='*',color='r', linestyle='')
-    plt.xlim([-1, x[-1]+1])
-    plt.xlabel('Days')
-    plt.ylabel(lab)
-    makeNicePlots(ax,0,1)
-
-    ax = plt.subplot(gs[1,2:3])
-    plt.errorbar(0, np.nanmean(eav), np.nanstd(eav)/np.sqrt(len(eav)), marker='o', color='k')
-    plt.errorbar(1, np.nanmean(iav), np.nanstd(iav)/np.sqrt(len(eav)), marker='o', color='k')
-    plt.xticks([0,1], (lab1, lab2), rotation='vertical')
-    plt.xlim([-1,2])
-    makeNicePlots(ax,0,1)
-
-    _, p = stats.ttest_ind(eav, iav, nan_policy='omit')
-    plt.title('p=%.3f' %(p))
-
-    plt.subplots_adjust(wspace=1, hspace=.5)
-
-       
-
-####################################################################################################
-####################################################################################################
-#%%
-
-X_chAl_exc_all = []
-X_chAl_inh_all = []
-meanX_chAl_exc_all = []
-meanX_chAl_inh_all = []
-    
-for iday in range(len(days)):    
-       
-    #%% Set .mat file names
-       
-    print '___________________'
-    imagingFolder = days[iday][0:6]; #'151013'
-    mdfFileNumber = map(int, (days[iday][7:]).split("-")); #[1,2] 
-       
-    pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
-    signalCh = [2] # since gcamp is channel 2, should be always 2.
-    postNProvided = 1; # If your directory does not contain pnevFile and instead it contains postFile, set this to 1 to get pnevFileName
-    
-    # from setImagingAnalysisNamesP import *
-    
-    imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
-    
-    postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
-    moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
-    
-    print(os.path.basename(imfilename))
-
-    svmName = setSVMname(pnevFileName, trialHistAnalysis, allExc, itiName)    
-    print os.path.basename(svmName)
-
-   
-    #%% Load vars
-   
-    Data = scio.loadmat(moreName, variable_names=['inhibitRois'])
-    inhibitRois = Data.pop('inhibitRois')[0,:]
-
-    Data = scio.loadmat(svmName, variable_names=['NsExcluded'])        
-    NsExcluded = Data.pop('NsExcluded')[0,:].astype('bool')
-    
-    Data = scio.loadmat(svmName, variable_names=['trsExcluded'])        
-    trsExcluded_chAl = Data.pop('trsExcluded')[0,:].astype('bool')
-
-    inhibitRois = inhibitRois[~NsExcluded] # Set inhRois which is same as inhibitRois but with non-active neurons excluded. (it has same size as X)                       
-  
-  
-    #%%
-    # Load 1stSideTry-aligned traces, frames, frame of event of interest
-    # use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
-    Data = scio.loadmat(postName, variable_names=['firstSideTryAl'],squeeze_me=True,struct_as_record=False)
-    traces_al_1stSide = Data['firstSideTryAl'].traces.astype('float')
-    time_aligned_1stSide = Data['firstSideTryAl'].time.astype('float')
-    eventI_ch = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
-    # print(np.shape(traces_al_1stSide))
-    
-    # training epoch: 300ms before the choice is made.
-    epSt = eventI_ch - np.round(300/frameLength) # the start point of the epoch relative to alignedEvent for training SVM. (500ms)
-    epEn = eventI_ch-1 # the end point of the epoch relative to alignedEvent for training SVM. (700ms)
-    ep_ch = np.arange(epSt, epEn+1).astype(int) # frames on stimAl.traces that will be used for trainning SVM.  
-    
-    # average frames during ep_ch (ie 300ms before choice onset)
-    X_choice0 = np.transpose(np.nanmean(traces_al_1stSide[ep_ch,:,:], axis=0)) # trials x neurons 
-    
-    
-    # determine trsExcluded for traces_al_1stSide
-    # remember traces_al_1stSide can have some nan trials that are change-of-mind trials... and they wont be nan in choiceVec0
-#    trsExcluded_chAl = (np.sum(np.isnan(X_choice0), axis = 1) + np.isnan(choiceVec0)) != 0 # NaN trials # trsExcluded
-    
-    
-    # exclude trsExcluded_chAl
-    X_chAl = X_choice0[~trsExcluded_chAl,:]; # trials x neurons
-    print 'choice-aligned traces (trs x units): ', np.shape(X_chAl)
-    
-    # exclude NsExcluded
-    X_chAl = X_chAl[:,~NsExcluded]
-    print 'choice-aligned traces (trs x units): ', np.shape(X_chAl)
-
-    # exclude unsure neurons (non exc, non inh)
-    X_chAl = X_chAl[:, ~np.isnan(inhibitRois)]
-    print 'choice-aligned traces (trs x units): ', np.shape(X_chAl)
+    plt.ylabel('FR (a.u.)')        
+    plt.xlabel('Time relative to choice onset')
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
+    makeNicePlots(plt.gca(),1,0)        
 
 
-    #%% Set inhRois_ei
-
-    inhRois = inhibitRois[~np.isnan(inhibitRois)]            
-        
-    if allExc==0:
-        n = sum(inhRois==1)                
-        inhRois_ei = np.zeros((2*n)); # first half is exc; 2nd half is inh
-        inhRois_ei[n:2*n] = 1;
-    else:
-        inhRois_ei = inhRois
-
+    #% Save the figure           
+    if savefigs:
+        if chAl:
+            cha = 'chAl_'
             
-    #%% Average across trials
-    
-    meanX_chAl = np.mean(X_chAl, axis = 0)
-    
-    if normX:
-        stdX_chAl = np.std(X_chAl, axis = 0)    
-        X_chAl = (X_chAl - meanX_chAl) / stdX_chAl
-        meanX_chAl = np.mean(X_chAl, axis = 0)
+        d = os.path.join(svmdir+dnow)        
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+        
+        fign = os.path.join(d, suffn[0:5]+cha+'FR_timeCourse_aveDays_allTrsNeursPooled'+dp+dpm+'.'+fmt[0])
+        plt.savefig(fign, bbox_inches='tight') 
+        
         
     
-    #%% Single trial-FR averaged in ep for exc and inh neurons, for each trial
+#%% Plot histograms
 
-    X_chAl_exc = X_chAl[:,inhRois_ei==0]    # exc 
-    X_chAl_inh = X_chAl[:,inhRois_ei==1]    # inh
-    print X_chAl_exc.shape
-    print X_chAl_inh.shape
+fr = eventI_ds-1
+lls = 'AllTr','HR','LR'
+tl = ',AllTr,HR,LR'
+tlab = '%dms' %(time_trace[fr])+tl    
+yl0 = 'Fraction'
+
+for im in range(len(mice)):
+    
+    mousename = mice[im]
+    execfile("svm_plots_setVars_n.py")      
+    dnow = os.path.join(dnow0, mousename)   
+    ndays = numDaysAll[im]
+
+    
+    fig = plt.figure(figsize=(6*3, 2.1*ndays))    
+    gs = gridspec.GridSpec(ndays, 4*3)#, width_ratios=[2, 1]) 
+            
+            
+    for iday in range(ndays):
+        
+        if lowhrlr[iday] != 1: # exclude days with very low trials
+        
+            eventI_ds = eventI_ds_allDays_allMice[im][iday]        
+            fr = eventI_ds-1
+            
+            XallExc = XallExc_allDays_allMice[im][iday]
+            Xinh = Xinh_allDays_allMice[im][iday]
+            
+            Y_svm = Y_svm_allDays_allMice[im][iday]       
+            hr_trs = (Y_svm==1)
+            lr_trs = (Y_svm==0)
+            
+            trss = hr_trs+lr_trs, hr_trs, lr_trs
+      
+          
+            for hi in [1,2,3]: # all trials, hr, lr
+
+            #    plotfr(a,b,hi,tlab)
+                h1 = gs[iday, (hi-1)*3 : hi*3-1] #[hi,0:2]
+                h2 = gs[iday, hi*3-1 : hi*3] #[hi,2:3]
+                
+                a = XallExc[fr,:,trss[hi-1]].flatten()
+                b = Xinh[fr,:,trss[hi-1]].flatten()
+                            
+                mx = np.max(np.concatenate((a,b))) 
+                mn = np.min(np.concatenate((a,b)))
+                r = mx - mn
+                binEvery = r/float(100)
+            
+                _, p = stats.ttest_ind(a, b, nan_policy='omit')    
+                
+                if hi==1:
+                    yl = '%s\n%s' %(days[iday][0:6],yl0)
+                else:
+                    yl = yl0
+
+                ax1, ax2 = histerrbar(h1,h2,a,b,binEvery,p,lab='FR (a.u.)',colors = ['b','r'],ylab=yl,lab1='exc',lab2='inh', plotCumsum=1)        
+                ax1.set_title('%d exc; %d inh' %(len(a),len(b)))
+            
+            plt.subplots_adjust(wspace=2, hspace=1)
+    
+    fig.suptitle(tlab, fontsize=11)
+    plt.subplots_adjust(wspace=2, hspace=1)        
+                
         
     
-    ##%% Keep values of all days (pool all trials and all neurons)
+        
+#%%
+'''
+if lowhrlr[iday] != 1: # exclude days with very low trials        
+    eventI_ds = eventI_ds_allDays_allMice[im][iday]        
+    fr = eventI_ds-1
     
-    X_chAl_exc_all.append(X_chAl_exc.reshape((-1,)))
-    X_chAl_inh_all.append(X_chAl_inh.reshape((-1,)))
+    XallExc = XallExc_allDays_allMice[im][iday]
+    Xinh = Xinh_allDays_allMice[im][iday]
+    # pool all neurons and trials
+    a0 = XallExc[fr,:,:].flatten()
+    b0 = Xinh[fr,:,:].flatten()        
     
-    
-    #%% Trial-averaged FR in X_chAl (ie in window ep) for exc and inh neurons
-    
-    meanX_chAl_exc = meanX_chAl[inhRois_ei==0]    # exc 
-    print meanX_chAl_exc.shape
-    
-    meanX_chAl_inh = meanX_chAl[inhRois_ei==1]    # inh 
-    print meanX_chAl_inh.shape
-
-    
-    ##%% Keep values of all days
-    
-    meanX_chAl_exc_all.append(meanX_chAl_exc)
-    meanX_chAl_inh_all.append(meanX_chAl_inh)
-    
-    
-
-####################################################################################################
-####################################################################################################
-#%% Plot histograms of FR (for exc,inh, single trial and trial averaged) for each day and average across days
-
-lab1 = 'exc'
-lab2 = 'inh'
-colors = ['k','r']
-
-
-#############################################################
-################### Single-trial FR #######################
-#############################################################
-### hist and P val for all days pooled (exc vs inh)
-lab = 'FR'
-ylab = 'Fraction of neurons x trials'
-
-a = np.concatenate(X_chAl_exc_all) 
-b = np.concatenate(X_chAl_inh_all)
-#a = a[~(np.isnan(a) + np.isinf(a))]
-#b = b[~(np.isnan(b) + np.isinf(b))]
-print [len(a), len(b)]
-
-_, p = stats.ttest_ind(a, b, nan_policy='omit')
-
-mx = max(a.max(),b.max())
-mn = min(a.min(),b.min())
-#mx = .005
-binEvery = (mx - mn)/500 #.001# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
-
-
-plt.figure(figsize=(5,5))    
-gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
-h1 = gs[0,0:2]
-h2 = gs[0,2:3]
-ax1,_ = histerrbar(a,b,binEvery,p,colors)
-#plt.xlabel(lab)
-#if normX:
-#    ax1.set_xlim([-1, 2])
-#else:
-#    ax1.set_xlim([-.001, .05])
-ymx = ax1.get_ylim()
-if normX:
-    ax1.set_ylim([-.01, ymx[1]])
-else:
-    ax1.set_ylim([-.05, ymx[1]])
-
-
-############ show individual days
-a = X_chAl_exc_all
-b = X_chAl_inh_all
-# if no averaging across neuron or trial shuffles, pool neuron and trial shuffles
-p = []
-for i in range(len(a)):
-    _,p0 = stats.ttest_ind(a[i], b[i], nan_policy='omit')
-    p.append(p0)
-p = np.array(p)    
-#ax = plt.subplot(gs[1,0:3])
-errbarAllDays(a,b,p)
-#plt.ylabel(lab)
-
-
-if savefigs:#% Save the figure
-    d = os.path.join(svmdir+dnow,mousename)
-    if not os.path.exists(d):
-        print 'creating folder'
-        os.makedirs(d)
- 
-    fign = os.path.join(d, suffn[0:5]+'XchAl_singleTrFR'+dp+fmt[0])
-    plt.savefig(fign, bbox_inches='tight')
-    
-
-
-
-#############################################################
-################### Trial-averaged FR #######################
-#############################################################
-### hist and P val for all days pooled (exc vs inh)
-lab = 'FR'
-ylab = 'Fraction of neurons'
-
-a = np.concatenate(meanX_chAl_exc_all) 
-b = np.concatenate(meanX_chAl_inh_all)
-#a = a[~(np.isnan(a) + np.isinf(a))]
-#b = b[~(np.isnan(b) + np.isinf(b))]
-print [len(a), len(b)]
-
-_, p = stats.ttest_ind(a, b, nan_policy='omit')
-
-mx = max(a.max(),b.max())
-mn = min(a.min(),b.min())
-#mx = .005
-binEvery = (mx - mn)/100 #.001# .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
-
-
-plt.figure(figsize=(5,5))    
-gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
-h1 = gs[0,0:2]
-h2 = gs[0,2:3]
-ax1,_ = histerrbar(a,b,binEvery,p,colors)
-#plt.xlabel(lab)
-#ax1.set_xlim([mn, .023])
-makeNicePlots(ax1,1)
-
-
-############ show individual days
-a = meanX_chAl_exc_all
-b = meanX_chAl_inh_all
-# if no averaging across neuron or trial shuffles, pool neuron and trial shuffles
-p = []
-for i in range(len(a)):
-    _,p0 = stats.ttest_ind(a[i], b[i], nan_policy='omit')
-    p.append(p0)
-p = np.array(p)    
-#ax = plt.subplot(gs[1,0:3])
-errbarAllDays(a,b,p)
-#plt.ylabel(lab)
-
-
-if savefigs:#% Save the figure
-    d = os.path.join(svmdir+dnow,mousename)
-    if not os.path.exists(d):
-        print 'creating folder'
-        os.makedirs(d)
- 
-    fign = os.path.join(d, suffn[0:5]+'XchAl_aveTrFR'+dp+fmt[0])
-    plt.savefig(fign, bbox_inches='tight')
-    
+    a.append(a0)
+    b.append(b0)
+'''
