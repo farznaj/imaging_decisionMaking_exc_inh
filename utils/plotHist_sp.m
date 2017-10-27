@@ -1,7 +1,15 @@
-function plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, sp,yy)
+function plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, sp,yy, documsum)
 
     if ~exist('tit','var')
         tit = [];
+    end
+    
+    if ~exist('documsum','var')
+        documsum = 0;
+    end
+    
+    if ~iscell(cols)
+        cols = mat2cell(cols,[1,1]);
     end
     
     r1 = round(min([y1(:);y2(:)]),1); 
@@ -12,9 +20,16 @@ function plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, sp,yy)
     [ninh, e] = histcounts(y2(:), bins);
 
     x = mode(diff(bins))/2 + bins; x = x(1:end-1);
+
+    if documsum
+        nexc = cumsum(nexc);
+        ninh = cumsum(ninh);   
+    end
+    
     ye = nexc/sum(nexc);
     yi = ninh/sum(ninh);
-    %     ye = smooth(ye);
+
+%     ye = smooth(ye);
     %     yi = smooth(yi);
     
     figure(fign)

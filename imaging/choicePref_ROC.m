@@ -1,10 +1,13 @@
-function choicePref_all = choicePref_ROC(traces_al_sm, ipsiTrs, contraTrs, makeplots, eventI_stimOn, useEqualNumTrs, doChoicePref)
+function [choicePref_all0, choicePref_all_shfl, choicePref_all_chance] = choicePref_ROC(traces_al_sm, ipsiTrs, contraTrs, makeplots, eventI_stimOn, useEqualNumTrs, doChoicePref, doshfl)
+%
 % choicePref_all: frames x neurons
 % compute choice preference (2*(auc-0.5)) for each neuron at each frame.
 % use avetrialAlign_setVars to get the input vars.
-% ipsi is asigned 0 and contra is asigned 1 in "targets". so assumption is ipsi response is lower than contra. 
+% ipsi is asigned 0 and contra is asigned 1 in "targets", so assumption is ipsi response is lower than contra. 
 % so auc>.5 (choicePref>0) happens when ipsi resp<contra, and auc<.5 (choicePref<0) happens when ipsi>contra.
-% choicePref: frames x neurons
+%
+% choicePref_all_shfl : for the trial label shuffled case
+
 
 %%
 if ~exist('makeplots', 'var')
@@ -17,6 +20,10 @@ end
 
 if ~exist('doChoicePref', 'var')
     doChoicePref = 1; % if 1 we are interested in choicePref values; otherwise we want the AUC values. % otherwise we go with values of auc.
+end
+
+if ~exist('doshfl', 'var')    
+    doshfl = 0 ; % if 1,shuffle trial labels to get roc values for shuffled case
 end
 
 
@@ -69,6 +76,7 @@ for in = 1:size(traces_al_sm, 2)
     
     %
     outputs = [traces_i, traces_c]; % ipsi is asigned 0 and contra is asigned 1 in "targets". so assumption is ipsi response is lower than contra. so auc>.5 (choicePref>0) happens when ipsi resp<contra, and auc<.5 (choicePref<0) happens when ipsi>contra.
+    
     if all(isnan(outputs(:)))
         fprintf('The neural trace is all NaNs!\n')
     else
@@ -107,9 +115,177 @@ for in = 1:size(traces_al_sm, 2)
     
 end
 fprintf('Size of choicePref_all (fr x units): %d  %d\n', size(choicePref_all))
+choicePref_all0 = choicePref_all;
 
 % choicePref_all(:, ~good_inhibit) % excitatory neurons.
 % choicePref_all(:, good_inhibit) % inhibitory neurons.
+
+
+
+
+%% Shuffle trial labels as a control
+
+sampsn = 50; % shuffle 50 times
+
+if doshfl~=0
+    
+    choicePref_all_shfl = nan([size(choicePref_all), sampsn]); % frames x neurons x samps
+
+    for samps = 1:sampsn        
+        
+      % shuffle tr labels, keeping the number of ipsi and contra untouched!
+        targets = [zeros(numfrs, sum(ipsiTrs)), ones(numfrs, sum(contraTrs))];            
+        shfldLabs = randperm(size(targets,2));
+        targets = targets(:,shfldLabs);        
+
+
+        fprintf('shuffle %d\n', samps)
+        
+        for in = 1:size(traces_al_sm, 2)
+
+            %%
+            if numfrs > 1
+                traces_i = squeeze(traces_al_sm(:, in, ipsiTrs)); % frames x trials.
+                traces_c = squeeze(traces_al_sm(:, in, contraTrs)); % frames x trials.
+            else
+                traces_i = squeeze(traces_al_sm(:, in, ipsiTrs))'; % frames x trials.
+                traces_c = squeeze(traces_al_sm(:, in, contraTrs))'; % frames x trials.
+            end
+
+            %
+            outputs = [traces_i, traces_c]; % ipsi is asigned 0 and contra is asigned 1 in "targets". so assumption is ipsi response is lower than contra. so auc>.5 (choicePref>0) happens when ipsi resp<contra, and auc<.5 (choicePref<0) happens when ipsi>contra.
+            if all(isnan(outputs(:)))
+                fprintf('The neural trace is all NaNs!\n')
+            else
+
+                if any(isnan(outputs(:))), error('There are NaNs in outputs (traces). Matlab roc wont work properly. Get rid of NaNs!'), end
+
+                [tpr,fpr,thresholds] = roc(targets,outputs); % each cell corresponds to a frame
+
+                %     tpr = cellfun(@(x)smooth(x,5)', tpr, 'uniformoutput', 0); % smoothing makes very little difference
+                %     fpr = cellfun(@(x)smooth(x,5)', fpr, 'uniformoutput', 0);
+                %{
+                figure; plotroc(targets(fr,:), outputs(fr,:))
+                figure; plotroc(targets, outputs)
+                %}
+
+                if numfrs > 1
+                    % auc = trapz([0, fpr{fr}, 1], [0, tpr{fr}, 1]); % choice pref measure for each neuron at each frame
+                    auc = cellfun(@(x,y)trapz([0, x, 1], [0, y, 1]), fpr, tpr); % [fpr, tpr] = [0 0] and [1 1] will be always valid and you need them to measure auc correctly.
+                else
+                    auc = trapz([0, fpr, 1], [0, tpr, 1]);
+                end
+
+                if doChoicePref==1 % otherwise we go with values of auc.
+                    choicePref =  2*(auc-0.5);
+                else % we are interested in auc values 
+                    choicePref = auc;
+                end
+                %     figure; plot(choicePref) % look at choicePref for neuron in over time (all frames)
+                choicePref_all(:,in) = choicePref; % frames x neurons
+
+                %     figure; hold on
+                %     boundedline((1:numfrs)', nanmean(traces_i,2), nanstd(traces_i,[],2), 'alpha')
+                %     boundedline((1:numfrs)', nanmean(traces_c,2), nanstd(traces_c,[],2), 'r', 'alpha')
+            end
+        end
+
+        choicePref_all_shfl(:,:,samps) = choicePref_all; % frames x neurons x samps
+    end    
+else
+    choicePref_all_shfl = [];
+end
+
+fprintf('Size of choicePref_all_shfl (fr x units x samps): %d %d %d\n', size(choicePref_all_shfl))
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Shuffle trial labels as a control: chance version!
+
+% sampsn = 50; % shuffle 50 times
+
+if 0 %doshfl~=0
+    
+    choicePref_all_chance = nan([size(choicePref_all), sampsn]); % frames x neurons x samps
+
+    for samps = 1:sampsn        
+        
+        targets = zeros(numfrs, sum(ipsiTrs)+sum(contraTrs));
+        % now assign randomly selected half of them to 1.
+        if rand < .5
+            nhalftrs = ceil(size(targets,2)/2);
+        else
+            nhalftrs = floor(size(targets,2)/2);
+        end
+        randhalf = randperm(size(targets,2));
+        randhalf = randhalf(1:nhalftrs);
+        targets(:,randhalf) = 1;
+
+
+
+        fprintf('shuffle %d\n', samps)
+        
+        for in = 1:size(traces_al_sm, 2)
+
+            %%
+            if numfrs > 1
+                traces_i = squeeze(traces_al_sm(:, in, ipsiTrs)); % frames x trials.
+                traces_c = squeeze(traces_al_sm(:, in, contraTrs)); % frames x trials.
+            else
+                traces_i = squeeze(traces_al_sm(:, in, ipsiTrs))'; % frames x trials.
+                traces_c = squeeze(traces_al_sm(:, in, contraTrs))'; % frames x trials.
+            end
+
+            %
+            outputs = [traces_i, traces_c]; % ipsi is asigned 0 and contra is asigned 1 in "targets". so assumption is ipsi response is lower than contra. so auc>.5 (choicePref>0) happens when ipsi resp<contra, and auc<.5 (choicePref<0) happens when ipsi>contra.
+            if all(isnan(outputs(:)))
+                fprintf('The neural trace is all NaNs!\n')
+            else
+
+                if any(isnan(outputs(:))), error('There are NaNs in outputs (traces). Matlab roc wont work properly. Get rid of NaNs!'), end
+
+                [tpr,fpr,thresholds] = roc(targets,outputs); % each cell corresponds to a frame
+
+                %     tpr = cellfun(@(x)smooth(x,5)', tpr, 'uniformoutput', 0); % smoothing makes very little difference
+                %     fpr = cellfun(@(x)smooth(x,5)', fpr, 'uniformoutput', 0);
+                %{
+                figure; plotroc(targets(fr,:), outputs(fr,:))
+                figure; plotroc(targets, outputs)
+                %}
+
+                if numfrs > 1
+                    % auc = trapz([0, fpr{fr}, 1], [0, tpr{fr}, 1]); % choice pref measure for each neuron at each frame
+                    auc = cellfun(@(x,y)trapz([0, x, 1], [0, y, 1]), fpr, tpr); % [fpr, tpr] = [0 0] and [1 1] will be always valid and you need them to measure auc correctly.
+                else
+                    auc = trapz([0, fpr, 1], [0, tpr, 1]);
+                end
+
+                if doChoicePref==1 % otherwise we go with values of auc.
+                    choicePref =  2*(auc-0.5);
+                else % we are interested in auc values 
+                    choicePref = auc;
+                end
+                %     figure; plot(choicePref) % look at choicePref for neuron in over time (all frames)
+                choicePref_all(:,in) = choicePref; % frames x neurons
+
+                %     figure; hold on
+                %     boundedline((1:numfrs)', nanmean(traces_i,2), nanstd(traces_i,[],2), 'alpha')
+                %     boundedline((1:numfrs)', nanmean(traces_c,2), nanstd(traces_c,[],2), 'r', 'alpha')
+            end
+        end
+
+        choicePref_all_chance(:,:,samps) = choicePref_all; % frames x neurons x samps
+    end    
+else
+    choicePref_all_chance = [];
+end
+
+fprintf('Size of choicePref_all_chance (fr x units x samps): %d %d %d\n', size(choicePref_all_chance))
+
+
 
 
 %% Make some plots
@@ -188,7 +364,7 @@ if makeplots
 end
 
 
-%% manual method: compute false-positive and true-positive for ROC
+%% Your own method: compute false-positive and true-positive for ROC
 % you have confirmed that the manual method (codes below) and matlab roc
 % give the same result. matlab roc is much faster though.
 %{

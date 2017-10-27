@@ -276,6 +276,9 @@ def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1=
     plt.title('p=%.3f' %(p))
     makeNicePlots(ax2,0,1)
 #    plt.tick_params
+    yl = plt.gca().get_ylim()
+    r = np.diff(yl)
+    plt.ylim([yl[0], yl[1]+r/10.])
     
     plt.subplots_adjust(wspace=1, hspace=.5)
     return ax1,ax2
@@ -1455,17 +1458,25 @@ def set_corr_hr_lr(postName, svmName, doIncorr=0):
 ##%% Find the common eventI, number of frames before and after the common eventI for the alignment of traces of all days.
 # By common eventI, we  mean the index on which all traces will be aligned.
 
-def set_nprepost(trace, eventI_ds_allDays, mn_corr, thTrained=10, regressBins=3):
+def set_nprepost(trace, eventI_ds_allDays, mn_corr=np.nan, thTrained=10., regressBins=3):
     # trace: each element is for one day
-            
-    numDays = len(trace)
+    # first element of trace[iday] should be frames
+    # if days of each mouse is already aligned, you can use this function to align all mice:
+    # set_nprepost(avFRexc_allMice, eventI_allMice)   
+    eventI_ds_allDays = np.array(eventI_ds_allDays).flatten()
+
+    numDays = len(trace)        
+    if np.isnan(mn_corr).any():
+        mn_corr = np.full((numDays), thTrained+1) # so all days are analyzed
+
+    nPreMin = np.nanmin(eventI_ds_allDays[mn_corr >= thTrained]).astype('int') # number of frames before the common eventI, also the index of common eventI.     
+    
     nPost = (np.ones((numDays,1))+np.nan).flatten()
     for iday in range(numDays):
         if mn_corr[iday] >= thTrained: # dont include days with too few svm trained trials.
             nPost[iday] = (len(trace[iday]) - eventI_ds_allDays[iday] - 1)
     nPostMin = np.nanmin(nPost).astype('int')
     
-    nPreMin = np.nanmin(eventI_ds_allDays).astype('int') # number of frames before the common eventI, also the index of common eventI.     
     print 'Number of frames before = %d, and after = %d the common eventI' %(nPreMin, nPostMin)
     
     ## Set the time array for the across-day aligned traces
@@ -1484,16 +1495,25 @@ def set_nprepost(trace, eventI_ds_allDays, mn_corr, thTrained=10, regressBins=3)
 
 #%% Align traces of each day on the common eventI
 
-def alTrace(trace, eventI_ds_allDays, nPreMin, nPostMin, mn_corr, thTrained=10):    
+def alTrace(trace, eventI_ds_allDays, nPreMin, nPostMin, mn_corr=np.nan, thTrained=10):    
+    # first element of trace[iday] should be frames
+    # if days of each mouse is already aligned, you can use this function to align all mice:
+    # trace will be trace[im] which is [dayAlignedFrames, days], and you will turn it to [mouseAlignedFrames, days]
+    # in this case iday (in below) will be like im... 
+
     # mn_corr: min number of HR and LR trials 
-    
-    trace= np.array(trace)
+    numDays = len(trace)        
+    if np.isnan(mn_corr).any():
+        mn_corr = np.full((numDays), thTrained+1) # so all days are analyzed
+        
+    trace = np.array(trace)
     trace_aligned = []
 #    trace_aligned = np.ones((nPreMin + nPostMin + 1, trace.shape[0])) + np.nan # frames x days, aligned on common eventI (equals nPreMin)     
-    for iday in range(trace.shape[0]):
+    for iday in range(numDays):
         if mn_corr[iday] >= thTrained: # dont include days with too few svm trained trials.
             trace_aligned.append(trace[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1])
 #            trace_aligned[:, iday] = trace[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]    
+#    trace_aligned = np.array(trace_aligned)
     return trace_aligned
 
         
@@ -1528,7 +1548,7 @@ def set_time_al(totLen_ds, eventI, lastTimeBinMissed, regressBins=3):
     time_trace_d = np.concatenate((xdb, xda))    
     # set the final downsampled time_trace: concatenate downsampled X at frames before frame0, with x at frame0, and x at frames after frame0
 #    time_trace_d = np.concatenate((xdb, [0], xda))    
-    time_al = time_trace_d[0:int(totLen_ds)]
+    time_al = time_trace_d[0:int(totLen_ds)] 
 
     return time_al
 
