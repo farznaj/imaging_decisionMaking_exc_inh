@@ -8,13 +8,19 @@ Created on Fri Oct 20 10:52:31 2017
 #%% Change the following vars:
 
 mice = 'fni16', 'fni17', 'fni18', 'fni19'
-normX = 0 # normalize X (just how SVM was performed) before computing FRs
+normX = 1 # after downsampling set max peak to 1. Makes sense to do, since traces before downsampling are normalized to max peak... so we should do it again after downsampling too.
+zscoreX = 0 # z-score X (just how SVM was performed) before computing FRs
 outcome2ana = 'corr' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
 thTrained = 10 # if days have fewer than this number of hr and lr trials, they would be excluded from plots
 
 savefigs = 0
 doPlots = 0 # plot for each mouse hists of FR at timebin -1 
 
+if normX:
+    nmd = 'norm2max_'
+else:
+    nmd = ''
+    
 # related to sum plot of all mice (noZmotionDays will be rewritten)
 noZmotionDays_allMPlots = 1 # remove the last 4 days of fni18 (ie keep only the 1st 3 days)
 # I prefer to exclude the zMotion days from fni18 bc inh is very high for them and it makes the se for this mouse crazy!
@@ -22,18 +28,20 @@ noZmotionDays_allMPlots = 1 # remove the last 4 days of fni18 (ie keep only the 
 
 from datetime import datetime
 nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
+
 if noZmotionDays_allMPlots:
     fni18n = '(noZmotionDays)'
     im = mice.index('fni18')
     # below is the reall noZoMotion days ... 
     #days2keep = [0,1,2,3] # days to keep
-    # days[4] is the one with hugly high inh FR which makes se across days bad for this mouse!
-    days2keep = [0,1,2,3,5,6]     
-    dpm0 = '_'.join(mice[0:im+1])+fni18n+'_'+'_'.join(mice[im+1:])+'_'+nowStr
+    # 151215_1-2', (days[4]) is the one with hugly high inh FR which makes se across days bad for this mouse!
+#    days2keep = [0,1,2,3,5,6]     
+    dpm0 = nmd+'_'.join(mice[0:im+1])+fni18n+'_'+'_'.join(mice[im+1:])+'_'+nowStr
 else:
-    dpm0 = '_'.join(mice)+'_'+nowStr
+    dpm0 = nmd+'_'.join(mice)+'_'+nowStr
 
 
+        
 
 lastTimeBinMissed = 0 #I think it should be 0 bc the exc,inh svm data was run that way. # if 0, things were ran fine; if 1: by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
 strength2ana = 'all' # 'all', easy', 'medium', 'hard' % What stim strength to use for training?
@@ -57,7 +65,7 @@ regressBins = int(np.round(100/frameLength)) # must be same regressBins used in 
 
 dnow0 = '/excInh_FRs'
 
-if normX==1:
+if zscoreX==1:
     dp = '_normed_'
 else:
     dp = '_'    
@@ -89,7 +97,7 @@ for im in range(len(mice)):
     numDaysAll[im] = len(days)
         
     dnow = os.path.join(dnow0,mousename)   
-    dpm = 'days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr   
+    dpm = nmd+'days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr   
     dpmAllm.append(dpm)
 
     
@@ -263,10 +271,17 @@ for im in range(len(mice)):
         time_trace_o = time_trace
         
         
-        #%%     
+        #%%
         X_svm, time_trace, eventI_ds = downsampXsvmTime(X_svm_o, time_trace_o, eventI, regressBins, lastTimeBinMissed)
         
-                
+        
+        #%% After downsampling normalize X_svm so each neuron's max is at 1 (you do this in matlab for S traces before downsampling... so it makes sense to again normalize the traces After downsampling so max peak is at 1)                
+        
+        if normX:
+            m = np.max(X_svm,axis=(0,2))   # find the max of each neurons across all trials and frames # max(X_svm.flatten())            
+            X_svm = np.transpose(np.transpose(X_svm,(0,2,1)) / m, (0,2,1))
+        
+        
         #%% Set NsExcluded : Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
         # thAct and thTrsWithSpike are parameters that you can play with.
         
@@ -320,7 +335,7 @@ for im in range(len(mice)):
             
         #%% Center and normalize X: feature normalization and scaling: to remove effects related to scaling and bias of each neuron, we need to zscore data (i.e., make data mean 0 and variance 1 for each neuron) 
         
-        if normX:
+        if zscoreX:
             #% Keep a copy of X_svm before normalization
             X_svm00 = X_svm + 0        
             
@@ -449,10 +464,8 @@ Xinh_allDays_allMice = np.array(Xinh_allDays_allMice)
 XallExc_allDays_allMice = np.array(XallExc_allDays_allMice)
 eventI_ds_allDays_allMice = np.array(eventI_ds_allDays_allMice)
 eventI_allDays_allMice = np.array(eventI_allDays_allMice)
- 
-##%%
-#numDaysAll = numDaysAll.astype(int)
 eventI_ds_allDays_allMice = np.array([[int(i) for i in eventI_ds_allDays_allMice[im]] for im in range(len(mice))]) # convert eventIs to int
+#numDaysAll = numDaysAll.astype(int)
 
 
 #%% Set number of trials for each day
@@ -467,10 +480,7 @@ for im in range(len(mice)):
 corr_hr_lr_allMice = np.array(corr_hr_lr_allMice)
 
 
-
-#%% 
-#######################################################################################################################################                
-##%% Decide what days to analyze: exclude days with too few trials used for training SVM, also exclude incorr from days with too few incorr trials.
+#%% Decide what days to analyze: exclude days with too few trials used for training SVM, also exclude incorr from days with too few incorr trials.
 # th for min number of trs of each class    
 
 mn_corr_allMice = []
@@ -480,7 +490,12 @@ for im in range(len(mice)):
     
 mn_corr_allMice = np.array(mn_corr_allMice)    
 
+if noZmotionDays_allMPlots: # remove the last 3 days of fni18 (ie keep only the 1st 4 days)    
+    im = mice.index('fni18') # remove its 4th day
+    mn_corr_allMice[im][4] = thTrained-1 # day 151215
+
 numDaysAllGood = np.array([sum(mn_corr_allMice[im]>=thTrained) for im in range(len(mice))])
+print numDaysAllGood
 
 
 #%% set Y_svm only for good days
@@ -521,7 +536,7 @@ eventI_ds_allMice = np.array(eventI_ds_allMice)
 
 #%% pool traces for all neurons and all trials for each day, each frame (each mouse)
 
-def poolAllNTr(XallExc_al_allMice, Xinh_al_allMice, trtype=0):
+def poolAllNTr(XallExc_al_allMice, Xinh_al_allMice, trtype=0, avtrs=0):
     
     exc_allFr_allMice = [] # nMice; each mouse: alignedFrames x nGoodDays; each element: pooled neurons and trials
     inh_allFr_allMice = []
@@ -545,9 +560,15 @@ def poolAllNTr(XallExc_al_allMice, Xinh_al_allMice, trtype=0):
                 
                 XallExc = XallExc_al_allMice[im][iday]
                 Xinh = Xinh_al_allMice[im][iday]
-                # pool all neurons and trials
-                a0 = XallExc[fr,:,trss[trtype]].flatten()
-                b0 = Xinh[fr,:,trss[trtype]].flatten()        
+                
+                a0 = XallExc[fr,:,trss[trtype]]#.flatten() #trs x units
+                b0 = Xinh[fr,:,trss[trtype]]#.flatten() #trs x units       
+                
+                if avtrs: # for each neuron average across trials.
+                    a0 = np.mean(a0,axis=0)
+                    b0 = np.mean(b0,axis=0)
+                a0 = a0.flatten() # pool all neurons and trials                   
+                b0 = b0.flatten()
                 
                 a.append(a0)
                 b.append(b0)
@@ -567,14 +588,9 @@ def poolAllNTr(XallExc_al_allMice, Xinh_al_allMice, trtype=0):
     return exc_allFr_allMice, inh_allFr_allMice
 
 
-#######################################################################################################################################        
-#%% Plots of individual mice    
-#######################################################################################################################################        
+#%% For each frame average FR across all neurons and trials
 
-#%% For each frame average FR across all neurons and trials; also if desired plot timecourse of ave exc vs ave inh FR (ave across days; each day was averaged across all neurons and trials)
-
-def aveNsTrs_plotTimecourse(exc_allFr, time_al=[], col='b', lab='', linstyl='', alph=''): 
-    # provide time_al to also make a plot; otherwise just compute average across neurons and trials.
+def aveNsTrs(exc_allFr): 
 
     nF = np.shape(exc_allFr)[0] #nFrs
     nD = np.shape(exc_allFr)[1] #nDays
@@ -586,84 +602,36 @@ def aveNsTrs_plotTimecourse(exc_allFr, time_al=[], col='b', lab='', linstyl='', 
     for fr in range(nF):
         avFR[fr,:] = np.array([np.mean(exc_allFr[fr,iday]) for iday in range(nD)])
         sdFR[fr,:] = np.array([np.std(exc_allFr[fr,iday]) for iday in range(nD)])
-        seFR[fr,:] = np.array([np.std(exc_allFr[fr,iday]) / np.sqrt(len(exc_allFr[fr,iday])) for iday in range(nD)])
-        
-    # average and se across days         
-    if type(time_al)!=list:        
-        av = np.mean(avFR,axis=1) 
-        sd = np.std(avFR,axis=1)/np.sqrt(avFR.shape[1]) 
-        
-        plt.errorbar(time_al, av, sd, color=col, label=lab, linestyle=linstyl, alpha=alph)
+        seFR[fr,:] = np.array([np.std(exc_allFr[fr,iday]) / np.sqrt(len(exc_allFr[fr,iday])) for iday in range(nD)])       
    
-    return avFR
+    return avFR #, sdFR, seFR
        
-        
-#%% Plot for each mouse timecourse of session-averaged FR for exc and inh (ave across days; each day was averaged across all neurons and trials)
 
-trtyps2an = [0] #[1,2] #[0,1,2] : trial types to plot: all, HR, LR
+#%% plot timecourse of ave exc vs ave inh FR (ave across days; each day was averaged across all neurons and trials)
 
-linstyls = '-','-','-'
-alphas = 1,1,.5
-
-for im in range(len(mice)):
-
-    mousename = mice[im]
-    execfile("svm_plots_setVars_n.py")      
-    dnow = os.path.join(dnow0, mousename)       
-
-    plt.figure(figsize=(3,2))        
-
-    for trtype in trtyps2an: # trial types to plot: 0:all trs; 1: hr trs; 2: lr trs
+def plotTimecourse(avFR, time_al=[], col='b', lab='', linstyl='', alph=''): 
+    # average and se across days         
+    av = np.mean(avFR,axis=1) 
+    sd = np.std(avFR,axis=1)/np.sqrt(avFR.shape[1]) 
     
-        exc_allFr_allMice, inh_allFr_allMice = poolAllNTr(XallExc_al_allMice, Xinh_al_allMice, trtype)
-    
-        exc_allFr = exc_allFr_allMice[im] # alignedFrames x days; each element: pooled neurons and trials
-        inh_allFr = inh_allFr_allMice[im]    
-        time_al = time_al_allMice[im]
-            
-        avFRexc = aveNsTrs_plotTimecourse(exc_allFr, time_al, col='b', lab='exc', linstyl=linstyls[trtype], alph=alphas[trtype]) # avFRexc: alignedFrames x days (each element was averaged across all neurons and trials))
-        avFRinh = aveNsTrs_plotTimecourse(inh_allFr, time_al, col='r', lab='inh', linstyl=linstyls[trtype], alph=alphas[trtype])
+    plt.errorbar(time_al, av, sd, color=col, label=lab, linestyle=linstyl, alpha=alph)
         
-        p = np.full((avFRexc.shape[0]), np.nan)
-        for fr in range(avFRexc.shape[0]):
-            _,p[fr] = stats.ttest_ind(avFRexc[fr], avFRinh[fr], nan_policy='omit')    
-        
-        yl = plt.gca().get_ylim()
-        pp = p
-        pp[p>.05] = np.nan
-        pp[p<=.05] = yl[1]
-        plt.plot(time_al, pp, marker='*',color='r', markeredgecolor='r', linestyle='', markersize=3)
-        
-    plt.ylabel('FR (a.u.)')        
-    plt.xlabel('Time relative to choice onset')
-    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
-    makeNicePlots(plt.gca(),1,0)        
-    
-    
-    #% Save the figure           
-    if savefigs:
-        if chAl:
-            cha = 'chAl_'
-            
-        d = os.path.join(svmdir+dnow)        
-        if not os.path.exists(d):
-            print 'creating folder'
-            os.makedirs(d)
-        
-        fign = os.path.join(d, suffn[0:5]+cha+'FR_timeCourse_aveDays_allTrsNeursPooled'+dp+dpmAllm[im]+'.'+fmt[0])
-        plt.savefig(fign, bbox_inches='tight') 
-        
-        
-##############
-#%%
+
+#%%##%% Pool traces for all neurons and all trials for each day, each frame (each mouse)
+#######################################################################################################################################                
+#######################################################################################################################################                
+
 trtypeFinal = 0 # trial types to plot: all, HR, LR
+avtrs = 1 # for each neuron average across trials, otherwise pool neural activities across all trials
 
+exc_allFr_allMice, inh_allFr_allMice = poolAllNTr(XallExc_al_allMice, Xinh_al_allMice, trtypeFinal, avtrs) # nNice; each element: dayAlignedFrames x nGoodDays; each element: pooled neurons and trials
 
-#%% pool traces for all neurons and all trials for each day, each frame (each mouse)
+#if noZmotionDays_allMPlots: # remove the last 3 days of fni18 (ie keep only the 1st 4 days)    
+#    im = mice.index('fni18')
+#    exc_allFr_allMice[im] = exc_allFr_allMice[im][:, days2keep]    
+#    inh_allFr_allMice[im] = inh_allFr_allMice[im][:, days2keep]    
 
-exc_allFr_allMice, inh_allFr_allMice = poolAllNTr(XallExc_al_allMice, Xinh_al_allMice, trtypeFinal) # nNice; each element: dayAlignedFrames x nGoodDays; each element: pooled neurons and trials
-
-
+    
 #%% Do for each mouse: For each frame average FR across all neurons and trials; 
 
 avFRexc_allMice = []
@@ -674,8 +642,8 @@ for im in range(len(mice)):
     inh_allFr = inh_allFr_allMice[im]    
     time_al = time_al_allMice[im]
         
-    avFRexc_allMice.append(aveNsTrs_plotTimecourse(exc_allFr)) # avFRexc: alignedFrames x days (each element was averaged across all neurons and trials))
-    avFRinh_allMice.append(aveNsTrs_plotTimecourse(inh_allFr))    
+    avFRexc_allMice.append(aveNsTrs(exc_allFr)) # avFRexc: alignedFrames x days (each element was averaged across all neurons and trials))
+    avFRinh_allMice.append(aveNsTrs(inh_allFr))    
 #    p = np.full((avFRexc.shape[0]), np.nan)
 #    for fr in range(avFRexc.shape[0]):
 #        _,p[fr] = stats.ttest_ind(avFRexc[fr], avFRinh[fr], nan_policy='omit')    
@@ -694,10 +662,10 @@ time_al_final, nPreMin_final, nPostMin_final = set_nprepost(avFRexc_allMice, eve
 avFRexc_allMice_al = alTrace(avFRexc_allMice, eventI_ds_allMice, nPreMin_final, nPostMin_final)
 avFRinh_allMice_al = alTrace(avFRinh_allMice, eventI_ds_allMice, nPreMin_final, nPostMin_final)
 
-if noZmotionDays_allMPlots: # remove the last 3 days of fni18 (ie keep only the 1st 4 days)    
-    im = mice.index('fni18')
-    avFRexc_allMice_al[im] = avFRexc_allMice_al[im][:, days2keep]
-    avFRinh_allMice_al[im] = avFRinh_allMice_al[im][:, days2keep]
+#if noZmotionDays_allMPlots: # remove the last 3 days of fni18 (ie keep only the 1st 4 days)    
+#    im = mice.index('fni18')
+#    avFRexc_allMice_al[im] = avFRexc_allMice_al[im][:, days2keep]
+#    avFRinh_allMice_al[im] = avFRinh_allMice_al[im][:, days2keep]
     
     
 #%% Align individual neural and trial traces across mice    
@@ -706,14 +674,77 @@ exc_allFr_allMice_al = alTrace(exc_allFr_allMice, eventI_ds_allMice, nPreMin_fin
 inh_allFr_allMice_al = alTrace(inh_allFr_allMice, eventI_ds_allMice, nPreMin_final, nPostMin_final)
 
 
-#%% Plot time course for each day ... do it for each mouse
-# only good days
+
+#%% 
+#########       Plots of individual mice    ########################################################################################        
+#######################################################################################################################################        
+#######################################################################################################################################        
+#######################################################################################################################################        
+
+#%% Plot for each mouse timecourse of session-averaged FR for exc and inh (ave across days; each day was averaged across all neurons and trials)
+
+avtrs = 1 # for each neuron average across trials, otherwise pool neural activities across all trials
+trtyps2an = [0,1,2] #[1,2] #[0,1,2] : trial types to plot: all, HR, LR
+
+linstyls = '-','-','-'
+alphas = 1,.5,.2  # all, HR, LR
+
+for im in range(len(mice)):
+
+    mousename = mice[im]
+#    execfile("svm_plots_setVars_n.py")      
+    dnow = os.path.join(dnow0, mousename)       
+
+    plt.figure(figsize=(3,2))        
+
+    for trtype in trtyps2an: # trial types to plot: 0:all trs; 1: hr trs; 2: lr trs
+        '''
+        exc_allFr_allMice, inh_allFr_allMice = poolAllNTr(XallExc_al_allMice, Xinh_al_allMice, trtype, avtrs)
+    
+        exc_allFr = exc_allFr_allMice[im] # alignedFrames x days; each element: pooled neurons and trials
+        inh_allFr = inh_allFr_allMice[im]    
+        time_al = time_al_allMice[im]
+        '''    
+        plotTimecourse(avFRexc_allMice[im], time_al_allMice[im], col='b', lab='exc', linstyl=linstyls[trtype], alph=alphas[trtype]) # avFRexc: alignedFrames x days (each element was averaged across all neurons and trials))
+        plotTimecourse(avFRinh_allMice[im], time_al_allMice[im], col='r', lab='inh', linstyl=linstyls[trtype], alph=alphas[trtype])
+        
+        p = np.full((avFRexc_allMice[im].shape[0]), np.nan)
+        for fr in range(avFRexc_allMice[im].shape[0]):
+            _,p[fr] = stats.ttest_ind(avFRexc_allMice[im][fr,:], avFRinh_allMice[im][fr,:], nan_policy='omit')    
+        
+        yl = plt.gca().get_ylim()
+        pp = p
+        pp[p>.05] = np.nan
+        pp[p<=.05] = yl[1]
+        plt.plot(time_al_allMice[im], pp, marker='*',color='r', markeredgecolor='r', linestyle='', markersize=3)
+        
+    plt.ylabel('FR (a.u.)')        
+    plt.xlabel('Time relative to choice onset')
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
+    makeNicePlots(plt.gca(),1,0)        
+    
+    #% Save the figure           
+    if savefigs:
+        if chAl:
+            cha = 'chAl_'
+            
+        d = os.path.join(svmdir+dnow)        
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+        
+        fign = os.path.join(d, suffn[0:5]+cha+'FR_timeCourse_aveDays_allTrsNeursPooled'+dp+dpmAllm[im]+'.'+fmt[0])
+        plt.savefig(fign, bbox_inches='tight') 
+        
+        
+#%% Plot time course for each day ... do it for each mouse (only good days)
 
 for im in range(len(mice)):
     mousename = mice[im]
-    execfile("svm_plots_setVars_n.py")      
     dnow = os.path.join(dnow0, mousename)        
+    execfile("svm_plots_setVars_n.py")          
     daysGood = np.array(days)[mn_corr_allMice[im]>=thTrained]
+    print 'Number of good days: ', len(daysGood)
 
     # only good days
     nDays = len(daysGood) #np.shape(exc_allFr_allMice[im][0])[0] # len(days)
@@ -756,7 +787,7 @@ for im in range(len(mice)):
         plt.savefig(fign, bbox_inches='tight') 
     
     
-#%% Plot ave+/-se vs. days, each time bin separately
+#%% Plot ave+/-se FRs for each day (x axis: days); do it for each time bin separately
 
 colors = ['b','r']; lab1='exc'; lab2='inh'; lab='FR (a.u.)'
 time2an = -1
@@ -764,7 +795,7 @@ time2an = -1
 for im in range(len(mice)):
 
     mousename = mice[im]
-    execfile("svm_plots_setVars_n.py")      
+#    execfile("svm_plots_setVars_n.py")      
     dnow = os.path.join(dnow0, mousename)       
 
     exc_allFr = exc_allFr_allMice[im] # alignedFrames x nGoodDays; each element: pooled neurons and trials
@@ -814,6 +845,304 @@ for im in range(len(mice)):
         
         fign = os.path.join(d, suffn[0:5]+cha+'FR_allFrs_eachDay_allTrsNeursPooled'+dp+dpmAllm[im]+'.'+fmt[0])
         plt.savefig(fign, bbox_inches='tight')        
+
+
+#######################################################################################################################################               
+#######################################################################################################################################                
+#%% Summary plots of all mice    
+#######################################################################################################################################        
+#######################################################################################################################################        
+             
+#%% Plot time course of FRs: take average across days for each mouse; then plot ave+/-se across mice
+
+def avMice(avFRexc_allMice_al):
+    # average across days for each mouse
+    avD_exc = np.array([np.mean(avFRexc_allMice_al[im],axis=1) for im in range(len(mice))]) # nMice x alignedFrames (across mice)
+    # average and se across mice
+    av_exc = np.mean(avD_exc,axis=0)
+    se_exc = np.std(avD_exc,axis=0)/np.sqrt(avD_exc.shape[1]) 
+    
+    return avD_exc, av_exc, se_exc
+
+
+#####################
+def pltSumMiceAvMice(avFRexc_allMice_al, avFRinh_allMice_al, lab1, lab2, alph=1, dpp='_allTrs'):
+    avD_exc, av_exc, se_exc = avMice(avFRexc_allMice_al)
+    avD_inh, av_inh, se_inh = avMice(avFRinh_allMice_al)
+    
+    _,p = stats.ttest_ind(avD_exc, avD_inh, nan_policy='omit')    
+    
+#    plt.figure(figsize=(3,2))   
+    
+    plt.errorbar(time_al_final, av_exc, se_exc, color='b', label=lab1, alpha=alph)
+    plt.errorbar(time_al_final, av_inh, se_inh, color='r', label=lab2, alpha=alph)
+    
+    yl = plt.gca().get_ylim()
+    pp = p
+    pp[p>.05] = np.nan
+    pp[p<=.05] = yl[1]
+    plt.plot(time_al_final, pp, marker='*',color='r', markeredgecolor='r', linestyle='', markersize=3)
+    
+    plt.ylabel('FR (a.u.)')        
+    plt.xlabel('Time relative to choice onset')
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
+    makeNicePlots(plt.gca(),1,0)        
+    
+    #% Save the figure           
+    if savefigs:
+        if chAl:
+            cha = 'chAl_'
+            
+        d = os.path.join(svmdir+dnow0)        
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+        
+        fign = os.path.join(d, suffn[0:5]+cha+'FR_timeCourse_aveMice_aveDays_allTrsNeursPooled'+dpp+dp+dpm0+'.'+fmt[0])
+        plt.savefig(fign, bbox_inches='tight') 
+
+       
+#%% Plot time course of FRs: Pool all days of all mice, then make an average
+              
+def pltSumMiceAvAllDays(avFRexc_allMice_al, avFRinh_allMice_al, lab1, lab2, alph=1, dpp='_allTrs'):              
+    av_allD_exc = np.hstack(avFRexc_allMice_al) # nAlignedFrames (across mice) x nAlldays(all mice)
+    av_allD_inh = np.hstack(avFRinh_allMice_al)
+    
+    _,p = stats.ttest_ind(av_allD_exc.T, av_allD_inh.T, nan_policy='omit')    
+        
+    # average across pooled days    
+    ave = np.mean(av_allD_exc, axis=1)
+    see = np.std(av_allD_exc, axis=1)/np.sqrt(av_allD_exc.shape[1])
+    avi = np.mean(av_allD_inh, axis=1)
+    sei = np.std(av_allD_inh, axis=1)/np.sqrt(av_allD_inh.shape[1])    
+        
+#    plt.figure(figsize=(3,2))   
+    
+    plt.errorbar(time_al_final, ave, see, color='b', label=lab1, alpha=alph)
+    plt.errorbar(time_al_final, avi, sei, color='r', label=lab2, alpha=alph)
+    
+    
+    yl = plt.gca().get_ylim()
+    pp = p
+    pp[p>.05] = np.nan
+    pp[p<=.05] = yl[1]
+    plt.plot(time_al_final, pp, marker='*',color='r', markeredgecolor='r', linestyle='', markersize=3)
+    
+    plt.ylabel('FR (a.u.)')        
+    plt.xlabel('Time relative to choice onset')
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
+    makeNicePlots(plt.gca(),1,0)        
+    
+    #% Save the figure           
+    if savefigs:
+        if chAl:
+            cha = 'chAl_'
+            
+        d = os.path.join(svmdir+dnow0)        
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+        
+        fign = os.path.join(d, suffn[0:5]+cha+'FR_timeCourse_aveMiceDaysPooled_allTrsNeursPooled'+dpp+dp+dpm0+'.'+fmt[0])
+        plt.savefig(fign, bbox_inches='tight') 
+    
+
+
+#%% Plot time course of FRs; summary of mice
+
+# Take average across days for each mouse; then plot ave+/-se across mice
+plt.figure(figsize=(3,2))
+pltSumMiceAvMice(avFRexc_allMice_al, avFRinh_allMice_al, lab1, lab2, alph=1, dpp='_allTrs')
+
+# Pool all days of all mice, then make an average
+plt.figure(figsize=(3,2)) 
+pltSumMiceAvAllDays(avFRexc_allMice_al, avFRinh_allMice_al, lab1, lab2, alph=1, dpp='_allTrs')
+
+
+    
+#%% Plot FR of exc and inh at time -1 for each mouse
+
+def avEachMouse(avFRexc_allMice_al, fr):
+    # take Neuron&Trial-averaged FRs for each day at time point -1 (avFRexc_allMice_al: FRs are averaged across all neurons and trials)
+    timeM1_exc = np.array([avFRexc_allMice_al[im][fr] for im in range(len(mice))]) # nMice; each mouse: nGoodDays
+    # compute ave and se across days for each mouse        
+    ave_e = np.array([np.mean(timeM1_exc[im]) for im in range(len(mice))])
+    se_e = np.array([np.std(timeM1_exc[im])/np.sqrt(len(timeM1_exc[im])) for im in range(len(mice))])
+    
+    return ave_e, se_e, timeM1_exc
+     
+
+#%% Plot FR of exc and inh at time -1 for each mouse
+
+fr = nPreMin_final-1     
+
+ave_e, se_e, timeM1_exc = avEachMouse(avFRexc_allMice_al, fr)     
+ave_i, se_i, timeM1_inh = avEachMouse(avFRinh_allMice_al, fr)     
+
+
+plt.figure(figsize=(2,3))
+
+plt.errorbar(range(len(mice)), ave_e, se_e, color='b', fmt='o')
+plt.errorbar(range(len(mice)), ave_i, se_i, color='r', fmt='o')
+
+plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)#, frameon=False) 
+plt.xlabel('Mice', fontsize=11)
+plt.ylabel('FR (a.u.)', fontsize=11)
+plt.xlim([-.2,len(mice)-1+.2])
+plt.xticks(range(len(mice)),mice)
+ax = plt.gca()
+makeNicePlots(ax)
+     
+#% Save the figure           
+if savefigs:
+    if chAl:
+        cha = 'chAl_'
+        
+    d = os.path.join(svmdir+dnow0)        
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+    
+    fign = os.path.join(d, suffn[0:5]+cha+'FR_time-1_eachMouse_aveDays_allTrsNeursPooled'+dp+dpm0+'.'+fmt[0])
+    plt.savefig(fign, bbox_inches='tight') 
+     
+
+
+#%% Set vars to plot hist of FRs in frame -1, all neurons of all trials of all days and all mice pooled
+
+fr = nPreMin_final-1     
+                
+#exc_allFr_allMice_al[im][fr,:][iday] # Fr of all neurons in time -1 in all trials of day iday
+#a = np.concatenate((exc_allFr_allMice_al[im][fr,:]))  # Fr of all neurons in time -1 in all trials of all days
+
+a0 = np.array([np.concatenate((exc_allFr_allMice_al[im][fr,:])) for im in range(len(mice))]) #nMice; each mouse: FR of all neurons in time -1 in all trials of all days
+b0 = np.array([np.concatenate((inh_allFr_allMice_al[im][fr,:])) for im in range(len(mice))]) #nMice; each mouse: FR of all neurons in time -1 in all trials of all days
+
+# pool all mice
+a = np.concatenate((a0)) # pool all mice (allNeurons, allTrs, allDays)
+b = np.concatenate((b0)) # pool all mice (allNeurons, allTrs, allDays)
+
+
+#%% Plot hist of FRs in frame -1, all neurons of all days and all mice pooled
+
+def plthistfr(a,b,dnow0,dpm0):
+    
+    mx = np.max(np.concatenate((a,b))) 
+    mn = np.min(np.concatenate((a,b)))
+    r = mx - mn
+    binEvery = r/float(30)    
+    
+    plt.figure(figsize=(7,4))    #5,3
+    gs = gridspec.GridSpec(2, 4)#, width_ratios=[2, 1]) 
+    h1 = gs[0,0:2]
+    h2 = gs[0,2:3]
+    yl0 = 'Fraction'
+    plotcumsum = 0
+    
+    ax1, ax2 = histerrbar(h1,h2,a,b,binEvery,p,lab='FR (a.u.)',colors = ['b','r'], ylab=yl0, lab1='exc',lab2='inh', plotCumsum=plotcumsum)        
+    ax1.set_title('%d exc; %d inh' %(len(a),len(b)))
+    #ax1.set_xlim([-.0005,.015])            
+    plt.subplots_adjust(wspace=1.5)
+    makeNicePlots(ax1,1,0)
+    
+    #% Save the figure           
+    if savefigs:
+        if chAl:
+            cha = 'chAl_'
+            
+        d = os.path.join(svmdir+dnow0)        
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+        
+        fign = os.path.join(d, suffn[0:5]+cha+'FR_time-1_dist_allNsTrsDaysPooled'+dp+dpm0+'.'+fmt[0]) # FR_time-1_dist_allNsTrsDaysMicePooled
+        print fign
+        plt.savefig(fign, bbox_inches='tight') 
+    
+    
+
+#%% Plot hist of all mice pooled
+
+_, p = stats.ttest_ind(a, b, nan_policy='omit')    
+
+plthistfr(a,b,dnow0,dpm0)
+
+    
+#%% Plot hist for each mouse
+
+for im in range(len(mice)):
+    a = a0[im]
+    b = b0[im]
+    
+    _, p = stats.ttest_ind(a, b, nan_policy='omit')    
+    
+    mousename = mice[im]
+    dnow = os.path.join(dnow0, mousename)       
+    
+    plthistfr(a,b,dnow,dpmAllm[im])
+    
+    
+
+####################################################################################
+#%% Plot ave FR for HR and LR trials separately
+
+def plothrlrtc():
+    
+    trlab = '_HR','_LR'
+    alphas = [1,.8,.4]
+
+    for trtypeFinal in [1,2]: # trial types to plot: all, HR, LR
+        
+        lab1 = 'exc'+trlab[trtypeFinal-1] 
+        lab2 = 'inh'+trlab[trtypeFinal-1]
+        
+        #%% pool traces for all neurons and all trials for each day, each frame (each mouse)
+        
+        exc_allFr_allMice, inh_allFr_allMice = poolAllNTr(XallExc_al_allMice, Xinh_al_allMice, trtypeFinal)
+        
+        
+        #%% For each frame average FR across all neurons and trials; 
+        
+        avFRexc_allMice = []
+        avFRinh_allMice = []
+        for im in range(len(mice)):
+        
+            exc_allFr = exc_allFr_allMice[im] # alignedFrames x nGoodDays; each element: pooled neurons and trials
+            inh_allFr = inh_allFr_allMice[im]    
+#            time_al = time_al_allMice[im]
+                
+            avFRexc_allMice.append(aveNsTrs(exc_allFr)) # avFRexc: alignedFrames x days (each element was averaged across all neurons and trials))
+            avFRinh_allMice.append(aveNsTrs(inh_allFr))    
+        #    p = np.full((avFRexc.shape[0]), np.nan)
+        #    for fr in range(avFRexc.shape[0]):
+        #        _,p[fr] = stats.ttest_ind(avFRexc[fr], avFRinh[fr], nan_policy='omit')    
+            
+        avFRexc_allMice = np.array(avFRexc_allMice)  # nMice; each element: # alignedFrames x nGoodDays  
+        avFRinh_allMice = np.array(avFRinh_allMice)    
+        
+        
+        #%% Align traces among mice
+        
+        time_al_final, nPreMin_final, nPostMin_final = set_nprepost(avFRexc_allMice, eventI_ds_allMice)
+        
+        # input: avFRexc_allMice: nMice; each mouse: alignedFrames (across days for that mouse) x nGoodDays
+        # output: avFRexc_allMice_al nMice; each mouse: alignedFrames (across mice) x nGoodDays
+        avFRexc_allMice_al = alTrace(avFRexc_allMice, eventI_ds_allMice, nPreMin_final, nPostMin_final)
+        avFRinh_allMice_al = alTrace(avFRinh_allMice, eventI_ds_allMice, nPreMin_final, nPostMin_final)
+        
+    #    if noZmotionDays_allMPlots: # remove the last 3 days of fni18 (ie keep only the 1st 4 days)    
+    #        im = mice.index('fni18')
+    #        avFRexc_allMice_al[im] = avFRexc_allMice_al[im][:, days2keep]
+    #        avFRinh_allMice_al[im] = avFRinh_allMice_al[im][:, days2keep]
+        
+        
+        #%%
+    #    pltSumMiceAvMice(avFRexc_allMice_al, avFRinh_allMice_al, alph=alphas[trtypeFinal])    
+        pltSumMiceAvAllDays(avFRexc_allMice_al, avFRinh_allMice_al, lab1, lab2, alph=alphas[trtypeFinal], dpp='_HrLr')
+
+
+plt.figure(figsize=(3,2))     
+plothrlrtc()
 
     
 #%% Plot histograms of exc,inh FRs
@@ -885,278 +1214,4 @@ for im in range(len(mice)):
     plt.subplots_adjust(wspace=2, hspace=1)        
 '''                
  
-#######################################################################################################################################               
-#######################################################################################################################################                
-#%% Summary plots of all mice    
-#######################################################################################################################################        
-#######################################################################################################################################        
-             
-#%% Plot time course of FRs: take average across days for each mouse; then plot ave+/-se across mice
-
-def avMice(avFRexc_allMice_al):
-    # average across days for each mouse
-    avD_exc = np.array([np.mean(avFRexc_allMice_al[im],axis=1) for im in range(len(mice))]) # nMice x alignedFrames (across mice)
-    # average and se across mice
-    av_exc = np.mean(avD_exc,axis=0)
-    se_exc = np.std(avD_exc,axis=0)/np.sqrt(avD_exc.shape[1]) 
-    
-    return avD_exc, av_exc, se_exc
-
-
-#####################
-def pltSumMiceAvMice(avFRexc_allMice_al, avFRinh_allMice_al, alph=1):
-    avD_exc, av_exc, se_exc = avMice(avFRexc_allMice_al)
-    avD_inh, av_inh, se_inh = avMice(avFRinh_allMice_al)
-    
-    _,p = stats.ttest_ind(avD_exc, avD_inh, nan_policy='omit')    
-    
-#    plt.figure(figsize=(3,2))   
-    
-    plt.errorbar(time_al_final, av_exc, se_exc, color='b', label='exc', alpha=alph)
-    plt.errorbar(time_al_final, av_inh, se_inh, color='r', label='inh', alpha=alph)
-    
-    yl = plt.gca().get_ylim()
-    pp = p
-    pp[p>.05] = np.nan
-    pp[p<=.05] = yl[1]
-    plt.plot(time_al_final, pp, marker='*',color='r', markeredgecolor='r', linestyle='', markersize=3)
-    
-    plt.ylabel('FR (a.u.)')        
-    plt.xlabel('Time relative to choice onset')
-    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
-    makeNicePlots(plt.gca(),1,0)        
-    
-    #% Save the figure           
-    if savefigs:
-        if chAl:
-            cha = 'chAl_'
-            
-        d = os.path.join(svmdir+dnow0)        
-        if not os.path.exists(d):
-            print 'creating folder'
-            os.makedirs(d)
-        
-        fign = os.path.join(d, suffn[0:5]+cha+'FR_timeCourse_aveMice_aveDays_allTrsNeursPooled'+dp+dpm0+'.'+fmt[0])
-        plt.savefig(fign, bbox_inches='tight') 
-
-       
-#%% Plot time course of FRs: Pool all days of all mice, then make an average
-              
-def pltSumMiceAvAllDays(avFRexc_allMice_al, avFRinh_allMice_al, alph=1):              
-    av_allD_exc = np.hstack(avFRexc_allMice_al) # nAlignedFrames (across mice) x nAlldays(all mice)
-    av_allD_inh = np.hstack(avFRinh_allMice_al)
-    
-    _,p = stats.ttest_ind(av_allD_exc.T, av_allD_inh.T, nan_policy='omit')    
-        
-    # average across pooled days    
-    ave = np.mean(av_allD_exc, axis=1)
-    see = np.std(av_allD_exc, axis=1)/np.sqrt(av_allD_exc.shape[1])
-    avi = np.mean(av_allD_inh, axis=1)
-    sei = np.std(av_allD_inh, axis=1)/np.sqrt(av_allD_inh.shape[1])    
-        
-#    plt.figure(figsize=(3,2))   
-    
-    plt.errorbar(time_al_final, ave, see, color='b', label='exc', alpha=alph)
-    plt.errorbar(time_al_final, avi, sei, color='r', label='inh', alpha=alph)
-    
-    
-    yl = plt.gca().get_ylim()
-    pp = p
-    pp[p>.05] = np.nan
-    pp[p<=.05] = yl[1]
-    plt.plot(time_al_final, pp, marker='*',color='r', markeredgecolor='r', linestyle='', markersize=3)
-    
-    plt.ylabel('FR (a.u.)')        
-    plt.xlabel('Time relative to choice onset')
-    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
-    makeNicePlots(plt.gca(),1,0)        
-    
-    #% Save the figure           
-    if savefigs:
-        if chAl:
-            cha = 'chAl_'
-            
-        d = os.path.join(svmdir+dnow0)        
-        if not os.path.exists(d):
-            print 'creating folder'
-            os.makedirs(d)
-        
-        fign = os.path.join(d, suffn[0:5]+cha+'FR_timeCourse_aveMiceDaysPooled_allTrsNeursPooled'+dp+dpm0+'.'+fmt[0])
-        plt.savefig(fign, bbox_inches='tight') 
-    
-
-
-#%% Plot time course of FRs
-
-plt.figure(figsize=(2,3))
-pltSumMiceAvMice(avFRexc_allMice_al, avFRinh_allMice_al)
-
-plt.figure(figsize=(2,3)) 
-pltSumMiceAvAllDays(avFRexc_allMice_al, avFRinh_allMice_al)
-
-
-    
-#%% Plot FR of exc and inh at time -1 for each mouse
-
-def avEachMouse(avFRexc_allMice_al, fr):
-    # take Neuron&Trial-averaged FRs for each day at time point -1 (avFRexc_allMice_al: FRs are averaged across all neurons and trials)
-    timeM1_exc = np.array([avFRexc_allMice_al[im][fr] for im in range(len(mice))]) # nMice; each mouse: nGoodDays
-    # compute ave and se across days for each mouse        
-    ave_e = np.array([np.mean(timeM1_exc[im]) for im in range(len(mice))])
-    se_e = np.array([np.std(timeM1_exc[im])/np.sqrt(len(timeM1_exc[im])) for im in range(len(mice))])
-    
-    return ave_e, se_e, timeM1_exc
-     
-
-#### Plot FR of exc and inh at time -1 for each mouse
-fr = nPreMin_final-1     
-ave_e, se_e, timeM1_exc = avEachMouse(avFRexc_allMice_al, fr)     
-ave_i, se_i, timeM1_inh = avEachMouse(avFRinh_allMice_al, fr)     
-
-
-plt.figure(figsize=(2,3))
-plt.errorbar(range(len(mice)), ave_e, se_e, color='b', fmt='o')
-plt.errorbar(range(len(mice)), ave_i, se_i, color='r', fmt='o')
-
-plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)#, frameon=False) 
-plt.xlabel('Mice', fontsize=11)
-plt.ylabel('FR (a.u.)', fontsize=11)
-plt.xlim([-.2,len(mice)-1+.2])
-plt.xticks(range(len(mice)),mice)
-ax = plt.gca()
-makeNicePlots(ax)
-     
-#% Save the figure           
-if savefigs:
-    if chAl:
-        cha = 'chAl_'
-        
-    d = os.path.join(svmdir+dnow0)        
-    if not os.path.exists(d):
-        print 'creating folder'
-        os.makedirs(d)
-    
-    fign = os.path.join(d, suffn[0:5]+cha+'FR_time-1_eachMouse_aveDays_allTrsNeursPooled'+dp+dpm0+'.'+fmt[0])
-    plt.savefig(fign, bbox_inches='tight') 
-     
-
-
-#%% Set vars to plot hist of FRs in frame -1, all neurons of all trials of all days and all mice pooled
-
-fr = nPreMin_final-1     
-                
-#exc_allFr_allMice_al[im][fr,:][iday] # Fr of all neurons in time -1 in all trials of day iday
-#a = np.concatenate((exc_allFr_allMice_al[im][fr,:]))  # Fr of all neurons in time -1 in all trials of all days
-
-a0 = np.array([np.concatenate((exc_allFr_allMice_al[im][fr,:])) for im in range(len(mice))]) #nMice; each mouse: FR of all neurons in time -1 in all trials of all days
-a = np.concatenate((a0)) # pool all mice (allNeurons, allTrs, allDays)
-
-b0 = np.array([np.concatenate((inh_allFr_allMice_al[im][fr,:])) for im in range(len(mice))]) #nMice; each mouse: FR of all neurons in time -1 in all trials of all days
-b = np.concatenate((b0)) # pool all mice (allNeurons, allTrs, allDays)
-
-mx = np.max(np.concatenate((a,b))) 
-mn = np.min(np.concatenate((a,b)))
-r = mx - mn
-binEvery = r/float(100)
-
-_, p = stats.ttest_ind(a, b, nan_policy='omit')    
-
-#s = 0     
-#for iday in range((exc_allFr_allMice_al[im]).shape[1]): 
-#    s=s+exc_allFr_allMice_al[im][fr,:][iday].shape[0]
-
-#%% Plot hist of FRs in frame -1, all neurons of all days and all mice pooled
-
-plt.figure(figsize=(5,3))    
-gs = gridspec.GridSpec(2, 4)#, width_ratios=[2, 1]) 
-h1 = gs[0,0:2]
-h2 = gs[0,2:3]
-yl0 = 'Fraction'
-
-ax1, ax2 = histerrbar(h1,h2,a,b,binEvery,p,lab='FR (a.u.)',colors = ['b','r'], ylab=yl0, lab1='exc',lab2='inh', plotCumsum=1)        
-ax1.set_title('%d exc; %d inh' %(len(a),len(b)))
-            
- 
-#% Save the figure           
-if savefigs:
-    if chAl:
-        cha = 'chAl_'
-        
-    d = os.path.join(svmdir+dnow0)        
-    if not os.path.exists(d):
-        print 'creating folder'
-        os.makedirs(d)
-    
-    fign = os.path.join(d, suffn[0:5]+cha+'FR_time-1_dist_allNsTrsDaysMicePooled'+dp+dpm0+'.'+fmt[0])
-    plt.savefig(fign, bbox_inches='tight') 
-    
-    
- 
-#%%
-'''
-if lowhrlr[iday] != 1: # exclude days with very low trials        
-    eventI_ds = eventI_ds_allDays_allMice[im][iday]        
-    fr = eventI_ds-1
-    
-    XallExc = XallExc_allDays_allMice[im][iday]
-    Xinh = Xinh_allDays_allMice[im][iday]
-    # pool all neurons and trials
-    a0 = XallExc[fr,:,:].flatten()
-    b0 = Xinh[fr,:,:].flatten()        
-    
-    a.append(a0)
-    b.append(b0)
-'''
-
-
-#%% Plot ave FR for HR and LR trials separately
-
-plt.figure(figsize=(2,3))     
-
-for trtypeFinal in [1,2]: # trial types to plot: all, HR, LR
-
-    #%% pool traces for all neurons and all trials for each day, each frame (each mouse)
-    
-    exc_allFr_allMice, inh_allFr_allMice = poolAllNTr(XallExc_al_allMice, Xinh_al_allMice, trtypeFinal)
-    
-    
-    #%% For each frame average FR across all neurons and trials; 
-    
-    avFRexc_allMice = []
-    avFRinh_allMice = []
-    for im in range(len(mice)):
-    
-        exc_allFr = exc_allFr_allMice[im] # alignedFrames x nGoodDays; each element: pooled neurons and trials
-        inh_allFr = inh_allFr_allMice[im]    
-        time_al = time_al_allMice[im]
-            
-        avFRexc_allMice.append(aveNsTrs_plotTimecourse(exc_allFr)) # avFRexc: alignedFrames x days (each element was averaged across all neurons and trials))
-        avFRinh_allMice.append(aveNsTrs_plotTimecourse(inh_allFr))    
-    #    p = np.full((avFRexc.shape[0]), np.nan)
-    #    for fr in range(avFRexc.shape[0]):
-    #        _,p[fr] = stats.ttest_ind(avFRexc[fr], avFRinh[fr], nan_policy='omit')    
-        
-    avFRexc_allMice = np.array(avFRexc_allMice)  # nMice; each element: # alignedFrames x nGoodDays  
-    avFRinh_allMice = np.array(avFRinh_allMice)    
-    
-    
-    #%% Align traces among mice
-    
-    time_al_final, nPreMin_final, nPostMin_final = set_nprepost(avFRexc_allMice, eventI_ds_allMice)
-    
-    # input: avFRexc_allMice: nMice; each mouse: alignedFrames (across days for that mouse) x nGoodDays
-    # output: avFRexc_allMice_al nMice; each mouse: alignedFrames (across mice) x nGoodDays
-    avFRexc_allMice_al = alTrace(avFRexc_allMice, eventI_ds_allMice, nPreMin_final, nPostMin_final)
-    avFRinh_allMice_al = alTrace(avFRinh_allMice, eventI_ds_allMice, nPreMin_final, nPostMin_final)
-    
-    if noZmotionDays_allMPlots: # remove the last 3 days of fni18 (ie keep only the 1st 4 days)    
-        im = mice.index('fni18')
-        avFRexc_allMice_al[im] = avFRexc_allMice_al[im][:, days2keep]
-        avFRinh_allMice_al[im] = avFRinh_allMice_al[im][:, days2keep]
-    
-    
-    #%%
-#    pltSumMiceAvMice(avFRexc_allMice_al, avFRinh_allMice_al, alph=alphas[trtypeFinal])
-
-    pltSumMiceAvAllDays(avFRexc_allMice_al, avFRinh_allMice_al, alph=alphas[trtypeFinal])
     

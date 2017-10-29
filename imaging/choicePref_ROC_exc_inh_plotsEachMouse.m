@@ -20,8 +20,10 @@ for im = 1:length(mice)
     % not the ones aligned across all mice).
     choicePref_exc_aligned = choicePref_exc_aligned_allMice{im}; % days; each day: frs x ns
     choicePref_inh_aligned = choicePref_inh_aligned_allMice{im};
-    choicePref_exc_aligned_shfl = choicePref_exc_aligned_allMice_shfl{im}; % days; each day: frs x ns
-    choicePref_inh_aligned_shfl = choicePref_inh_aligned_allMice_shfl{im};
+    if doshfl
+        choicePref_exc_aligned_shfl = choicePref_exc_aligned_allMice_shfl{im}; % days; each day: frs x ns
+        choicePref_inh_aligned_shfl = choicePref_inh_aligned_allMice_shfl{im};
+    end
     time_aligned = time_aligned_allMice{im};
     nowStr = nowStr_allMice{im};
     mnTrNum = mnTrNum_allMice{im};
@@ -42,17 +44,17 @@ for im = 1:length(mice)
     seinh = cellfun(@(x)std(x,[],2)/sqrt(size(x,2)), choicePref_inh_aligned, 'uniformoutput',0);
     seinh = cell2mat(seinh); % frs x days        
 
-    % shfl
-    aveexc_shfl = cellfun(@(x)mean(x,2), choicePref_exc_aligned_shfl, 'uniformoutput',0); % average across neurons (already averaged across samps)
-    aveexc_shfl = cell2mat(aveexc_shfl); % frs x days
-    seexc_shfl = cellfun(@(x)std(x,[],2)/sqrt(size(x,2)), choicePref_exc_aligned_shfl, 'uniformoutput',0); % standard error across neurons 
-    seexc_shfl = cell2mat(seexc_shfl); % frs x days
+    if doshfl % shfl
+        aveexc_shfl = cellfun(@(x)mean(x,2), choicePref_exc_aligned_shfl, 'uniformoutput',0); % average across neurons (already averaged across samps)
+        aveexc_shfl = cell2mat(aveexc_shfl); % frs x days
+        seexc_shfl = cellfun(@(x)std(x,[],2)/sqrt(size(x,2)), choicePref_exc_aligned_shfl, 'uniformoutput',0); % standard error across neurons 
+        seexc_shfl = cell2mat(seexc_shfl); % frs x days
 
-    aveinh_shfl = cellfun(@(x)mean(x,2), choicePref_inh_aligned_shfl, 'uniformoutput',0);
-    aveinh_shfl = cell2mat(aveinh_shfl);
-    seinh_shfl = cellfun(@(x)std(x,[],2)/sqrt(size(x,2)), choicePref_inh_aligned_shfl, 'uniformoutput',0);
-    seinh_shfl = cell2mat(seinh_shfl); % frs x days x samps        
-
+        aveinh_shfl = cellfun(@(x)mean(x,2), choicePref_inh_aligned_shfl, 'uniformoutput',0);
+        aveinh_shfl = cell2mat(aveinh_shfl);
+        seinh_shfl = cellfun(@(x)std(x,[],2)/sqrt(size(x,2)), choicePref_inh_aligned_shfl, 'uniformoutput',0);
+        seinh_shfl = cell2mat(seinh_shfl); % frs x days x samps        
+    end
 
     % run ttest across days for each frame
     % ttest: is exc (neuron-averaged ROC pooled across days) ROC
@@ -67,11 +69,11 @@ for im = 1:length(mice)
     excall = cell2mat(choicePref_exc_aligned); % nFrs x n_exc_all
     inhall = cell2mat(choicePref_inh_aligned); % nFrs x n_inh_all
     size(excall), size(inhall)
-    % shfl
-    excall_shfl = cell2mat(choicePref_exc_aligned_shfl); % nFrs x n_exc_all x samps
-    inhall_shfl = cell2mat(choicePref_inh_aligned_shfl); % nFrs x n_inh_all x samps        
-    size(excall_shfl), size(inhall_shfl)
-
+    if doshfl % shfl
+        excall_shfl = cell2mat(choicePref_exc_aligned_shfl); % nFrs x n_exc_all x samps
+        inhall_shfl = cell2mat(choicePref_inh_aligned_shfl); % nFrs x n_inh_all x samps        
+        size(excall_shfl), size(inhall_shfl)
+    end
     % ttest: is exc (single neuron ROC pooled across days) ROC
     % different from inh ROC? Do it for each time bin seperately.
     h = ttest2(excall', inhall'); % h: 1 x nFrs
@@ -92,9 +94,10 @@ for im = 1:length(mice)
     subplot(121); hold on
     h1 = boundedline(time_aligned, nanmean(aveexc,2), nanstd(aveexc,0,2)/sqrt(nGoodDays(im)), 'b', 'alpha'); % sum(mnTrNum>=thMinTrs)
     h2 = boundedline(time_aligned, nanmean(aveinh,2), nanstd(aveinh,0,2)/sqrt(nGoodDays(im)), 'r', 'alpha');
-    % shfl
-    h1 = boundedline(time_aligned, nanmean(aveexc_shfl,2), nanstd(aveexc_shfl,0,2)/sqrt(nGoodDays(im)), 'cmap', colss(1,:), 'alpha'); % sum(mnTrNum>=thMinTrs)
-    h2 = boundedline(time_aligned, nanmean(aveinh_shfl,2), nanstd(aveinh_shfl,0,2)/sqrt(nGoodDays(im)), 'cmap', colss(2,:), 'alpha');    
+    if doshfl % shfl
+        h1 = boundedline(time_aligned, nanmean(aveexc_shfl,2), nanstd(aveexc_shfl,0,2)/sqrt(nGoodDays(im)), 'cmap', colss(1,:), 'alpha'); % sum(mnTrNum>=thMinTrs)
+        h2 = boundedline(time_aligned, nanmean(aveinh_shfl,2), nanstd(aveinh_shfl,0,2)/sqrt(nGoodDays(im)), 'cmap', colss(2,:), 'alpha');    
+    end
     a = get(gca, 'ylim');    
     plot(time_aligned, hh0*(a(2)-.05*diff(a)), 'k.')    
     plot([0,0],a,'k:')
@@ -112,9 +115,10 @@ for im = 1:length(mice)
     subplot(122); hold on
     h1 = boundedline(time_aligned, nanmean(excall,2), nanstd(excall,0,2)/sqrt(sum(~isnan(excall(1,:)))), 'b', 'alpha');
     h2 = boundedline(time_aligned, nanmean(inhall,2), nanstd(inhall,0,2)/sqrt(sum(~isnan(inhall(1,:)))), 'r', 'alpha');
-    % shfl
-    h1 = boundedline(time_aligned, nanmean(excall_shfl,2), nanstd(excall_shfl,0,2)/sqrt(sum(~isnan(excall_shfl(1,:)))), 'cmap', colss(1,:), 'alpha');
-    h2 = boundedline(time_aligned, nanmean(inhall_shfl,2), nanstd(inhall_shfl,0,2)/sqrt(sum(~isnan(inhall_shfl(1,:)))), 'cmap', colss(2,:), 'alpha');    
+    if doshfl % shfl
+        h1 = boundedline(time_aligned, nanmean(excall_shfl,2), nanstd(excall_shfl,0,2)/sqrt(sum(~isnan(excall_shfl(1,:)))), 'cmap', colss(1,:), 'alpha');
+        h2 = boundedline(time_aligned, nanmean(inhall_shfl,2), nanstd(inhall_shfl,0,2)/sqrt(sum(~isnan(inhall_shfl(1,:)))), 'cmap', colss(2,:), 'alpha');    
+    end
     a = get(gca, 'ylim');
     plot(time_aligned, hh*(a(2)-.05*diff(a)), 'k.')
     plot([0,0],a,'k:')
@@ -150,10 +154,11 @@ for im = 1:length(mice)
     y1 = aveexc(:);
     y2 = aveinh(:);
     fh = plotHist(y1,y2,xlab,ylab,leg, cols, yy,fh);
-    % shfl
-    y1 = aveexc_shfl(:);
-    y2 = aveinh_shfl(:);        
-    fh = plotHist(y1,y2,xlab,ylab,leg, colss, yy,fh);
+    if doshfl % shfl
+        y1 = aveexc_shfl(:);
+        y2 = aveinh_shfl(:);        
+        fh = plotHist(y1,y2,xlab,ylab,leg, colss, yy,fh);
+    end
 
     if savefigs
         savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_aveNeurs_frsDaysPooled_', nowStr,'.fig']))
@@ -182,11 +187,11 @@ for im = 1:length(mice)
     y1 = excall(:);
     y2 = inhall(:);
     fh = plotHist(y1,y2,xlab,ylab,leg, cols, yy,fh);
-    % shfl
-    y1 = excall_shfl(:);
-    y2 = inhall_shfl(:);
-    fh = plotHist(y1,y2,xlab,ylab,leg, colss, yy,fh);
-
+    if doshfl % shfl
+        y1 = excall_shfl(:);
+        y2 = inhall_shfl(:);
+        fh = plotHist(y1,y2,xlab,ylab,leg, colss, yy,fh);
+    end
 
     if savefigs        
         savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_frsDaysNeursPooled_', nowStr,'.fig']))
@@ -210,10 +215,11 @@ for im = 1:length(mice)
         y1 = excall(ifr,:);
         y2 = inhall(ifr,:);        
         plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, ha(ifr), yy)
-        % shfl
-        y1 = excall_shfl(ifr,:);
-        y2 = inhall_shfl(ifr,:);        
-        plotHist_sp(y1,y2,xlab,ylab,leg, colss, tit, fign, ha(ifr), yy)
+        if doshfl % shfl
+            y1 = excall_shfl(ifr,:);
+            y2 = inhall_shfl(ifr,:);        
+            plotHist_sp(y1,y2,xlab,ylab,leg, colss, tit, fign, ha(ifr), yy)
+        end
         
         if ifr==1
             xlabel(ha(ifr), xlab)
@@ -255,10 +261,11 @@ for im = 1:length(mice)
 %             subplot(ceil(size(aveexc,2)/10), 10, iday)                                    
             [h1] = boundedline(ha(iday), time_aligned, aveexc(:,iday)', seexc(:,iday)', 'b', 'alpha', 'nan', 'remove');
             [h2] = boundedline(ha(iday), time_aligned, aveinh(:,iday)', seinh(:,iday)', 'r', 'alpha', 'nan', 'remove');
-            % shfl
-            [h1] = boundedline(ha(iday), time_aligned, aveexc_shfl(:,iday)', seexc_shfl(:,iday)', 'cmap', colss(1,:), 'alpha', 'nan', 'remove');
-            [h2] = boundedline(ha(iday), time_aligned, aveinh_shfl(:,iday)', seinh_shfl(:,iday)', 'cmap', colss(2,:), 'alpha', 'nan', 'remove');            
-
+            if doshfl  % shfl
+                [h1] = boundedline(ha(iday), time_aligned, aveexc_shfl(:,iday)', seexc_shfl(:,iday)', 'cmap', colss(1,:), 'alpha', 'nan', 'remove');
+                [h2] = boundedline(ha(iday), time_aligned, aveinh_shfl(:,iday)', seinh_shfl(:,iday)', 'cmap', colss(2,:), 'alpha', 'nan', 'remove');            
+            end
+            
             hold(ha(iday),'on')
             yl = get(ha(iday),'ylim');
             plot(ha(iday), [0, 0], [yl(1), yl(2)], 'k:')
@@ -288,7 +295,7 @@ for im = 1:length(mice)
     co = jet(size(aveexc,2));
     set(groot,'defaultAxesColorOrder',co)
 
-    fh=figure('position', [424   253   534   687]);
+    fh = figure('position', [424   253   534   687]);
     
     subplot(221)
     plot(time_aligned, aveexc);     hold on
@@ -316,29 +323,30 @@ for im = 1:length(mice)
 %     imagesc(aveexc)
 
 
-    %%%%% shfl
-    subplot(222)
-    plot(time_aligned, aveexc_shfl);     hold on
-    if ~isempty(yy)
-        plot([time_aligned(1),time_aligned(end)], [yy,yy], 'k:')
-    end
-    yl = get(gca,'ylim');
-    plot([0,0], yl, 'k:')
-    ylim(yl)
-    title('exc\_shfl')
-%     legend(days, 'Position', [0.6434 -0.7195 0.3153 1.3991]);
-    xlabel('time')
-    ylabel(namc)
+    if doshfl %%%%% shfl
+        subplot(222)
+        plot(time_aligned, aveexc_shfl);     hold on
+        if ~isempty(yy)
+            plot([time_aligned(1),time_aligned(end)], [yy,yy], 'k:')
+        end
+        yl = get(gca,'ylim');
+        plot([0,0], yl, 'k:')
+        ylim(yl)
+        title('exc\_shfl')
+    %     legend(days, 'Position', [0.6434 -0.7195 0.3153 1.3991]);
+        xlabel('time')
+        ylabel(namc)
 
-    subplot(224)
-    plot(time_aligned, aveinh_shfl);     hold on
-    if ~isempty(yy)
-        plot([time_aligned(1),time_aligned(end)], [yy,yy], 'k:')
+        subplot(224)
+        plot(time_aligned, aveinh_shfl);     hold on
+        if ~isempty(yy)
+            plot([time_aligned(1),time_aligned(end)], [yy,yy], 'k:')
+        end
+        yl = get(gca,'ylim');
+        plot([0,0], yl, 'k:')
+        ylim(yl)    
+        title('inh\_shfl')    
     end
-    yl = get(gca,'ylim');
-    plot([0,0], yl, 'k:')
-    ylim(yl)    
-    title('inh\_shfl')    
     
     
     if savefigs
@@ -364,9 +372,10 @@ for im = 1:length(mice)
         % data
         [h1] = boundedline(ha(fr+1), 1:size(aveexc,2), aveexc(fr,:), seexc(fr,:), 'b', 'alpha', 'nan', 'remove');
         [h2] = boundedline(ha(fr+1), 1:size(aveinh,2), aveinh(fr,:), seinh(fr,:), 'r', 'alpha', 'nan', 'remove');
-        % shfl
-        [h1] = boundedline(ha(fr+1), 1:size(aveexc_shfl,2), aveexc_shfl(fr,:), seexc_shfl(fr,:), 'cmap', colss(1,:), 'alpha', 'nan', 'remove');
-        [h2] = boundedline(ha(fr+1), 1:size(aveinh_shfl,2), aveinh_shfl(fr,:), seinh_shfl(fr,:), 'cmap', colss(2,:), 'alpha', 'nan', 'remove');            
+        if doshfl % shfl
+            [h1] = boundedline(ha(fr+1), 1:size(aveexc_shfl,2), aveexc_shfl(fr,:), seexc_shfl(fr,:), 'cmap', colss(1,:), 'alpha', 'nan', 'remove');
+            [h2] = boundedline(ha(fr+1), 1:size(aveinh_shfl,2), aveinh_shfl(fr,:), seinh_shfl(fr,:), 'cmap', colss(2,:), 'alpha', 'nan', 'remove');            
+        end
         hold(ha(fr+1),'on')
         if ~isempty(yy)
             plot(ha(fr+1), [0,length(days)+1], [yy,yy], 'k:')

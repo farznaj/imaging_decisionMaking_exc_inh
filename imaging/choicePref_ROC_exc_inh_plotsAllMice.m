@@ -20,9 +20,10 @@ nowStr = nowStr_allMice{imfni18}; % use nowStr of mouse fni18 (in case its day 4
 fh = figure; hold on
 h1 = boundedline(time_al, nanmean(exc_avDays_eachMouse,2), nanstd(exc_avDays_eachMouse,[],2)/sqrt(size(exc_avDays_eachMouse,2)), 'b', 'alpha');
 h2 = boundedline(time_al, nanmean(inh_avDays_eachMouse,2), nanstd(inh_avDays_eachMouse,[],2)/sqrt(size(inh_avDays_eachMouse,2)), 'r', 'alpha');
-% shfl
-h11 = boundedline(time_al, nanmean(exc_avDays_eachMouse_shfl,2), nanstd(exc_avDays_eachMouse_shfl,[],2)/sqrt(size(exc_avDays_eachMouse_shfl,2)), 'cmap', colss(1,:), 'alpha');
-h12 = boundedline(time_al, nanmean(inh_avDays_eachMouse_shfl,2), nanstd(inh_avDays_eachMouse_shfl,[],2)/sqrt(size(inh_avDays_eachMouse_shfl,2)), 'cmap', colss(2,:), 'alpha');
+if doshfl % shfl
+    h11 = boundedline(time_al, nanmean(exc_avDays_eachMouse_shfl,2), nanstd(exc_avDays_eachMouse_shfl,[],2)/sqrt(size(exc_avDays_eachMouse_shfl,2)), 'cmap', colss(1,:), 'alpha');
+    h12 = boundedline(time_al, nanmean(inh_avDays_eachMouse_shfl,2), nanstd(inh_avDays_eachMouse_shfl,[],2)/sqrt(size(inh_avDays_eachMouse_shfl,2)), 'cmap', colss(2,:), 'alpha');
+end
 a = get(gca, 'ylim');    
 plot(time_al, hh0_allm*(a(2)-.05*diff(a)), 'k.')    
 plot([0,0],a,'k:')
@@ -50,9 +51,10 @@ end
 fh = figure; hold on
 h1 = boundedline(time_al, nanmean(exc_allDaysPooled_allMice,2), nanstd(exc_allDaysPooled_allMice,[],2)/sqrt(sum(nGoodDays)), 'b', 'alpha');
 h2 = boundedline(time_al, nanmean(inh_allDaysPooled_allMice,2), nanstd(inh_allDaysPooled_allMice,[],2)/sqrt(sum(nGoodDays)), 'r', 'alpha');
-% shfl
-h11 = boundedline(time_al, nanmean(exc_allDaysPooled_allMice_shfl,2), nanstd(exc_allDaysPooled_allMice_shfl,[],2)/sqrt(sum(nGoodDays)), 'cmap', colss(1,:), 'alpha');
-h12 = boundedline(time_al, nanmean(inh_allDaysPooled_allMice_shfl,2), nanstd(inh_allDaysPooled_allMice_shfl,[],2)/sqrt(sum(nGoodDays)), 'cmap', colss(2,:), 'alpha');
+if doshfl % shfl
+    h11 = boundedline(time_al, nanmean(exc_allDaysPooled_allMice_shfl,2), nanstd(exc_allDaysPooled_allMice_shfl,[],2)/sqrt(sum(nGoodDays)), 'cmap', colss(1,:), 'alpha');
+    h12 = boundedline(time_al, nanmean(inh_allDaysPooled_allMice_shfl,2), nanstd(inh_allDaysPooled_allMice_shfl,[],2)/sqrt(sum(nGoodDays)), 'cmap', colss(2,:), 'alpha');
+end
 a = get(gca, 'ylim');    
 plot(time_al, hh_allm*(a(2)-.05*diff(a)), 'k.')    
 plot([0,0],a,'k:')
@@ -96,10 +98,11 @@ for ifr = 1:length(time_al)
     y2 = inh_allNsDaysMicePooled(ifr,:);
     plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, ha(ifr), yy, documsum)
         
-    % sfhl
-    y1 = exc_allNsDaysMicePooled_shfl(ifr,:);
-    y2 = inh_allNsDaysMicePooled_shfl(ifr,:);   
-    plotHist_sp(y1,y2,xlab,ylab,leg, colss, tit, fign, ha(ifr), yy, documsum)
+    if doshfl % sfhl
+        y1 = exc_allNsDaysMicePooled_shfl(ifr,:);
+        y2 = inh_allNsDaysMicePooled_shfl(ifr,:);   
+        plotHist_sp(y1,y2,xlab,ylab,leg, colss, tit, fign, ha(ifr), yy, documsum)
+    end
 
     if ifr==1
         xlabel(ha(ifr), xlab)
@@ -128,11 +131,11 @@ fign = figure; % f = nan(1,1); f(1) = axes();
 y1 = exc_allNsDaysMicePooled(fr,:);
 y2 = inh_allNsDaysMicePooled(fr,:);
 plotHist(y1,y2,xlab,ylab,leg, cols, yy,fign);
-% shfl
-y1s = exc_allNsDaysMicePooled_shfl(fr,:);
-y2s = inh_allNsDaysMicePooled_shfl(fr,:);
-plotHist(y1s,y2s,xlab,ylab,leg, colss, yy,fign);
-
+if doshfl % shfl
+    y1s = exc_allNsDaysMicePooled_shfl(fr,:);
+    y2s = inh_allNsDaysMicePooled_shfl(fr,:);
+    plotHist(y1s,y2s,xlab,ylab,leg, colss, yy,fign);
+end
 
 if savefigs        
     fdn = fullfile(dirn0, strcat(namc,'_','ROC_curr_chAl_excInh_dist_time-1_NsDaysMicePooled_', dm0, nowStr));
@@ -167,7 +170,6 @@ ese = exc_seDays_eachMouse(fr,:);
 iav = inh_avDays_eachMouse(fr,:);
 ise = inh_seDays_eachMouse(fr,:);
 
-
 % ttest for each mouse, exc vs inh across days
 pallm_days = nan(length(time_al), length(mice));
 hallm_days = nan(length(time_al), length(mice));
@@ -181,12 +183,13 @@ hh_days(hallm_days==0) = nan;
 pallm_days(fr,:)
 
 
-% shfl
-eavs = exc_avDays_eachMouse_shfl(fr,:);
-eses = exc_seDays_eachMouse_shfl(fr,:);
+if doshfl  % shfl
+    eavs = exc_avDays_eachMouse_shfl(fr,:);
+    eses = exc_seDays_eachMouse_shfl(fr,:);
 
-iavs = inh_avDays_eachMouse_shfl(fr,:);
-ises = inh_seDays_eachMouse_shfl(fr,:);
+    iavs = inh_avDays_eachMouse_shfl(fr,:);
+    ises = inh_seDays_eachMouse_shfl(fr,:);
+end
 
 
 %%%%%%%%%%%%%%% Plot
@@ -196,10 +199,10 @@ fign = figure('position',[60   593   450   320]);
 subplot(121), hold on;
 errorbar(1:length(mice), eav, ese, 'b', 'linestyle','none', 'marker','o')
 errorbar((1:length(mice))+g, iav, ise ,'r', 'linestyle','none', 'marker','o')
-% shfl
-errorbar(1:length(mice), eavs, eses, 'color', colss(1,:), 'linestyle','none', 'marker','o')
-errorbar((1:length(mice))+g, iavs, ises ,'color', colss(2,:), 'linestyle','none', 'marker','o')
-
+if doshfl % shfl
+    errorbar(1:length(mice), eavs, eses, 'color', colss(1,:), 'linestyle','none', 'marker','o')
+    errorbar((1:length(mice))+g, iavs, ises ,'color', colss(2,:), 'linestyle','none', 'marker','o')
+end
 xlim([.5, length(mice)+.5])
 xlabel('Mice')
 ylabel(namc)
@@ -243,13 +246,13 @@ hh_pooledN(hallm_pooledN==0) = nan;
 pallm_pooledN(fr,:)
 
 
-% shfl
-eavs = cellfun(@(x)nanmean(x(fr,:),2), exc_allNsDaysPooled_eachMouse_shfl);
-eses = cellfun(@(x)nanstd(x(fr,:),[],2), exc_allNsDaysPooled_eachMouse_shfl)/sqrt(exc_nValidNs(im));
+if doshfl  % shfl
+    eavs = cellfun(@(x)nanmean(x(fr,:),2), exc_allNsDaysPooled_eachMouse_shfl);
+    eses = cellfun(@(x)nanstd(x(fr,:),[],2), exc_allNsDaysPooled_eachMouse_shfl)/sqrt(exc_nValidNs(im));
 
-iavs = cellfun(@(x)nanmean(x(fr,:),2), inh_allNsDaysPooled_eachMouse_shfl);
-ises = cellfun(@(x)nanstd(x(fr,:),[],2), inh_allNsDaysPooled_eachMouse_shfl)/sqrt(inh_nValidNs(im));
-
+    iavs = cellfun(@(x)nanmean(x(fr,:),2), inh_allNsDaysPooled_eachMouse_shfl);
+    ises = cellfun(@(x)nanstd(x(fr,:),[],2), inh_allNsDaysPooled_eachMouse_shfl)/sqrt(inh_nValidNs(im));
+end
 
 
 %%%%% Plot
@@ -259,10 +262,10 @@ g = 0;
 subplot(122), hold on;
 errorbar(1:length(mice), eav, ese, 'b', 'linestyle','none', 'marker','o')
 errorbar((1:length(mice))+g, iav, ise ,'r', 'linestyle','none', 'marker','o')
-% shfl
-errorbar(1:length(mice), eavs, eses, 'color', colss(1,:), 'linestyle','none', 'marker','o')
-errorbar((1:length(mice))+g, iavs, ises ,'color', colss(2,:), 'linestyle','none', 'marker','o')
-
+if doshfl  % shfl
+    errorbar(1:length(mice), eavs, eses, 'color', colss(1,:), 'linestyle','none', 'marker','o')
+    errorbar((1:length(mice))+g, iavs, ises ,'color', colss(2,:), 'linestyle','none', 'marker','o')
+end
 xlim([.5, length(mice)+.5])
 xlabel('Mice')
 ylabel(namc)

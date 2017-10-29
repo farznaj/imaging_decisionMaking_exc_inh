@@ -1,5 +1,5 @@
 saveVars = 1; % if 1, vars will be saved.
-doshfl = 1 ; % 1: shuffle trial labels; also do the chance version (ieset half of them to 0, other half to 1); 0: dont do either. If 1, in addition to doing roc on actual traces, we shuffle trial labels to get roc values for shuffled case as well.
+doshfl = 0; % 1: shuffle trial labels; also do the chance version (ieset half of them to 0, other half to 1); 0: dont do either. If 1, in addition to doing roc on actual traces, we shuffle trial labels to get roc values for shuffled case as well.
 
 mice = {'fni16','fni17','fni18','fni19'};
 outcome2ana = 'corr';
@@ -12,6 +12,14 @@ frameLength = 1000/30.9; % sec.
 regressBins = round(100/frameLength); % 100ms # set to nan if you don't want to downsample.
 dirn0 = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/ROC';
 nowStr = datestr(now, 'yymmdd-HHMMSS');
+zScoreX = 0; % % it doesnt make any difference, bc z scoring is a linear operation, so it doesnt change ROC values. %if 1, trace of each neuron (at each frame) will be z scored, ie mean of that neuron across all trials will be subtracted from each trial and then it will be divided by the std of the neuron across all trials. 
+if zScoreX
+    softNorm = 1; % soft normalziation : neurons with sd<thAct wont have too large values after normalization
+    thAct = 5e-4; % it will be used for soft normalization #1e-5 # neurons whose average activity during ep is less than thAct will be called non-active and will be excluded.
+    namz = '_zscoredX';
+else
+    namz = '';
+end
 
 
 %%
@@ -179,6 +187,36 @@ for im = 1:length(mice)
         eventI_ds_allDays(iday) = eventI_ds;
 
 
+        %% Keep a copy of X_svm before normalization
+        
+        if zScoreX
+        
+            X_svm00 = X_svm;
+
+            %% Center and normalize X: feature normalization and scaling: to remove effects related to scaling and bias of each neuron, we need to zscore data (i.e., make data mean 0 and variance 1 for each neuron) 
+
+            % Normalize each frame separately (do soft normalization)
+            X_svm_N = nan(size(X_svm00));
+            meanX_fr = nan(size(X_svm00,1), size(X_svm00,2));
+            stdX_fr = nan(size(X_svm00,1), size(X_svm00,2));
+            for ifr = 1:size(X_svm00,1)
+                m = squeeze(mean(X_svm00(ifr,:,:), 3)); % 1xneurons % average across trials
+                s = squeeze(std(X_svm00(ifr,:,:),[], 3));   
+                meanX_fr(ifr,:) = m; % frs x neurons
+                stdX_fr(ifr,:) = s;       
+
+                if softNorm==1 % soft normalziation : neurons with sd<thAct wont have too large values after normalization
+                    s = s+thAct;     
+                end
+
+                X_svm_N(ifr,:,:) = bsxfun(@rdivide, bsxfun(@minus, squeeze(X_svm00(ifr,:,:))' , m) , s)';
+            end
+
+            X_svm = X_svm_N;
+
+        end
+        
+
         %% Set ipsiTrs and contraTrs % needed for computing choice preference, 2*(auc-0.5), for each neuron at each frame.
 
         % set ipsi and contra trials (using only correct trials)
@@ -282,9 +320,9 @@ for im = 1:length(mice)
 %         if doshfl==-1, cn='_chance'; else cn=''; end
         
         if trialHistAnalysis
-            namv = sprintf('ROC_prev_%s%s_stimstr%d_%s_%s.mat', al,o2a,thStimStrength, mouse, nowStr);
+            namv = sprintf('ROC_prev_%s%s_stimstr%d%s_%s_%s.mat', al,o2a,thStimStrength, namz, mouse, nowStr);
         else
-            namv = sprintf('ROC_curr_%s%s_stimstr%d_%s_%s.mat', al,o2a,thStimStrength, mouse, nowStr);
+            namv = sprintf('ROC_curr_%s%s_stimstr%d%s_%s_%s.mat', al,o2a,thStimStrength, namz, mouse, nowStr);
         end
 
         disp('saving roc vars for exc and inh neurons....')            
