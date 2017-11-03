@@ -24,7 +24,7 @@ def ttest2(a, b, **tailOption):
 #signalCh = 2 # # since gcamp is channel 2, should be 2.
 #pnev2load = [] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
 
-def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options):
+def setImagingAnalysisNamesP(mousename, imagingFolder=[], mdfFileNumber=1, **options):
 
     if options.get('signalCh'):
         signalCh = options.get('signalCh');    
@@ -69,64 +69,77 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     else:
         dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data/'
         
+    
     ##%%        
-    tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
-
-    if not os.path.exists(tifFold):
-        if 'altDataPath' in locals():
-            tifFold = os.path.join(altDataPath+mousename, 'imaging', imagingFolder)
-        else:
-            sys.exit('Data directory does not exist!')
-
+    if type(imagingFolder)==str:    
+        tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
     
-#    print mdfFileNumber, type(mdfFileNumber)
-#    mdfFileNumber = np.array(mdfFileNumber).astype('int')
-#    print mdfFileNumber, type(mdfFileNumber), np.shape(mdfFileNumber)
-#    print np.shape(mdfFileNumber)[0]
-    r = '%03d-'*np.shape(mdfFileNumber)[0] #len(mdfFileNumber)
-    r = r[:-1]
-    rr = r % (tuple(mdfFileNumber))
+        if not os.path.exists(tifFold):
+            if 'altDataPath' in locals():
+                tifFold = os.path.join(altDataPath+mousename, 'imaging', imagingFolder)
+            else:
+                sys.exit('Data directory does not exist!')
     
-    date_major = imagingFolder+'_'+rr
-    imfilename = os.path.join(tifFold,date_major+'.mat')
-    
-    ##%%
-    if signalCh>0:
-        if postNProvided:
-            pnevFileName = 'post_'+date_major+'_ch'+str(signalCh)+'-Pnev*'
-        else:
-            pnevFileName = date_major+'_ch'+str(signalCh)+'-Pnev*'
-            
-        pnevFileName = glob.glob(os.path.join(tifFold,pnevFileName))   
-        # sort pnevFileNames by date (descending)
-        pnevFileName = sorted(pnevFileName, key=os.path.getmtime)
-        pnevFileName = pnevFileName[::-1] # so the latest file is the 1st one.
-        '''
-        array = []
-        for idx in range(0, len(pnevFileName)):
-            array.append(os.path.getmtime(pnevFileName[idx]))
-
-        inds = np.argsort(array)
-        inds = inds[::-1]
-        pnev2load = inds[pnev2load]
-        '''    
-        if len(pnevFileName)==0:
-            c = ("No Pnev file was found"); print("%s\n" % c)
-            pnevFileName = ''
-        else:
-            pnevFileName = pnevFileName[pnev2load[0]]
+        
+    #    print mdfFileNumber, type(mdfFileNumber)
+    #    mdfFileNumber = np.array(mdfFileNumber).astype('int')
+    #    print mdfFileNumber, type(mdfFileNumber), np.shape(mdfFileNumber)
+    #    print np.shape(mdfFileNumber)[0]
+        r = '%03d-'*np.shape(mdfFileNumber)[0] #len(mdfFileNumber)
+        r = r[:-1]
+        rr = r % (tuple(mdfFileNumber))
+        
+        date_major = imagingFolder+'_'+rr
+        imfilename = os.path.join(tifFold,date_major+'.mat')
+        
+        ##%%
+        if signalCh>0:
             if postNProvided:
-                p = os.path.basename(pnevFileName)[5:]
-                pnevFileName = os.path.join(tifFold,p)
-    else:
-        pnevFileName = ''
+                pnevFileName = 'post_'+date_major+'_ch'+str(signalCh)+'-Pnev*'
+            else:
+                pnevFileName = date_major+'_ch'+str(signalCh)+'-Pnev*'
+                
+            pnevFileName = glob.glob(os.path.join(tifFold,pnevFileName))   
+            # sort pnevFileNames by date (descending)
+            pnevFileName = sorted(pnevFileName, key=os.path.getmtime)
+            pnevFileName = pnevFileName[::-1] # so the latest file is the 1st one.
+            '''
+            array = []
+            for idx in range(0, len(pnevFileName)):
+                array.append(os.path.getmtime(pnevFileName[idx]))
     
-    ##%%
-    if nOuts==2:
-        return imfilename, pnevFileName
-    else:
-        return imfilename, pnevFileName, dataPath
+            inds = np.argsort(array)
+            inds = inds[::-1]
+            pnev2load = inds[pnev2load]
+            '''    
+            if len(pnevFileName)==0:
+                c = ("No Pnev file was found"); print("%s\n" % c)
+                pnevFileName = ''
+            else:
+                pnevFileName = pnevFileName[pnev2load[0]]
+                if postNProvided:
+                    p = os.path.basename(pnevFileName)[5:]
+                    pnevFileName = os.path.join(tifFold,p)
+        else:
+            pnevFileName = ''
+        
+        ##%%
+        if nOuts==2:
+            return imfilename, pnevFileName
+        else:
+            return imfilename, pnevFileName, dataPath
  
+    else:
+        
+        if any([mousename in s for s in ['fni16','fni17']]):
+            imagingDir = os.path.join(dataPath+mousename,'imaging')
+            
+        elif any([mousename in s for s in ['fni18','fni19']]): # these 2 mice are saved on hpc_home
+            imagingDir = os.path.join(altDataPath+mousename,'imaging')
+            
+        return imagingDir
+        
+        
         
 #%% Define perClassError: percent difference between Y and Yhat, ie classification error
 
@@ -1464,10 +1477,10 @@ def set_nprepost(trace, eventI_ds_allDays, mn_corr=np.nan, thTrained=10., regres
     # if days of each mouse is already aligned, you can use this function to align all mice:
     # set_nprepost(avFRexc_allMice, eventI_allMice)   
     eventI_ds_allDays = np.array(eventI_ds_allDays).flatten()
-
     numDays = len(trace)        
     if np.isnan(mn_corr).any():
         mn_corr = np.full((numDays), thTrained+1) # so all days are analyzed
+
 
     nPreMin = np.nanmin(eventI_ds_allDays[mn_corr >= thTrained]).astype('int') # number of frames before the common eventI, also the index of common eventI.     
     
@@ -1476,11 +1489,10 @@ def set_nprepost(trace, eventI_ds_allDays, mn_corr=np.nan, thTrained=10., regres
         if mn_corr[iday] >= thTrained: # dont include days with too few svm trained trials.
             nPost[iday] = (len(trace[iday]) - eventI_ds_allDays[iday] - 1)
     nPostMin = np.nanmin(nPost).astype('int')
-    
-    print 'Number of frames before = %d, and after = %d the common eventI' %(nPreMin, nPostMin)
-    
+        
     ## Set the time array for the across-day aligned traces
     totLen = nPreMin + nPostMin +1
+    print 'Number of frames before = %d, and after = %d the common eventI' %(nPreMin, nPostMin)
 
     # Get downsampled time trace, without using the non-downsampled eventI
     # you need nPreMin and totLen
@@ -1504,7 +1516,7 @@ def alTrace(trace, eventI_ds_allDays, nPreMin, nPostMin, mn_corr=np.nan, thTrain
     # mn_corr: min number of HR and LR trials 
     numDays = len(trace)        
     if np.isnan(mn_corr).any():
-        mn_corr = np.full((numDays), thTrained+1) # so all days are analyzed
+        mn_corr = np.full((numDays), thTrained+1).astype(int) # so all days are analyzed
         
     trace = np.array(trace)
     trace_aligned = []
@@ -1923,4 +1935,45 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
     
     
 
+#%% Average and st error of class accuracies across CV samples ... for each day
+
+def av_se_CA_trsamps(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, perClassErrorTest_data_exc_all, perClassErrorTest_shfl_exc_all, perClassErrorTest_chance_exc_all, perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all):
     
+#    numD = len(eventI_allDays)
+    numSamples = np.shape(perClassErrorTest_data_inh_all[0])[0]
+    numExcSamples = np.shape(perClassErrorTest_data_exc_all[0])[0]
+    
+    #### inh
+    av_test_data_inh = np.array([100-np.nanmean(perClassErrorTest_data_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
+    sd_test_data_inh = np.array([np.nanstd(perClassErrorTest_data_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+    
+    av_test_shfl_inh = np.array([100-np.nanmean(perClassErrorTest_shfl_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
+    sd_test_shfl_inh = np.array([np.nanstd(perClassErrorTest_shfl_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+    
+    av_test_chance_inh = np.array([100-np.nanmean(perClassErrorTest_chance_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
+    sd_test_chance_inh = np.array([np.nanstd(perClassErrorTest_chance_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+    
+    
+    #### exc (average across cv samples and exc shuffles)
+    av_test_data_exc = np.array([100-np.nanmean(perClassErrorTest_data_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
+    sd_test_data_exc = np.array([np.nanstd(perClassErrorTest_data_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples+numExcSamples) for iday in range(numD)])  
+    
+    av_test_shfl_exc = np.array([100-np.nanmean(perClassErrorTest_shfl_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
+    sd_test_shfl_exc = np.array([np.nanstd(perClassErrorTest_shfl_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples+numExcSamples) for iday in range(numD)])  
+    
+    av_test_chance_exc = np.array([100-np.nanmean(perClassErrorTest_chance_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
+    sd_test_chance_exc = np.array([np.nanstd(perClassErrorTest_chance_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples+numExcSamples) for iday in range(numD)])  
+    
+    
+    #### allExc
+    av_test_data_allExc = np.array([100-np.nanmean(perClassErrorTest_data_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
+    sd_test_data_allExc = np.array([np.nanstd(perClassErrorTest_data_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+    
+    av_test_shfl_allExc = np.array([100-np.nanmean(perClassErrorTest_shfl_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
+    sd_test_shfl_allExc = np.array([np.nanstd(perClassErrorTest_shfl_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+    
+    av_test_chance_allExc = np.array([100-np.nanmean(perClassErrorTest_chance_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
+    sd_test_chance_allExc = np.array([np.nanstd(perClassErrorTest_chance_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+    
+    return numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_exc, sd_test_data_exc, av_test_shfl_exc, sd_test_shfl_exc, av_test_chance_exc, sd_test_chance_exc, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc
+

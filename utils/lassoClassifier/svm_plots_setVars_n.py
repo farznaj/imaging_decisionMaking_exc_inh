@@ -132,8 +132,8 @@ else:
 
 # Make folder named SVM to save figures inside it
 svmdir = os.path.join(figsDir, 'SVM')
-if not os.path.exists(svmdir):
-    os.makedirs(svmdir)    
+#if not os.path.exists(svmdir):
+#    os.makedirs(svmdir)    
 
 
 daysOrig = days

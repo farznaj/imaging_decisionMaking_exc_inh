@@ -124,8 +124,6 @@ for im in range(len(mice)):
         numInh = np.full((len(days)), np.nan)
         numAllexc = np.full((len(days)), np.nan)
 
-    eventI_ds_allDays = np.full((len(days)), np.nan)    
-    eventI_allDays = np.full((len(days)), np.nan) # frame at which choice happened (if traces were downsampled in svm_eachFrame, it will be the downsampled frame number)
     perClassErrorTest_data_inh_all = []
     perClassErrorTest_shfl_inh_all = []
     perClassErrorTest_chance_inh_all = []
@@ -136,7 +134,9 @@ for im in range(len(mice)):
     perClassErrorTest_shfl_exc_all = []
     perClassErrorTest_chance_exc_all = []
     corr_hr_lr = np.full((len(days),2), np.nan) # number of hr, lr correct trials for each day
-       
+    eventI_ds_allDays = np.full((len(days)), np.nan)    
+    eventI_allDays = np.full((len(days)), np.nan) # frame at which choice happened (if traces were downsampled in svm_eachFrame, it will be the downsampled frame number)       
+
     for iday in range(len(days)): 
     
         #%%            
@@ -167,7 +167,7 @@ for im in range(len(mice)):
         corr_hr_lr[iday,:] = [corr_hr, corr_lr]        
 
     
-        #%% Load matlab vars to set eventI_ds (downsampled eventI)
+        #%% Set eventI_ds (downsampled eventI)
 
         eventI, eventI_ds = setEventIds(postName, chAl, regressBins=3, trialHistAnalysis=0)
         
