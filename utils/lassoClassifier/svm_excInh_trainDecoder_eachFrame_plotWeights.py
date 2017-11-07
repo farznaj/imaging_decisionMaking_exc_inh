@@ -721,6 +721,7 @@ def call_plotwTraces(av_wexc, sd_wexc, av_winh, sd_winh, pcorrtrace,av_wexc_abs,
             fign = os.path.join(d, suffn[0:5]+cha+'timeCourse_w_absw_aveMice_aveDays_aveNs_excVSinh_'+dpp+'.'+fmt[0])
         else:
             fign = os.path.join(d, suffn[0:5]+cha+'timeCourse_w_absw_avePooledMiceDays_aveNs_excVSinh_'+dpp+'.'+fmt[0])    
+    
         fig.savefig(fign, bbox_inches='tight')
     
         

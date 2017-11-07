@@ -86,6 +86,7 @@ execfile("defFuns.py")
 
 numDaysAll = np.full(len(mice), np.nan, dtype=int)
 days_allMice = [] 
+eventI_ds_allMice = [] # you need this var to align traces of all mice
 
 # im = 0     
 for im in range(len(mice)):
@@ -332,7 +333,10 @@ for im in range(len(mice)):
         nw = np.linalg.norm(w_nb, axis=0) # frames; 2-norm of weights 
         wInh_n2b = w_nb/nw # neurons x frames
     
-        # exc (average across trial subselects as well as exc neurons subselect)
+        # exc (average across trial subselects as well as exc neurons subselects)
+        #### NOTE: we are pooling decoders from trial and exc samples here and then taking an average across them.
+        ### I do not think this is right to do! we should get decoders for each exc sample, compute their angles. Do the same for all exc samples and then perhaps compute the average of angles across exc samps.
+        # this is what you do for wExc_n2b_excsh
         w_nb = np.mean(wExc_normed, axis=(0,1)) # neurons x frames 
         nw = np.linalg.norm(w_nb, axis=0) # frames; 2-norm of weights 
         wExc_n2b = w_nb/nw # neurons x frames
@@ -488,6 +492,8 @@ for im in range(len(mice)):
     
     time_aligned, nPreMin, nPostMin = set_nprepost(av_test_data_inh, eventI_ds_allDays, mn_corr, thTrained, regressBins)
 
+    eventI_ds_allMice.append(nPreMin) # you need this var to align traces of all mice
+    
     
     #%% Align traces of all days on the common eventI
     
@@ -637,7 +643,7 @@ for im in range(len(mice)):
     [np.fill_diagonal(angleAllExcS_aligned[:,:,ish,iday], np.nan) for iday in range(numGoodDays) for ish in range(nsh)];    
     [np.fill_diagonal(angleExc_excshS_aligned[:,:,ish,iesh,iday], np.nan) for iday in range(numGoodDays) for ish in range(nsh) for iesh in range(numExcSamples)];
     
-    # sig    
+    # sig ... NOTE: since this is boolean not sure if turning to nan works! check!
     [np.fill_diagonal(sigAngInh[:,:,iday], np.nan) for iday in range(numGoodDays)];
     [np.fill_diagonal(sigAngExc[:,:,iday], np.nan) for iday in range(numGoodDays)];
     [np.fill_diagonal(sigAngAllExc[:,:,iday], np.nan) for iday in range(numGoodDays)];

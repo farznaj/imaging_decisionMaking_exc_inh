@@ -298,7 +298,7 @@ def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1=
 
 
     
-#%% each element of a and b contras vars for a days. Here we compute and plot ave and se across those vars.
+#%% each element of a and b contains vars of a days. Here we compute and plot ave and se across those vars vs. days
     
 def errbarAllDays(a,b,p,gs,colors = ['g','k'],lab1='exc',lab2='inh',lab='ave(CA)', h1=[], h2=[]):
     
@@ -350,6 +350,122 @@ def errbarAllDays(a,b,p,gs,colors = ['g','k'],lab1='exc',lab2='inh',lab='ave(CA)
     
     return ax1,ax2
     
+
+#%% ave mice time course: Plot time course of whatever var u r interested in for exc and inh: take average across days for each mouse; then plot ave+/-se across mice
+
+def plotTimecourse_avMice(time_al_final, avFRAllMs, daysDim, colors, labs, lab, alph=1, doErrbar=1, dnow0='', fnam=''):
+   
+#    colors = ['b','r']; lab1='exc'; lab2='inh'; lab='Stability (deg.)'
+
+    def avMice(avFRexc_allMice_al, daysDim):
+        # average across days for each mouse
+        avD_exc = np.array([np.mean(avFRexc_allMice_al[im],axis=daysDim) for im in range(len(avFRexc_allMice_al))]) # nMice x alignedFrames (across mice)
+        # average and se across mice
+        av_exc = np.mean(avD_exc,axis=0)
+        se_exc = np.std(avD_exc,axis=0)/np.sqrt(avD_exc.shape[0]) 
+        
+        return avD_exc, av_exc, se_exc
+    
+    ##################    
+#    avFRexc_allMice_al, avFRinh_allMice_al
+    #    plt.figure(figsize=(3,2))
+    avD_excinh = []
+    for i in range(len(avFRAllMs)):
+        avD_exc, av_exc, se_exc = avMice(avFRAllMs[i], daysDim)
+        avD_excinh.append(avD_exc)
+#        avD_inh, av_inh, se_inh = avMice(avFRinh_allMice_al, daysDim)
+
+        if doErrbar:    # plot error bar
+            plt.errorbar(time_al_final, av_exc, se_exc, color=colors[i], label=labs[i], alpha=alph)
+    #        plt.errorbar(time_al_final, av_inh, se_inh, color=colors[1], label=lab2, alpha=alph)
+        else: # plot patches... boundedline...
+            plt.fill_between(time_al_final, av_exc - se_exc, av_exc + se_exc, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
+            plt.plot(time_al_final, av_exc, colors[i], label=labs[i])
+    #        plt.fill_between(time_al_final, av_inh - se_inh, av_inh + se_inh, alpha=0.5, edgecolor=colors[1], facecolor=colors[1])
+    #        plt.plot(time_al_final, av_inh, colors[1], label=lab2)        
+    
+    
+    
+    if len(avFRAllMs)>1:
+        _,p = stats.ttest_ind(avD_excinh[0], avD_excinh[1], nan_policy='omit')    
+    
+        yl = plt.gca().get_ylim()
+        pp = p
+        pp[p>.05] = np.nan
+        pp[p<=.05] = yl[1]
+        plt.plot(time_al_final, pp, marker='*',color='r', markeredgecolor='r', linestyle='', markersize=3)
+    
+    plt.ylabel(lab)        
+    plt.xlabel('Time relative to choice onset')
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
+    makeNicePlots(plt.gca(),1,0)        
+    
+
+    #% Save the figure           
+    if savefigs:
+        if chAl:
+            cha = 'chAl_'
+            
+        d = os.path.join(svmdir+dnow0)        
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+        
+        fign = os.path.join(d, suffn[0:5]+cha+ fnam +'.'+fmt[0])
+#        fnam = 'FR_timeCourse_aveMice_aveDays_allTrsNeursPooled'+dpp+dp+dpm0
+        plt.savefig(fign, bbox_inches='tight') 
+
+       
+
+#%% each mouse time course: Plot time course of whatever var u r interested in for exc and inh      
+
+#time_al = time_aligned_final; avFRe = stabScoreExc0_al[im]; avFRi = stabScoreInh0_allMice_al[im]
+def plotTimecourse_eachMouse(time_al, avFRs, daysDim, colors, labs, lab, linstyl='-', alph=1, dnow='', fnam=''): 
+    
+    for i in range(len(avFRs)):    
+        # average and se across days         
+        avFR = avFRs[i]+0
+        av = np.mean(avFR, axis=daysDim) 
+        sd = np.std(avFR, axis=daysDim)/np.sqrt(avFR.shape[daysDim])     
+        plt.errorbar(time_al, av, sd, color=colors[i], label=labs[i], linestyle=linstyl, alpha=alph)
+           
+
+    if len(avFRs)>1: # plot p vals    
+        if daysDim==0: # then frames are dim 1, so we transpose it to have frames as dim 0
+            avFRs = avFRs[0].T, avFRs[1].T
+
+        p = np.full((avFRs[0].shape[0]), np.nan)
+        for fr in range(avFRs[0].shape[0]):
+            _,p[fr] = stats.ttest_ind(avFRs[0][fr,:], avFRs[1][fr,:], nan_policy='omit')    
+        
+        yl = plt.gca().get_ylim()
+        pp = p
+        pp[p>.05] = np.nan
+        pp[p<=.05] = yl[1]
+        plt.plot(time_al, pp, marker='*',color='r', markeredgecolor='r', linestyle='', markersize=3)
+        
+
+    plt.ylabel(lab)        
+    plt.xlabel('Time relative to choice onset')
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
+    makeNicePlots(plt.gca(),1,0)        
+    
+    
+    #% Save the figure           
+    if savefigs:
+        if chAl:
+            cha = 'chAl_'
+            
+        d = os.path.join(svmdir+dnow)        
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+        
+        fign = os.path.join(d, suffn[0:5]+cha+ fnam +'.'+fmt[0])
+#        fnam = 'FR_timeCourse_aveDays_allTrsNeursPooled'+dp+dpmAllm[im]
+        plt.savefig(fign, bbox_inches='tight') 
+        
+
 
 #%%   
 def setTo50classErr(classError, w, thNon0Ws = .05, thSamps = 10, eps = 1e-10):
@@ -1474,8 +1590,16 @@ def set_corr_hr_lr(postName, svmName, doIncorr=0):
 def set_nprepost(trace, eventI_ds_allDays, mn_corr=np.nan, thTrained=10., regressBins=3):
     # trace: each element is for one day
     # first element of trace[iday] should be frames
-    # if days of each mouse is already aligned, you can use this function to align all mice:
-    # set_nprepost(avFRexc_allMice, eventI_allMice)   
+    
+    ###### if days of each mouse are already aligned, you can stilluse this function to align all mice:
+    # set_nprepost(avFRexc_allMice, eventI_ds_allMice); where eventI_ds_allMice is computed as :
+#    time_al, nPreMin, nPostMin = set_nprepost(Xinh_allDays_allMice[im], eventI_ds_allDays_allMice[im], mn_corr, thTrained=10, regressBins=3)    
+#    time_al_allMice.append(time_al)
+#    nPreMin_allMice.append(nPreMin)
+    
+#    time_al, nPreMin, nPostMin = set_nprepost(Xinh_allDays_allMice[im], eventI_ds_allDays_allMice[im], mn_corr, thTrained=10, regressBins=3)    
+#    eventI_ds_allMice.append(nPreMin)    
+    
     eventI_ds_allDays = np.array(eventI_ds_allDays).flatten()
     numDays = len(trace)        
     if np.isnan(mn_corr).any():
@@ -1487,7 +1611,7 @@ def set_nprepost(trace, eventI_ds_allDays, mn_corr=np.nan, thTrained=10., regres
     nPost = (np.ones((numDays,1))+np.nan).flatten()
     for iday in range(numDays):
         if mn_corr[iday] >= thTrained: # dont include days with too few svm trained trials.
-            nPost[iday] = (len(trace[iday]) - eventI_ds_allDays[iday] - 1)
+            nPost[iday] = len(trace[iday]) - eventI_ds_allDays[iday] - 1
     nPostMin = np.nanmin(nPost).astype('int')
         
     ## Set the time array for the across-day aligned traces
@@ -1503,7 +1627,49 @@ def set_nprepost(trace, eventI_ds_allDays, mn_corr=np.nan, thTrained=10., regres
     time_al = np.concatenate((aa,bb))
 
     return time_al, nPreMin, nPostMin
+   
+
+
+#%% Set time_aligned and nPreMin for aligning traces of all mice
+
+def set_nprepost_allMice(trace_allMice, eventI_ds_allDays_allMice, corr_hr_lr_allMice, thTrained=10., regressBins=3):
+
+# trace_allMice[im].shape[1] must be frames
+# trace_allMice has len(mice) elements, each element is averaged across days;
+# nPreMin_allMice indicates the frame of eventI for each mouse (after aligning its traces from all days) and it is 
+# computed using eventI_ds_allDays_allMice which indicates the frame of eventI for each day of each mouse.
+
+    nPreMin_allMice = np.full((len(trace_allMice)), np.nan, dtype=int)
+    
+    for im in range(len(trace_allMice)):
         
+        mn_corr = np.min(corr_hr_lr_allMice[im], axis=1) # number of trials of each class. 90% of this was used for training, and 10% for testing.
+        
+        nPreMin = np.nanmin(eventI_ds_allDays_allMice[im][mn_corr >= thTrained]).astype('int') # number of frames before the common eventI, also the index of common eventI.     
+        totLen = trace_allMice[im].shape[1] #nPreMin + nPostMin +1         # trace_allMice = classAccurTMS_allExc[im]
+    
+        nPreMin_allMice[im] = nPreMin
+
+#    time_al_final, nPreMin_final, nPostMin_final = set_nprepost(trace_allMice, nPreMin_allMice)
+    nPreMin_final = np.min(nPreMin_allMice).astype(int) # you need to do the following to get the final common eventI of all mice: nPreMin_final = np.min(nPreMin_allMice)
+    
+    nPost = [trace_allMice[im].shape[1] - nPreMin_allMice[im] - 1 for im in range(len(trace_allMice))]
+    nPostMin_final = np.nanmin(nPost).astype('int')
+    
+    ## Set the time array for the across-day aligned traces
+    totLen = nPreMin_final + nPostMin_final +1
+    print 'Number of frames before = %d, and after = %d the common eventI' %(nPreMin, nPostMin_final)
+
+
+    a = frameLength*np.arange(-regressBins*nPreMin_final,0)
+    b = frameLength*np.arange(0,regressBins*(totLen-nPreMin_final))
+    aa = np.mean(np.reshape(a,(regressBins,nPreMin_final), order='F'), axis=0)
+    bb = np.mean(np.reshape(b,(regressBins,totLen-nPreMin_final), order='F'), axis=0)
+    time_aligned_final = np.concatenate((aa,bb))
+    
+
+    return time_aligned_final, nPreMin_final, nPostMin_final, nPreMin_allMice 
+
 
 #%% Align traces of each day on the common eventI
 
@@ -1528,7 +1694,32 @@ def alTrace(trace, eventI_ds_allDays, nPreMin, nPostMin, mn_corr=np.nan, thTrain
 #    trace_aligned = np.array(trace_aligned)
     return trace_aligned
 
+
+#%% Align angles (frs x frs x days) of all days on the common eventI
+
+def alTrace_frfr(trace_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final):
+    # trace = angleInh_all 
+    # frs x frs x days
+
+    numMice = len(trace_allMice)
+    
+    totLen = nPreMin_final + nPostMin_final + 1  # len(time_aligned) # nPreMin + nPostMin + 1   
+    trace_aligned_allMice = []
+    
+    for im in range(numMice):
+#        trace_aligned = np.ones((totLen,totLen, trace_allMice[im].shape[2])) + np.nan
+    #    angleInh_aligned[:, im] = angleInh_all[im][eventI_ds_allDays[im] - nPreMin  :  eventI_ds_allDays[im] + nPostMin + 1  ,  eventI_ds_allDays[im] - nPreMin  :  eventI_ds_allDays[im] + nPostMin + 1]
+        inds = np.arange(nPreMin_allMice[im] - nPreMin_final,  nPreMin_allMice[im] + nPostMin_final + 1)
         
+        trace_aligned = trace_allMice[im][inds][:,inds]
+        trace_aligned_allMice.append(trace_aligned)
+    
+    if np.ndim(trace_aligned_allMice[im])==2: # if it is fr x fr x days we can't do it bc diff mice have diff num days!
+        trace_aligned_allMice = np.array(trace_aligned_allMice)
+    
+    return trace_aligned_allMice
+
+    
 #%% Set the time array for the across-day aligned traces
 
 # totLen_ds = len(av_l2_test_diday)

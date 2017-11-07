@@ -509,7 +509,7 @@ Y_svm_goodDays_allMice = np.array([Y_svm_allDays_allMice[im][mn_corr_allMice[im]
 Xinh_al_allMice = [] # nMice; #nGoodDays; #nAlighnedFrames x units x trials
 XallExc_al_allMice = []
 time_al_allMice = []
-eventI_ds_allMice = []
+nPreMin_allMice = []
 
 for im in range(len(mice)):
 
@@ -521,7 +521,7 @@ for im in range(len(mice)):
 
     time_al, nPreMin, nPostMin = set_nprepost(Xinh_allDays_allMice[im], eventI_ds_allDays_allMice[im], mn_corr, thTrained=10, regressBins=3)    
     time_al_allMice.append(time_al)
-    eventI_ds_allMice.append(nPreMin)
+    nPreMin_allMice.append(nPreMin)
 
     # Align traces of all days   
     Xinh_al_allMice.append(alTrace(Xinh_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr, thTrained))
@@ -531,7 +531,7 @@ for im in range(len(mice)):
 Xinh_al_allMice = np.array(Xinh_al_allMice)
 XallExc_al_allMice = np.array(XallExc_al_allMice)
 time_al_allMice = np.array(time_al_allMice)
-eventI_ds_allMice = np.array(eventI_ds_allMice)
+nPreMin_allMice = np.array(nPreMin_allMice)
 
 
 #%% pool traces for all neurons and all trials for each day, each frame (each mouse)
@@ -655,12 +655,12 @@ avFRinh_allMice = np.array(avFRinh_allMice)
 ############################################################################
 #%% Align neuron&trial-averaged traces across mice
 
-time_al_final, nPreMin_final, nPostMin_final = set_nprepost(avFRexc_allMice, eventI_ds_allMice)
+time_al_final, nPreMin_final, nPostMin_final = set_nprepost(avFRexc_allMice, nPreMin_allMice)
 
 # input: avFRexc_allMice: nMice; each mouse: alignedFrames (across days for that mouse) x nGoodDays
 # output: avFRexc_allMice_al nMice; each mouse: alignedFrames (across mice) x nGoodDays
-avFRexc_allMice_al = alTrace(avFRexc_allMice, eventI_ds_allMice, nPreMin_final, nPostMin_final)
-avFRinh_allMice_al = alTrace(avFRinh_allMice, eventI_ds_allMice, nPreMin_final, nPostMin_final)
+avFRexc_allMice_al = alTrace(avFRexc_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final)
+avFRinh_allMice_al = alTrace(avFRinh_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final)
 
 #if noZmotionDays_allMPlots: # remove the last 3 days of fni18 (ie keep only the 1st 4 days)    
 #    im = mice.index('fni18')
@@ -670,8 +670,8 @@ avFRinh_allMice_al = alTrace(avFRinh_allMice, eventI_ds_allMice, nPreMin_final, 
     
 #%% Align individual neural and trial traces across mice    
 
-exc_allFr_allMice_al = alTrace(exc_allFr_allMice, eventI_ds_allMice, nPreMin_final, nPostMin_final)  # nNice; each element: mouseAlignedFrames x nGoodDays; each element: pooled neurons and trials
-inh_allFr_allMice_al = alTrace(inh_allFr_allMice, eventI_ds_allMice, nPreMin_final, nPostMin_final)
+exc_allFr_allMice_al = alTrace(exc_allFr_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final)  # nNice; each element: mouseAlignedFrames x nGoodDays; each element: pooled neurons and trials
+inh_allFr_allMice_al = alTrace(inh_allFr_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final)
 
 
 
@@ -684,7 +684,10 @@ inh_allFr_allMice_al = alTrace(inh_allFr_allMice, eventI_ds_allMice, nPreMin_fin
 #%% Plot for each mouse timecourse of session-averaged FR for exc and inh (ave across days; each day was averaged across all neurons and trials)
 
 avtrs = 1 # for each neuron average across trials, otherwise pool neural activities across all trials
-trtyps2an = [0,1,2] #[1,2] #[0,1,2] : trial types to plot: all, HR, LR
+trtyps2an = [trtypeFinal] #[0,1,2] #[1,2] #[0,1,2] : trial types to plot: all, HR, LR # NOTE:
+# if you want to try trTypes other than trtypeFinal, you must run :
+#exc_allFr_allMice, inh_allFr_allMice = poolAllNTr(XallExc_al_allMice, Xinh_al_allMice, trtype, avtrs)
+#again, also after this code ... if for the rest of the codes below you want to plot trtypeFinal
 
 linstyls = '-','-','-'
 alphas = 1,.5,.2  # all, HR, LR
@@ -802,7 +805,7 @@ for im in range(len(mice)):
     inh_allFr = inh_allFr_allMice[im]    
     
     nFrs = exc_allFr.shape[0]
-    frBef = [eventI_ds_allMice[im] + time2an]
+    frBef = [nPreMin_allMice[im] + time2an]
     frs2p = range(nFrs)    # plot all frames
 #    frs2p = frBef       # only plot the time bin before the choice
     
@@ -860,7 +863,7 @@ def avMice(avFRexc_allMice_al):
     avD_exc = np.array([np.mean(avFRexc_allMice_al[im],axis=1) for im in range(len(mice))]) # nMice x alignedFrames (across mice)
     # average and se across mice
     av_exc = np.mean(avD_exc,axis=0)
-    se_exc = np.std(avD_exc,axis=0)/np.sqrt(avD_exc.shape[1]) 
+    se_exc = np.std(avD_exc,axis=0)/np.sqrt(avD_exc.shape[0]) 
     
     return avD_exc, av_exc, se_exc
 
@@ -1123,12 +1126,12 @@ def plothrlrtc():
         
         #%% Align traces among mice
         
-        time_al_final, nPreMin_final, nPostMin_final = set_nprepost(avFRexc_allMice, eventI_ds_allMice)
+        time_al_final, nPreMin_final, nPostMin_final = set_nprepost(avFRexc_allMice, nPreMin_allMice)
         
         # input: avFRexc_allMice: nMice; each mouse: alignedFrames (across days for that mouse) x nGoodDays
         # output: avFRexc_allMice_al nMice; each mouse: alignedFrames (across mice) x nGoodDays
-        avFRexc_allMice_al = alTrace(avFRexc_allMice, eventI_ds_allMice, nPreMin_final, nPostMin_final)
-        avFRinh_allMice_al = alTrace(avFRinh_allMice, eventI_ds_allMice, nPreMin_final, nPostMin_final)
+        avFRexc_allMice_al = alTrace(avFRexc_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final)
+        avFRinh_allMice_al = alTrace(avFRinh_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final)
         
     #    if noZmotionDays_allMPlots: # remove the last 3 days of fni18 (ie keep only the 1st 4 days)    
     #        im = mice.index('fni18')
