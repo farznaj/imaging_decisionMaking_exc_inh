@@ -23,13 +23,15 @@ Created on Sun Mar 12 15:12:29 2017
 
 mice = 'fni16', #'fni17', 'fni18', 'fni19' # 'fni17',
 
+sigPerc = 1 #5 # percentile to determine significancy (if data angle is lower than 5th percentile of shuffle angles, we calle it siginificantly lower!)
 saveVars = 0 # if 1, a mat file will be saved including angle variables
 excludeLowTrDays = 1 # remove days with too few trials
-doPlotsEachMouse = 1 # make plots for each mouse
-doExcSamps = 1 # if 1, for exc use vars defined by averaging trial subselects first for each exc samp and then averaging across exc samps. This is better than pooling all trial samps and exc samps ...    
-savefigs = 1
+#doPlotsEachMouse = 1 # make plots for each mouse
+#doExcSamps = 1 # if 1, for exc use vars defined by averaging trial subselects first for each exc samp and then averaging across exc samps. This is better than pooling all trial samps and exc samps ...    
+#savefigs = 1
 
 nsh = 1000 # number of times to shuffle the decoders to get null distribution of angles
+loadWeights = 1
 
 # quantile of stim strength - cb to use         
 # 0: hard (min <= sr < 25th percentile of stimrate-cb); 
@@ -64,7 +66,6 @@ if doAllN==1:
 from datetime import datetime
 nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 #time2an = -1; # relative to eventI, look at classErr in what time stamp.
-loadWeights = 1
 shflTrsEachNeuron = 0
 
 trialHistAnalysis = 0;
@@ -72,7 +73,7 @@ iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all
 import numpy as np
 frameLength = 1000/30.9; # sec.
 regressBins = int(np.round(100/frameLength)) # must be same regressBins used in svm_eachFrame. 100ms # set to nan if you don't want to downsample.
-dnow0 = '/stability/'
+#dnow0 = '/stability/'
 
 
 execfile("defFuns.py")
@@ -257,23 +258,26 @@ for im in range(len(mice)):
             loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron)
         
         ##%% Get number of inh and exc        
-        if loadWeights==1:
+        if loadWeights!=0: # weights were loaded
             numInh[iday] = w_data_inh.shape[1]
             numAllexc[iday] = w_data_allExc.shape[1]        
         
         ####%% Take care of lastTimeBinMissed = 0 #1# if 0, things were ran fine; if 1: by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
         ### allN data was run with lastTimeBinMissed = 1 
-        if perClassErrorTest_chance_inh.shape[1] != perClassErrorTest_chance_allExc.shape[1]:
-            if perClassErrorTest_chance_inh.shape[1] - perClassErrorTest_chance_allExc.shape[1] == 1:
+#        if perClassErrorTest_chance_inh.shape[1] != perClassErrorTest_chance_allExc.shape[1]:
+#            if perClassErrorTest_chance_inh.shape[1] - perClassErrorTest_chance_allExc.shape[1] == 1:
+        if w_data_inh.shape[2] != w_data_allExc.shape[2]:
+            if w_data_inh.shape[2] - w_data_allExc.shape[2] == 1:
                 print '================== lastTimeBinMissed=1 for allN =================='
                 print '======== removing last element from inh/exc to match the size with allN ========'
                 
-                perClassErrorTest_data_inh = np.delete(perClassErrorTest_data_inh, -1, axis=-1)
-                perClassErrorTest_shfl_inh = np.delete(perClassErrorTest_shfl_inh, -1, axis=-1)
-                perClassErrorTest_chance_inh = np.delete(perClassErrorTest_chance_inh, -1, axis=-1)
-                perClassErrorTest_data_exc = np.delete(perClassErrorTest_data_exc, -1, axis=-1)
-                perClassErrorTest_shfl_exc = np.delete(perClassErrorTest_shfl_exc, -1, axis=-1)
-                perClassErrorTest_chance_exc = np.delete(perClassErrorTest_chance_exc, -1, axis=-1)
+                if loadWeights!=2: # class accuracies were load
+                    perClassErrorTest_data_inh = np.delete(perClassErrorTest_data_inh, -1, axis=-1)
+                    perClassErrorTest_shfl_inh = np.delete(perClassErrorTest_shfl_inh, -1, axis=-1)
+                    perClassErrorTest_chance_inh = np.delete(perClassErrorTest_chance_inh, -1, axis=-1)
+                    perClassErrorTest_data_exc = np.delete(perClassErrorTest_data_exc, -1, axis=-1)
+                    perClassErrorTest_shfl_exc = np.delete(perClassErrorTest_shfl_exc, -1, axis=-1)
+                    perClassErrorTest_chance_exc = np.delete(perClassErrorTest_chance_exc, -1, axis=-1)
                 w_data_inh = np.delete(w_data_inh, -1, axis=-1)
                 w_data_exc = np.delete(w_data_exc, -1, axis=-1)
                 b_data_inh = np.delete(b_data_inh, -1, axis=-1)
@@ -283,20 +287,23 @@ for im in range(len(mice)):
                 sys.exit('something wrong')
                 
 
-        
-        #%% Keep vars for all days
-        
-        perClassErrorTest_data_inh_all.append(perClassErrorTest_data_inh) # each day: samps x numFrs    
-        perClassErrorTest_shfl_inh_all.append(perClassErrorTest_shfl_inh)
-        perClassErrorTest_chance_inh_all.append(perClassErrorTest_chance_inh)
-        
-        perClassErrorTest_data_allExc_all.append(perClassErrorTest_data_allExc) # each day: samps x numFrs    
-        perClassErrorTest_shfl_allExc_all.append(perClassErrorTest_shfl_allExc)
-        perClassErrorTest_chance_allExc_all.append(perClassErrorTest_chance_allExc) 
+        numExcSamples = w_data_inh.shape[0]
 
-        perClassErrorTest_data_exc_all.append(perClassErrorTest_data_exc) # each day: numShufflesExc x numSamples x numFrames    
-        perClassErrorTest_shfl_exc_all.append(perClassErrorTest_shfl_exc)
-        perClassErrorTest_chance_exc_all.append(perClassErrorTest_chance_exc)
+        
+        #%% Keep class accuracy vars for all days
+        
+        if loadWeights!=2: # class accuracies were load
+            perClassErrorTest_data_inh_all.append(perClassErrorTest_data_inh) # each day: samps x numFrs    
+            perClassErrorTest_shfl_inh_all.append(perClassErrorTest_shfl_inh)
+            perClassErrorTest_chance_inh_all.append(perClassErrorTest_chance_inh)
+            
+            perClassErrorTest_data_allExc_all.append(perClassErrorTest_data_allExc) # each day: samps x numFrs    
+            perClassErrorTest_shfl_allExc_all.append(perClassErrorTest_shfl_allExc)
+            perClassErrorTest_chance_allExc_all.append(perClassErrorTest_chance_allExc) 
+    
+            perClassErrorTest_data_exc_all.append(perClassErrorTest_data_exc) # each day: numShufflesExc x numSamples x numFrames    
+            perClassErrorTest_shfl_exc_all.append(perClassErrorTest_shfl_exc)
+            perClassErrorTest_chance_exc_all.append(perClassErrorTest_chance_exc)
     
     
         #%% Normalize weights (ie the w vector at each frame must have length 1)
@@ -433,26 +440,7 @@ for im in range(len(mice)):
     ####################################################################################
     ####################################################################################
     ####################################################################################
-    
-    #%% Define days to be analyzed (Identify days with too few trials (to exclude them!))    
-    '''        
-    # Set number of hr and lr trials for each days     # The total trial numbers are twice ntrs    
-    hrnAll = np.array(hrnAll)
-    lrnAll = np.array(lrnAll)
-    
-    print 'Fraction of days with more LR trials = ', (lrnAll > hrnAll).mean()
-    print 'LR - HR trials (average across days) = ',(lrnAll - hrnAll).mean()
-    
-    thnt = 10 # if either hr or lr trials were fewer than 10, dont analyze that day!
-    ntrs = np.min([hrnAll,lrnAll], axis=0)
-    print (ntrs < thnt).sum(), ' days will be excluded bc either HR or LR is < ', thnt # days to be excluded
-    
-    ## 
-    dayinds = np.arange(len(days));     
-    if excludeLowTrDays==1: # days need to have at least 10 of each hr,lr trials to be included in the analysis
-        dayinds = np.delete(dayinds, np.argwhere(ntrs < thnt))
-    '''
-    
+
     #%% Decide what days to analyze: exclude days with too few trials used for training SVM, also exclude incorr from days with too few incorr trials.
     
     # th for min number of trs of each class
@@ -472,60 +460,59 @@ for im in range(len(mice)):
     dayinds = np.delete(dayinds, np.argwhere(mn_corr < thTrained))
    
     
-    #%%    
-    ######################################################################################################################################################    
-    ######################################################################################################################################################          
-      
-    ##%% Average and st error of class accuracies across CV samples ... for each day
-    
-    numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_exc, sd_test_data_exc, av_test_shfl_exc, sd_test_shfl_exc, av_test_chance_exc, sd_test_chance_exc, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc \
-        = av_se_CA_trsamps(numOrigDays, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, perClassErrorTest_data_exc_all, perClassErrorTest_shfl_exc_all, perClassErrorTest_chance_exc_all, perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all)
-
-    
-    #%%
-    ##################################################################################################
-    ############## Align class accur traces of all days to make a final average trace ##############
-    ################################################################################################## 
-      
-    ##%% Find the common eventI, number of frames before and after the common eventI for the alignment of traces of all days.
+    #%% Find the common eventI, number of frames before and after the common eventI for the alignment of traces of all days.
     # By common eventI, we  mean the index on which all traces will be aligned.
     
-    time_aligned, nPreMin, nPostMin = set_nprepost(av_test_data_inh, eventI_ds_allDays, mn_corr, thTrained, regressBins)
+    time_aligned, nPreMin, nPostMin = set_nprepost(angleInh_all, eventI_ds_allDays, mn_corr, thTrained, regressBins) # av_test_data_inh
 
     eventI_ds_allMice.append(nPreMin) # you need this var to align traces of all mice
     
     
-    #%% Align traces of all days on the common eventI
     
-    #same as alTrace in defFuns, except here the output is an array of size frs x days, there the output is a list of size days x frs
-    def alTrace(trace, eventI_ds_allDays, nPreMin, nPostMin, mn_corr, thTrained=10):    
-        numDays = len(trace) 
-        trace_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)     
-        for iday in range(trace.shape[0]):         
-            if mn_corr[iday] >= thTrained: # dont include days with too few
-                trace_aligned[:, iday] = trace[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]    
-        return trace_aligned
+    #%%    
+    #################################################################
+    #################### Take care of class accuracies ########################
+    #################################################################
+      
+    if loadWeights!=2: # class accuracies were load  
+        ##%% Average and st error of class accuracies across CV samples ... for each day
         
+        numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_exc, sd_test_data_exc, av_test_shfl_exc, sd_test_shfl_exc, av_test_chance_exc, sd_test_chance_exc, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc \
+            = av_se_CA_trsamps(numOrigDays, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, perClassErrorTest_data_exc_all, perClassErrorTest_shfl_exc_all, perClassErrorTest_chance_exc_all, perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all)
     
-    av_test_data_inh_aligned = alTrace(av_test_data_inh, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
-    av_test_shfl_inh_aligned = alTrace(av_test_shfl_inh, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
-    av_test_chance_inh_aligned = alTrace(av_test_chance_inh, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
+         
+        #%% Align traces of all days on the common eventI
+        
+        #same as alTrace in defFuns, except here the output is an array of size frs x days, there the output is a list of size days x frs
+        def alTrace(trace, eventI_ds_allDays, nPreMin, nPostMin, mn_corr, thTrained=10):    
+            numDays = len(trace) 
+            trace_aligned = np.ones((nPreMin + nPostMin + 1, numDays)) + np.nan # frames x days, aligned on common eventI (equals nPreMin)     
+            for iday in range(trace.shape[0]):         
+                if mn_corr[iday] >= thTrained: # dont include days with too few
+                    trace_aligned[:, iday] = trace[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]    
+            return trace_aligned
+            
+        
+        av_test_data_inh_aligned = alTrace(av_test_data_inh, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
+        av_test_shfl_inh_aligned = alTrace(av_test_shfl_inh, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
+        av_test_chance_inh_aligned = alTrace(av_test_chance_inh, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
+        
+        av_test_data_exc_aligned = alTrace(av_test_data_exc, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
+        av_test_shfl_exc_aligned = alTrace(av_test_shfl_exc, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
+        av_test_chance_exc_aligned = alTrace(av_test_chance_exc, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
+        
+        av_test_data_allExc_aligned = alTrace(av_test_data_allExc, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
+        av_test_shfl_allExc_aligned = alTrace(av_test_shfl_allExc, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
+        av_test_chance_allExc_aligned = alTrace(av_test_chance_allExc, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
+        
+        
+        #%% Compute data - shuffle for the aligned class accuracy traces
+        #### only good days
+        
+        classAccurTMS_inh = np.array([(av_test_data_inh_aligned[:, iday] - av_test_shfl_inh_aligned[:, iday]) for iday in dayinds])
+        classAccurTMS_exc = np.array([(av_test_data_exc_aligned[:, iday] - av_test_shfl_exc_aligned[:, iday]) for iday in dayinds])
+        classAccurTMS_allExc = np.array([(av_test_data_allExc_aligned[:, iday] - av_test_shfl_allExc_aligned[:, iday]) for iday in dayinds])
     
-    av_test_data_exc_aligned = alTrace(av_test_data_exc, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
-    av_test_shfl_exc_aligned = alTrace(av_test_shfl_exc, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
-    av_test_chance_exc_aligned = alTrace(av_test_chance_exc, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
-    
-    av_test_data_allExc_aligned = alTrace(av_test_data_allExc, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
-    av_test_shfl_allExc_aligned = alTrace(av_test_shfl_allExc, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
-    av_test_chance_allExc_aligned = alTrace(av_test_chance_allExc, eventI_ds_allDays, nPreMin, nPostMin, mn_corr)
-    
-    
-    #%% Compute data - shuffle for the aligned class accuracy traces
-    #### only good days
-    
-    classAccurTMS_inh = np.array([(av_test_data_inh_aligned[:, iday] - av_test_shfl_inh_aligned[:, iday]) for iday in dayinds])
-    classAccurTMS_exc = np.array([(av_test_data_exc_aligned[:, iday] - av_test_shfl_exc_aligned[:, iday]) for iday in dayinds])
-    classAccurTMS_allExc = np.array([(av_test_data_allExc_aligned[:, iday] - av_test_shfl_allExc_aligned[:, iday]) for iday in dayinds])
     
     
     #%%
@@ -583,7 +570,8 @@ for im in range(len(mice)):
         
         
     #%% Find time points at which decoders angles are significantly different from the null distribution
-    
+        
+#    sigPerc = 5 # percentile to determine significancy (if data angle is lower than 5th percentile of shuffle angles, we calle it siginificantly lower!)
     sigAngInh = np.full((np.shape(angleInh_aligned)), False, dtype=bool) # frames x frames x days # matrix of 0s and 1s; 0 mean the decoders of those time points are mis-aligned (ie their angle is similar to null dist); 1 means the 2 decoders are aligned.
     sigAngExc = np.full((np.shape(angleExc_aligned)), False, dtype=bool)
     sigAngAllExc = np.full((np.shape(angleAllExc_aligned)), False, dtype=bool)
@@ -599,16 +587,16 @@ for im in range(len(mice)):
         for f1 in range(totLen):
             for f2 in np.delete(range(totLen),f1): #range(totLen):
                 ##### whether real angle is smaller than 5th percentile of shuffle angles.
-                h = np.percentile(angleInhS_aligned[f1,f2,:, iday], 5)
+                h = np.percentile(angleInhS_aligned[f1,f2,:, iday], sigPerc)
                 sigAngInh[f1,f2,iday] = angleInh_aligned[f1,f2, iday] < h # if the real angle is < 5th percentile of the shuffled angles, then it is significantly differnet from null dist.  
                 
-                h = np.percentile(angleExcS_aligned[f1,f2,:, iday], 5)
+                h = np.percentile(angleExcS_aligned[f1,f2,:, iday], sigPerc)
                 sigAngExc[f1,f2,iday] = angleExc_aligned[f1,f2, iday] < h            
 
-                h = np.percentile(angleAllExcS_aligned[f1,f2,:, iday], 5)
+                h = np.percentile(angleAllExcS_aligned[f1,f2,:, iday], sigPerc)
                 sigAngAllExc[f1,f2,iday] = angleAllExc_aligned[f1,f2, iday] < h
 
-                h = np.percentile(angleExc_excshS_aligned[f1,f2,:,:, iday], 5, axis=0) # for each exc samp, compute the percentile over the 1000 shfl angles
+                h = np.percentile(angleExc_excshS_aligned[f1,f2,:,:, iday], sigPerc, axis=0) # for each exc samp, compute the percentile over the 1000 shfl angles
                 sigAngExc_excsh[f1,f2,:,iday] = angleExc_excsh_aligned[f1,f2, :, iday] < h  # exc samps            
 
                 

@@ -353,16 +353,16 @@ def errbarAllDays(a,b,p,gs,colors = ['g','k'],lab1='exc',lab2='inh',lab='ave(CA)
 
 #%% ave mice time course: Plot time course of whatever var u r interested in for exc and inh: take average across days for each mouse; then plot ave+/-se across mice
 
-def plotTimecourse_avMice(time_al_final, avFRAllMs, daysDim, colors, labs, lab, alph=1, doErrbar=1, dnow0='', fnam=''):
+def plotTimecourse_avMice(time_al_final, avFRAllMs, daysDim, colors, labs, lab, alph=1, doErrbar=1, dnow0='', fnam='', tlab=''):
    
 #    colors = ['b','r']; lab1='exc'; lab2='inh'; lab='Stability (deg.)'
 
     def avMice(avFRexc_allMice_al, daysDim):
         # average across days for each mouse
-        avD_exc = np.array([np.mean(avFRexc_allMice_al[im],axis=daysDim) for im in range(len(avFRexc_allMice_al))]) # nMice x alignedFrames (across mice)
+        avD_exc = np.array([np.nanmean(avFRexc_allMice_al[im],axis=daysDim) for im in range(len(avFRexc_allMice_al))]) # nMice x alignedFrames (across mice)
         # average and se across mice
-        av_exc = np.mean(avD_exc,axis=0)
-        se_exc = np.std(avD_exc,axis=0)/np.sqrt(avD_exc.shape[0]) 
+        av_exc = np.nanmean(avD_exc,axis=0)
+        se_exc = np.nanstd(avD_exc,axis=0)/np.sqrt(avD_exc.shape[0]) 
         
         return avD_exc, av_exc, se_exc
     
@@ -397,36 +397,39 @@ def plotTimecourse_avMice(time_al_final, avFRAllMs, daysDim, colors, labs, lab, 
     
     plt.ylabel(lab)        
     plt.xlabel('Time relative to choice onset')
+    plt.title(tlab, position=[.5,1.05])
     plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
     makeNicePlots(plt.gca(),1,0)        
     
 
-    #% Save the figure           
-    if savefigs:
-        if chAl:
-            cha = 'chAl_'
-            
-        d = os.path.join(svmdir+dnow0)        
-        if not os.path.exists(d):
-            print 'creating folder'
-            os.makedirs(d)
-        
-        fign = os.path.join(d, suffn[0:5]+cha+ fnam +'.'+fmt[0])
-#        fnam = 'FR_timeCourse_aveMice_aveDays_allTrsNeursPooled'+dpp+dp+dpm0
-        plt.savefig(fign, bbox_inches='tight') 
+#    #% Save the figure           
+#    if savefigs:
+#        if chAl:
+#            cha = 'chAl_'
+#        else:
+#            cha = 'stAl_'    
+#            
+#        d = os.path.join(svmdir+dnow0)        
+#        if not os.path.exists(d):
+#            print 'creating folder'
+#            os.makedirs(d)
+#        
+#        fign = os.path.join(d, suffn[0:5]+cha+ fnam +'.'+fmt[0])
+##        fnam = 'FR_timeCourse_aveMice_aveDays_allTrsNeursPooled'+dpp+dp+dpm0
+#        plt.savefig(fign, bbox_inches='tight') 
 
        
 
 #%% each mouse time course: Plot time course of whatever var u r interested in for exc and inh      
 
 #time_al = time_aligned_final; avFRe = stabScoreExc0_al[im]; avFRi = stabScoreInh0_allMice_al[im]
-def plotTimecourse_eachMouse(time_al, avFRs, daysDim, colors, labs, lab, linstyl='-', alph=1, dnow='', fnam=''): 
+def plotTimecourse_eachMouse(time_al, avFRs, daysDim, colors, labs, lab, linstyl='-', alph=1, dnow='', fnam='', tlab=''): 
     
     for i in range(len(avFRs)):    
         # average and se across days         
         avFR = avFRs[i]+0
-        av = np.mean(avFR, axis=daysDim) 
-        sd = np.std(avFR, axis=daysDim)/np.sqrt(avFR.shape[daysDim])     
+        av = np.nanmean(avFR, axis=daysDim) 
+        sd = np.nanstd(avFR, axis=daysDim)/np.sqrt(avFR.shape[daysDim])     
         plt.errorbar(time_al, av, sd, color=colors[i], label=labs[i], linestyle=linstyl, alpha=alph)
            
 
@@ -447,23 +450,26 @@ def plotTimecourse_eachMouse(time_al, avFRs, daysDim, colors, labs, lab, linstyl
 
     plt.ylabel(lab)        
     plt.xlabel('Time relative to choice onset')
+    plt.title(tlab, position=[.5,1.05])
     plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
     makeNicePlots(plt.gca(),1,0)        
     
     
-    #% Save the figure           
-    if savefigs:
-        if chAl:
-            cha = 'chAl_'
-            
-        d = os.path.join(svmdir+dnow)        
-        if not os.path.exists(d):
-            print 'creating folder'
-            os.makedirs(d)
-        
-        fign = os.path.join(d, suffn[0:5]+cha+ fnam +'.'+fmt[0])
-#        fnam = 'FR_timeCourse_aveDays_allTrsNeursPooled'+dp+dpmAllm[im]
-        plt.savefig(fign, bbox_inches='tight') 
+#    #% Save the figure           
+#    if savefigs:
+#        if chAl:
+#            cha = 'chAl_'
+#        else:
+#            cha = 'stAl_'
+#            
+#        d = os.path.join(svmdir+dnow)        
+#        if not os.path.exists(d):
+#            print 'creating folder'
+#            os.makedirs(d)
+#        
+#        fign = os.path.join(d, suffn[0:5]+cha+ fnam +'.'+fmt[0])
+##        fnam = 'FR_timeCourse_aveDays_allTrsNeursPooled'+dp+dpmAllm[im]
+#        plt.savefig(fign, bbox_inches='tight') 
         
 
 
@@ -1331,21 +1337,25 @@ def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNum
 #%% Change color order to jet 
 
 def colorOrder(nlines=30):
-    ##%% Define a colormap
-    from matplotlib import cm
+    ##%% Define a colormap   
     from numpy import linspace
+    from matplotlib import cm
+    cmtype = cm.jet # jet; what kind of colormap?
+    
     start = 0.0
     stop = 1.0
     number_of_lines = nlines #len(days)
     cm_subsection = linspace(start, stop, number_of_lines) 
-    colors = [ cm.jet(x) for x in cm_subsection ]
+    colorsm = [ cmtype(x) for x in cm_subsection ]
     
     #% Change color order to jet 
-    from cycler import cycler
-    plt.rcParams['axes.prop_cycle'] = cycler(color=colors)
+#    from cycler import cycler
+#    plt.rcParams['axes.prop_cycle'] = cycler(color=colors)
+    
+#    a = plt.scatter(y, y2, c=np.arange(len(y)), cmap=cm.jet, edgecolors='face')#, label='class accuracy (% correct testing trials)')
+            
+    return colorsm
 
-
-        
 
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
 
@@ -1682,7 +1692,7 @@ def alTrace(trace, eventI_ds_allDays, nPreMin, nPostMin, mn_corr=np.nan, thTrain
     # mn_corr: min number of HR and LR trials 
     numDays = len(trace)        
     if np.isnan(mn_corr).any():
-        mn_corr = np.full((numDays), thTrained+1).astype(int) # so all days are analyzed
+        mn_corr = np.full((numDays), thTrained+1, dtype=int) # so all days are analyzed
         
     trace = np.array(trace)
     trace_aligned = []
@@ -2009,7 +2019,7 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
     '''
     for idi in range(3):
         
-        doInhAllexcEqexc = np.full((3), False)
+        doInhAllexcEqexc = np.full((3), False, dtype=bool)
         doInhAllexcEqexc[idi] = True 
         if idi==1 and doAllN: # plot allN, instead of allExc
             svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, shflTrsEachNeuron) # for chAl: the latest file is with soft norm; earlier file is 
