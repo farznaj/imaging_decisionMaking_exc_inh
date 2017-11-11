@@ -534,8 +534,10 @@ def setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_s
     classErr_bestC_test_incorr_chance = np.full((numSamples, numFrs), np.nan)
     if len(wAllC)>0:
         w_bestc_data = np.full((numSamples, wAllC.shape[2], numFrs), np.nan)
+        b_bestc_data = np.full((numSamples, numFrs), np.nan)
     else:
         w_bestc_data = []
+        b_bestc_data = []
     
     for ifr in range(numFrs):
                 
@@ -609,7 +611,7 @@ def setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_s
             classErr_bestC_test_incorr_chance[:,ifr] = perClassErrorTest_incorr_chance[:,indBestC,ifr].squeeze()                
         if len(wAllC)>0:
             w_bestc_data[:,:,ifr] = wAllC[:,indBestC,:,ifr].squeeze() # numSamps x neurons
-            b_bestc_data = bAllC[:,indBestC,ifr]            
+            b_bestc_data[:,ifr] = bAllC[:,indBestC,ifr].squeeze() # numSamps           
 
        # check the number of non-0 weights
     #       for ifr in range(numFrs):
@@ -1994,8 +1996,7 @@ def loadSVM_allN(svmName, doPlots, doIncorr, loadWeights):
     else:
         return classErr_bestC_train_data, classErr_bestC_test_data, classErr_bestC_test_shfl, classErr_bestC_test_chance, cbestFrs, w_bestc_data, b_bestc_data
     
-
-        
+         
 #%% Load exc,inh SVM vars
         
 def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, doPlots, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron):
@@ -2017,15 +2018,26 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
 
     else:  # 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)       
     '''
+    
+#    if doAllN==1:
+#        smallestC = 0 # Identify best c: if 1: smallest c whose CV error falls below 1 se of min CV error will be used as optimal C; if 0: c that gives min CV error will be used as optimal c.
+#        if smallestC==1:
+#            print 'bestc = smallest c whose cv error is less than 1se of min cv error'
+#        else:
+#            print 'bestc = c that gives min cv error'
+            
+    svmName_allN = ''            
     for idi in range(3):
         
         doInhAllexcEqexc = np.full((3), False, dtype=bool)
         doInhAllexcEqexc[idi] = True 
         if idi==1 and doAllN: # plot allN, instead of allExc
-            svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, shflTrsEachNeuron) # for chAl: the latest file is with soft norm; earlier file is 
+            svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, shflTrsEachNeuron)[0] # for chAl: the latest file is with soft norm; earlier file is 
+            svmName_allN = svmName
         else:        
-            svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)        
-        svmName = svmName[0] # use [0] for the latest file; use [-1] for the earliest file
+            svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]
+            svmName_excInh = svmName
+#        svmName = svmName[0] # use [0] for the latest file; use [-1] for the earliest file
         print os.path.basename(svmName)    
 
         ######### inh
@@ -2041,6 +2053,7 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
         elif doInhAllexcEqexc[1] == 1: 
             if doAllN: # plot allN, instead of allExc
                 _, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, _, w_data_allExc, b_data_allExc = loadSVM_allN(svmName, doPlots, doIncorr, 1)   
+                
             else: # plot allExc
                 if loadWeights==1:
                     Dataae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_allExc', 'perClassErrorTest_shfl_allExc', 'perClassErrorTest_chance_allExc', 'w_data_allExc', 'b_data_allExc'])
@@ -2132,7 +2145,7 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
         perClassErrorTest_shfl_exc = []
         perClassErrorTest_chance_exc = []
     
-    return perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc
+    return perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN
     
     
 

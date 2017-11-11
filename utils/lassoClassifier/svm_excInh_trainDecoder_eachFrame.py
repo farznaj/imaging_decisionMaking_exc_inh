@@ -55,8 +55,8 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni19' #'fni17' #'fni16' #
-    imagingFolder = '150930'#'150923' #'151023' #'151023' #'151001' #
+    mousename = 'fni16' #'fni17' #'fni16' #
+    imagingFolder = '150923' #30'#'150923' #'151023' #'151023' #'151001' #
     mdfFileNumber = [1] #[1] 
 
     shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.

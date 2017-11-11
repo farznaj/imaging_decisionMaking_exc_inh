@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Thu Nov  9 17:07:19 2017
+
+@author: farznaj
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Tue Oct 10 15:26:41 2017
 
 @author: farznaj
@@ -22,8 +29,8 @@ Created on Sun Mar 12 15:12:29 2017
 mice = 'fni16', 'fni17', 'fni18', 'fni19'
 
 savefigs = 0
-useAllNdecoder = 1 # if 1: use the decoder that was trained on all neurons; # if 0: Use the decoder that was trained only on inh or only exc.
-normWeights = 0 # if 1, weights will be normalized to unity length.
+useAllNdecoder = 0 # if 1: use the decoder that was trained on all neurons; # if 0: Use the decoder that was trained only on inh or only exc.
+normWeights = 1 # if 1, weights will be normalized to unity length.
 
 doPlots = 1 #1 # plot hists of w per mouse
 thTrained = 10#10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
@@ -303,6 +310,7 @@ for im in range(len(mice)):
         else:  
             #%% Use the other svm file in which SVM was trained using only inh or exc.
             _,_,_,_,_,_,_,_,_, winh0, wexc0, w_data_exc, _, _, _, svmName_excInh, svmName_allN = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, 0, 1, 0)
+#            loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, 0, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron):
             # weights are samps x neurons x frames
 
             if normWeights: ##%% normalize weights of each sample        

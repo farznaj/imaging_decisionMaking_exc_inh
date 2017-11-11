@@ -47,11 +47,11 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni19' #'fni16'##'fni17' #'fni16' #
-    imagingFolder = '150930'#'150923'#'150903' #'151023' #'151001' #
+    mousename = 'fni16' #'fni16'##'fni17' #'fni16' #
+    imagingFolder = '150923'#'150923'#'150903' #'151023' #'151001' #
     mdfFileNumber = [1] #[1] 
 
-    shflTrsEachNeuron = 1  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
+    shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
     outcome2ana = 'corr' # 'all' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.                
     ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone.
          
