@@ -134,10 +134,9 @@ for im in range(len(mice)):
     behCorr_all = []
     behCorrHR_all = []
     behCorrLR_all = []    
-    corr_hr_lr = np.full((len(days),2), np.nan) # number of hr, lr correct trials for each day
     eventI_ds_allDays = np.full((len(days)), np.nan)    
     eventI_allDays = np.full((len(days)), np.nan) # frame at which choice happened (if traces were downsampled in svm_eachFrame, it will be the downsampled frame number)
-    
+    corr_hr_lr = np.full((len(days),2), np.nan) # number of hr, lr correct trials for each day    
     
     #%%
 #    iday = 15

@@ -1,6 +1,159 @@
+## Load commonly used libraries, and define commanly used functions
+
+
+#%%
+frameLength = 1000/30.9; # sec.  # np.diff(time_aligned_stim)[0];
+palpha = .05 # p <= palpha is significant
+
+
+##%% Import modules
+import sys
+eps = sys.float_info.epsilon #10**-10 # tiny number below which weight is considered 0
+import os
+import glob
+import numpy as np   
+import numpy.random as rng
+import scipy as sci
+import scipy.io as scio
+import scipy.stats as stats
+from matplotlib import pyplot as plt
+import matplotlib.gridspec as gridspec
+
+from svm_plots_setVars_n import *
+#import sys
+#sys.path.append('/home/farznaj/Documents/trial_history/imaging/')  
+#from setImagingAnalysisNamesP import *
+#neuronType = 2; # 0: excitatory, 1: inhibitory, 2: all types.    
+
+
+#%% Set svm and figure directories; also some vars related to saving figures
+
+#plt.rc('font', family='helvetica')    
+fmt = ['pdf', 'svg', 'eps'] #'png', 'pdf': preserve transparency # Format of figures for saving
+
+#figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/' # Directory for saving figures.
+import platform
+if platform.system()=='Linux':
+    figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/'
+elif platform.system()=='Darwin':
+    figsDir = '/Users/Farzaneh/Dropbox/ChurchlandLab/Farzaneh_Gamal/' #    svmfold = ''
+
+
+# Make folder named SVM to save figures inside it
+svmdir = os.path.join(figsDir, 'SVM') #if not os.path.exists(svmdir): #    os.makedirs(svmdir)    
+
+
+if trialHistAnalysis: #     ep_ms = np.round((ep-eventI)*frameLength) #    th_stim_dur = []
+    suffn = 'prev_'  #    suffnei = 'prev_%sITIs_excInh_' %(itiName)
+else:
+    suffn = 'curr_'  #    suffnei = 'curr_%s_epVar_' %('excInh')   #print '\n', suffn[:-1], ' - ', suffnei[:-1]
+
+
+if trialHistAnalysis==1:    
+    if iTiFlg==0:
+        itiName = 'short'
+    elif iTiFlg==1:
+        itiName = 'long'
+    elif iTiFlg==2:
+        itiName = 'all'
+else: # wont be used, only not to get error when running setSVMname
+    itiName = 'all'
+
+
+
+#%%
+########################################################################
 ## All commanly used functions
+########################################################################
+
+def svm_setDays_allMice(mice, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, regressBins, useEqualTrNums, shflTrsEachNeuron, thTrained):
+    
+    
+    #%%
+    chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
+    stAl = ch_st_goAl[1]
+    goToneAl = ch_st_goAl[2]
+
+
+    #%% Set alldays, good days and mn_corr for all mice
+    
+    days_allMice = [] 
+    numDaysAll = np.full(len(mice), np.nan, dtype=int)
+    
+    daysGood_allMice = []
+    dayinds_allMice = []
+    mn_corr_allMice = []
+    
+    allDays = np.nan
+    noZmotionDays = np.nan
+    noZmotionDays_strict = np.nan
+    noExtraStimDays = np.nan
+    
+    for im in range(len(mice)):
+        
+        #%%            
+        mousename = mice[im] # mousename = 'fni16' #'fni17'
+        if mousename == 'fni18': #set one of the following to 1:
+            allDays = 1# all 7 days will be used (last 3 days have z motion!)
+            noZmotionDays = 0 # 4 days that dont have z motion will be used.
+            noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
+        if mousename == 'fni19':    
+            allDays = 1
+            noExtraStimDays = 0   
+            
+    #    execfile("svm_plots_setVars_n.py")      #    execfile("svm_plots_setVars.py")      
+        days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
+    
+        days_allMice.append(days)
+        numDaysAll[im] = len(days)
+        
+        
+        #%% Set number of hr, lr trials that were used for svm training on each day
+        
+        corr_hr_lr = np.full((len(days),2), np.nan) # number of hr, lr correct trials for each day    
+    
+        for iday in range(len(days)): 
+        
+            imagingFolder = days[iday][0:6]; #'151013'
+            mdfFileNumber = map(int, (days[iday][7:]).split("-")); #[1,2] 
+                
+            imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=[2], pnev2load=[], postNProvided=1)        
+            postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
+    #        moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))       
+    #        print(os.path.basename(imfilename))    
+            svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, [1,0,0], regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]   
+            
+            ##%% Set number of hr, lr trials that were used for svm training        
+            corr_hr, corr_lr = set_corr_hr_lr(postName, svmName)    
+            corr_hr_lr[iday,:] = [corr_hr, corr_lr]    
+    
+    
+        #%% Set good days (days with enough trials)
+            
+        mn_corr = np.min(corr_hr_lr,axis=1) # number of trials of each class. 90% of this was used for training, and 10% for testing.
+    
+        print 'num days to be excluded with few svm-trained trs:', sum(mn_corr < thTrained)    
+        print np.array(days)[mn_corr < thTrained]
+        
+        numGoodDays = sum(mn_corr>=thTrained)    
+        numOrigDays = numDaysAll[im].astype(int)
+        
+        dayinds = np.arange(numOrigDays)
+        dayinds = np.delete(dayinds, np.argwhere(mn_corr < thTrained))
+    
+        dayinds_allMice.append(dayinds)
+        daysGood_allMice.append(np.array(days_allMice[im])[dayinds])        
+        mn_corr_allMice.append(mn_corr)
+        
+    
+    return days_allMice, numDaysAll, daysGood_allMice, dayinds_allMice, mn_corr_allMice
+        
+    
+    
+
 
 #%% Extend the built in two tailed ttest function to one-tailed
+
 def ttest2(a, b, **tailOption):
     import scipy.stats as stats
     import numpy as np
@@ -1559,8 +1712,24 @@ def setEventIds(postName, chAl, regressBins=3, trialHistAnalysis=0):
     
 
 #%% Get number of hr, lr trials that were used for svm training
+'''
+corr_hr_lr = np.full((len(days),2), np.nan) # number of hr, lr correct trials for each day    
+
+for iday in range(len(days)): 
+
+    imagingFolder = days[iday][0:6]; #'151013'
+    mdfFileNumber = map(int, (days[iday][7:]).split("-")); #[1,2] 
+        
+    imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=[2], pnev2load=[], postNProvided=1)        
+    postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
+#        moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))       
+#        print(os.path.basename(imfilename))    
+    svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, [1,0,0], regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]   
+'''
     
 def set_corr_hr_lr(postName, svmName, doIncorr=0):
+    # codes above show how to get postName and svmName
+
     Data = scio.loadmat(postName, variable_names=['allResp_HR_LR'])    
     allResp_HR_LR = np.array(Data.pop('allResp_HR_LR')).flatten().astype('float')
 #    print '%d correct choices; %d incorrect choices' %(sum(outcomes==1), sum(outcomes==0))
@@ -1710,15 +1879,16 @@ def alTrace(trace, eventI_ds_allDays, nPreMin, nPostMin, mn_corr=np.nan, thTrain
 #%% Align angles (frs x frs x days) of all days on the common eventI
 
 def alTrace_frfr(trace_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final):
-    # trace = angleInh_all 
-    # frs x frs x days
+    # can be used for aligning matrices of size frs x frs across days, or across mice
+    # trace_allMice: each element is for a mouse or a day ... and it has size frs x frs
+    # output: days x alignedFrs x alignedFrs
 
     numMice = len(trace_allMice)
     
     totLen = nPreMin_final + nPostMin_final + 1  # len(time_aligned) # nPreMin + nPostMin + 1   
     trace_aligned_allMice = []
     
-    for im in range(numMice):
+    for im in range(numMice): # or looping through days
 #        trace_aligned = np.ones((totLen,totLen, trace_allMice[im].shape[2])) + np.nan
     #    angleInh_aligned[:, im] = angleInh_all[im][eventI_ds_allDays[im] - nPreMin  :  eventI_ds_allDays[im] + nPostMin + 1  ,  eventI_ds_allDays[im] - nPreMin  :  eventI_ds_allDays[im] + nPostMin + 1]
         inds = np.arange(nPreMin_allMice[im] - nPreMin_final,  nPreMin_allMice[im] + nPostMin_final + 1)
@@ -2191,3 +2361,17 @@ def av_se_CA_trsamps(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shf
     
     return numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_exc, sd_test_data_exc, av_test_shfl_exc, sd_test_shfl_exc, av_test_chance_exc, sd_test_chance_exc, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc
 
+
+
+
+#%% Set extent for imshow, so x axis has values corresponding to time_aligned
+
+def setExtent_imshow(time_aligned):
+    
+    real_x = time_aligned
+    real_y = real_x[::-1] + 0
+    dx = (real_x[1]-real_x[0])/2.
+    dy = (real_y[1]-real_y[0])/2.
+    extent = [real_x[0]-dx, real_x[-1]+dx, real_y[0]-dy, real_y[-1]+dy]  # extent=[time_aligned[0], time_aligned[-1], time_aligned[-1], time_aligned[0]])
+
+    return extent

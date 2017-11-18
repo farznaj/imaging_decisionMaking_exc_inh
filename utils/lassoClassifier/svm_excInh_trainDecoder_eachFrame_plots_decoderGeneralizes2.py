@@ -14,9 +14,9 @@ Created on Fri Oct 20 10:52:31 2017
 
 #%% Change the following vars:
 
-mice = 'fni16', 'fni17', 'fni19', 'fni18'
+mice = 'fni18', #'fni16', 'fni17', 'fni18', 'fni19'
 
-saveResults = 1
+saveResults = 0
 
 
 normWeights = 1 # if 1, weights will be normalized to unity length.
@@ -66,23 +66,24 @@ def testDecode(x, w, b, th=0):
     nFrs = x.shape[0]
 #    numSamples = w.shape[0]
 #    classErr = np.full((numSamples, nFrs, nFrs), np.nan)  # nSamps x testingFrs x trainedFrs
-    classErr = []
+    classErr = [] # trainedFrs x nSamps x testingFrs
     
-    for ifr in range(nFrs): # get the decoder of this frame
+    for ifr in range(nFrs): # this is the trainedFr # get the decoder of this frame
         
         ww = w[:,:,ifr]
         bb = b[:,ifr]
         
+        # test the decoder of frame ifr on all other time points
         # projecting neural activity of each frame onto the decoder of frame ifr
         yhat = np.dot(ww, x) + bb[:, np.newaxis, np.newaxis]# nSamps x nFrs x trs
         # predict trial labels                     
         yhat[yhat<th] = 0
         yhat[yhat>th] = 1  
         
-        classErr.append(np.mean(abs(yhat - Y_svm), axis=-1) * 100)
+        classErr.append(np.mean(abs(yhat - Y_svm), axis=-1) * 100) # nSamps x testingFrs
 #        classErr[:,:,ifr] = np.mean(abs(yhat - Y_svm), axis=-1) * 100 # nSamps x testingFrs x trainedFrs (how well decoder ifr does in predicting choice on each frame of frs)
 
-    return classErr
+    return classErr  # trainedFrs x nSamps x testingFrs
 
 
         
@@ -111,7 +112,7 @@ for im in range(len(mice)):
     execfile("svm_plots_setVars_n.py")      
 #    numDaysAll[im] = len(days)
         
-    
+        
     #%% Loop over days
     
     classErr_allN_allDays = []
@@ -282,7 +283,7 @@ for im in range(len(mice)):
             print '\tall trials: %d HR; %d LR' %((Y_svm==1).sum(), (Y_svm==0).sum())
     
     
-        #%% I think we need at the very least 3 trials of each class to train SVM. So exit the analysis if this condition is not met!
+        ##%% I think we need at the very least 3 trials of each class to train SVM. So exit the analysis if this condition is not met!
         
     #    if min((Y_svm==1).sum(), (Y_svm==0).sum()) < 3:
     #        sys.exit('Too few trials to do SVM training! HR=%d, LR=%d' %((Y_svm==1).sum(), (Y_svm==0).sum()))
@@ -477,14 +478,14 @@ for im in range(len(mice)):
         w = w_data_allN_normed
         b = b_data_allExc
         
-        classErr_allN = testDecode(x, w, b) # nSamps x testingFrs x trainedFrs (how well decoder ifr does in predicting choice on each frame of frs)
+        classErr_allN = testDecode(x, w, b) # trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
         
         ########### inh neurons
         x = Xinh
         w = w_data_inh_normed
         b = b_data_inh
         
-        classErr_inh = testDecode(x, w, b) # nSamps x testingFrs x trainedFrs (how well decoder ifr does in predicting choice on each frame of frs)
+        classErr_inh = testDecode(x, w, b) # trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
 
         ########### exc neurons
         classErr_exc = []
@@ -493,7 +494,7 @@ for im in range(len(mice)):
             w = w_data_exc_normed[iexc,:,:,:]
             b = b_data_exc[iexc,:,:]
             
-            classErr_exc.append(testDecode(x, w, b)) # nExcSamps x nSamps x testingFrs x trainedFrs (how well decoder ifr does in predicting choice on each frame of frs)
+            classErr_exc.append(testDecode(x, w, b)) # nExcSamps x trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
 
  
         '''
@@ -536,11 +537,11 @@ for im in range(len(mice)):
         
         
         scio.savemat(finame, {'lastTimeBinMissed_allDays':lastTimeBinMissed_allDays,
-                               'classErr_allN_allDays':classErr_allN_allDays,
-                               'classErr_inh_allDays':classErr_inh_allDays,
-                               'classErr_exc_allDays':classErr_exc_allDays,
-                               'eventI_ds_allDays':eventI_ds_allDays,
-                               'eventI_allDays':eventI_allDays})
+                              'classErr_allN_allDays':classErr_allN_allDays,
+                              'classErr_inh_allDays':classErr_inh_allDays,
+                              'classErr_exc_allDays':classErr_exc_allDays,
+                              'eventI_ds_allDays':eventI_ds_allDays,
+                              'eventI_allDays':eventI_allDays})
     
            
     else:
