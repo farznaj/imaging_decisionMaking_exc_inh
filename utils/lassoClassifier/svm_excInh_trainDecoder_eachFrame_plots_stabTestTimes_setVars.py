@@ -14,9 +14,9 @@ Created on Fri Oct 20 10:52:31 2017
 
 #%% Change the following vars:
 
-mice = 'fni18', #'fni16', 'fni17', 'fni18', 'fni19'
+mice = 'fni16', 'fni17', 'fni18', 'fni19'
 
-saveResults = 0
+saveResults = 1
 
 
 normWeights = 1 # if 1, weights will be normalized to unity length.
@@ -62,7 +62,7 @@ shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X
 
 
 #%%
-def testDecode(x, w, b, th=0):
+def testDecode(y, x, w, b, th=0):
     nFrs = x.shape[0]
 #    numSamples = w.shape[0]
 #    classErr = np.full((numSamples, nFrs, nFrs), np.nan)  # nSamps x testingFrs x trainedFrs
@@ -73,14 +73,23 @@ def testDecode(x, w, b, th=0):
         ww = w[:,:,ifr]
         bb = b[:,ifr]
         
-        # test the decoder of frame ifr on all other time points
+        # test the decoder of frame ifr (trainedFr) on all other time points (testingFrs)
         # projecting neural activity of each frame onto the decoder of frame ifr
-        yhat = np.dot(ww, x) + bb[:, np.newaxis, np.newaxis]# nSamps x nFrs x trs
+        yhat = np.dot(ww, x) + bb[:, np.newaxis, np.newaxis] # nSamps x testingFrs x trials
         # predict trial labels                     
         yhat[yhat<th] = 0
         yhat[yhat>th] = 1  
         
-        classErr.append(np.mean(abs(yhat - Y_svm), axis=-1) * 100) # nSamps x testingFrs
+        # Now compute difference between actual and predicted y
+        if np.ndim(y) == 1:
+            d = yhat - y  # nSamps x testingFrs x trials
+        else:  # if y is samps x trials (ie if y is shuffled)
+#            test this
+            d = np.transpose(np.transpose(yhat, (1,0,2)) - y, (1,0,2))  # nSamps x testingFrs x trials
+        
+        # average across trials to get classification error 
+        classErr.append(np.mean(abs(d), axis=-1) * 100) # nSamps x testingFrs 
+
 #        classErr[:,:,ifr] = np.mean(abs(yhat - Y_svm), axis=-1) * 100 # nSamps x testingFrs x trainedFrs (how well decoder ifr does in predicting choice on each frame of frs)
 
     return classErr  # trainedFrs x nSamps x testingFrs
@@ -105,11 +114,20 @@ for im in range(len(mice)):
         allDays = 1# all 7 days will be used (last 3 days have z motion!)
         noZmotionDays = 0 # 4 days that dont have z motion will be used.
         noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
-    if mousename == 'fni19':    
+        noExtraStimDays = np.nan
+    elif mousename == 'fni19':    
         allDays = 1
         noExtraStimDays = 0   
+        noZmotionDays = np.nan
+        noZmotionDays_strict = np.nan
+    else:
+        allDays = np.nan
+        noZmotionDays = np.nan
+        noZmotionDays_strict = np.nan
+        noExtraStimDays = np.nan
         
-    execfile("svm_plots_setVars_n.py")      
+#    execfile("svm_plots_setVars_n.py")      
+    days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
 #    numDaysAll[im] = len(days)
         
         
@@ -118,6 +136,11 @@ for im in range(len(mice)):
     classErr_allN_allDays = []
     classErr_inh_allDays = []
     classErr_exc_allDays = []
+
+    classErr_allN_shfl_allDays = []
+    classErr_inh_shfl_allDays = []
+    classErr_exc_shfl_allDays = []
+        
     eventI_ds_allDays = np.full((len(days)), np.nan) # frame at which choice happened (if traces were downsampled in svm_eachFrame, it will be the downsampled frame number)
     eventI_allDays = np.full((len(days)), np.nan)
     lastTimeBinMissed_allDays = np.full((len(days)), np.nan)
@@ -478,14 +501,14 @@ for im in range(len(mice)):
         w = w_data_allN_normed
         b = b_data_allExc
         
-        classErr_allN = testDecode(x, w, b) # trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
+        classErr_allN = testDecode(Y_svm, x, w, b) # trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
         
         ########### inh neurons
         x = Xinh
         w = w_data_inh_normed
         b = b_data_inh
         
-        classErr_inh = testDecode(x, w, b) # trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
+        classErr_inh = testDecode(Y_svm, x, w, b) # trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
 
         ########### exc neurons
         classErr_exc = []
@@ -494,9 +517,8 @@ for im in range(len(mice)):
             w = w_data_exc_normed[iexc,:,:,:]
             b = b_data_exc[iexc,:,:]
             
-            classErr_exc.append(testDecode(x, w, b)) # nExcSamps x trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
+            classErr_exc.append(testDecode(Y_svm, x, w, b)) # nExcSamps x trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
 
- 
         '''
         classErrAveSamps = np.mean(classErr, axis=0) # 
         # classErrAveSamps[testFr, trainedFr]
@@ -508,13 +530,55 @@ for im in range(len(mice)):
         plt.axvline(eventI_ds, 0, nFrs)
         '''
 
+        
+        #%% Same as above but now set class accuracy for shuffled trial labels    
+#        TEST THE FOLLOWING
+        
+        
+        # Set shuffled Y_svm
+        nSamps = w_data_allN_normed.shape[0]
+        
+        Y_shfl = np.full((nSamps,len(Y_svm)), np.nan) # samps x trials
+        for isamp in range(nSamps):
+            Y_shfl[isamp,:] = Y_svm[rng.permutation(len(Y_svm))]
+         
 
-        ###############%%    
+        ########### All neurons
+        x = X_svm
+        w = w_data_allN_normed
+        b = b_data_allExc
+        
+        classErr_allN_shfl = testDecode(Y_shfl, x, w, b) # trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
+        
+        ########### inh neurons
+        x = Xinh
+        w = w_data_inh_normed
+        b = b_data_inh
+        
+        classErr_inh_shfl = testDecode(Y_shfl, x, w, b) # trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
+
+        ########### exc neurons
+        classErr_exc_shfl = []
+        for iexc in range(numShufflesExc):
+            x = XexcEq[iexc,:,:,:]
+            w = w_data_exc_normed[iexc,:,:,:]
+            b = b_data_exc[iexc,:,:]
+            
+            classErr_exc_shfl.append(testDecode(Y_shfl, x, w, b)) # nExcSamps x trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
+
+
+
+        ############################################################%%    
         #%% Keep vars of all days
     
         classErr_allN_allDays.append(classErr_allN)
         classErr_inh_allDays.append(classErr_inh)        
-        classErr_exc_allDays.append(classErr_exc)        
+        classErr_exc_allDays.append(classErr_exc)  
+
+        classErr_allN_shfl_allDays.append(classErr_allN_shfl)
+        classErr_inh_shfl_allDays.append(classErr_inh_shfl)        
+        classErr_exc_shfl_allDays.append(classErr_exc_shfl)  
+        
         eventI_ds_allDays[iday] = eventI_ds.astype(int)
         eventI_allDays[iday] = eventI #.astype(int)
         lastTimeBinMissed_allDays[iday] = lastTimeBinMissed
@@ -537,13 +601,15 @@ for im in range(len(mice)):
         
         
         scio.savemat(finame, {'lastTimeBinMissed_allDays':lastTimeBinMissed_allDays,
+                              'eventI_ds_allDays':eventI_ds_allDays,
+                              'eventI_allDays':eventI_allDays,
                               'classErr_allN_allDays':classErr_allN_allDays,
                               'classErr_inh_allDays':classErr_inh_allDays,
                               'classErr_exc_allDays':classErr_exc_allDays,
-                              'eventI_ds_allDays':eventI_ds_allDays,
-                              'eventI_allDays':eventI_allDays})
+                              'classErr_allN_shfl_allDays':classErr_allN_shfl_allDays,
+                              'classErr_inh_shfl_allDays':classErr_inh_shfl_allDays,
+                              'classErr_exc_shfl_allDays':classErr_exc_shfl_allDays})
     
-           
     else:
         print 'Not saving .mat file'
 

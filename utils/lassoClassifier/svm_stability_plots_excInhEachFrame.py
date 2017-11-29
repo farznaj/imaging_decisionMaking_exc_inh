@@ -61,32 +61,38 @@ else:
 execfile("defFuns.py")
 
 
-#%%
+#%% moved to defFuns
+'''
 #cmap='jet_r'; #cmap='hot'
-def plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap='jet', cblab=''):
-
-    totLen = len(time_aligned) 
-    step = 4
-    x = (np.unique(np.concatenate((np.arange(np.argwhere(time_aligned>=0)[0], -.5, -step), 
-               np.arange(np.argwhere(time_aligned>=0)[0], totLen, step))))).astype(int)
-    #x = np.arange(0,totLen,step)
+def plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap='jet', cblab='', xl='', yl=''):
+#    
+#    totLen = len(time_aligned) 
+#    step = 4
+#    x = (np.unique(np.concatenate((np.arange(np.argwhere(time_aligned>=0)[0], -.5, -step), 
+#               np.arange(np.argwhere(time_aligned>=0)[0], totLen, step))))).astype(int)
+#    #x = np.arange(0,totLen,step)
+   
+    extent = setExtent_imshow(time_aligned)               
                
-               
-    plt.imshow(top, cmap) #, interpolation='nearest') #, extent=time_aligned)
+    plt.imshow(top, cmap, extent=extent) #, interpolation='nearest') #, extent=time_aligned)
     
-    plt.colorbar(label=cblab)
-    plt.xticks(x, np.round(time_aligned[x]).astype(int))
-    plt.yticks(x, np.round(time_aligned[x]).astype(int))
-    makeNicePlots(plt.gca())
+#    plt.xticks(x, np.round(time_aligned[x]).astype(int))
+#    plt.yticks(x, np.round(time_aligned[x]).astype(int))
     #ax.set_xticklabels(np.round(time_aligned[np.arange(0,60,10)]))
+#    plt.xlim([0, len(time_aligned)])
+#    plt.ylim([0, len(time_aligned)][::-1]) #    plt.ylim([0, len(time_aligned)])
+
+    plt.axhline(nPreMin, 0, nFrs, color='r')
+    plt.axvline(nPreMin, 0, nFrs, color='r')
+    
     plt.title(lab)
     plt.xlabel(xl)
+    plt.ylabel(xl)
+    plt.colorbar(label=cblab)
     plt.clim(cmin, cmax)
-    plt.plot([nPreMin, nPreMin], [0, len(time_aligned)], color='r')
-    plt.plot([0, len(time_aligned)], [nPreMin, nPreMin], color='r')
-    plt.xlim([0, len(time_aligned)])
-#    plt.ylim([0, len(time_aligned)])
-    plt.ylim([0, len(time_aligned)][::-1])
+    
+    makeNicePlots(plt.gca())
+'''
 
 
 #%% Plot Angles averaged across days for data, shfl, shfl-data (plot angle between decoders at different time points)        
@@ -372,12 +378,19 @@ for im in range(len(mice)):
         allDays = 1# all 7 days will be used (last 3 days have z motion!)
         noZmotionDays = 0 # 4 days that dont have z motion will be used.
         noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
-    if mousename == 'fni19':    
+    elif mousename == 'fni19':    
         allDays = 1
         noExtraStimDays = 0   
+    else:
+        import numpy as np
+        allDays = np.nan
+        noZmotionDays = np.nan
+        noZmotionDays_strict = np.nan
+        noExtraStimDays = np.nan
+
         
-    execfile("svm_plots_setVars_n.py")      
-#    execfile("svm_plots_setVars.py")      
+#    execfile("svm_plots_setVars_n.py")      #    execfile("svm_plots_setVars.py")      
+    days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
     days_allMice.append(days)
     numDaysAll[im] = len(days)
    
@@ -684,24 +697,27 @@ for im in range(len(mice)):
         #plt.plot(stabScore.T);
         #plt.legend(days, loc='center left', bbox_to_anchor=(1, .7))
         
-        step = 4
-        x = (np.unique(np.concatenate((np.arange(np.argwhere(time_aligned>=0)[0], -.5, -step), 
-                   np.arange(np.argwhere(time_aligned>=0)[0], totLen, step))))).astype(int)
+#        step = 4
+#        x = (np.unique(np.concatenate((np.arange(np.argwhere(time_aligned>=0)[0], -.5, -step), 
+#                   np.arange(np.argwhere(time_aligned>=0)[0], totLen, step))))).astype(int)
         #cmins,cmaxs, cminc,cmaxc
         asp = 'auto' #2 #
         
         def plotStabScore(top, lab, cmins, cmaxs, cmap='jet', cblab='', ax=plt):
         #    img = ax.imshow(top, cmap)
-            img = ax.imshow(top, cmap, vmin=cmins, vmax=cmaxs)
+            extent = setExtent_imshow(time_aligned)
+            img = ax.imshow(top, cmap, vmin=cmins, vmax=cmaxs, extent=extent)
+            
         #    plt.plot([nPreMin, nPreMin], [0, len(dayinds)], color='r')
-            ax.set_xlim([-1, len(time_aligned)])
-            ax.set_ylim([-2, len(dayinds)][::-1])
+#            ax.set_xlim([-1, len(time_aligned)])
+#            ax.set_ylim([-2, len(dayinds)][::-1])
         #    ax.autoscale(False)
-            ax.axvline(x=nPreMin, c='w', lw=1)
+#            ax.axvline(x=nPreMin, c='w', lw=1)
+            ax.axvline(x=0, c='w', lw=1)
         #    fig.colorbar(label=cblab);     
         #    plt.clim(cmins, cmaxs)
-            ax.set_xticks(x)
-            ax.set_xticklabels(np.round(time_aligned[x]).astype(int))
+#            ax.set_xticks(x)
+#            ax.set_xticklabels(np.round(time_aligned[x]).astype(int))
             ax.set_ylabel('Days')
             ax.set_xlabel(xl)
             ax.set_title(lab)

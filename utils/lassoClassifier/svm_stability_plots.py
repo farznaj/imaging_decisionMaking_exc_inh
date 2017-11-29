@@ -7,18 +7,26 @@ Created on Mon Feb  6 14:36:50 2017
 
 mousename = 'fni17' #'fni17'
 #ch_st_goAl = [0,1,0] # whether do analysis on traces aligned on choice, stim or go tone.
-if mousename == 'fni18':
-    allDays = 1 # all 7 days will be used (last 3 days have z motion!)
+if mousename == 'fni18': #set one of the following to 1:
+    allDays = 1# all 7 days will be used (last 3 days have z motion!)
     noZmotionDays = 0 # 4 days that dont have z motion will be used.
     noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
-if mousename == 'fni19':    
+elif mousename == 'fni19':    
     allDays = 1
     noExtraStimDays = 0   
+else:
+    import numpy as np
+    allDays = np.nan
+    noZmotionDays = np.nan
+    noZmotionDays_strict = np.nan
+    noExtraStimDays = np.nan
+
     
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
 execfile("defFuns.py")
-execfile("svm_plots_setVars_n.py")  
+#execfile("svm_plots_setVars_n.py")  
+days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
 
 #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 #chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 

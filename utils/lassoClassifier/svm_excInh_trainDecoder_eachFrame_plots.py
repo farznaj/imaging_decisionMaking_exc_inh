@@ -13,27 +13,34 @@ Created on Sun Mar 12 15:12:29 2017
 
 #%% Change the following vars:
 
-mousename = 'fni17' #'fni17'
+mousename = 'fni16' #'fni17'
 
-shflTrsEachNeuron = 1  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
-lastTimeBinMissed = 0 #1# if 0, things were ran fine; if 1: by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
-savefigs = 1
+shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
+#lastTimeBinMissed = 0 #1# if 0, things were ran fine; if 1: by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
+savefigs = 0
 
 doAllN = 1 # plot allN, instead of allExc
 corrTrained = 1
 doIncorr = 0
 
-thTrained = 10#10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
+thTrained = 10  # number of trials of each class used for svm training, min acceptable value to include a day in analysis
 loadWeights = 0
 useEqualTrNums = 1
-    
+
 if mousename == 'fni18': #set one of the following to 1:
     allDays = 1# all 7 days will be used (last 3 days have z motion!)
     noZmotionDays = 0 # 4 days that dont have z motion will be used.
     noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
-if mousename == 'fni19':    
+elif mousename == 'fni19':    
     allDays = 1
     noExtraStimDays = 0   
+else:
+    import numpy as np
+    allDays = np.nan
+    noZmotionDays = np.nan
+    noZmotionDays_strict = np.nan
+    noExtraStimDays = np.nan
+
     
 ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 #loadInhAllexcEqexc = 1 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)       
@@ -64,7 +71,8 @@ if doAllN==1:
         print 'bestc = c that gives min cv error'
 
 execfile("defFuns.py")
-execfile("svm_plots_setVars_n.py")  
+#execfile("svm_plots_setVars_n.py")  
+days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
 
 frameLength = 1000/30.9; # sec.
 regressBins = int(np.round(100/frameLength)) # must be same regressBins used in svm_eachFrame. 100ms # set to nan if you don't want to downsample.
@@ -94,7 +102,7 @@ numInh = np.full((len(days)), np.nan)
 numAllexc = np.full((len(days)), np.nan)
 corr_hr_lr = np.full((len(days),2), np.nan) # number of hr, lr correct trials for each day
   
-for iday in range(len(days)):  #
+for iday in range(len(days)):  
 
     #%%            
     print '___________________'
@@ -170,6 +178,7 @@ eventI_ds_allDays = eventI_ds_allDays.astype(int)
 ######################################################################################################################################################          
 
 #%% Average and st error of class accuracies across CV samples ... for each day
+# in the function below we turn class error to class accuracy (by subtracting them from 100)
 
 numD = len(eventI_allDays)
 
@@ -398,7 +407,12 @@ for iday in range(len(days)):
             time_al = np.concatenate((a,b))
         else:
         '''    
+        lastTimeBinMissed = 0
         time_al = set_time_al(totLen, eventI_allDays[iday], lastTimeBinMissed)    
+        if len(time_al) != len(av_test_data_allExc_ch[iday]):
+            lastTimeBinMissed = 1
+            time_al = set_time_al(totLen, eventI_allDays[iday], lastTimeBinMissed)    
+            
 #        plt.figure()
         plt.subplot(221)
         plt.errorbar(time_al, av_test_data_exc_ch[iday], yerr = sd_test_data_exc_ch[iday], label='exc', color='b')

@@ -177,16 +177,22 @@ corr_hr_lr_allMice = []
 for im in range(len(mice)):
         
     #%%            
-    mousename = mice[im] # mousename = 'fni16' #'fni17'
     if mousename == 'fni18': #set one of the following to 1:
         allDays = 1# all 7 days will be used (last 3 days have z motion!)
         noZmotionDays = 0 # 4 days that dont have z motion will be used.
         noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
-    if mousename == 'fni19':    
+    elif mousename == 'fni19':    
         allDays = 1
         noExtraStimDays = 0   
-        
-    execfile("svm_plots_setVars_n.py")      
+    else:
+        import numpy as np
+        allDays = np.nan
+        noZmotionDays = np.nan
+        noZmotionDays_strict = np.nan
+        noExtraStimDays = np.nan
+
+#    execfile("svm_plots_setVars_n.py")      
+    days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
     numDaysAll[im] = len(days)        
 
 #    dnow = '/excInh_trainDecoder_eachFrame_weights/'+mousename+'/'+dect
@@ -731,7 +737,8 @@ nMice = len(mice)
 nTotGoodSess = sum(numDaysAll_good)
 
 for im in range(len(mice)):        
-    execfile("svm_plots_setVars_n.py")  # to get days
+#    execfile("svm_plots_setVars_n.py")  # to get days
+    days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
     mousename = mice[im] # mousename = 'fni16' #'fni17'
     dnow = os.path.join(dnow0,mousename,dect,nl)   
     dpm = 'days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr   
@@ -1027,7 +1034,8 @@ def plotAllPooled(dnowAM, dpp):
 
 if len(mice)==1:            
     for im in range(len(mice)):        
-        execfile("svm_plots_setVars_n.py")  # to get days
+#        execfile("svm_plots_setVars_n.py")  # to get days
+        days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
         mousename = mice[im] # mousename = 'fni16' #'fni17'
         dnow = os.path.join(dnow0,mousename,dect,nl)   
         dpm = 'days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       

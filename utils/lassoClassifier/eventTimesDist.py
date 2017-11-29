@@ -20,8 +20,8 @@ excludeTrs = 0 # If 1, some trials will be excluded from the dists; You need to 
 trialHistAnalysis = 0
 
 execfile("defFuns.py")
-execfile("svm_plots_setVars_n.py")  
-
+#execfile("svm_plots_setVars_n.py")  
+days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
 
 
 #%% Set the following vars:

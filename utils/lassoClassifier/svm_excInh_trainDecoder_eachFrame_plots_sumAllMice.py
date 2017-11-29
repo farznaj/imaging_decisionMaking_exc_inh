@@ -96,11 +96,19 @@ for im in range(len(mice)):
         allDays = 1# all 7 days will be used (last 3 days have z motion!)
         noZmotionDays = 0 # 4 days that dont have z motion will be used.
         noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
-    if mousename == 'fni19':    
+    elif mousename == 'fni19':    
         allDays = 1
         noExtraStimDays = 0   
+    else:
+        import numpy as np
+        allDays = np.nan
+        noZmotionDays = np.nan
+        noZmotionDays_strict = np.nan
+        noExtraStimDays = np.nan
+
     
-    execfile("svm_plots_setVars_n.py")      
+#    execfile("svm_plots_setVars_n.py")      
+    days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
 #    execfile("svm_plots_setVars.py")      
     
     #%% 

@@ -89,11 +89,17 @@ for im in range(len(mice)):
         allDays = 1# all 7 days will be used (last 3 days have z motion!)
         noZmotionDays = 0 # 4 days that dont have z motion will be used.
         noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
-    if mousename == 'fni19':    
+    elif mousename == 'fni19':    
         allDays = 1
         noExtraStimDays = 0   
+    else:        
+        allDays = np.nan
+        noZmotionDays = np.nan
+        noZmotionDays_strict = np.nan
+        noExtraStimDays = np.nan        
         
-    execfile("svm_plots_setVars_n.py")      
+#    execfile("svm_plots_setVars_n.py")      
+    days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
     numDaysAll[im] = len(days)
         
     dnow = os.path.join(dnow0,mousename)   
@@ -745,7 +751,8 @@ for im in range(len(mice)):
 for im in range(len(mice)):
     mousename = mice[im]
     dnow = os.path.join(dnow0, mousename)        
-    execfile("svm_plots_setVars_n.py")          
+#    execfile("svm_plots_setVars_n.py")          
+    days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
     daysGood = np.array(days)[mn_corr_allMice[im]>=thTrained]
     print 'Number of good days: ', len(daysGood)
 
