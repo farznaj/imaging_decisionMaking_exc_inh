@@ -18,6 +18,7 @@ import scipy.io as scio
 import scipy.stats as stats
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
+import copy
 
 #import sys
 #sys.path.append('/home/farznaj/Documents/trial_history/imaging/')  
@@ -1853,13 +1854,15 @@ def set_corr_hr_lr(postName, svmName, doIncorr=0):
         return corr_hr, corr_lr
 
 
+    
 #%% Find number of frames before and after eventI for each day, and the the min numbers across days; 
 # this is to find common eventI (among a number of session)
 
 ##%% Find the common eventI, number of frames before and after the common eventI for the alignment of traces of all days.
 # By common eventI, we  mean the index on which all traces will be aligned.
 
-def set_nprepost(trace, eventI_ds_allDays, mn_corr=np.nan, thTrained=10., regressBins=3):
+def set_nprepost(trace, eventI_ds_allDays, mn_corr=np.nan, thTrained=10., regressBins=3, traceAl=0):
+    # if traceAl=1, it means trace is already aligned across days.. so totLen = len(trace)
     # trace: each element is for one day
     # first element of trace[iday] should be frames
     
@@ -1880,11 +1883,16 @@ def set_nprepost(trace, eventI_ds_allDays, mn_corr=np.nan, thTrained=10., regres
 
     nPreMin = np.nanmin(eventI_ds_allDays[mn_corr >= thTrained]).astype('int') # number of frames before the common eventI, also the index of common eventI.     
     
-    nPost = (np.ones((numDays,1))+np.nan).flatten()
-    for iday in range(numDays):
-        if mn_corr[iday] >= thTrained: # dont include days with too few svm trained trials.
-            nPost[iday] = len(trace[iday]) - eventI_ds_allDays[iday] - 1
-    nPostMin = np.nanmin(nPost).astype('int')
+    
+    if traceAl==1: # the input trace is already aligned across days
+        nPostMin  = len(trace[0]) - nPreMin - 1
+    else: 
+        nPost = (np.ones((numDays,1))+np.nan).flatten()
+        for iday in range(numDays):
+            if mn_corr[iday] >= thTrained: # dont include days with too few svm trained trials.
+                nPost[iday] = len(trace[iday]) - eventI_ds_allDays[iday] - 1
+        nPostMin = np.nanmin(nPost).astype('int')
+    
         
     ## Set the time array for the across-day aligned traces
     totLen = nPreMin + nPostMin +1
