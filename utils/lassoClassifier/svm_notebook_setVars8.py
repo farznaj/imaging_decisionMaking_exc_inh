@@ -30,7 +30,9 @@ Created on Fri Oct 28 12:48:43 2016
 #ch_st_goAl = [0,1,0] # whether do analysis on traces aligned on choice, stim or go tone.
 def svm_notebook_setVars8(mousename, imagingFolder, mdfFileNumber, ch_st_goAl, numSamples=50, trialHistAnalysis=0, iTiFlg=2):
 
-    shflTrsEachNeuron = 1  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
+    shflTrLabs = 1 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.
+
+    shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
     outcome2ana = 'corr' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
     
     winLen = 100 # ms, length of window for downsampling; svm will be trained in non-overlapping windows of size winLen ms.

@@ -21,10 +21,12 @@ Created on Sun Mar 12 15:12:29 2017
 
 #%% Set the following vars:
 
-mice = 'fni16', #'fni17', 'fni18', 'fni19' # 'fni17',
+mice = 'fni16', 'fni17', 'fni18', 'fni19' # 'fni17',
 
-sigPerc = 1 #5 # percentile to determine significancy (if data angle is lower than 5th percentile of shuffle angles, we calle it siginificantly lower!)
-saveVars = 0 # if 1, a mat file will be saved including angle variables
+shflTrLabs = 1 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.
+saveVars = 1 # if 1, a mat file will be saved including angle variables
+
+sigPerc = 1 #5 # percentile to determine significancy (if data angle is lower than 5th percentile of shuffle angles, we call it siginificantly lower!)
 excludeLowTrDays = 1 # remove days with too few trials
 #doPlotsEachMouse = 1 # make plots for each mouse
 #doExcSamps = 1 # if 1, for exc use vars defined by averaging trial subselects first for each exc samp and then averaging across exc samps. This is better than pooling all trial samps and exc samps ...    
@@ -76,7 +78,8 @@ regressBins = int(np.round(100/frameLength)) # must be same regressBins used in 
 #dnow0 = '/stability/'
 
 
-execfile("defFuns.py")
+#execfile("defFuns.py")
+from defFuns import *
 
 
            
@@ -89,7 +92,8 @@ numDaysAll = np.full(len(mice), np.nan, dtype=int)
 days_allMice = [] 
 eventI_ds_allMice = [] # you need this var to align traces of all mice
 
-# im = 0     
+
+#%% im = 0     
 for im in range(len(mice)):
         
     #%%            
@@ -145,8 +149,9 @@ for im in range(len(mice)):
     eventI_allDays = np.full((len(days)), np.nan) # frame at which choice happened (if traces were downsampled in svm_eachFrame, it will be the downsampled frame number)
     corr_hr_lr = np.full((len(days),2), np.nan) # number of hr, lr correct trials for each day    
     
+    
     #%%
-#    iday = 15
+#    iday = 0
     for iday in range(len(days)): 
     
         #%%            
@@ -261,7 +266,7 @@ for im in range(len(mice)):
         #%% Load SVM vars : loadSVM_excInh
     
         perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN = \
-            loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron)
+            loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs)
         
         ##%% Get number of inh and exc        
         if loadWeights!=0: # weights were loaded
@@ -337,7 +342,151 @@ for im in range(len(mice)):
         if sum(normw<=eps).sum()!=0:
             print 'take care of this; you need to reshape w_normed first'
         #    w_normed[normw<=eps, :] = 0 # set the direction to zero if the magnitude of the vector is zero
+
     
+        numSamples = wInh_normed.shape[0]
+        nfrs = wInh_normed.shape[-1]
+        
+        
+        
+        
+        
+        
+        
+                
+        
+        #%% Compute angle between decoders of different trial subsamples
+        '''
+        a = wInh_normed
+        a = wAllExc_normed
+        
+        # same frame, 50 samples... get the angles between these 50 samples (50 x 50)
+     
+        angleInh_samps = np.full((numSamples,numSamples,nfrs), np.nan)
+        
+        for ifr in range(nfrs):
+            v1 = a[:,:,ifr].T # neurons x samples
+            angleInh_samps[:,:,ifr] = np.arccos(abs(np.dot(v1.transpose(), v1)))*180/np.pi # samps x samps; angle between decoders of different trial subsamples
+            # set the diagonal (angle of each samp by itself) to nan
+            np.fill_diagonal(angleInh_samps[:,:,ifr], np.nan)           
+            
+            # only take the lower triangle since the matrix is symmetric    
+            angleInh_samps[:,:,ifr][np.triu_indices(numSamples)] = np.nan      
+            
+        angleInh_avSamps = np.nanmean(angleInh_samps, axis=(0,1)) # nfrs
+#        angleInh_avSamps = np.nanmedian(angleInh_samps, axis=(0,1)) # nfrs
+        plt.plot(angleInh_avSamps)
+#        plt.imshow(angleInh_samps); plt.colorbar()               
+#        np.nanmean(angleInh_samps) , np.nanmedian(angleInh_samps)
+        
+        # look at dist of angles between samples for each frame
+        plt.figure(figsize=(2,nfrs*2))
+        for ifr in range(nfrs):
+            plt.subplot(nfrs,1,ifr+1)
+            plt.hist(angleInh_samps[:,:,ifr][~np.isnan(angleInh_samps[:,:,ifr])]);
+        
+
+        
+        # same frame, 50 samples... get the angles between these 50 samples (50 x 50)
+        angleInh_samps = np.full((numSamples,numSamples,numExcSamples, nfrs), np.nan)
+        
+        for iexc in range(numExcSamples):
+            a = wExc_normed[iexc]
+            for ifr in range(nfrs):
+                v1 = a[:,:,ifr].T # neurons x samples
+                angleInh_samps[:,:,iexc,ifr] = np.arccos(abs(np.dot(v1.transpose(), v1)))*180/np.pi # samps x samps; angle between decoders of different trial subsamples
+                # set the diagonal (angle of each samp by itself) to nan
+                np.fill_diagonal(angleInh_samps[:,:,iexc,ifr], np.nan)
+            
+        # set the diagonal (angle of each samp by itself) to nan
+        angleInh_avSamps = np.nanmean(angleInh_samps, axis=(0,1,2)) # nfrs
+#        angleInh_avSamps = np.nanmedian(angleInh_samps, axis=(0,1)) # nfrs
+        plt.plot(angleInh_avSamps)
+
+
+
+
+#        a = wInh_normed
+        angleInhS_samps = np.full((numSamples,numSamples,nfrs, nsh), np.nan)
+
+        for ish in range(nsh):
+            # remember bc of the way u shuffle neurons of each decoder, angle between shuffled decoder of frame 1 and shuffled decoder of frame 2 wont be the same  as that of frame 2 and frame 1 (bc neurons are shuffled once in nord and again nord1... also angle between decoders of the same frame are not really 0 bc the order of neurons in frame 1 (nord) is not the same as the order in frame 1 (nord1))        
+            nord = rng.permutation(a.shape[1]) # shuffle neurons 
+            nord1 = rng.permutation(a.shape[1])            
+            for ifr in range(nfrs):
+                v1 = a[:,:,ifr].T # neurons x samples
+                angleInhS_samps[:,:,ifr,ish] = np.arccos(abs(np.dot(v1[nord,:].transpose(), v1[nord1,:])))*180/np.pi # samps x samps; angle between decoders of different trial subsamples
+                # set the diagonal (angle of each samp by itself) to nan
+                np.fill_diagonal(angleInhS_samps[:,:,ifr,ish], np.nan)
+            
+        angleInhS_avSamps = np.nanmean(angleInhS_samps, axis=(0,1,3)) # nfrs
+#        angleInh_avSamps = np.nanmedian(angleInh_samps, axis=(0,1)) # nfrs
+        plt.plot(angleInhS_avSamps)            
+        
+
+        plt.figure()
+        plt.plot(angleInhS_avSamps - angleInh_avSamps)
+        
+
+        
+        #%% instead of taking angle between samples (which seems to be noisy for some frames)... do bootstrapping (random sampling with replacemenet) and then average the decoders and then compute angle like below
+        
+#        a = wInh_normed
+        a = wAllExc_normed
+        # inh                
+        wInh_n2b_bootstrap = [] # nsh x neurons x frames
+        for ish in range(nsh):
+            randsamps = np.random.choice(numSamples, numSamples) # take random samples with replacement            
+            w_nb = np.mean(a[randsamps,:,:], axis=(0)) # neurons x frames 
+            nw = np.linalg.norm(w_nb, axis=0) # frames; 2-norm of weights 
+            wInh_n2b = w_nb/nw # neurons x frames
+            wInh_n2b_bootstrap.append(wInh_n2b)
+        wInh_n2b_bootstrap = np.array(wInh_n2b_bootstrap)
+
+
+        # now compute the angle between samples in frame ifr
+        a = wInh_n2b_bootstrap
+
+        angleInh_samps = np.full((nsh,nsh,nfrs), np.nan)
+        angleInhS_samps = np.full((nsh,nsh,nfrs), np.nan)
+        for ifr in range(nfrs):
+            v1 = a[:,:,ifr].T # neurons x samples
+            # real data
+            angleInh_samps[:,:,ifr] = np.arccos(abs(np.dot(v1.transpose(), v1)))*180/np.pi # samps x samps; angle between decoders of different trial subsamples
+            
+            # remember bc of the way u shuffle neurons of each decoder, angle between shuffled decoder of frame 1 and shuffled decoder of frame 2 wont be the same  as that of frame 2 and frame 1 (bc neurons are shuffled once in nord and again nord1... also angle between decoders of the same frame are not really 0 bc the order of neurons in frame 1 (nord) is not the same as the order in frame 1 (nord1))        
+            nord = rng.permutation(v1.shape[0]) # shuffle neurons 
+            nord1 = rng.permutation(v1.shape[0])
+            angleInhS_samps[:,:,ifr] = np.arccos(abs(np.dot(v1[nord,:].transpose(), v1[nord1,:])))*180/np.pi 
+            # set the diagonal (angle of each samp by itself) to 0
+            np.fill_diagonal(angleInh_samps[:,:,ifr], 0)            
+            np.fill_diagonal(angleInhS_samps[:,:,ifr], 0)            
+            
+            # set the diagonal (angle of each samp by itself) to nan
+            np.fill_diagonal(angleInh_samps[:,:,ifr], np.nan)            
+            # only take the lower triangle since the matrix is symmetric    
+            angleInh_samps[:,:,ifr][np.triu_indices(numSamples)] = np.nan      
+            
+        angleInh_avSamps = np.nanmean(angleInh_samps, axis=(0,1)) # nfrs
+        angleInhS_avSamps = np.nanmean(angleInhS_samps, axis=(0,1)) # nfrs
+#        angleInh_avSamps = np.nanmedian(angleInh_samps, axis=(0,1)) # nfrs
+        plt.figure(); plt.plot(angleInh_avSamps)
+        plt.figure(); plt.plot(angleInhS_avSamps)
+        plt.figure(); plt.plot(angleInhS_avSamps - angleInh_avSamps)
+#        plt.imshow(angleInh_samps); plt.colorbar()               
+#        np.nanmean(angleInh_samps) , np.nanmedian(angleInh_samps)
+        
+        # look at dist of angles between samples for each frame
+        plt.figure(figsize=(2,nfrs*2))
+        for ifr in range(nfrs):
+            plt.subplot(nfrs,1,ifr+1)
+            plt.hist(angleInh_samps[:,:,ifr][~np.isnan(angleInh_samps[:,:,ifr])]);
+        
+        '''
+        
+        
+
+            
         
         #%% Set the final decoders by aggregating decoders across trial subselects (ie average ws across all trial subselects), then again normalize them so they have length 1 (Bagging)
         
@@ -361,7 +510,7 @@ for im in range(len(mice)):
             nw = np.linalg.norm(w_nb, axis=0) # frames; 2-norm of weights 
             wExc_n2b_excsh[ish,:,:] = w_nb/nw # excShfl x neurons x frames
         
-        # allExc
+        # allN
         w_nb = np.mean(wAllExc_normed, axis=(0)) # neurons x frames 
         nw = np.linalg.norm(w_nb, axis=0) # frames; 2-norm of weights 
         wAllExc_n2b = w_nb/nw # neurons x frames
@@ -410,6 +559,32 @@ for im in range(len(mice)):
                 nord1 = rng.permutation(wInh_n2b.shape[0])
                 angleExc_excsh0[ish2] = np.arccos(abs(np.dot(wExc_n2b_excsh[ish2][nord,:].transpose(), wExc_n2b_excsh[ish2][nord1,:])))*180/np.pi        
             angleExc_excshS[:,:,ish,:] = np.transpose(angleExc_excsh0, (1,2,0))
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        #%% compute angle between decoders at each time point and their shuffled version
+        '''
+        # angle between wInh_n2b and its shuffled version 
+#        a = wInh_n2b  # neurons x frames        
+        a = wAllExc_n2b
+        
+        ash = a[rng.permutation(a.shape[0]),:] # neurons order is shuffled  # neurons x frames
+        angleInh_S = np.arccos(abs(np.dot(a.transpose(), ash)))*180/np.pi # frames x frames; angle between ws at different times        
+        # all we care about is the diagonal of the above matrix... bc that shows angle btwn a decoder and its shuffled version for each time point (we dont care about angle between decoder(t) and shuffled_decoder(t'))
+        angleInh_S_d = np.diagonal(angleInh_S)
+        plt.plot(angleInh_S_d)
+        '''
+        
+        
+        
         
         
         #%% Keep vars from all days
@@ -654,7 +829,11 @@ for im in range(len(mice)):
         
         
     #%% Compute a measure for stability of decoders at each time point
-    # I find meas=0 the best one. 
+    ################################################################################################    
+    ######################## IMPORTANT: In the measures below you are averaging each column... since stability is symmetric around the diagonal, it means naturally you will get lower values at the begining and at the end of the trial
+    ################################################################################################
+    
+    # I think meas=0 the best one. 
     
 #    dostabplots = 0 # set to 1 if you want to compare the measures below
 
@@ -829,12 +1008,18 @@ for im in range(len(mice)):
     #%% Save vars for each mouse
     
     if saveVars:
+        
+        if shflTrLabs:
+            shflTrLabs_n = 'shflTrLabs_'
+        else:
+            shflTrLabs_n = ''
+            
         fname = os.path.join(os.path.dirname(os.path.dirname(imfilename)), 'analysis')    
         if not os.path.exists(fname):
             print 'creating folder'
             os.makedirs(fname)    
             
-        finame = os.path.join(fname, ('svm_stability_%s.mat' %nowStr))
+        finame = os.path.join(fname, ('svm_stability_%s%s.mat' %(shflTrLabs_n,nowStr)))
     
         scio.savemat(finame,{'angleInh_aligned':angleInh_aligned,
                         'angleExc_aligned':angleExc_aligned,

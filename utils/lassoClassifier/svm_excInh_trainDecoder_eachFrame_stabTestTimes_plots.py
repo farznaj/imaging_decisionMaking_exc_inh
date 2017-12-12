@@ -963,15 +963,13 @@ def trts(trt,tst):
 
 #%% times are relative to choice
 
-
-
-trt = -10 # -5
-for tst in [-2, 0, 2, 6]:
+trt = -7 # -5
+for tst in [-3, 0, 2, 6]:
     trts(trt,tst)
 
 
-trt = -2
-for tst in [0, 2, 6]:
+trt = -3
+for tst in [-1, 0, 2, 6]:
     trts(trt,tst)
 
 
@@ -980,7 +978,7 @@ for tst in [2, 6]:
     trts(trt,tst)
 
 
-trt = 2
+trt = 3
 for tst in [6]:
     trts(trt,tst)
 

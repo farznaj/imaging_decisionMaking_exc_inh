@@ -11,6 +11,7 @@ Created on Thu Nov  2 10:03:50 2017
 
 mice = 'fni16', 'fni17', 'fni18', 'fni19' # 'fni17',
 
+shflTrLabs = 1 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.
 doPlotsEachMouse = 1 # make plots for each mouse
 savefigs = 1
 
@@ -45,7 +46,9 @@ iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all
 import numpy as np
 frameLength = 1000/30.9; # sec.
 regressBins = int(np.round(100/frameLength)) # must be same regressBins used in svm_eachFrame. 100ms # set to nan if you don't want to downsample.
+
 dnow0 = '/stability/'
+dnow00 = dnow0 # u need to keep a copy of it
 
 import glob
 stabLab0_data = 'Instability (average angle with other decoders)'    
@@ -95,7 +98,7 @@ def plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap='jet', cblab='', x
 '''
 
 
-#%% Plot Angles averaged across days for data, shfl, shfl-data (plot angle between decoders at different time points)        
+#%% Plot heatmaps of Angles averaged across days for data, shfl, shfl-data (plot angle between decoders at different time points)        
 
 def plotAngsAll(nPreMin, time_aligned, angInh_av, angExc_av, angAllExc_av, angExc_excsh_av, angInhS_av, angExcS_av, angAllExcS_av, angExc_excshS_av, pei, dnow, fnam):
 
@@ -131,14 +134,17 @@ def plotAngsAll(nPreMin, time_aligned, angInh_av, angExc_av, angAllExc_av, angEx
         plt.subplot(621); lab = 'inh (data)'; 
         top = angInh_av; 
         plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
+        plt.xlabel('Time since choice onset (ms)')
         
         plt.subplot(623); lab = 'exc (data)'; 
         top = ex; 
         plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
+        plt.xlabel('Time since choice onset (ms)')
         
         plt.subplot(622); lab = labAll+' (data)'; 
         top = angAllExc_av; 
         plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
+        plt.xlabel('Time since choice onset (ms)')
         
         plt.subplots_adjust(hspace=.2, wspace=.3)
         
@@ -168,14 +174,17 @@ def plotAngsAll(nPreMin, time_aligned, angInh_av, angExc_av, angAllExc_av, angEx
         plt.subplot(625); lab = 'inh (shfl)'; 
         top = angInhS_av; 
         plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
+        plt.xlabel('Time since choice onset (ms)')
     
         plt.subplot(627); lab = 'exc (shfl)'; 
         top = ex; 
         plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
+        plt.xlabel('Time since choice onset (ms)')
     
         plt.subplot(626); lab = labAll+' (shfl)'; 
         top = angAllExcS_av; 
         plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
+        plt.xlabel('Time since choice onset (ms)')
     
         plt.subplots_adjust(hspace=.2, wspace=.3)
         
@@ -209,15 +218,18 @@ def plotAngsAll(nPreMin, time_aligned, angInh_av, angExc_av, angAllExc_av, angEx
     plt.subplot(rows,cols,sp1);  lab = 'inh (shfl-data)';     
     top = angInhS_av - angInh_av; #    top[np.triu_indices(len(top),k=0)] = np.nan # plot only the lower triangle (since values are rep)
     plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
+    plt.xlabel('Time since choice onset (ms)')
     
-    plt.subplot(rows,cols,sp3); lab = labAll+'exc (shfl-data)'; 
+    plt.subplot(rows,cols,sp3); lab = 'exc (shfl-data)'; 
     top = ex; #    top[np.triu_indices(len(top),k=0)] = np.nan
     plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
-    
+    plt.xlabel('Time since choice onset (ms)')
+        
     plt.subplot(rows,cols,sp2); lab = labAll+' (shfl-data)'; 
     top = angAllExcS_av - angAllExc_av; #    top[np.triu_indices(len(top),k=0)] = np.nan
     plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
-    
+    plt.xlabel('Time since choice onset (ms)')
+        
     # last subplot: inh(shfl-real) - exc(shfl-real)
     cmin = np.nanmin((angInhS_av - angInh_av) - (ex)); 
     cmax = np.nanmax((angInhS_av - angInh_av) - (ex))
@@ -227,7 +239,8 @@ def plotAngsAll(nPreMin, time_aligned, angInh_av, angExc_av, angAllExc_av, angEx
     plt.subplot(rows,cols,sp4); lab = 'inh-exc'; 
     top = ((angInhS_av - angInh_av) - (ex)); #    top[np.triu_indices(len(top),k=0)] = np.nan
     plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
-    
+    plt.xlabel('Time since choice onset (ms)')
+        
     # Is inh and exc stability different? 
     # for each population (inh,exc) subtract shuffle-averaged angles from real angles... do ttest across days for each pair of time points
 #    _,pei = stats.ttest_ind(angleInh_aligned - angleInhS_aligned_avSh , angleExc_aligned - angleExcS_aligned_avSh, axis=-1)     
@@ -256,6 +269,29 @@ def plotAngsAll(nPreMin, time_aligned, angInh_av, angExc_av, angAllExc_av, angEx
 
 
 
+#%% Plot heatmaps of a meaure showing all days : day vs time(during trial)
+
+def plotStabScore(top, lab, cmins, cmaxs, cmap='jet', cblab='', ax=plt):
+#    img = ax.imshow(top, cmap)
+    extent = setExtent_imshow(time_aligned, np.arange(0, top.shape[0])[::-1]) # mark y axis every 5 days.
+    img = ax.imshow(top, cmap, vmin=cmins, vmax=cmaxs, extent=extent)
+    
+#    plt.plot([nPreMin, nPreMin], [0, len(dayinds)], color='r')
+#            ax.set_xlim([-1, len(time_aligned)])
+#            ax.set_ylim([-2, len(dayinds)][::-1])
+#    ax.autoscale(False)
+#            ax.axvline(x=nPreMin, c='w', lw=1)
+    ax.axvline(x=0, c='w', lw=1)
+#    fig.colorbar(label=cblab);     
+#    plt.clim(cmins, cmaxs)
+#            ax.set_xticks(x)
+#            ax.set_xticklabels(np.round(time_aligned[x]).astype(int))
+    ax.set_ylabel('Days')
+    ax.set_xlabel(xl)
+    ax.set_title(lab)
+    makeNicePlots(ax)
+    return img
+ 
            
 #%% 
 numDaysAll = np.full(len(mice), np.nan, dtype=int)
@@ -355,6 +391,7 @@ behCorr_allMice = []
 behCorrHR_allMice = [] 
 behCorrLR_allMice = [] 
 
+nPreMin_allMice = []
 time_aligned_allMice = []
 
 corr_hr_lr_allMice = []
@@ -394,7 +431,9 @@ for im in range(len(mice)):
     days_allMice.append(days)
     numDaysAll[im] = len(days)
    
-    dnow = dnow0+mousename+'/'
+    dnow = dnow0 + mousename + '/'
+    if shflTrLabs:
+        dnow = dnow + 'shflTrLabs' + '/'
 
     
     #%% Set svm_stab mat file name
@@ -406,7 +445,12 @@ for im in range(len(mice)):
         print 'creating folder'
         os.makedirs(fname)    
         
-    finame = os.path.join(fname, 'svm_stability_[0-9]*.mat')
+    if shflTrLabs:
+        shflTrLabs_n = '_shflTrLabs'
+    else:
+        shflTrLabs_n = ''        
+        
+    finame = os.path.join(fname, 'svm_stability%s_[0-9]*.mat' %(shflTrLabs_n))
 
     stabName = glob.glob(finame)
     stabName = sorted(stabName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
@@ -423,12 +467,12 @@ for im in range(len(mice)):
     stabBehName = stabBehName[0]
 
     
-    #### Set stab file name that contains sigAngs ran with sigPercentile of 1
-    finame = os.path.join(fname, 'svm_stability_sigAngPerc*.mat')
-
-    stabSigAngName = glob.glob(finame)
-    stabSigAngName = sorted(stabSigAngName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
-    stabSigAngName = stabSigAngName[0]
+    if shflTrLabs==0:   #### Set stab file name that contains sigAngs ran with sigPercentile of 1
+        finame = os.path.join(fname, 'svm_stability_sigAngPerc*.mat')
+    
+        stabSigAngName = glob.glob(finame)
+        stabSigAngName = sorted(stabSigAngName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
+        stabSigAngName = stabSigAngName[0]
     
     
 
@@ -448,12 +492,7 @@ for im in range(len(mice)):
     angleExc_excshS_aligned_avSh = Data.pop('angleExc_excshS_aligned_avSh')
     angleExc_excshS_aligned_avExcsh = Data.pop('angleExc_excshS_aligned_avExcsh')
     angleExc_excshS_aligned_sdExcsh = Data.pop('angleExc_excshS_aligned_sdExcsh')
-#    sigAngInh = Data.pop('sigAngInh')
-#    sigAngExc = Data.pop('sigAngExc')
-#    sigAngAllExc = Data.pop('sigAngAllExc')
-#    sigAngExc_excsh = Data.pop('sigAngExc_excsh')
-#    sigAngExc_excsh_avExcsh = Data.pop('sigAngExc_excsh_avExcsh')
-#    sigAngExc_excsh_sdExcsh = Data.pop('sigAngExc_excsh_sdExcsh')
+
     stabScoreInh0_data = Data.pop('stabScoreInh0_data')
     stabScoreExc0_data = Data.pop('stabScoreExc0_data')
     stabScoreAllExc0_data = Data.pop('stabScoreAllExc0_data')
@@ -472,12 +511,7 @@ for im in range(len(mice)):
     stabScoreExc_excsh0 = Data.pop('stabScoreExc_excsh0')
     stabScoreExc_excsh0_avExcsh = Data.pop('stabScoreExc_excsh0_avExcsh')
     stabScoreExc_excsh0_sdExcsh = Data.pop('stabScoreExc_excsh0_sdExcsh')
-#    stabScoreInh1 = Data.pop('stabScoreInh1')
-#    stabScoreExc1 = Data.pop('stabScoreExc1')
-#    stabScoreAllExc1 = Data.pop('stabScoreAllExc1')
-#    stabScoreExc_excsh1 = Data.pop('stabScoreExc_excsh1')
-#    stabScoreExc_excsh1_avExcsh = Data.pop('stabScoreExc_excsh1_avExcsh')
-#    stabScoreExc_excsh1_sdExcsh = Data.pop('stabScoreExc_excsh1_sdExcsh')
+
     angInh_av = Data.pop('angInh_av')
     angExc_av = Data.pop('angExc_av')
     angAllExc_av = Data.pop('angAllExc_av')
@@ -486,10 +520,7 @@ for im in range(len(mice)):
     angExcS_av = Data.pop('angExcS_av')
     angAllExcS_av = Data.pop('angAllExcS_av')
     angExc_excshS_av = Data.pop('angExc_excshS_av')
-#    sigAngInh_av = Data.pop('sigAngInh_av')
-#    sigAngExc_av = Data.pop('sigAngExc_av')
-#    sigAngAllExc_av = Data.pop('sigAngAllExc_av')
-#    sigAngExc_excsh_av = Data.pop('sigAngExc_excsh_av')
+
     stabScoreInh0_data_av = Data.pop('stabScoreInh0_data_av').flatten()
     stabScoreExc0_data_av = Data.pop('stabScoreExc0_data_av').flatten()
     stabScoreAllExc0_data_av = Data.pop('stabScoreAllExc0_data_av').flatten()
@@ -502,28 +533,14 @@ for im in range(len(mice)):
     stabScoreExc0_av = Data.pop('stabScoreExc0_av').flatten()
     stabScoreAllExc0_av = Data.pop('stabScoreAllExc0_av').flatten()
     stabScoreExc_excsh0_av = Data.pop('stabScoreExc_excsh0_av').flatten()
-#    stabScoreInh1_av = Data.pop('stabScoreInh1_av').flatten()
-#    stabScoreExc1_av = Data.pop('stabScoreExc1_av').flatten()
-#    stabScoreAllExc1_av = Data.pop('stabScoreAllExc1_av').flatten()
-#    stabScoreExc_excsh1_av = Data.pop('stabScoreExc_excsh1_av').flatten()
+
     corr_hr_lr = Data.pop('corr_hr_lr')
     eventI_allDays = Data.pop('eventI_allDays').flatten()
     eventI_ds_allDays = Data.pop('eventI_ds_allDays').flatten()
     
-    ####### Load beh and CA vars
-    Data = scio.loadmat(stabBehName)
-    
-    behCorr_all = Data.pop('behCorr_all').flatten() # the following comment is for the above mat file: I didnt save _all vars... so what is saved is only for one day! ... have to reset these 3 vars again here!
-    behCorrHR_all = Data.pop('behCorrHR_all').flatten()
-    behCorrLR_all = Data.pop('behCorrLR_all').flatten()
-    classAccurTMS_inh = Data.pop('classAccurTMS_inh') # the following comment is for the above mat file: there was also problem in setting these vars, so you need to reset these 3 vars here
-    classAccurTMS_exc = Data.pop('classAccurTMS_exc')
-    classAccurTMS_allExc = Data.pop('classAccurTMS_allExc')
 
-
-    ######## Load sigAng vars ran with sigPercentile of 1 (instead of 5 which is in stabName)
-
-    Data = scio.loadmat(stabSigAngName)
+    if shflTrLabs==0:
+        Data = scio.loadmat(stabSigAngName)     ######## Load sigAng vars ran with sigPercentile of 1 (instead of 5 which is in stabName)
 
     sigAngInh = Data.pop('sigAngInh')
     sigAngExc = Data.pop('sigAngExc')
@@ -535,20 +552,35 @@ for im in range(len(mice)):
     sigAngExc_av = Data.pop('sigAngExc_av')
     sigAngAllExc_av = Data.pop('sigAngAllExc_av')
     sigAngExc_excsh_av = Data.pop('sigAngExc_excsh_av')
-    # u forgot to save the following... so setting them here (but they are added to setVars_sigAng script now)
-    '''
-    stabScoreInh1 = Data.pop('stabScoreInh1')
-    stabScoreExc1 = Data.pop('stabScoreExc1')
-    stabScoreAllExc1 = Data.pop('stabScoreAllExc1')
-    stabScoreExc_excsh1 = Data.pop('stabScoreExc_excsh1')
-    stabScoreExc_excsh1_avExcsh = Data.pop('stabScoreExc_excsh1_avExcsh')
-    stabScoreExc_excsh1_sdExcsh = Data.pop('stabScoreExc_excsh1_sdExcsh')    
-    stabScoreInh1_av = Data.pop('stabScoreInh1_av').flatten()
-    stabScoreExc1_av = Data.pop('stabScoreExc1_av').flatten()
-    stabScoreAllExc1_av = Data.pop('stabScoreAllExc1_av').flatten()
-    stabScoreExc_excsh1_av = Data.pop('stabScoreExc_excsh1_av').flatten()
-    '''
     
+    if shflTrLabs:     # if shflTrLabs=0, u forgot to save the following... so setting them here (but they are added to setVars_sigAng script now)    
+        stabScoreInh1 = Data.pop('stabScoreInh1')
+        stabScoreExc1 = Data.pop('stabScoreExc1')
+        stabScoreAllExc1 = Data.pop('stabScoreAllExc1')
+        stabScoreExc_excsh1 = Data.pop('stabScoreExc_excsh1')
+        stabScoreExc_excsh1_avExcsh = Data.pop('stabScoreExc_excsh1_avExcsh')
+        stabScoreExc_excsh1_sdExcsh = Data.pop('stabScoreExc_excsh1_sdExcsh')    
+        stabScoreInh1_av = Data.pop('stabScoreInh1_av').flatten()
+        stabScoreExc1_av = Data.pop('stabScoreExc1_av').flatten()
+        stabScoreAllExc1_av = Data.pop('stabScoreAllExc1_av').flatten()
+        stabScoreExc_excsh1_av = Data.pop('stabScoreExc_excsh1_av').flatten()
+    
+    
+    
+    
+    
+    ############################ Load beh and CA vars ############################
+    
+    Data = scio.loadmat(stabBehName)
+    
+    behCorr_all = Data.pop('behCorr_all').flatten() # the following comment is for the above mat file: I didnt save _all vars... so what is saved is only for one day! ... have to reset these 3 vars again here!
+    behCorrHR_all = Data.pop('behCorrHR_all').flatten()
+    behCorrLR_all = Data.pop('behCorrLR_all').flatten()
+    classAccurTMS_inh = Data.pop('classAccurTMS_inh') # the following comment is for the above mat file: there was also problem in setting these vars, so you need to reset these 3 vars here
+    classAccurTMS_exc = Data.pop('classAccurTMS_exc')
+    classAccurTMS_allExc = Data.pop('classAccurTMS_allExc')
+
+
     
     #%% Set some vars!
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
@@ -563,32 +595,28 @@ for im in range(len(mice)):
     
     dayinds = np.arange(numOrigDays)
     dayinds = np.delete(dayinds, np.argwhere(mn_corr < thTrained))
-
-    dayinds_allMice.append(dayinds)
-    daysGood_allMice.append(np.array(days_allMice[im])[dayinds])        
-    mn_corr_allMice.append(mn_corr)
     
 
     #%% Set number of decoders that are "aligned" with each decoder (at each timepoint) (we get this by summing sigAng across rows gives us the)
     # aligned decoder is defined as a decoder whose angle with the decoder of interest is <5th percentile of dist of shuffled angles.
-
-    # sigAng: for each day shows whether angle betweeen the decoders at specific timepoints is significantly different than null dist (ie angle is smaller than 5th percentile of shuffle angles).
-    stabScoreInh1 = np.array([np.nansum(sigAngInh[:,:,iday], axis=0) for iday in range(numGoodDays)]) # days x frs
-    stabScoreExc1 = np.array([np.nansum(sigAngExc[:,:,iday], axis=0) for iday in range(numGoodDays)]) 
-    stabScoreAllExc1 = np.array([np.nansum(sigAngAllExc[:,:,iday], axis=0) for iday in range(numGoodDays)]) 
-    stabScoreExc_excsh1 = np.transpose(np.array([np.nansum(sigAngExc_excsh[:,:,:,iday], axis=0) for iday in range(numGoodDays)]), (0,2,1)) # days x excSamps x frs
-#    stabLab1 = 'Stability (number of aligned decoders)' # with the decoder of interest (ie the decoder at the specific timepont we are looking at)            
-
-    ####### Averages across days
-    # num aligned decoder
-    stabScoreInh1_av = np.nanmean(stabScoreInh1, axis=0)  # frs 
-    stabScoreExc1_av = np.nanmean(stabScoreExc1, axis=0)
-    stabScoreAllExc1_av = np.nanmean(stabScoreAllExc1, axis=0)
-     # average and std across excSamps for each day     
-    stabScoreExc_excsh1_avExcsh = np.nanmean(stabScoreExc_excsh1, axis=1)  # days x frs    
-    stabScoreExc_excsh1_sdExcsh = np.nanstd(stabScoreExc_excsh1, axis=1)  # days x frs    
-     # now average of excSamp-averages across days
-    stabScoreExc_excsh1_av = np.nanmean(stabScoreExc_excsh1_avExcsh, axis=0) # frs   
+    if shflTrLabs==0: # otherwise it was saved in stabName
+        # sigAng: for each day shows whether angle betweeen the decoders at specific timepoints is significantly different than null dist (ie angle is smaller than 5th percentile of shuffle angles).
+        stabScoreInh1 = np.array([np.nansum(sigAngInh[:,:,iday], axis=0) for iday in range(numGoodDays)]) # days x frs
+        stabScoreExc1 = np.array([np.nansum(sigAngExc[:,:,iday], axis=0) for iday in range(numGoodDays)]) 
+        stabScoreAllExc1 = np.array([np.nansum(sigAngAllExc[:,:,iday], axis=0) for iday in range(numGoodDays)]) 
+        stabScoreExc_excsh1 = np.transpose(np.array([np.nansum(sigAngExc_excsh[:,:,:,iday], axis=0) for iday in range(numGoodDays)]), (0,2,1)) # days x excSamps x frs
+    #    stabLab1 = 'Stability (number of aligned decoders)' # with the decoder of interest (ie the decoder at the specific timepont we are looking at)            
+    
+        ####### Averages across days
+        # num aligned decoder
+        stabScoreInh1_av = np.nanmean(stabScoreInh1, axis=0)  # frs 
+        stabScoreExc1_av = np.nanmean(stabScoreExc1, axis=0)
+        stabScoreAllExc1_av = np.nanmean(stabScoreAllExc1, axis=0)
+         # average and std across excSamps for each day     
+        stabScoreExc_excsh1_avExcsh = np.nanmean(stabScoreExc_excsh1, axis=1)  # days x frs    
+        stabScoreExc_excsh1_sdExcsh = np.nanstd(stabScoreExc_excsh1, axis=1)  # days x frs    
+         # now average of excSamp-averages across days
+        stabScoreExc_excsh1_av = np.nanmean(stabScoreExc_excsh1_avExcsh, axis=0) # frs   
 
        
     #%% Remove low trial days from beh vars
@@ -611,406 +639,18 @@ for im in range(len(mice)):
     bb = np.mean(np.reshape(b,(regressBins,totLen-nPreMin), order='F'), axis=0)
     time_aligned = np.concatenate((aa,bb))
 
-    time_aligned_allMice.append(time_aligned)
-    
-
-    #%%
-    ######################## PLOTS of each mouse ########################
-    ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    if doPlotsEachMouse==1:   
-        
-        #%% Plot min number of HR/LR trials per day
-        
-        plt.figure(figsize=(4.5,3))
-        plt.plot(mn_corr)
-        plt.xlabel('Days')
-        plt.ylabel('Trial number (min HR,LR)')
-        makeNicePlots(plt.gca())
-        
-        ##%% Save the figure    
-        if savefigs:
-            d = os.path.join(svmdir+dnow) #,mousename)       
-            daysnew = (np.array(days))[dayinds]
-            if chAl==1:
-                dd = 'chAl_ntrs_' + daysnew[0][0:6] + '-to-' + daysnew[-1][0:6] + '_' + nowStr
-            else:
-                dd = 'stAl_ntrs_' + daysnew[0][0:6] + '-to-' + daysnew[-1][0:6] + '_' + nowStr       
-            if not os.path.exists(d):
-                print 'creating folder'
-                os.makedirs(d)            
-            fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0]) 
-            
-            plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
-            
-            
-        #%% Plot Angles averaged across days for data, shfl, shfl-data (plot angle between decoders at different time points)        
-
-        if doExcSamps:        
-            ae = angleExc_excsh_aligned_avExcsh
-            aes = angleExc_excshS_aligned_avExcsh
-        else:
-            ae = angleExc_aligned
-            aes = angleExcS_aligned_avSh
-                
-        # Is inh and exc stability different? 
-        # for each population (inh,exc) subtract shuffle-averaged angles from real angles... do ttest across days for each pair of time points
-        _,pei = stats.ttest_ind(angleInh_aligned - angleInhS_aligned_avSh   ,    ae - aes, axis=-1)
-        
-        fnam = 'angles_AveDays_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-        
-        plotAngsAll(nPreMin, time_aligned, angInh_av, angExc_av, angAllExc_av, angExc_excsh_av, angInhS_av, angExcS_av, angAllExcS_av, angExc_excshS_av, pei, dnow, fnam)
-
-
-        #%% Plot heatmaps of stability and class accuracy for all days
-        
-        ### decide which one of the following (for score0: data, shfl, shfl-data) you want to plot below
-        '''
-        # 0: data
-        ssi = stabScoreInh0_data, stabScoreInh1
-        sse = stabScoreExc0_data, stabScoreExc1
-    #    sse_excsh = stabScoreExc_excsh0, stabScoreExc_excsh1
-        sse_excsh = stabScoreExc_excsh0_data_avExcsh, stabScoreExc_excsh1_avExcsh
-        ssa = stabScoreAllExc0_data, stabScoreAllExc1        
-        ssl = stabLab0_data, stabLab1
-        
-        # 0: shfl
-        ssi = stabScoreInh0_shfl, stabScoreInh1
-        sse = stabScoreExc0_shfl, stabScoreExc1
-    #    sse_excsh = stabScoreExc_excsh0, stabScoreExc_excsh1
-        sse_excsh = stabScoreExc_excsh0_shfl_avExcsh, stabScoreExc_excsh1_avExcsh
-        ssa = stabScoreAllExc0_shfl, stabScoreAllExc1        
-        ssl = stabLab0_shfl, stabLab1
-        '''
-        # 0: ave(shfl) - data
-        ssi = stabScoreInh0, stabScoreInh1
-        sse = stabScoreExc0, stabScoreExc1
-    #    sse_excsh = stabScoreExc_excsh0, stabScoreExc_excsh1
-        sse_excsh = stabScoreExc_excsh0_avExcsh, stabScoreExc_excsh1_avExcsh
-        ssa = stabScoreAllExc0, stabScoreAllExc1        
-        ssl = stabLab0, stabLab1
-        
-        
-        ##%%
-        ########################################
-        #plt.plot(stabScore.T);
-        #plt.legend(days, loc='center left', bbox_to_anchor=(1, .7))
-        
-#        step = 4
-#        x = (np.unique(np.concatenate((np.arange(np.argwhere(time_aligned>=0)[0], -.5, -step), 
-#                   np.arange(np.argwhere(time_aligned>=0)[0], totLen, step))))).astype(int)
-        #cmins,cmaxs, cminc,cmaxc
-        asp = 'auto' #2 #
-        
-        def plotStabScore(top, lab, cmins, cmaxs, cmap='jet', cblab='', ax=plt):
-        #    img = ax.imshow(top, cmap)
-            extent = setExtent_imshow(time_aligned)
-            img = ax.imshow(top, cmap, vmin=cmins, vmax=cmaxs, extent=extent)
-            
-        #    plt.plot([nPreMin, nPreMin], [0, len(dayinds)], color='r')
-#            ax.set_xlim([-1, len(time_aligned)])
-#            ax.set_ylim([-2, len(dayinds)][::-1])
-        #    ax.autoscale(False)
-#            ax.axvline(x=nPreMin, c='w', lw=1)
-            ax.axvline(x=0, c='w', lw=1)
-        #    fig.colorbar(label=cblab);     
-        #    plt.clim(cmins, cmaxs)
-#            ax.set_xticks(x)
-#            ax.set_xticklabels(np.round(time_aligned[x]).astype(int))
-            ax.set_ylabel('Days')
-            ax.set_xlabel(xl)
-            ax.set_title(lab)
-            makeNicePlots(ax)
-            return img
-          
-          
-        #################### stability ####################
-        for meas in range(2): #range(3): # which one of the measures below to use            
-            stabScoreInh = ssi[meas]
-            if doExcSamps:
-                stabScoreExc = sse_excsh[meas]
-            else:
-                stabScoreExc = sse[meas]
-            stabScoreAllExc = ssa[meas]
-            stabLab = ssl[meas]
-             
-            _,ps = stats.ttest_ind(stabScoreInh, stabScoreExc) 
-            _,pc = stats.ttest_ind(classAccurTMS_inh, classAccurTMS_exc) 
-            
-            _,psa = stats.ttest_ind(stabScoreInh, stabScoreAllExc) 
-            _,pca = stats.ttest_ind(classAccurTMS_inh, classAccurTMS_allExc) 
-                         
-            cmins = np.floor(np.min([np.nanmin(stabScoreInh), np.nanmin(stabScoreExc), np.nanmin(stabScoreAllExc)]))
-            cmaxs = np.floor(np.max([np.nanmax(stabScoreInh), np.nanmax(stabScoreExc), np.nanmax(stabScoreAllExc)]))
-    
-              
-            fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(7,5))
-            
-            lab = 'inh'
-            top = stabScoreInh
-            cmap ='jet'
-            cblab = stabLab
-            ax = axes.flat[0]
-            img = plotStabScore(top, lab, cmins, cmaxs, cmap, cblab, ax)
-            ax.set_aspect(asp)
-            
-            
-            lab = 'exc'
-            top = stabScoreExc
-            cmap ='jet'
-            cblab = stabLab
-            ax = axes.flat[1]
-            plotStabScore(top, lab, cmins, cmaxs, cmap, cblab, ax)
-            # mark sig timepoints (exc sig diff from inh)
-            y=-1; pp = np.full(ps.shape, np.nan); pp[ps<=.05] = y
-            ax.plot(range(len(time_aligned)), pp, color='r', lw=2)
-            ax.set_aspect(asp)
-            
-            
-            lab = labAll
-            top = stabScoreAllExc
-            cmap ='jet'
-            cblab = stabLab
-            ax = axes.flat[2]
-            img = plotStabScore(top, lab, cmins, cmaxs, cmap, cblab, ax)
-            #plt.colorbar(label=cblab) #,fraction=0.14, pad=0.04); #plt.clim(cmins, cmaxs)
-            #add_colorbar(img)
-            pos1 = ax.get_position()
-            cb_ax = fig.add_axes([0.92, 0.15, 0.02, 0.72], adjustable='box-forced')
-            #cb_ax = fig.add_axes([0.92, np.prod([pos1.y0,asp]), 0.02, pos1.width])
-            cbar = fig.colorbar(img, cax=cb_ax, label=cblab)
-            #cbar = fig.colorbar(img, ax=axes.ravel().tolist(), shrink=0.95)
-            #fig.colorbar(img, ax=axes.ravel().tolist())
-            # Make an axis for the colorbar on the right side
-            #from mpl_toolkits.axes_grid1 import make_axes_locatable
-            #divider = make_axes_locatable(ax)
-            #cax = divider.append_axes("right", size="5%", pad=0.05)
-            #fig.colorbar(img, cax=cax)
-            #### mark sig timepoints (all exc sig diff from inh)
-            y=-1; pp = np.full(ps.shape, np.nan); pp[psa<=.05] = y
-            ax.plot(range(len(time_aligned)), pp, color='r', lw=2)
-            ax.set_aspect(asp)
-            #fig.tight_layout()   
-            
-            plt.subplots_adjust(wspace=.4)
-            
-            ##%% Save the figure    
-            if savefigs:
-                d = os.path.join(svmdir+dnow) #,mousename)       
-#                daysnew = (np.array(days))[dayinds]
-                if meas==0:
-                    nn = 'ang'
-                elif meas==1:
-                    nn = 'nsig'                
-                
-                if chAl==1:
-                    dd = 'chAl_stab_'+nn+'_eachDay_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-                else:
-                    dd = 'chAl_stab_'+nn+'_eachDay_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
-                if not os.path.exists(d):
-                    print 'creating folder'
-                    os.makedirs(d)            
-                fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0])    
-                plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
-        
-
-            #%% P value (inh vs exc as well as inh vs allExc) for stability and class accurr across days for each time bin
-            
-            plt.figure()
-            plt.subplot(221); plt.plot(ps); plt.ylabel('p_stability'); makeNicePlots(plt.gca())
-            plt.title('exc vs inh'); 
-            plt.xticks(x, np.round(time_aligned[x]).astype(int))
-            plt.axhline(y=.05, c='r', lw=1)
-            
-            plt.subplot(223); plt.plot(pc); plt.ylabel('p_class accur'); makeNicePlots(plt.gca())
-            plt.xticks(x, np.round(time_aligned[x]).astype(int))
-            plt.axhline(y=.05, c='r', lw=1)
-            plt.xlabel('Time (ms')
-            
-            plt.subplot(222); plt.plot(psa); plt.ylabel('p_stability'); makeNicePlots(plt.gca())
-            plt.title('all exc vs inh')
-            plt.xticks(x, np.round(time_aligned[x]).astype(int))
-            plt.axhline(y=.05, c='r', lw=1)
-            yl = plt.gca().get_ylim(); plt.ylim([-.005, yl[1]])
-            
-            plt.subplot(224); plt.plot(pca); plt.ylabel('p_class accur'); makeNicePlots(plt.gca())
-            plt.xticks(x, np.round(time_aligned[x]).astype(int))
-            plt.axhline(y=.05, c='r', lw=1)
-            plt.xlabel('Time (ms')
-            yl = plt.gca().get_ylim(); plt.ylim([-.005, yl[1]])
-            
-            plt.subplots_adjust(hspace=.4, wspace=.5)
-            
-            
-            ##%% Save the figure    
-            if savefigs:
-                d = os.path.join(svmdir+dnow) #,mousename)       
-#                daysnew = (np.array(days))[dayinds]
-                if meas==0:
-                    nn = 'ang'
-                elif meas==1:
-                    nn = 'nsig'    
-                
-                if chAl==1:
-                    dd = 'chAl_stab_'+nn+'_p_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-                else:
-                    dd = 'chAl_stab_'+nn+'_p_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
-                    
-                if not os.path.exists(d):
-                    print 'creating folder'
-                    os.makedirs(d)            
-                fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0])    
-                plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
-            
-            
-            #%% stab vs days  
-            
-            nbin = 1 #3 : Average stability score in the last n bins before the choice, and compare it between exc and inh
-            rr = np.arange(nPreMin-nbin, nPreMin)
-            ssbefchExc = np.mean(stabScoreExc[:, rr], axis=1)
-            ssbefchInh = np.mean(stabScoreInh[:, rr], axis=1)
-            ssbefchAllExc = np.mean(stabScoreAllExc[:, rr], axis=1)
-            
-            plt.figure(figsize=(4.5,3))
-            plt.plot(ssbefchAllExc, 'k', label=labAll)
-            plt.plot(ssbefchInh, 'r', label='inh')
-            plt.plot(ssbefchExc, 'b', label='exc')
-            plt.xlabel('Days')
-            plt.ylabel(stabLab)
-            plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False) 
-            makeNicePlots(plt.gca())
-            
-            
-            ##%% Save the figure    
-            if savefigs:
-                d = os.path.join(svmdir+dnow) #,mousename)       
-#                daysnew = (np.array(days))[dayinds]
-                if meas==0:
-                    nn = 'ang'
-                elif meas==1:
-                    nn = 'nsig'                    
-#                n = '_aveLast%dbin' %(nbin)
-
-                if chAl==1:
-                    dd = 'chAl_stab_'+nn+nbinlab+'_inhExc'+labAll+'_'  + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-                else:
-                    dd = 'chAl_stab_'+nn+nbinlab+'_inhExc'+labAll+'_'  + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
-
-                if not os.path.exists(d):
-                    print 'creating folder'
-                    os.makedirs(d)            
-                fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0])
-                plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
-                    
-        
-        #%% ######################## class accuracy (data - shfl) ####################
-        
-        cminc = np.floor(np.min([np.nanmin(classAccurTMS_inh), np.nanmin(classAccurTMS_exc), np.nanmin(classAccurTMS_allExc)]))
-        cmaxc = np.floor(np.max([np.nanmax(classAccurTMS_inh), np.nanmax(classAccurTMS_exc), np.nanmax(classAccurTMS_allExc)]))
-
-        fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(7,5))
-        
-        lab = 'inh'
-        top = classAccurTMS_inh
-        cmap ='jet'
-        cblab = 'Class accuracy (data-shfl)'
-        ax = axes.flat[0]
-        img = plotStabScore(top, lab, cminc, cmaxc, cmap, cblab, ax)
-        ax.set_aspect(asp)
-        
-        
-        lab = 'exc'
-        top = classAccurTMS_exc
-        cmap ='jet'
-        cblab = 'Class accuracy (data-shfl)'
-        ax = axes.flat[1]
-        plotStabScore(top, lab, cminc, cmaxc, cmap, cblab, ax)
-        y=-1; pp = np.full(ps.shape, np.nan); pp[pc<=.05] = y
-        ax.plot(range(len(time_aligned)), pp, color='r', lw=2)
-        ax.set_aspect(asp)
-        
-        
-        lab = labAll
-        top = classAccurTMS_allExc
-        cmap ='jet'
-        cblab = 'Class accuracy (data-shfl)'
-        ax = axes.flat[2]
-        img = plotStabScore(top, lab, cminc, cmaxc, cmap, cblab, ax)
-        #plt.colorbar(label=cblab) #,fraction=0.14, pad=0.04); #plt.clim(cmins, cmaxs)
-        #add_colorbar(img)
-        cb_ax = fig.add_axes([0.92, 0.15, 0.02, 0.72])
-        cbar = fig.colorbar(img, cax=cb_ax, label=cblab)
-        #cbar = fig.colorbar(img, ax=axes.ravel().tolist(), shrink=0.95)
-        #fig.colorbar(img, ax=axes.ravel().tolist())
-        # Make an axis for the colorbar on the right side
-        #from mpl_toolkits.axes_grid1 import make_axes_locatable
-        #divider = make_axes_locatable(ax)
-        #cax = divider.append_axes("right", size="5%", pad=0.05)
-        #fig.colorbar(img, cax=cax)
-        y=-1; pp = np.full(ps.shape, np.nan); pp[pca<=.05] = y
-        ax.plot(range(len(time_aligned)), pp, color='r', lw=2)
-        ax.set_aspect(asp)
-        
-        plt.subplots_adjust(wspace=.4)
-        
-        ##%% Save the figure    
-        if savefigs:
-            d = os.path.join(svmdir+dnow) #,mousename)       
-#            daysnew = (np.array(days))[dayinds]
-            if chAl==1:
-                dd = 'chAl_classAcc_eachDay_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-            else:
-                dd = 'stAl_classAcc_eachDay_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
-            if not os.path.exists(d):
-                print 'creating folder'
-                os.makedirs(d)            
-            fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0])    
-            plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
-        
-        
-        #%% Average class accuracy in the last n bins before the choice, and compare it between exc and inh
-            
-#        nbin = 1 #3
-        rr = np.arange(nPreMin-nbin, nPreMin)
-        ssbefchExc = np.mean(classAccurTMS_exc[:, rr], axis=1)
-        ssbefchInh = np.mean(classAccurTMS_inh[:, rr], axis=1)
-        ssbefchAllExc = np.mean(classAccurTMS_allExc[:, rr], axis=1)
-        
-        plt.figure(figsize=(4.5,3))
-        plt.plot(ssbefchAllExc, 'k', label=labAll)
-        plt.plot(ssbefchInh, 'r', label='inh')
-        plt.plot(ssbefchExc, 'b', label='exc')
-        plt.xlabel('Days')
-        plt.ylabel('Class accuracy (data-shfl)')
-        plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False) 
-        makeNicePlots(plt.gca())
-        
-        
-        ##%% Save the figure    
-        if savefigs:
-            d = os.path.join(svmdir+dnow) #,mousename)       
-#                daysnew = (np.array(days))[dayinds]
-
-#            n = '_aveLast%dbin' %(nbin)
-
-            if chAl==1:
-                dd = 'chAl_classAcc'+nbinlab+'_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-            else:
-                dd = 'stAl_classAcc'+nbinlab+'_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
-
-            if not os.path.exists(d):
-                print 'creating folder'
-                os.makedirs(d)            
-            fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0])
-            plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
-                
                 
 
     #%% Keep vars of all mice     
     ####################################################################################################
     ####################################################################################################
 
+    dayinds_allMice.append(dayinds)
+    daysGood_allMice.append(np.array(days_allMice[im])[dayinds])        
+    mn_corr_allMice.append(mn_corr)
+    
+    nPreMin_allMice.append(nPreMin)
+    time_aligned_allMice.append(time_aligned)
 
     angleInh_aligned_allMice.append(angleInh_aligned) # each mouse: frs x frs x days
     angleExc_aligned_allMice.append(angleExc_aligned)
@@ -1178,29 +818,475 @@ classAccurTMS_allExc_allMice = np.array(classAccurTMS_allExc_allMice)
 numGoodDaysAll = np.array([len(daysGood_allMice[im]) for im in range(len(mice))])
 
 
-#no
-#%% 
 
 
 
-#%%################ Plots for all mice ################
+
+
+
+#%% Plots 
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################
+####################################################################################################
+####################################################################################################
+####################################################################################################
+####################################################################################################
+
+#%% IMPORANT note about the measures of stability that you have computed for each time point
+################################################################################################    
+######################## IMPORTANT: In the measures below you are averaging each column... since stability is symmetric around the diagonal, it means naturally you will get lower values at the begining and at the end of the trial
+################################################################################################
+    
+    
 #%% 
 
 mice2an = np.arange(len(mice)) #np.array([0,1,3]) # which mice to analyze #range(len(mice))
 mice = np.array(mice)
 
 #meas = 0  # what measure of stability to use --> 0: ave angle ; 1 : num sig angles
-
-dnowb = dnow0 #+'/behavior_svm/'
+if shflTrLabs:
+    dnow0 = dnow00 + 'shflTrLabs_allMice' + '/'
+#dnowb = dnow00 #+'/behavior_svm/'
 
 from datetime import datetime
 nowStrAM = datetime.now().strftime('%y%m%d-%H%M%S')
 
 
+
+
+
+#%%
+######################## PLOTS of each mouse ########################
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%
+    
+for im in range(len(mice)): #   if doPlotsEachMouse==1:   
+
+    #%%
+    days = daysGood_allMice[im]
+
+    dnow = dnow00 + mice[im] + '/'
+    if shflTrLabs:
+        dnow = dnow + 'shflTrLabs' + '/'    
+
+    nowStr = nowStr_allMice[im]
+    time_aligned = time_aligned_allMice[im]
+    nPreMin = nPreMin_allMice[im]
+    
+    
+    #%% Plot min number of HR/LR trials per day
+    
+    mn_corr = mn_corr_allMice[im]    
+    
+    plt.figure(figsize=(4.5,3))
+    plt.plot(mn_corr)
+    
+    plt.xlabel('Days')
+    plt.ylabel('Trial number (min HR,LR)')
+    makeNicePlots(plt.gca())
+    
+    ##%% Save the figure    
+    if savefigs:            
+        d = os.path.join(svmdir+dnow) #,mousename)       
+#        daysnew = (np.array(days))[dayinds]
+        if chAl==1:
+            dd = 'chAl_ntrs_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+        else:
+            dd = 'stAl_ntrs_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)            
+        fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0]) 
+        
+        plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+        
+        
+    #%% Plot Angles averaged across days for data, shfl, shfl-data (plot angle between decoders at different time points)        
+
+    if doExcSamps:        
+        ae = angleExc_excsh_aligned_avExcsh_allMice[im]
+        aes = angleExc_excshS_aligned_avExcsh_allMice[im]
+    else:
+        ae = angleExc_aligned_allMice[im]
+        aes = angleExcS_aligned_avSh_allMice[im]
+            
+    # Is inh and exc stability different? 
+    # for each population (inh,exc) subtract shuffle-averaged angles from real angles... do ttest across days for each pair of time points
+    _,pei = stats.ttest_ind(angleInh_aligned_allMice[im] - angleInhS_aligned_avSh_allMice[im]   ,    ae - aes, axis=-1)
+    
+    fnam = 'angles_AveDays_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+    
+    plotAngsAll(nPreMin, time_aligned, angInh_av_allMice[im], angExc_av_allMice[im], angAllExc_av_allMice[im], angExc_excsh_av_allMice[im], angInhS_av_allMice[im], angExcS_av_allMice[im], angAllExcS_av_allMice[im], angExc_excshS_av_allMice[im], pei, dnow, fnam)
+
+
+    #%% Plot heatmaps of stability and class accuracy showing all days
+    
+    ### decide which one of the following (for score0: data, shfl, shfl-data) you want to plot below
+    '''
+    # 0: data
+    ssi = stabScoreInh0_data, stabScoreInh1
+    sse = stabScoreExc0_data, stabScoreExc1
+#    sse_excsh = stabScoreExc_excsh0, stabScoreExc_excsh1
+    sse_excsh = stabScoreExc_excsh0_data_avExcsh, stabScoreExc_excsh1_avExcsh
+    ssa = stabScoreAllExc0_data, stabScoreAllExc1        
+    ssl = stabLab0_data, stabLab1
+    
+    # 0: shfl
+    ssi = stabScoreInh0_shfl, stabScoreInh1
+    sse = stabScoreExc0_shfl, stabScoreExc1
+#    sse_excsh = stabScoreExc_excsh0, stabScoreExc_excsh1
+    sse_excsh = stabScoreExc_excsh0_shfl_avExcsh, stabScoreExc_excsh1_avExcsh
+    ssa = stabScoreAllExc0_shfl, stabScoreAllExc1        
+    ssl = stabLab0_shfl, stabLab1
+    '''
+    # 0: ave(shfl) - data
+    ssi = stabScoreInh0_allMice[im], stabScoreInh1_allMice[im]
+    sse = stabScoreExc0_allMice[im], stabScoreExc1_allMice[im]
+#    sse_excsh = stabScoreExc_excsh0, stabScoreExc_excsh1
+    sse_excsh = stabScoreExc_excsh0_avExcsh_allMice[im], stabScoreExc_excsh1_avExcsh_allMice[im]
+    ssa = stabScoreAllExc0_allMice[im], stabScoreAllExc1_allMice[im]        
+    ssl = stabLab0, stabLab1
+    
+    #plt.plot(stabScore.T);
+    #plt.legend(days, loc='center left', bbox_to_anchor=(1, .7))
+    
+#        step = 4
+#        x = (np.unique(np.concatenate((np.arange(np.argwhere(time_aligned>=0)[0], -.5, -step), 
+#                   np.arange(np.argwhere(time_aligned>=0)[0], totLen, step))))).astype(int)
+    #cmins,cmaxs, cminc,cmaxc
+    asp = 'auto' #2 #
+    
+    
+    for meas in range(2): #range(3): # which one of the measures below to use            
+    
+        ########################################################################
+        #################### stability ####################
+        ########################################################################
+    
+        stabScoreInh = ssi[meas]
+        if doExcSamps:
+            stabScoreExc = sse_excsh[meas]
+        else:
+            stabScoreExc = sse[meas]
+        stabScoreAllExc = ssa[meas]
+        stabLab = ssl[meas]
+         
+        _,ps = stats.ttest_ind(stabScoreInh, stabScoreExc) 
+        _,pc = stats.ttest_ind(classAccurTMS_inh_allMice[im], classAccurTMS_exc_allMice[im]) 
+        
+        _,psa = stats.ttest_ind(stabScoreInh, stabScoreAllExc) 
+        _,pca = stats.ttest_ind(classAccurTMS_inh_allMice[im], classAccurTMS_allExc_allMice[im]) 
+                     
+        cmins = np.floor(np.min([np.nanmin(stabScoreInh), np.nanmin(stabScoreExc), np.nanmin(stabScoreAllExc)]))
+        cmaxs = np.floor(np.max([np.nanmax(stabScoreInh), np.nanmax(stabScoreExc), np.nanmax(stabScoreAllExc)]))
+
+          
+        fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(7,5))
+        
+        lab = 'inh'
+        top = stabScoreInh
+        cmap ='jet'
+        cblab = stabLab
+        ax = axes.flat[0]
+        img = plotStabScore(top, lab, cmins, cmaxs, cmap, cblab, ax)
+        ax.set_aspect(asp)
+        makeNicePlots(ax,1)
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        
+        
+        lab = 'exc'
+        top = stabScoreExc
+        cmap ='jet'
+        cblab = stabLab
+        ax = axes.flat[1]
+        plotStabScore(top, lab, cmins, cmaxs, cmap, cblab, ax)
+        # mark sig timepoints (exc sig diff from inh)
+        y=-1; pp = np.full(ps.shape, np.nan); pp[ps<=.05] = y
+        ax.plot(range(len(time_aligned)), pp, color='r', lw=2)
+        ax.set_aspect(asp)
+        makeNicePlots(ax,1)
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+
+        
+        lab = labAll
+        top = stabScoreAllExc
+        cmap ='jet'
+        cblab = stabLab
+        ax = axes.flat[2]
+        img = plotStabScore(top, lab, cmins, cmaxs, cmap, cblab, ax)
+        #plt.colorbar(label=cblab) #,fraction=0.14, pad=0.04); #plt.clim(cmins, cmaxs)
+        #add_colorbar(img)
+        pos1 = ax.get_position()
+        cb_ax = fig.add_axes([0.92, 0.15, 0.02, 0.72], adjustable='box-forced')
+        #cb_ax = fig.add_axes([0.92, np.prod([pos1.y0,asp]), 0.02, pos1.width])
+        cbar = fig.colorbar(img, cax=cb_ax, label=cblab)
+        #cbar = fig.colorbar(img, ax=axes.ravel().tolist(), shrink=0.95)
+        #fig.colorbar(img, ax=axes.ravel().tolist())
+        # Make an axis for the colorbar on the right side
+        #from mpl_toolkits.axes_grid1 import make_axes_locatable
+        #divider = make_axes_locatable(ax)
+        #cax = divider.append_axes("right", size="5%", pad=0.05)
+        #fig.colorbar(img, cax=cax)
+        #### mark sig timepoints (all exc sig diff from inh)
+        y=-1; pp = np.full(ps.shape, np.nan); pp[psa<=.05] = y
+        ax.plot(range(len(time_aligned)), pp, color='r', lw=2)
+        ax.set_aspect(asp)
+        #fig.tight_layout()   
+        makeNicePlots(ax,1)
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+
+      
+        plt.subplots_adjust(wspace=.6)
+        
+        ##%% Save the figure    
+        if savefigs:
+            d = os.path.join(svmdir+dnow) #,mousename)       
+#                daysnew = (np.array(days))[dayinds]
+            if meas==0:
+                nn = 'ang'
+            elif meas==1:
+                nn = 'nsig'                
+            
+            if chAl==1:
+                dd = 'chAl_stab_'+nn+'_eachDay_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            else:
+                dd = 'chAl_stab_'+nn+'_eachDay_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
+            if not os.path.exists(d):
+                print 'creating folder'
+                os.makedirs(d)            
+            fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0])    
+            plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+    
+
+        ################################################################################################################################################
+        #########################%% P value (inh vs exc as well as inh vs allExc) for stability and class accurr across days for each time bin ########################################################################
+        ################################################################################################################################################
+        plt.figure()
+
+        plt.subplot(221); 
+        plt.plot(time_aligned, ps); plt.ylabel('p_stability'); makeNicePlots(plt.gca())
+        plt.title('exc vs inh'); 
+#            plt.xticks(x, np.round(time_aligned[x]).astype(int))
+        plt.axhline(y=.05, c='r', lw=1)
+        makeNicePlots(plt.gca(),1)
+        
+        plt.subplot(223); 
+        plt.plot(time_aligned, pc); plt.ylabel('p_class accur'); makeNicePlots(plt.gca())
+#            plt.xticks(x, np.round(time_aligned[x]).astype(int))
+        plt.axhline(y=.05, c='r', lw=1)
+        plt.xlabel('Time (ms')
+        makeNicePlots(plt.gca(),1)
+        
+        plt.subplot(222); 
+        plt.plot(time_aligned, psa); plt.ylabel('p_stability'); makeNicePlots(plt.gca())
+        plt.title('all exc vs inh')
+#            plt.xticks(x, np.round(time_aligned[x]).astype(int))
+        plt.axhline(y=.05, c='r', lw=1)
+        yl = plt.gca().get_ylim(); plt.ylim([-.005, yl[1]])
+        makeNicePlots(plt.gca(),1)
+        
+        plt.subplot(224); 
+        plt.plot(time_aligned, pca); plt.ylabel('p_class accur'); makeNicePlots(plt.gca())
+#            plt.xticks(x, np.round(time_aligned[x]).astype(int))
+        plt.axhline(y=.05, c='r', lw=1)
+        plt.xlabel('Time (ms')
+        yl = plt.gca().get_ylim(); plt.ylim([-.005, yl[1]])
+        makeNicePlots(plt.gca(),1)
+        
+        plt.subplots_adjust(hspace=.4, wspace=.5)
+        
+        
+        ##%% Save the figure    
+        if savefigs:
+            d = os.path.join(svmdir+dnow) #,mousename)       
+#                daysnew = (np.array(days))[dayinds]
+            if meas==0:
+                nn = 'ang'
+            elif meas==1:
+                nn = 'nsig'    
+            
+            if chAl==1:
+                dd = 'chAl_stab_'+nn+'_p_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            else:
+                dd = 'chAl_stab_'+nn+'_p_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
+                
+            if not os.path.exists(d):
+                print 'creating folder'
+                os.makedirs(d)            
+            fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0])    
+            plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+        
+        
+        
+        ################################################################################################################################################
+        ##########################%% stab in the last time bin vs days  ########################################################################
+        ################################################################################################################################################
+        nbin = 1 #3 : Average stability score in the last n bins before the choice, and compare it between exc and inh
+        rr = np.arange(nPreMin-nbin, nPreMin)
+        ssbefchExc = np.mean(stabScoreExc[:, rr], axis=1)
+        ssbefchInh = np.mean(stabScoreInh[:, rr], axis=1)
+        ssbefchAllExc = np.mean(stabScoreAllExc[:, rr], axis=1)
+        
+        plt.figure(figsize=(4.5,3))
+        plt.plot(ssbefchAllExc, 'k', label=labAll)
+        plt.plot(ssbefchInh, 'r', label='inh')
+        plt.plot(ssbefchExc, 'b', label='exc')
+        plt.xlabel('Days')
+        plt.ylabel(stabLab)
+        plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False) 
+        makeNicePlots(plt.gca())
+        
+        
+        ##%% Save the figure    
+        if savefigs:
+            d = os.path.join(svmdir+dnow) #,mousename)       
+#                daysnew = (np.array(days))[dayinds]
+            if meas==0:
+                nn = 'ang'
+            elif meas==1:
+                nn = 'nsig'                    
+#                n = '_aveLast%dbin' %(nbin)
+
+            if chAl==1:
+                dd = 'chAl_stab_'+nn+nbinlab+'_inhExc'+labAll+'_'  + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            else:
+                dd = 'chAl_stab_'+nn+nbinlab+'_inhExc'+labAll+'_'  + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
+
+            if not os.path.exists(d):
+                print 'creating folder'
+                os.makedirs(d)            
+            fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0])
+            plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+                
+                
+                
+                
+    ################################################################################################                
+    #%% ######################## class accuracy (data - shfl) ####################
+
+    ### heatmaps of CA for each day
+    
+    cminc = np.floor(np.min([np.nanmin(classAccurTMS_inh_allMice[im]), np.nanmin(classAccurTMS_exc_allMice[im]), np.nanmin(classAccurTMS_allExc_allMice[im])]))
+    cmaxc = np.floor(np.max([np.nanmax(classAccurTMS_inh_allMice[im]), np.nanmax(classAccurTMS_exc_allMice[im]), np.nanmax(classAccurTMS_allExc_allMice[im])]))
+
+    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(7,5))
+    
+    lab = 'inh'
+    top = classAccurTMS_inh_allMice[im]
+    cmap ='jet'
+    cblab = 'Class accuracy (data-shfl)'
+    ax = axes.flat[0]
+    img = plotStabScore(top, lab, cminc, cmaxc, cmap, cblab, ax)
+    ax.set_aspect(asp)
+    makeNicePlots(ax,1)
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()        
+ 
+   
+    lab = 'exc'
+    top = classAccurTMS_exc_allMice[im]
+    cmap ='jet'
+    cblab = 'Class accuracy (data-shfl)'
+    ax = axes.flat[1]
+    plotStabScore(top, lab, cminc, cmaxc, cmap, cblab, ax)
+    y=-1; pp = np.full(ps.shape, np.nan); pp[pc<=.05] = y
+    ax.plot(range(len(time_aligned)), pp, color='r', lw=2)
+    ax.set_aspect(asp)
+    makeNicePlots(ax,1)
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)        
+
+    
+    lab = labAll
+    top = classAccurTMS_allExc_allMice[im]
+    cmap ='jet'
+    cblab = 'Class accuracy (data-shfl)'
+    ax = axes.flat[2]
+    img = plotStabScore(top, lab, cminc, cmaxc, cmap, cblab, ax)
+    #plt.colorbar(label=cblab) #,fraction=0.14, pad=0.04); #plt.clim(cmins, cmaxs)
+    #add_colorbar(img)
+    cb_ax = fig.add_axes([0.92, 0.15, 0.02, 0.72])
+    cbar = fig.colorbar(img, cax=cb_ax, label=cblab)
+    #cbar = fig.colorbar(img, ax=axes.ravel().tolist(), shrink=0.95)
+    #fig.colorbar(img, ax=axes.ravel().tolist())
+    # Make an axis for the colorbar on the right side
+    #from mpl_toolkits.axes_grid1 import make_axes_locatable
+    #divider = make_axes_locatable(ax)
+    #cax = divider.append_axes("right", size="5%", pad=0.05)
+    #fig.colorbar(img, cax=cax)
+    y=-1; pp = np.full(ps.shape, np.nan); pp[pca<=.05] = y
+    ax.plot(range(len(time_aligned)), pp, color='r', lw=2)
+    ax.set_aspect(asp)
+    makeNicePlots(ax,1)
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+ 
+       
+    plt.subplots_adjust(wspace=.4)
+    
+    ##%% Save the figure    
+    if savefigs:
+        d = os.path.join(svmdir+dnow) #,mousename)       
+#            daysnew = (np.array(days))[dayinds]
+        if chAl==1:
+            dd = 'chAl_classAcc_eachDay_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+        else:
+            dd = 'stAl_classAcc_eachDay_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)            
+        fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0])    
+        plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+    
+    
+    #%% CA (in the last time bin) vs days; (Average class accuracy in the last n bins before the choice, and compare it between exc and inh)
+        
+#        nbin = 1 #3
+    rr = np.arange(nPreMin-nbin, nPreMin)
+    ssbefchExc = np.mean(classAccurTMS_exc_allMice[im][:, rr], axis=1)
+    ssbefchInh = np.mean(classAccurTMS_inh_allMice[im][:, rr], axis=1)
+    ssbefchAllExc = np.mean(classAccurTMS_allExc_allMice[im][:, rr], axis=1)
+    
+    plt.figure(figsize=(4.5,3))
+    plt.plot(ssbefchAllExc, 'k', label=labAll)
+    plt.plot(ssbefchInh, 'r', label='inh')
+    plt.plot(ssbefchExc, 'b', label='exc')
+    plt.xlabel('Days')
+    plt.ylabel('Class accuracy (data-shfl)')
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False) 
+    makeNicePlots(plt.gca())
+    
+    
+    ##%% Save the figure    
+    if savefigs:
+        d = os.path.join(svmdir+dnow) #,mousename)       
+#                daysnew = (np.array(days))[dayinds]
+
+#            n = '_aveLast%dbin' %(nbin)
+
+        if chAl==1:
+            dd = 'chAl_classAcc'+nbinlab+'_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+        else:
+            dd = 'stAl_classAcc'+nbinlab+'_inhExc'+labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
+
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)            
+        fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0])
+        plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+            
+
+
+
+
+
+################################################################################################                
+################################################################################################                
+################################################################################################                
 #%% Define days to be analyzed (Identify days with too few trials (to exclude them!))    
 '''
 daysGood_allMice = []
@@ -1417,6 +1503,37 @@ _,pei = stats.ttest_ind(angInh_av_allMice_al - angInhS_av_allMice_al ,   ae - ae
 fnam = 'angles_AveMice_AveDays_inhExc'+labAll+'_' + '_'.join(mice) + '_' + nowStrAM   # (np.array(mice)[mice2an_all])
 
 plotAngsAll(nPreMin_final, time_aligned_final, angInh_av_allMice_al_av, angExc_av_allMice_al_av, angAllExc_av_allMice_al_av, angExc_excsh_av_allMice_al_av, angInhS_av_allMice_al_av, angExcS_av_allMice_al_av, angAllExcS_av_allMice_al_av, angExc_excshS_av_allMice_al_av, pei, dnow0, fnam)
+
+
+
+
+
+
+#%%
+
+def plotdiffang(a, ifr):
+    top = a[ifr][ifr::-1]
+    top = np.diff(top)
+    plt.plot(top)
+
+
+a = angAllExc_av_allMice_al_av
+
+plt.figure()
+ifr = -2; plotdiffang(a, ifr)
+ifr = nPreMin_final-1; plotdiffang(a, ifr)
+ifr = 5; plotdiffang(a, ifr)
+
+im = 3
+a = angAllExc_av_allMice_al[im]
+aa = np.diff(a, axis=1)
+extent = setExtent_imshow(time_aligned)    
+plt.imshow(aa, extent=extent); plt.colorbar()
+plt.imshow(a); plt.colorbar()
+
+
+
+
 
 
 #%% Now plot these onlySig ang averages computed above       
@@ -1930,11 +2047,11 @@ for im in range(len(mice)):
     plt.figure(figsize=(3,8))       
 
     plt.subplot(311)     
-    plotTimecourse_eachMouse(time_aligned_final, stab0, daysDim, colors, labs, ylab, linstyl, alph, dnow, fnam, tlab=lab0)#, col='b', ylab='exc')#, linstyl=linstyls[trtype], alph=alphas[trtype]) # avFRexc: alignedFrames x days (each element was averaged across all neurons and trials))
+    plotTimecourse_eachMouse(time_aligned_final, stab0, daysDim, colors, labs, ylab, linstyl, alph, '', fnam, tlab=lab0)#, col='b', ylab='exc')#, linstyl=linstyls[trtype], alph=alphas[trtype]) # avFRexc: alignedFrames x days (each element was averaged across all neurons and trials))
     plt.subplot(312)     
-    plotTimecourse_eachMouse(time_aligned_final, stab1, daysDim, colors, labs, ylab, linstyl, alph, dnow, fnam, tlab=lab1)           
+    plotTimecourse_eachMouse(time_aligned_final, stab1, daysDim, colors, labs, ylab, linstyl, alph, '', fnam, tlab=lab1)           
     plt.subplot(313)     
-    plotTimecourse_eachMouse(time_aligned_final, stab2, daysDim, colors, labs, ylab, linstyl, alph, dnow, fnam, tlab=lab2)       
+    plotTimecourse_eachMouse(time_aligned_final, stab2, daysDim, colors, labs, ylab, linstyl, alph, '', fnam, tlab=lab2)       
 
     plt.subplots_adjust(hspace=.8)
     
@@ -1942,7 +2059,11 @@ for im in range(len(mice)):
     #% Save the figure           
     if savefigs:
         days = daysGood_allMice[im]
-        dnow = dnow0+mice[im]+'/'
+
+        dnow = dnow00 + mice[im] + '/'
+        if shflTrLabs:
+            dnow = dnow + 'shflTrLabs' + '/'
+
         fnam = 'stab_timeCourse_aveDays_inhExc'+labAll+'_'  + daysGood_allMice[im][0][0:6] + '-to-' + daysGood_allMice[im][-1][0:6] + '_' + nowStr_allMice[im]
             
         d = os.path.join(svmdir+dnow)        
@@ -2089,7 +2210,11 @@ for im in range(len(mice)):
     ##%% Save the figure    
     if savefigs:
         days = daysGood_allMice[im]
-        dnow = dnow0+mice[im]+'/'
+
+        dnow = dnow00 + mice[im] + '/'
+        if shflTrLabs:
+            dnow = dnow + 'shflTrLabs' + '/'
+            
         fnam = 'scatter_Stab_CA_allDays_inhExc'+labAll+'_'  + daysGood_allMice[im][0][0:6] + '-to-' + daysGood_allMice[im][-1][0:6] + '_' + nowStr_allMice[im]
         
         d = os.path.join(svmdir+dnow) #,mousename)           
@@ -2202,7 +2327,11 @@ for im in range(len(mice2an)):
         
     if savefigs:
         days = daysGood_allMice[im]
-        dnow = dnow0+mice[im]+'/'
+
+        dnow = dnow00 + mice[im] + '/'
+        if shflTrLabs:
+            dnow = dnow + 'shflTrLabs' + '/'
+
         fnam = 'beh_Stab_CA_vsDays_inhExc'+labAll+'_'  + daysGood_allMice[im][0][0:6] + '-to-' + daysGood_allMice[im][-1][0:6] + '_' + nowStr_allMice[im]
         
         d = os.path.join(svmdir+dnow) #,mousename)           
@@ -2218,7 +2347,6 @@ for im in range(len(mice2an)):
     
 
 #%%
-
 def plotscat(x, y, xlab, ylab, clab):
     
     plt.scatter(x, y, c=np.arange(len(y)), cmap=cm.jet, edgecolors='face', s=8) #, label='class accuracy (% correct testing trials)')
@@ -2335,7 +2463,11 @@ for im in range(len(mice2an)):
     if savefigs:
         
         days = daysGood_allMice[im]
-        dnow = dnow0+mice[im]+'/'
+
+        dnow = dnow00 + mice[im] + '/'
+        if shflTrLabs:
+            dnow = dnow + 'shflTrLabs' + '/'
+
         fnam = 'scatter_beh_SVM_inhExc'+labAll+'_'  + daysGood_allMice[im][0][0:6] + '-to-' + daysGood_allMice[im][-1][0:6] + '_' + nowStr_allMice[im]
 
         d = os.path.join(svmdir+dnow) #,mousename)           

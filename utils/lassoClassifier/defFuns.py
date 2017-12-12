@@ -1,5 +1,7 @@
 ## Load commonly used libraries, and define commanly used functions
 
+trialHistAnalysis = 0;
+iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
 
 #%%
 frameLength = 1000/30.9; # sec.  # np.diff(time_aligned_stim)[0];
@@ -34,10 +36,11 @@ fmt = ['pdf', 'svg', 'eps'] #'png', 'pdf': preserve transparency # Format of fig
 #figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/' # Directory for saving figures.
 import platform
 if platform.system()=='Linux':
-    figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/'
+#    figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/'
+    figsDir = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/'
 elif platform.system()=='Darwin':
     figsDir = '/Users/Farzaneh/Dropbox/ChurchlandLab/Farzaneh_Gamal/' #    svmfold = ''
-
+    figsDir = '/Users/Farzaneh/Dropbox/ChurchlandLab//Projects/inhExcDecisionMaking/'
 
 # Make folder named SVM to save figures inside it
 svmdir = os.path.join(figsDir, 'SVM') #if not os.path.exists(svmdir): #    os.makedirs(svmdir)    
@@ -761,13 +764,91 @@ def setTo50classErr(classError, w, thNon0Ws = .05, thSamps = 10, eps = 1e-10):
 #%% function to set best c (svm already trained) and get the class error values at best C
 # this function is a combination of the 2 functions below, where best c is set in a separate function and setting classErr at best c is done in a separate function too.
   
-def setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_shfl, perClassErrorTest_chance, cvect, regType, doPlots=0, doIncorr=0, wAllC=[], bAllC=[]):
+def setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_shfl, perClassErrorTest_chance, cvect, regType, doPlots=0, doIncorr=0, wAllC=[], bAllC=[], shflTrLabs=0):
     
     numSamples = perClassErrorTest.shape[0] 
     numFrs = perClassErrorTest.shape[2]
-    
-    ###%% Compute average of class errors across numSamples
-    
+
+    #########################################################################################
+    ################################ Set cbest for all frames ###############################
+    #########################################################################################        
+    if shflTrLabs==0: # if shflTrLabs=1, you have to load cbestFrs from the svm file ran without shuffling tr labels (shflTrLabs=0)        
+        for ifr in range(numFrs):                    
+            ###%% Compute average of class errors across numSamples        
+            meanPerClassErrorTrain = np.mean(perClassErrorTrain[:,:,ifr], axis = 0);
+            semPerClassErrorTrain = np.std(perClassErrorTrain[:,:,ifr], axis = 0)/np.sqrt(numSamples);            
+            meanPerClassErrorTest = np.mean(perClassErrorTest[:,:,ifr], axis = 0);
+            semPerClassErrorTest = np.std(perClassErrorTest[:,:,ifr], axis = 0)/np.sqrt(numSamples);            
+            meanPerClassErrorTest_shfl = np.mean(perClassErrorTest_shfl[:,:,ifr], axis = 0);
+    #        semPerClassErrorTest_shfl = np.std(perClassErrorTest_shfl[:,:,ifr], axis = 0)/np.sqrt(numSamples);            
+            meanPerClassErrorTest_chance = np.mean(perClassErrorTest_chance[:,:,ifr], axis = 0);
+    #        semPerClassErrorTest_chance = np.std(perClassErrorTest_chance[:,:,ifr], axis = 0)/np.sqrt(numSamples);
+            
+            ###### Identify best c        
+            # Use all range of c... it may end up a value at which all weights are 0.
+            ix = np.argmin(meanPerClassErrorTest)
+            if smallestC==1:
+                cbest = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix])];
+                cbest = cbest[0]; # best regularization term based on minError+SE criteria
+                cbestAll = cbest
+            else:
+                cbestAll = cvect[ix]
+            print 'best c = %.10f' %cbestAll
+            
+            ###### Make sure at bestc at least one weight is non-zero (ie pick bestc from only those values of c that give non-0 average weights.)
+            if regType == 'l1': # in l2, we don't really have 0 weights!
+                sys.exit('Needs work! below wAllC has to be for 1 frame') 
+                
+                a = abs(wAllC)>eps # non-zero weights
+                b = np.mean(a, axis=(0,2,3)) # Fraction of non-zero weights (averaged across shuffles)
+                c1stnon0 = np.argwhere(b)[0].squeeze() # first element of c with at least 1 non-0 w in 1 shuffle
+                cvectnow = cvect[c1stnon0:]                
+                meanPerClassErrorTestnow = np.mean(perClassErrorTest[:,c1stnon0:,ifr], axis = 0);
+                semPerClassErrorTestnow = np.std(perClassErrorTest[:,c1stnon0:,ifr], axis = 0)/np.sqrt(numSamples);
+                ix = np.argmin(meanPerClassErrorTestnow)
+                if smallestC==1:
+                    cbest = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
+                    cbest = cbest[0]; # best regularization term based on minError+SE criteria    
+                else:
+                    cbest = cvectnow[ix]        
+                print 'best c (at least 1 non-0 weight) = ', cbest                
+            else:
+                cbest = cbestAll            
+        
+            cbestFrs[ifr] = cbest
+        
+            #################### Plot C path                           
+            if doPlots:
+        #            print 'Best c (inverse of regularization parameter) = %.2f' %cbest
+                plt.figure()
+                plt.subplot(1,2,1)
+                plt.fill_between(cvect, meanPerClassErrorTrain-semPerClassErrorTrain, meanPerClassErrorTrain+ semPerClassErrorTrain, alpha=0.5, edgecolor='k', facecolor='k')
+                plt.fill_between(cvect, meanPerClassErrorTest-semPerClassErrorTest, meanPerClassErrorTest+ semPerClassErrorTest, alpha=0.5, edgecolor='r', facecolor='r')
+            #    plt.fill_between(cvect, meanPerClassErrorTest_chance-semPerClassErrorTest_chance, meanPerClassErrorTest_chance+ semPerClassErrorTest_chance, alpha=0.5, edgecolor='b', facecolor='b')        
+            #    plt.fill_between(cvect, meanPerClassErrorTest_shfl-semPerClassErrorTest_shfl, meanPerClassErrorTest_shfl+ semPerClassErrorTest_shfl, alpha=0.5, edgecolor='y', facecolor='y')        
+                
+                plt.plot(cvect, meanPerClassErrorTrain, 'k', label = 'training')
+                plt.plot(cvect, meanPerClassErrorTest, 'r', label = 'validation')
+                plt.plot(cvect, meanPerClassErrorTest_chance, 'b', label = 'cv-chance')       
+                plt.plot(cvect, meanPerClassErrorTest_shfl, 'y', label = 'cv-shfl')            
+            
+                plt.plot(cvect[cvect==cbest], meanPerClassErrorTest[cvect==cbest], 'bo')
+                
+                plt.xlim([cvect[1], cvect[-1]])
+                plt.xscale('log')
+                plt.xlabel('c (inverse of regularization parameter)')
+                plt.ylabel('classification error (%)')
+                plt.legend(loc='center left', bbox_to_anchor=(1, .7))
+                
+                cl = 'r' if ifr==eventI_ds else 'k' # show frame number of eventI in red :)
+                plt.title('Frame %d' %(ifr), color=cl)
+                plt.tight_layout()                 
+        
+        
+        
+    #########################################################################################        
+    #################### Set w and class errors at best c for each frame #########################        
+    #########################################################################################
     classErr_bestC_train_data = np.full((numSamples, numFrs), np.nan)
     classErr_bestC_test_data = np.full((numSamples, numFrs), np.nan)
     classErr_bestC_test_shfl = np.full((numSamples, numFrs), np.nan)
@@ -782,70 +863,15 @@ def setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_s
         b_bestc_data = np.full((numSamples, numFrs), np.nan)
     else:
         w_bestc_data = []
-        b_bestc_data = []
-    
+        b_bestc_data = []                
+
     for ifr in range(numFrs):
-                
-        meanPerClassErrorTrain = np.mean(perClassErrorTrain[:,:,ifr], axis = 0);
-        semPerClassErrorTrain = np.std(perClassErrorTrain[:,:,ifr], axis = 0)/np.sqrt(numSamples);
-        
-        meanPerClassErrorTest = np.mean(perClassErrorTest[:,:,ifr], axis = 0);
-        semPerClassErrorTest = np.std(perClassErrorTest[:,:,ifr], axis = 0)/np.sqrt(numSamples);
-        
-        meanPerClassErrorTest_shfl = np.mean(perClassErrorTest_shfl[:,:,ifr], axis = 0);
-#        semPerClassErrorTest_shfl = np.std(perClassErrorTest_shfl[:,:,ifr], axis = 0)/np.sqrt(numSamples);
-        
-        meanPerClassErrorTest_chance = np.mean(perClassErrorTest_chance[:,:,ifr], axis = 0);
-#        semPerClassErrorTest_chance = np.std(perClassErrorTest_chance[:,:,ifr], axis = 0)/np.sqrt(numSamples);
-        
-        
-        
-        ################### Identify best c        
-        # Use all range of c... it may end up a value at which all weights are 0.
-        ix = np.argmin(meanPerClassErrorTest)
-        if smallestC==1:
-            cbest = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix])];
-            cbest = cbest[0]; # best regularization term based on minError+SE criteria
-            cbestAll = cbest
+        if shflTrLabs:
+            indBestC = 0
         else:
-            cbestAll = cvect[ix]
-        print 'best c = %.10f' %cbestAll
-        
-        
-        
-        #################### Make sure at bestc at least one weight is non-zero (ie pick bestc from only those values of c that give non-0 average weights.)
-        if regType == 'l1': # in l2, we don't really have 0 weights!
-            sys.exit('Needs work! below wAllC has to be for 1 frame') 
-            
-            a = abs(wAllC)>eps # non-zero weights
-            b = np.mean(a, axis=(0,2,3)) # Fraction of non-zero weights (averaged across shuffles)
-            c1stnon0 = np.argwhere(b)[0].squeeze() # first element of c with at least 1 non-0 w in 1 shuffle
-            cvectnow = cvect[c1stnon0:]
-            
-            meanPerClassErrorTestnow = np.mean(perClassErrorTest[:,c1stnon0:,ifr], axis = 0);
-            semPerClassErrorTestnow = np.std(perClassErrorTest[:,c1stnon0:,ifr], axis = 0)/np.sqrt(numSamples);
-            ix = np.argmin(meanPerClassErrorTestnow)
-            if smallestC==1:
-                cbest = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
-                cbest = cbest[0]; # best regularization term based on minError+SE criteria    
-            else:
-                cbest = cvectnow[ix]
-    
-            print 'best c (at least 1 non-0 weight) = ', cbest
-            
-        else:
-            cbest = cbestAll            
-        
-    
-        cbestFrs[ifr] = cbest
-        
-        
-        
-        #################### Set the decoder and class errors at best c         
+            indBestC = np.in1d(cvect, cbestFrs[ifr])
         # you don't need to again train classifier on data bc you already got it above when you found bestc. You just need to do it for shuffled. ... [you already have access to test/train error as well as b and w of training SVM with bestc.)]
         # we just get the values of perClassErrorTrain and perClassErrorTest at cbest (we already computed these values above when training on all values of c)
-        indBestC = np.in1d(cvect, cbest)
-
         classErr_bestC_train_data[:,ifr] = perClassErrorTrain[:,indBestC,ifr].squeeze() # numSamps           
         classErr_bestC_test_data[:,ifr] = perClassErrorTest[:,indBestC,ifr].squeeze()
         classErr_bestC_test_shfl[:,ifr] = perClassErrorTest_shfl[:,indBestC,ifr].squeeze()
@@ -857,7 +883,6 @@ def setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_s
         if len(wAllC)>0:
             w_bestc_data[:,:,ifr] = wAllC[:,indBestC,:,ifr].squeeze() # numSamps x neurons
             b_bestc_data[:,ifr] = bAllC[:,indBestC,ifr].squeeze() # numSamps           
-
        # check the number of non-0 weights
     #       for ifr in range(numFrs):
     #        w_data = wAllC[:,indBestC,:,ifr].squeeze()
@@ -866,34 +891,6 @@ def setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_s
     #        ada = ~ada # samples w >=2 non0 weights
     #        numNon0SampData[ifr] = ada.sum() # number of cv samples with >=2 non-0 weights
     
-        
-        
-        #################### Plot C path                   
-        if doPlots:
-    #            print 'Best c (inverse of regularization parameter) = %.2f' %cbest
-            plt.figure()
-            plt.subplot(1,2,1)
-            plt.fill_between(cvect, meanPerClassErrorTrain-semPerClassErrorTrain, meanPerClassErrorTrain+ semPerClassErrorTrain, alpha=0.5, edgecolor='k', facecolor='k')
-            plt.fill_between(cvect, meanPerClassErrorTest-semPerClassErrorTest, meanPerClassErrorTest+ semPerClassErrorTest, alpha=0.5, edgecolor='r', facecolor='r')
-        #    plt.fill_between(cvect, meanPerClassErrorTest_chance-semPerClassErrorTest_chance, meanPerClassErrorTest_chance+ semPerClassErrorTest_chance, alpha=0.5, edgecolor='b', facecolor='b')        
-        #    plt.fill_between(cvect, meanPerClassErrorTest_shfl-semPerClassErrorTest_shfl, meanPerClassErrorTest_shfl+ semPerClassErrorTest_shfl, alpha=0.5, edgecolor='y', facecolor='y')        
-            
-            plt.plot(cvect, meanPerClassErrorTrain, 'k', label = 'training')
-            plt.plot(cvect, meanPerClassErrorTest, 'r', label = 'validation')
-            plt.plot(cvect, meanPerClassErrorTest_chance, 'b', label = 'cv-chance')       
-            plt.plot(cvect, meanPerClassErrorTest_shfl, 'y', label = 'cv-shfl')            
-        
-            plt.plot(cvect[cvect==cbest], meanPerClassErrorTest[cvect==cbest], 'bo')
-            
-            plt.xlim([cvect[1], cvect[-1]])
-            plt.xscale('log')
-            plt.xlabel('c (inverse of regularization parameter)')
-            plt.ylabel('classification error (%)')
-            plt.legend(loc='center left', bbox_to_anchor=(1, .7))
-            
-            cl = 'r' if ifr==eventI_ds else 'k' # show frame number of eventI in red :)
-            plt.title('Frame %d' %(ifr), color=cl)
-            plt.tight_layout()          
            
     if doIncorr==1: #'perClassErrorTest_incorr' in locals():
         return classErr_bestC_train_data, classErr_bestC_test_data, classErr_bestC_test_shfl, classErr_bestC_test_chance, cbestFrs, w_bestc_data, b_bestc_data, classErr_bestC_test_incorr, classErr_bestC_test_incorr_shfl, classErr_bestC_test_incorr_chance
@@ -901,7 +898,7 @@ def setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_s
         return classErr_bestC_train_data, classErr_bestC_test_data, classErr_bestC_test_shfl, classErr_bestC_test_chance, cbestFrs, w_bestc_data, b_bestc_data
     
     
-  
+    
 #%% function to find best c from testing class error ran on values of cvect
 
 def findBestC(perClassErrorTest, cvect, regType, smallestC=1):
@@ -1606,7 +1603,7 @@ def colorOrder(nlines=30):
 
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
 
-def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc=[], regressBins=3, useEqualTrNums=1, corrTrained=0, shflTrsEachNeuron=0):
+def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc=[], regressBins=3, useEqualTrNums=1, corrTrained=0, shflTrsEachNeuron=0, shflTrLabs=0):
     import glob
 
     if chAl==1:
@@ -1623,6 +1620,11 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
         shflname = 'shflTrsPerN_'
     else:
         shflname = ''
+
+    if shflTrLabs:
+        shflTrLabs_n = '_shflTrLabs'
+    else:
+        shflTrLabs_n = ''        
             
     ''' 
     if len(doInhAllexcEqexc)==0: # 1st run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc at the same time, also for all days (except a few days of fni18), inhRois was used (not the new inhRois_pix)       
@@ -1648,14 +1650,14 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
         
     if trialHistAnalysis:
         if useEqualTrNums:
-            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s_prevChoice_%s_ds%d_eqTrs_*' %(o2a, shflname, ntype, al,regressBins)
+            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_eqTrs_*' %(o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
         else:
-            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s_prevChoice_%s_ds%d_*' %(o2a, shflname, ntype, al,regressBins)
+            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_*' %(o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
     else:
         if useEqualTrNums:
-            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s_currChoice_%s_ds%d_eqTrs_*' %(o2a, shflname, ntype, al,regressBins)
+            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_eqTrs_*' %(o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
         else:
-            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s_currChoice_%s_ds%d_*' %(o2a, shflname, ntype, al,regressBins)
+            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_*' %(o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
         
         
         
@@ -1669,7 +1671,7 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
 
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
 
-def setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins=3, corrTrained=0, shflTrsEachNeuron=0):
+def setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins=3, corrTrained=0, shflTrsEachNeuron=0, shflTrLabs=0):
     import glob
 
     if chAl==1:
@@ -1687,10 +1689,15 @@ def setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins
     else:
     	shflname = ''        
     
-    if trialHistAnalysis:
-        svmn = 'svmPrevChoice_eachFrame_%s%s%s_ds%d_*' %(al,o2a,shflname,regressBins)
+    if shflTrLabs:
+        shflTrLabs_n = 'shflTrLabs_'
     else:
-        svmn = 'svmCurrChoice_eachFrame_%s%s%s_ds%d_*' %(al,o2a,shflname,regressBins)
+        shflTrLabs_n = ''
+    
+    if trialHistAnalysis:
+        svmn = 'svmPrevChoice_eachFrame_%s%s%s%s_ds%d_*' %(shflTrLabs_n, al,o2a,shflname,regressBins)
+    else:
+        svmn = 'svmCurrChoice_eachFrame_%s%s%s%s_ds%d_*' %(shflTrLabs_n, al,o2a,shflname,regressBins)
     
     svmn = svmn + os.path.basename(pnevFileName) #pnevFileName[-32:]    
     svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
@@ -2017,7 +2024,7 @@ def alTrace_frfr(trace, eventI_ds_allDays, nPreMin, nPostMin, mn_corr=np.nan, th
             
             trace_aligned.append(trace[iday][inds][:,inds])
     
-    if len(np.unique([np.shape(trace_aligned[iday])[-1] for iday in range(np.shape(trace_aligned)[0])])) > 1: # if it is fr x fr x days we can't do it bc diff mice have diff num days! but if it is frs x frs or frs x frs x samps we can turn it into an array
+    if len(np.unique([np.shape(trace_aligned[iday])[-1] for iday in range(sum(mn_corr >= thTrained))])) == 1: # if it is fr x fr x days we can't do it bc diff mice have diff num days! but if it is frs x frs or frs x frs x samps we can turn it into an array
         trace_aligned = np.array(trace_aligned)
     
     return trace_aligned
@@ -2205,7 +2212,7 @@ def pwmt_frs(a,b):
 
 #%% Load SVM vars - eachFrame, allN
     
-def loadSVM_allN(svmName, doPlots, doIncorr, loadWeights):
+def loadSVM_allN(svmName, doPlots, doIncorr, loadWeights, shflTrLabs=0):
     # loadWeights: 
     # 0: don't load weights, only load class accur
     # 1 : load weights and class cccur
@@ -2246,13 +2253,12 @@ def loadSVM_allN(svmName, doPlots, doIncorr, loadWeights):
          bAllC = []
          
         
-    #######%% Set class error values at best C (also find bestc for each frame and plot c path)
-    
+    #####################%% Set class error values at best C (also find bestc for each frame and plot c path)    
     if loadWeights!=2:        
         if doIncorr==1:
-            classErr_bestC_train_data, classErr_bestC_test_data, classErr_bestC_test_shfl, classErr_bestC_test_chance, cbestFrs, w_bestc_data, b_bestc_data, classErr_bestC_test_incorr, classErr_bestC_test_incorr_shfl, classErr_bestC_test_incorr_chance = setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_shfl, perClassErrorTest_chance, cvect, regType, doPlots, doIncorr, wAllC, bAllC)
+            classErr_bestC_train_data, classErr_bestC_test_data, classErr_bestC_test_shfl, classErr_bestC_test_chance, cbestFrs, w_bestc_data, b_bestc_data, classErr_bestC_test_incorr, classErr_bestC_test_incorr_shfl, classErr_bestC_test_incorr_chance = setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_shfl, perClassErrorTest_chance, cvect, regType, doPlots, doIncorr, wAllC, bAllC, shflTrLabs)
         else:
-            classErr_bestC_train_data, classErr_bestC_test_data, classErr_bestC_test_shfl, classErr_bestC_test_chance, cbestFrs, w_bestc_data, b_bestc_data = setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_shfl, perClassErrorTest_chance, cvect, regType, 0, doIncorr, wAllC, bAllC)
+            classErr_bestC_train_data, classErr_bestC_test_data, classErr_bestC_test_shfl, classErr_bestC_test_chance, cbestFrs, w_bestc_data, b_bestc_data = setBestC_classErr(perClassErrorTrain, perClassErrorTest, perClassErrorTest_shfl, perClassErrorTest_chance, cvect, regType, 0, doIncorr, wAllC, bAllC, shflTrLabs)
     else: # only weights
         Data = scio.loadmat(svmName, variable_names=['perClassErrorTest'])  
         perClassErrorTest = Data.pop('perClassErrorTest') # numSamples x len(cvect) x nFrames
@@ -2297,7 +2303,7 @@ def loadSVM_allN(svmName, doPlots, doIncorr, loadWeights):
          
 #%% Load exc,inh SVM vars
         
-def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, doPlots, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron):
+def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, doPlots, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0):
     # loadWeights: 
     # 0: don't load weights, only load class accur
     # 1 : load weights and class cccur
@@ -2325,16 +2331,17 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
 #            print 'bestc = c that gives min cv error'
             
     svmName_allN = ''            
+    svmName_excInh = []
     for idi in range(3):
         
         doInhAllexcEqexc = np.full((3), False, dtype=bool)
         doInhAllexcEqexc[idi] = True 
         if idi==1 and doAllN: # plot allN, instead of allExc
-            svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, shflTrsEachNeuron)[0] # for chAl: the latest file is with soft norm; earlier file is 
+            svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, shflTrsEachNeuron, shflTrLabs)[0] # for chAl: the latest file is with soft norm; earlier file is 
             svmName_allN = svmName
         else:        
-            svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]
-            svmName_excInh = svmName
+            svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron, shflTrLabs)[0]
+            svmName_excInh.append(svmName)
 #        svmName = svmName[0] # use [0] for the latest file; use [-1] for the earliest file
         print os.path.basename(svmName)    
 
@@ -2350,7 +2357,7 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
         ######### allN or allExc
         elif doInhAllexcEqexc[1] == 1: 
             if doAllN: # plot allN, instead of allExc
-                _, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, _, w_data_allExc, b_data_allExc = loadSVM_allN(svmName, doPlots, doIncorr, 1)   
+                _, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, _, w_data_allExc, b_data_allExc = loadSVM_allN(svmName, doPlots, doIncorr, 1, shflTrLabs)   
                 
             else: # plot allExc
                 if loadWeights==1:
@@ -2494,10 +2501,13 @@ def av_se_CA_trsamps(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shf
 
 #%% Set extent for imshow, so x axis has values corresponding to time_aligned
 
-def setExtent_imshow(time_aligned):
+def setExtent_imshow(time_aligned, y=np.nan):
     
     real_x = time_aligned
-    real_y = real_x[::-1] + 0
+    if np.isnan(y).all(): # y has same extent as x
+        real_y = real_x[::-1] + 0
+    else:
+        real_y = y
     dx = (real_x[1]-real_x[0])/2.
     dy = (real_y[1]-real_y[0])/2.
     extent = [real_x[0]-dx, real_x[-1]+dx, real_y[0]-dy, real_y[-1]+dy]  # extent=[time_aligned[0], time_aligned[-1], time_aligned[-1], time_aligned[0]])
