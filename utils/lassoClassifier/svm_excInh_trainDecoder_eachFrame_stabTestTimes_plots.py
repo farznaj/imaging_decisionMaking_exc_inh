@@ -64,6 +64,8 @@ numDaysGood = np.array([len(daysGood_allMice[im]) for im in range(len(mice))])
 
 #%% Define function for all plots below. Heatmaps of time vs time... showing either CA, or diff from max CA, etc... for exc,inh,allN
 
+# if doAv=1; average will be made across days that is provided in top; if 0, inputs are already averaged across days
+
 def plotAngInhExcAllN(topi0, tope0, topa0, cblab, namf, do4, doCA=0, doAv=0):
     # for the 4th subplot below when plotting stab measure
     def plotstabsp(stab_inhm, stab_excm, stab_allNm, yls, ax):        
@@ -270,6 +272,8 @@ data = scio.loadmat(cnam, variable_names=['eventI_ds_allDays_allMice',
 
                     
 eventI_ds_allDays_allMice = data.pop('eventI_ds_allDays_allMice').flatten()                    
+eventI_ds_allDays_allMice = [eventI_ds_allDays_allMice[im].flatten() for im in range(len(mice))]
+
 # average of samps
 classAcc_allN_allDays_alig_avSamps_allMice = data.pop('classAcc_allN_allDays_alig_avSamps_allMice').flatten() # nGoodDays x nTrainedFrs x nTestingFrs
 classAcc_inh_allDays_alig_avSamps_allMice = data.pop('classAcc_inh_allDays_alig_avSamps_allMice').flatten() # nGoodDays x nTrainedFrs x nTestingFrs
@@ -328,56 +332,33 @@ classAcc_exc_allDays_alig_avSamps2_allMice = [np.mean(classAcc_exc_allDays_alig_
 classAcc_exc_shfl_allDays_alig_avSamps2_allMice = [np.mean(classAcc_exc_shfl_allDays_alig_avSamps_allMice[im], axis=-1) for im in range(len(mice))] # nGoodDays x nTrainedFrs x nTestingFrs
 
 
-#%% Average across days for each mouse
-
-classAcc_allN_allDays_alig_avSamps_avDays_allMice = []
-classAcc_inh_allDays_alig_avSamps_avDays_allMice = []
-classAcc_exc_allDays_alig_avSamps_avDays_allMice = []
-
-classAcc_allN_shfl_allDays_alig_avSamps_avDays_allMice = []
-classAcc_inh_shfl_allDays_alig_avSamps_avDays_allMice = []
-classAcc_exc_shfl_allDays_alig_avSamps_avDays_allMice = []
+#%% Average CA across days for each mouse
 
 #AVERAGE only the last 10 days! in case naive vs trained makes a difference!
 #[np.max([-10,-len(days_allMice[im])]):]
 
-for im in range(len(mice)):
-    
-    classAcc_allN_allDays_alig_avSamps_avDays_allMice.append(np.mean(classAcc_allN_allDays_alig_avSamps_allMice[im], axis=0)) # nTrainedFrs x nTestingFrs
-    classAcc_inh_allDays_alig_avSamps_avDays_allMice.append(np.mean(classAcc_inh_allDays_alig_avSamps_allMice[im], axis=0)) # nTrainedFrs x nTestingFrs
-    classAcc_exc_allDays_alig_avSamps_avDays_allMice.append(np.mean(classAcc_exc_allDays_alig_avSamps2_allMice[im], axis=0)) # nTrainedFrs x nTestingFrs
-    # shfl
-    classAcc_allN_shfl_allDays_alig_avSamps_avDays_allMice.append(np.mean(classAcc_allN_shfl_allDays_alig_avSamps_allMice[im], axis=0)) # nTrainedFrs x nTestingFrs
-    classAcc_inh_shfl_allDays_alig_avSamps_avDays_allMice.append(np.mean(classAcc_inh_shfl_allDays_alig_avSamps_allMice[im], axis=0)) # nTrainedFrs x nTestingFrs
-    classAcc_exc_shfl_allDays_alig_avSamps_avDays_allMice.append(np.mean(classAcc_exc_shfl_allDays_alig_avSamps2_allMice[im], axis=0)) # nTrainedFrs x nTestingFrs
+classAcc_allN_allDays_alig_avSamps_avDays_allMice = np.array([np.mean(classAcc_allN_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+classAcc_inh_allDays_alig_avSamps_avDays_allMice = np.array([np.mean(classAcc_inh_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+classAcc_exc_allDays_alig_avSamps_avDays_allMice = np.array([np.mean(classAcc_exc_allDays_alig_avSamps2_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+# shfl
+classAcc_allN_shfl_allDays_alig_avSamps_avDays_allMice = np.array([np.mean(classAcc_allN_shfl_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+classAcc_inh_shfl_allDays_alig_avSamps_avDays_allMice = np.array([np.mean(classAcc_inh_shfl_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+classAcc_exc_shfl_allDays_alig_avSamps_avDays_allMice = np.array([np.mean(classAcc_exc_shfl_allDays_alig_avSamps2_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
     
 
 
 ######%% SD across days for each mouse
 
-classAcc_allN_allDays_alig_avSamps_sdDays_allMice = []
-classAcc_inh_allDays_alig_avSamps_sdDays_allMice = []
-classAcc_exc_allDays_alig_avSamps_sdDays_allMice = []
-
-classAcc_allN_shfl_allDays_alig_avSamps_sdDays_allMice = []
-classAcc_inh_shfl_allDays_alig_avSamps_sdDays_allMice = []
-classAcc_exc_shfl_allDays_alig_avSamps_sdDays_allMice = []
-
 #AVERAGE only the last 10 days! in case naive vs trained makes a difference!
 #[np.max([-10,-len(days_allMice[im])]):]
-
-for im in range(len(mice)):
     
-    classAcc_allN_allDays_alig_avSamps_sdDays_allMice.append(np.std(classAcc_allN_allDays_alig_avSamps_allMice[im], axis=0)) # nTrainedFrs x nTestingFrs
-    classAcc_inh_allDays_alig_avSamps_sdDays_allMice.append(np.std(classAcc_inh_allDays_alig_avSamps_allMice[im], axis=0)) # nTrainedFrs x nTestingFrs
-    classAcc_exc_allDays_alig_avSamps_sdDays_allMice.append(np.std(classAcc_exc_allDays_alig_avSamps2_allMice[im], axis=0)) # nTrainedFrs x nTestingFrs
-    # shfl
-    classAcc_allN_shfl_allDays_alig_avSamps_sdDays_allMice.append(np.std(classAcc_allN_shfl_allDays_alig_avSamps_allMice[im], axis=0)) # nTrainedFrs x nTestingFrs
-    classAcc_inh_shfl_allDays_alig_avSamps_sdDays_allMice.append(np.std(classAcc_inh_shfl_allDays_alig_avSamps_allMice[im], axis=0)) # nTrainedFrs x nTestingFrs
-    classAcc_exc_shfl_allDays_alig_avSamps_sdDays_allMice.append(np.std(classAcc_exc_shfl_allDays_alig_avSamps2_allMice[im], axis=0)) # nTrainedFrs x nTestingFrs
-
-
-
+classAcc_allN_allDays_alig_avSamps_sdDays_allMice = np.array([np.std(classAcc_allN_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+classAcc_inh_allDays_alig_avSamps_sdDays_allMice = np.array([np.std(classAcc_inh_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+classAcc_exc_allDays_alig_avSamps_sdDays_allMice = np.array([np.std(classAcc_exc_allDays_alig_avSamps2_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+# shfl
+classAcc_allN_shfl_allDays_alig_avSamps_sdDays_allMice = np.array([np.std(classAcc_allN_shfl_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+classAcc_inh_shfl_allDays_alig_avSamps_sdDays_allMice = np.array([np.std(classAcc_inh_shfl_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+classAcc_exc_shfl_allDays_alig_avSamps_sdDays_allMice = np.array([np.std(classAcc_exc_shfl_allDays_alig_avSamps2_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
 
 
 #%% Compute change in CA when tested at time ts and trained at time tr relative to its max value (ie when trained on ts (t same as testing time))
@@ -434,16 +415,30 @@ for im in range(len(mice)):
 classAcc_fractChangeFromMax_exc_allDays_alig_avSamps2_allMice = np.array([np.nanmean(classAcc_fractChangeFromMax_exc_allDays_alig_avSamps_allMice[im],axis=-1) for im in range(len(mice))])
 
 
+#%% Average fract max CA across days for each mouse
+
+#AVERAGE only the last 10 days! in case naive vs trained makes a difference!
+#[np.max([-10,-len(days_allMice[im])]):]
+
+# cahnge
+classAcc_changeFromMax_allN_allDays_alig_avSamps_avDays_allMice = np.array([np.nanmean(classAcc_changeFromMax_allN_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+classAcc_changeFromMax_inh_allDays_alig_avSamps_avDays_allMice = np.array([np.nanmean(classAcc_changeFromMax_inh_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+classAcc_changeFromMax_exc_allDays_alig_avSamps_avDays_allMice = np.array([np.nanmean(classAcc_changeFromMax_exc_allDays_alig_avSamps2_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+
+# fract max
+classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_avDays_allMice = np.array([np.nanmean(classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+classAcc_fractChangeFromMax_inh_allDays_alig_avSamps_avDays_allMice = np.array([np.nanmean(classAcc_fractChangeFromMax_inh_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+classAcc_fractChangeFromMax_exc_allDays_alig_avSamps_avDays_allMice = np.array([np.nanmean(classAcc_fractChangeFromMax_exc_allDays_alig_avSamps2_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
 
 
-#%% PLOTS
+#%% PLOTS of each mouse
 ##############################################################################################################################################################
 ##############################################################################################################################################################
 ##############################################################################################################################################################
 ##############################################################################################################################################################
    
     
-#%% Plot heatmaps of CA, CA-max(CA), CA/max(CA) when decoder is trained and tested at all time points
+#%% Plot day-averaged heatmaps of CA, CA-max(CA), CA/max(CA) when decoder is trained and tested at all time points (only plot data)
 
 cblab012 = 'Class accuracy (%)', 'Class accuracy - max (%)', 'Class accuracy / max' #'Fract change in max class accuracy' 
 figns = 'classAccur', 'classAccurMinusMax', 'classAccurFractMax'
@@ -982,14 +977,172 @@ trt = 3
 for tst in [6]:
     trts(trt,tst)
 
-
-
 # train ~600ms before choice, test 100ms before choice
 
 
+
+
+#%% PLOTS of all mice
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+
+########################## Align traces across all mice ##########################
+
+#%% Set time_aligned and nPreMin for aligning traces of all mice
+
+time_aligned_final, nPreMin_final, nPostMin_final, nPreMin_allMice = set_nprepost_allMice(classAcc_inh_allDays_alig_avSamps_allMice, eventI_ds_allDays_allMice, mn_corr_allMice)
+
+
+#%% Align day-averaged CA traces 
+
+classAcc_allN_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_allN_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+classAcc_inh_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_inh_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+classAcc_exc_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_exc_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+# shfl
+classAcc_allN_shfl_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_allN_shfl_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+classAcc_inh_shfl_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_inh_shfl_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+classAcc_exc_shfl_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_exc_shfl_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+
+
+#%% Average day-averaged traces across mice
+
+classAcc_allN_alig_avSamps_avDays_avMice = np.mean(classAcc_allN_alig_avSamps_avDays_allMice_al, axis=0) # frs x frs
+classAcc_inh_alig_avSamps_avDays_avMice = np.mean(classAcc_inh_alig_avSamps_avDays_allMice_al, axis=0) 
+classAcc_exc_alig_avSamps_avDays_avMice = np.mean(classAcc_exc_alig_avSamps_avDays_allMice_al, axis=0)                    
+# shfl
+classAcc_allN_shfl_alig_avSamps_avDays_avMice = np.mean(classAcc_allN_shfl_alig_avSamps_avDays_allMice_al, axis=0) # frs x frs
+classAcc_inh_shfl_alig_avSamps_avDays_avMice = np.mean(classAcc_inh_shfl_alig_avSamps_avDays_allMice_al, axis=0) 
+classAcc_exc_shfl_alig_avSamps_avDays_avMice = np.mean(classAcc_exc_shfl_alig_avSamps_avDays_allMice_al, axis=0)                    
+
+# set se across mice
+classAcc_allN_alig_avSamps_avDays_sdMice = np.std(classAcc_allN_alig_avSamps_avDays_allMice_al, axis=0) / np.sqrt(len(mice)) # frs x frs
+classAcc_inh_alig_avSamps_avDays_sdMice = np.std(classAcc_inh_alig_avSamps_avDays_allMice_al, axis=0) / np.sqrt(len(mice))
+classAcc_exc_alig_avSamps_avDays_sdMice = np.std(classAcc_exc_alig_avSamps_avDays_allMice_al, axis=0) / np.sqrt(len(mice))
+
+
+#%% Plot heatmaps: mice-averaged of CAs (frs x frs) across mice (data, shfl, shfl-data)
+
+# ttest across mice (day-averaged traces)            
+_,pei = stats.ttest_ind(classAcc_inh_alig_avSamps_avDays_allMice_al - classAcc_inh_shfl_alig_avSamps_avDays_allMice_al , classAcc_exc_alig_avSamps_avDays_allMice_al - classAcc_exc_shfl_alig_avSamps_avDays_allMice_al , axis=0) 
+
+fnam = figns[0]+'_AveMice_AveDays_inhExc'+labAll+'_' + '_'.join(mice) + '_' + nowStr   # (np.array(mice)[mice2an_all])
+
+plotAngsAll(nPreMin_final, time_aligned_final, classAcc_inh_alig_avSamps_avDays_avMice, [], classAcc_allN_alig_avSamps_avDays_avMice, classAcc_exc_alig_avSamps_avDays_avMice, 
+            classAcc_inh_shfl_alig_avSamps_avDays_avMice, [], classAcc_allN_shfl_alig_avSamps_avDays_avMice, classAcc_exc_shfl_alig_avSamps_avDays_avMice, pei, dir0, fnam, cblab012[0], CA=1)
+
+
+
+#%%
+############################ Same as above, now for fract max CA ############################
+
+##%% Align day-averaged CA traces 
+
+classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_inh_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_exc_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+# shfl
+#classAcc_fractChangeFromMax_allN_shfl_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_allN_shfl_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+#classAcc_fractChangeFromMax_inh_shfl_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_inh_shfl_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+#classAcc_fractChangeFromMax_exc_shfl_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_exc_shfl_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+
+
+#%% Average day-averaged traces across mice
+
+classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_avMice = np.nanmean(classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_allMice_al, axis=0) # frs x frs
+classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_avMice = np.nanmean(classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_allMice_al, axis=0) 
+classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_avMice = np.nanmean(classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_allMice_al, axis=0)                    
+# shfl
+#classAcc_fractChangeFromMax_allN_shfl_alig_avSamps_avDays_avMice = np.mean(classAcc_fractChangeFromMax_allN_shfl_alig_avSamps_avDays_allMice_al, axis=0) # frs x frs
+#classAcc_fractChangeFromMax_inh_shfl_alig_avSamps_avDays_avMice = np.mean(classAcc_fractChangeFromMax_inh_shfl_alig_avSamps_avDays_allMice_al, axis=0) 
+#classAcc_fractChangeFromMax_exc_shfl_alig_avSamps_avDays_avMice = np.mean(classAcc_fractChangeFromMax_exc_shfl_alig_avSamps_avDays_allMice_al, axis=0)                    
+
+
+#%% Plot heatmaps: mice-averaged of CAs (frs x frs) across mice (data, shfl, shfl-data)
+
+# ttest across mice (day-averaged traces)            
+#_,pei = stats.ttest_ind(classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_allMice_al - classAcc_fractChangeFromMax_inh_shfl_alig_avSamps_avDays_allMice_al , classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_allMice_al - classAcc_fractChangeFromMax_exc_shfl_alig_avSamps_avDays_allMice_al , axis=0) 
+_,pei = stats.ttest_ind(classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_allMice_al , classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_allMice_al, axis=0) 
+
+fnam = figns[2]+'_AveMice_AveDays_inhExc'+labAll+'_' + '_'.join(mice) + '_' + nowStr   # (np.array(mice)[mice2an_all])
+
+plotAngsAll(nPreMin_final, time_aligned_final, classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_avMice, [], classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_avMice, classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_avMice, 
+            0, [], 0, 0, pei, dir0, fnam, cblab012[1], CA=1)
+
+
+
+
+#################################################################################
+
+#%% Plot CA traces of a specific horizontal slice of the heatmap (decoder trained at time t, how does it perform when tested at all other times)
+
+fr2an = nPreMin_final-1
+
+plt.figure(figsize=(3*3,2))  
+
+plt.subplot(131)
+top = classAcc_allN_alig_avSamps_avDays_avMice[fr2an]
+topsd = classAcc_allN_alig_avSamps_avDays_sdMice[fr2an]
+plt.fill_between(time_aligned_final, top - topsd, top + topsd, color='k', alpha=.5)
+plt.plot(time_aligned_final, top, color='k')
+plt.xlabel('Decoder testing t (ms)') 
+plt.ylabel(cblab012[0])
+plt.vlines(time_aligned_final[fr2an],np.min(top),np.max(top), color='k', linestyle=':') # mark the training time point
+makeNicePlots(plt.gca(), 1, 1)
+
+
+plt.subplot(132)
+top = classAcc_inh_alig_avSamps_avDays_avMice[fr2an]
+topsd = classAcc_inh_alig_avSamps_avDays_sdMice[fr2an]
+plt.fill_between(time_aligned_final, top - topsd, top + topsd, color='r', alpha=.5)
+plt.plot(time_aligned_final, top, color='r')
+plt.xlabel('Decoder testing t (ms)') 
+plt.ylabel(cblab012[0])
+plt.vlines(time_aligned_final[fr2an],np.min(top),np.max(top), color='k', linestyle=':') # mark the training time point
+makeNicePlots(plt.gca(), 1)
+
+
+plt.subplot(133)
+top = classAcc_exc_alig_avSamps_avDays_avMice[fr2an]
+topsd = classAcc_exc_alig_avSamps_avDays_sdMice[fr2an]
+plt.fill_between(time_aligned_final, top - topsd, top + topsd, color='b', alpha=.5)
+plt.plot(time_aligned_final, top, color='b')
+plt.xlabel('Decoder testing t (ms)') 
+plt.ylabel(cblab012[0])
+plt.vlines(time_aligned_final[fr2an],np.min(top),np.max(top), color='k', linestyle=':') # mark the training time point
+makeNicePlots(plt.gca(), 1)
+
+plt.subplots_adjust(wspace=.6)
+
+
+################## save the figure ##################
+if savefigs:
+    if chAl:
+        cha = 'chAl_'
+    else:
+        cha = 'stAl_'
+        
+    fnam = figns[0]+'_timeBin-1_AveMice_AveDays_inhExc'+labAll+'_' + '_'.join(mice) + '_' + nowStr
+    d = os.path.join(svmdir+dir0) #,mousename)       
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)            
+        
+    fign = os.path.join(d, suffn[0:5]+cha+fnam+'.'+fmt[0])    
+    plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+
     
-
-
+'''
+# show individual mice
+a = [classAcc_allN_alig_avSamps_avDays_allMice_al[im][fr2an] for im in range(len(mice))]
+for im in range(len(mice)):
+    top = a[im]
+    plt.plot(time_aligned_final, top, color='k')
+'''
 
 
 #%%    

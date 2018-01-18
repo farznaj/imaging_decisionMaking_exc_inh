@@ -1,0 +1,2534 @@
+% First run corr_excInh_setVars to get FRs
+% Then run choicePref_ROC_exc_inh_plots_setVars to get ROCs (to set ipsi, contra tuned neurons) 
+% Then run this script
+
+% E_ipsi and I_ipsi have ROC > .5 (right before the choice), we want to see
+% if E_ipsi activates I_ipsi; subsequently I_ipsi will inhibit E_contra  
+% so we want to see if E_ipsi is correlated with I_ipsi
+% and perhaps if I_ipsi is anti-correlated with E_contra...
+
+%%% Correlations are computed in 4 different ways:
+%{
+rAve_EI_same --> average of r(N1-allN)  
+
+r_EI_same_allMice --> pw corrs without any averaging
+
+r_EI_same_aveDays --> pw corrs are averaged for each day (for each population)
+
+rPop_EI_same_allMice --> corr btwn pop-averaged FRs
+%}
+
+
+%% Set the following vars
+
+saveFigs = 0; 
+if strcmp(alFR,'chAl') % only if alFR is chAl, set the 2 vars below:
+    cprintf('r', 'MAKE SURE you set the 2 vars below!\n')
+end
+subMeanResp = 1; %1; % For each neuron, mean response across ipsi(contra) trials will be subtracted from the response to each ipsi (contra) trial, so using all trials for computing correlations
+ipsi_contra_all_which = [1,0,0]; % [0,1,0] % if subMeanResp is 0, and alFR is chAl, we need to analyze either ipsi or contra trials, to make sure neural correlations are not due to the choice.
+
+
+% What time point to use for setting ipsi, contra tuning (fr2an) and for computing firing rate correlations (fr2an_FR)
+fr2an = nPreMin; % for ROC, timebin before the choice
+fr2an_FR = nPreMin_fr; % for FR, timebin before the initiation tone (assuming corr_excInh_setVars was run with alFR='initAl') % in case FR traces are aligned on a different event than ROC traces.
+time2an = 'timeM1'; % time minus 1, meaning timeBin before whatever the alignment was on
+
+th = .5; % threshold for identifying ipsi-preferred vs contra preferred neurons. % ipsi auc will be above 0.5
+
+
+%%
+dirn0fr = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/FR';
+
+if strcmp(alFR,'initAl') % if FRs are aligned on initiTone, we will set subMeanResp to 0. 
+    cprintf('blue', 'FRs are aligned on initTone, so using all trials for computing correlations\n')
+    subMeanResp = 0;
+    ipsi_contra_all = [0,0,1]; % what trials to use: ipsi, contra, all        
+    nnow = 'corr_FRinitAl_ROCchAl';
+    
+elseif strcmp(alFR,'chAl') %fr2an==fr2an_FR % FRs are choice aligned like ROC... so lets make sure we look at only one type of trial
+    if subMeanResp
+        cprintf('blue', 'For each neuron, mean response across ipsi(contra) trials will be subtracted from the response to each ipsi (contra) trial, so using all trials for computing correlations\n')
+        ipsi_contra_all = [0,0,1]; %[1,0,0]; % what trials to use: ipsi, contra, all
+        nnow = 'corr_FRchAlMeanSub_ROCchAl';
+        
+    else
+        cprintf('r', 'FRs are aligned on choice, so using only ipsi or only contra trials for computing correlations!\n')
+        ipsi_contra_all = ipsi_contra_all_which;
+        if ipsi_contra_all(1)==1
+            nnow = 'corr_FRchAlOnlyIpsi_ROCchAl';
+        elseif ipsi_contra_all(2)==1
+            nnow = 'corr_FRchAlOnlyContra_ROCchAl';
+        end
+    end
+end
+
+
+if strcmp(outcome2ana, 'corr')
+    o2a = '_corr'; 
+elseif strcmp(outcome2ana, 'incorr')
+    o2a = '_incorr';  
+else
+    o2a = '_allOutcome';
+end  
+
+cols = {'k', 'r'}; % same, opposite tuning : this is color for plots of corr between neurons with the same vs opposite tuning.
+nowStr = datestr(now, 'yymmdd-HHMMSS');
+
+
+%%
+roc_exc_timeM1 = cell(1, length(mice));
+roc_inh_timeM1 = cell(1, length(mice));
+
+exc_ipsi_timeM1 = cell(1, length(mice));
+inh_ipsi_timeM1 = cell(1, length(mice));
+exc_contra_timeM1 = cell(1, length(mice));
+inh_contra_timeM1 = cell(1, length(mice));
+
+fr_exc_ipsi_timeM1 = cell(1, length(mice));
+fr_inh_ipsi_timeM1 = cell(1, length(mice));
+fr_exc_contra_timeM1 = cell(1, length(mice));
+fr_inh_contra_timeM1 = cell(1, length(mice));
+
+fr_exc_ipsi_timeM1_aveNs = cell(1, length(mice));
+fr_inh_ipsi_timeM1_aveNs = cell(1, length(mice));
+fr_exc_contra_timeM1_aveNs = cell(1, length(mice));
+fr_inh_contra_timeM1_aveNs = cell(1, length(mice));
+
+for im = 1:length(mice)
+    roc_exc_timeM1{im} = cell(nAllDays(im),1);
+    roc_inh_timeM1{im} = cell(nAllDays(im),1);
+    exc_ipsi_timeM1{im} = cell(nAllDays(im),1);
+    inh_ipsi_timeM1{im} = cell(nAllDays(im),1);    
+    exc_contra_timeM1{im} = cell(nAllDays(im),1);
+    inh_contra_timeM1{im} = cell(nAllDays(im),1);        
+    
+    for iday = 1:nAllDays(im)
+        if mnTrNum_allMice{im}(iday) >= thMinTrs
+            % ROC values (% ROCs at timebin -1 for all neurons, for each day of each mouse)
+            roc_exc_timeM1{im}{iday} = choicePref_exc_al_allMice{im}{iday}(fr2an,:); % nNeurons
+            roc_inh_timeM1{im}{iday} = choicePref_inh_al_allMice{im}{iday}(fr2an,:);
+
+            % is neuron ipsi or contra preferred? (if roc==.5, don't assign the neuron to either class)
+            exc_ipsi_timeM1{im}{iday} = choicePref_exc_al_allMice{im}{iday}(fr2an,:) > th;
+            inh_ipsi_timeM1{im}{iday} = choicePref_inh_al_allMice{im}{iday}(fr2an,:) > th;
+
+            exc_contra_timeM1{im}{iday} = choicePref_exc_al_allMice{im}{iday}(fr2an,:) < th;
+            inh_contra_timeM1{im}{iday} = choicePref_inh_al_allMice{im}{iday}(fr2an,:) < th;                
+
+
+            % firing rate of E_ipsi, etc neurons at timebin -1
+            frE = squeeze(fr_exc_al_allMice{im}{iday}(fr2an_FR,:,:));
+            frI = squeeze(fr_inh_al_allMice{im}{iday}(fr2an_FR,:,:));
+
+            if subMeanResp
+                % subtract N resp averaged across all ipsiTrs from N resp to each
+                % individual ipsi trial
+                % Exc, ipsiTrs
+                frE_ipsiTrs = frE(:,ipsiTrs_allDays_allMice{im}{iday});
+                frE_ipsiTrsAve = mean(frE_ipsiTrs,2);
+                frE_ipsiTrs_minusAveIpsi = frE_ipsiTrs - frE_ipsiTrsAve;
+                % Exc, contraTrs
+                frE_contraTrs = frE(:,contraTrs_allDays_allMice{im}{iday});
+                frE_contraTrsAve = mean(frE_contraTrs,2);
+                frE_contraTrs_minusAveIpsi = frE_contraTrs - frE_contraTrsAve;        
+                % Exc, pool ipsi and contra trials
+                frE = [frE_ipsiTrs_minusAveIpsi, frE_contraTrs_minusAveIpsi];
+
+                % Inh, ipsiTrs
+                frI_ipsiTrs = frI(:,ipsiTrs_allDays_allMice{im}{iday});
+                frI_ipsiTrsAve = mean(frI_ipsiTrs,2);
+                frI_ipsiTrs_minusAveIpsi = frI_ipsiTrs - frI_ipsiTrsAve;        
+                % Inh, contraTrs
+                frI_contraTrs = frI(:,contraTrs_allDays_allMice{im}{iday});
+                frI_contraTrsAve = mean(frI_contraTrs,2);
+                frI_contraTrs_minusAveIpsi = frI_contraTrs - frI_contraTrsAve;
+                % Inh, pool ipsi and contra trials
+                frI = [frI_ipsiTrs_minusAveIpsi, frI_contraTrs_minusAveIpsi];        
+            end
+
+            %
+            fr_exc_ipsi_timeM1{im}{iday} = frE(exc_ipsi_timeM1{im}{iday}, :); % numE_ipsi x numTrs        
+            fr_inh_ipsi_timeM1{im}{iday} = frI(inh_ipsi_timeM1{im}{iday}, :);
+
+            fr_exc_contra_timeM1{im}{iday} = frE(exc_contra_timeM1{im}{iday}, :); % numE_contra x numTrs        
+            fr_inh_contra_timeM1{im}{iday} = frI(inh_contra_timeM1{im}{iday}, :);
+
+
+            % Average FRs across neurons (for each trials)
+            fr_exc_ipsi_timeM1_aveNs{im}{iday} = mean(fr_exc_ipsi_timeM1{im}{iday},1); % numTrs
+            fr_inh_ipsi_timeM1_aveNs{im}{iday} = mean(fr_inh_ipsi_timeM1{im}{iday},1);
+
+            fr_exc_contra_timeM1_aveNs{im}{iday} = mean(fr_exc_contra_timeM1{im}{iday},1);
+            fr_inh_contra_timeM1_aveNs{im}{iday} = mean(fr_inh_contra_timeM1{im}{iday},1);
+        end
+    end
+end
+
+
+
+
+%% Show number of neurons in each category (based on their ROC value in the time bin before the choice)
+
+num_exc_ipsi_timeM1 = cell(1, length(mice));
+num_inh_ipsi_timeM1 = cell(1, length(mice));
+num_exc_contra_timeM1 = cell(1, length(mice));
+num_inh_contra_timeM1 = cell(1, length(mice));
+
+for im = 1:length(mice)
+    for iday = 1:nAllDays(im)
+        num_exc_ipsi_timeM1{im}(iday) = sum(exc_ipsi_timeM1{im}{iday});
+        num_inh_ipsi_timeM1{im}(iday) = sum(inh_ipsi_timeM1{im}{iday});
+
+        num_exc_contra_timeM1{im}(iday) = sum(exc_contra_timeM1{im}{iday});
+        num_inh_contra_timeM1{im}(iday) = sum(inh_contra_timeM1{im}{iday});
+    end
+end
+
+% number of Ei, etc for each mouse
+num_Ei = cellfun(@sum, num_exc_ipsi_timeM1);
+num_Ec = cellfun(@sum, num_exc_contra_timeM1);
+num_Ii = cellfun(@sum, num_inh_ipsi_timeM1);
+num_Ic = cellfun(@sum, num_inh_contra_timeM1);
+
+num_Ei_Ec_eachMouse = [num_Ei; num_Ec]
+num_Ii_Ic_eachMouse = [num_Ii; num_Ic]
+
+fract_Ei_Ec = [num_Ei; num_Ec] ./ sum(num_Ei_Ec_eachMouse,1)
+fract_Ii_Ic = [num_Ii; num_Ic] ./ sum(num_Ii_Ic_eachMouse,1)
+
+
+%%%%%% num ipsi - num contra ... hist across days
+%{
+for im = 1:length(mice)
+    figure; 
+
+    subplot(211); hold on % exc: ipsi - contra
+    histogram(num_exc_ipsi_timeM1{im} - num_exc_contra_timeM1{im})
+
+    subplot(212); hold on % inh: ipsi - contra
+    histogram(num_inh_ipsi_timeM1{im} - num_inh_contra_timeM1{im})
+
+end
+%}
+
+
+%% Compute correlatin between paris of neurons
+
+r_Ei_Ei = cell(1, length(mice));
+r_Ec_Ec = cell(1, length(mice));
+r_Ei_Ec = cell(1, length(mice));
+r_Ii_Ii = cell(1, length(mice));
+r_Ic_Ic = cell(1, length(mice));
+r_Ii_Ic = cell(1, length(mice));
+r_Ei_Ii = cell(1, length(mice));
+r_Ec_Ic = cell(1, length(mice));
+r_Ei_Ic = cell(1, length(mice));
+r_Ec_Ii = cell(1, length(mice));
+
+p_Ei_Ei = cell(1, length(mice));
+p_Ec_Ec = cell(1, length(mice));
+p_Ei_Ec = cell(1, length(mice));
+p_Ii_Ii = cell(1, length(mice));
+p_Ic_Ic = cell(1, length(mice));
+p_Ii_Ic = cell(1, length(mice));
+p_Ei_Ii = cell(1, length(mice));
+p_Ec_Ic = cell(1, length(mice));
+p_Ei_Ic = cell(1, length(mice));
+p_Ec_Ii = cell(1, length(mice));
+
+r_Ei_Ei_shfl = cell(1, length(mice));
+r_Ec_Ec_shfl = cell(1, length(mice));
+r_Ei_Ec_shfl = cell(1, length(mice));
+r_Ii_Ii_shfl = cell(1, length(mice));
+r_Ic_Ic_shfl = cell(1, length(mice));
+r_Ii_Ic_shfl = cell(1, length(mice));
+r_Ei_Ii_shfl = cell(1, length(mice));
+r_Ec_Ic_shfl = cell(1, length(mice));
+r_Ei_Ic_shfl = cell(1, length(mice));
+r_Ec_Ii_shfl = cell(1, length(mice));
+
+for im = 1:length(mice)
+    for iday = 1:nAllDays(im)
+        if mnTrNum_allMice{im}(iday) >= thMinTrs
+            
+            if ipsi_contra_all(1)==1
+                trs = ipsiTrs_allDays_allMice{im}{iday};
+            elseif ipsi_contra_all(2)==1
+                trs = contraTrs_allDays_allMice{im}{iday};
+            elseif ipsi_contra_all(3)==1
+                trs = true(1, size(fr_exc_ipsi_timeM1{im}{iday}, 2)); %1:length(ipsiTrs_allDays_allMice{im}{iday});
+            end
+
+            %%%%% exc,exc: corr between similarly-tuned neurons
+            [r_Ei_Ei{im}{iday}, p_Ei_Ei{im}{iday}] = corr(fr_exc_ipsi_timeM1{im}{iday}(:,trs)'); % ns x ns
+            [r_Ec_Ec{im}{iday}, p_Ec_Ec{im}{iday}] = corr(fr_exc_contra_timeM1{im}{iday}(:,trs)'); 
+            %%%%% exc,exc: corr between oppositely-tuned neurons
+            [r_Ei_Ec{im}{iday}, p_Ei_Ec{im}{iday}] = corr(fr_exc_ipsi_timeM1{im}{iday}(:,trs)', fr_exc_contra_timeM1{im}{iday}(:,trs)'); % ns x ns
+
+            %%%%% inh,inh: corr between similarly-tuned neurons
+            [r_Ii_Ii{im}{iday}, p_Ii_Ii{im}{iday}] = corr(fr_inh_ipsi_timeM1{im}{iday}(:,trs)');
+            [r_Ic_Ic{im}{iday}, p_Ic_Ic{im}{iday}] = corr(fr_inh_contra_timeM1{im}{iday}(:,trs)');
+            %%%%% inh,inh: corr between oppositely-tuned neurons
+            [r_Ii_Ic{im}{iday}, p_Ii_Ic{im}{iday}] = corr(fr_inh_ipsi_timeM1{im}{iday}(:,trs)', fr_inh_contra_timeM1{im}{iday}(:,trs)'); % ns x ns
+
+            %%%%% exc,inh: corr between similarly-tuned neurons of exc and inh
+            [r_Ei_Ii{im}{iday}, p_Ei_Ii{im}{iday}] = corr(fr_exc_ipsi_timeM1{im}{iday}(:,trs)', fr_inh_ipsi_timeM1{im}{iday}(:,trs)');
+            [r_Ec_Ic{im}{iday}, p_Ec_Ic{im}{iday}] = corr(fr_exc_contra_timeM1{im}{iday}(:,trs)', fr_inh_contra_timeM1{im}{iday}(:,trs)');
+
+            %%%%% exc,inh: corr between oppositely-tuned neurons of exc and inh
+            [r_Ei_Ic{im}{iday}, p_Ei_Ic{im}{iday}] = corr(fr_exc_ipsi_timeM1{im}{iday}(:,trs)', fr_inh_contra_timeM1{im}{iday}(:,trs)');
+            [r_Ec_Ii{im}{iday}, p_Ec_Ii{im}{iday}] = corr(fr_exc_contra_timeM1{im}{iday}(:,trs)', fr_inh_ipsi_timeM1{im}{iday}(:,trs)');
+            
+            
+            %%%%%%%%%%%%%%%%%%%%%%%%% shuffled: corr between neurons after shuffling trials %%%%%%%%%%%%%%%%%%%%%%%%%            
+            %%%%% exc,exc: corr between similarly-tuned neurons
+            ntrs = sum(trs);
+            x = fr_exc_ipsi_timeM1{im}{iday}(:,trs)'; % trials x neurons            
+            r_Ei_Ei_shfl{im}{iday} = corr(x(randperm(ntrs),:) , x(randperm(ntrs),:)); % ns x ns
+            x = fr_exc_contra_timeM1{im}{iday}(:,trs)';
+            r_Ec_Ec_shfl{im}{iday} = corr(x(randperm(ntrs),:) , x(randperm(ntrs),:));
+            %%%%% exc,exc: corr between oppositely-tuned neurons
+            x1 = fr_exc_ipsi_timeM1{im}{iday}(:,trs)';
+            x2 = fr_exc_contra_timeM1{im}{iday}(:,trs)';
+            r_Ei_Ec_shfl{im}{iday} = corr(x1(randperm(ntrs),:) , x2(randperm(ntrs),:)); % ns x ns
+
+            %%%%% inh,inh: corr between similarly-tuned neurons
+            x = fr_inh_ipsi_timeM1{im}{iday}(:,trs)';
+            r_Ii_Ii_shfl{im}{iday} = corr(x(randperm(ntrs),:) , x(randperm(ntrs),:));
+            x = fr_inh_contra_timeM1{im}{iday}(:,trs)';
+            r_Ic_Ic_shfl{im}{iday} = corr(x(randperm(ntrs),:) , x(randperm(ntrs),:));
+            %%%%% inh,inh: corr between oppositely-tuned neurons
+            x1 = fr_inh_ipsi_timeM1{im}{iday}(:,trs)';
+            x2 = fr_inh_contra_timeM1{im}{iday}(:,trs)';
+            r_Ii_Ic_shfl{im}{iday} = corr(x1(randperm(ntrs),:) , x2(randperm(ntrs),:)); % ns x ns
+
+            %%%%% exc,inh: corr between similarly-tuned neurons of exc and inh
+            x1 = fr_exc_ipsi_timeM1{im}{iday}(:,trs)';
+            x2 = fr_inh_ipsi_timeM1{im}{iday}(:,trs)';
+            r_Ei_Ii_shfl{im}{iday} = corr(x1(randperm(ntrs),:) , x2(randperm(ntrs),:));
+            x1 = fr_exc_contra_timeM1{im}{iday}(:,trs)';
+            x2 = fr_inh_contra_timeM1{im}{iday}(:,trs)';
+            r_Ec_Ic_shfl{im}{iday} = corr(x1(randperm(ntrs),:) , x2(randperm(ntrs),:));
+
+            %%%%% exc,inh: corr between oppositely-tuned neurons of exc and inh
+            x1 = fr_exc_ipsi_timeM1{im}{iday}(:,trs)';
+            x2 = fr_inh_contra_timeM1{im}{iday}(:,trs)';
+            r_Ei_Ic_shfl{im}{iday} = corr(x1(randperm(ntrs),:) , x2(randperm(ntrs),:));
+            x1 = fr_exc_contra_timeM1{im}{iday}(:,trs)';
+            x2 = fr_inh_ipsi_timeM1{im}{iday}(:,trs)';
+            r_Ec_Ii_shfl{im}{iday} = corr(x1(randperm(ntrs),:) , x2(randperm(ntrs),:));
+            
+        end
+    end
+end
+
+
+%% Set the diagonal of Ei_Ei, etc to nan (bc they are symmetric)
+
+for im = 1:length(mice)
+    for iday = 1:nAllDays(im)
+        if mnTrNum_allMice{im}(iday) >= thMinTrs
+            r_Ei_Ei{im}{iday}(logical(eye(size(r_Ei_Ei{im}{iday})))) = nan; 
+            r_Ec_Ec{im}{iday}(logical(eye(size(r_Ec_Ec{im}{iday})))) = nan;
+            r_Ii_Ii{im}{iday}(logical(eye(size(r_Ii_Ii{im}{iday})))) = nan;
+            r_Ic_Ic{im}{iday}(logical(eye(size(r_Ic_Ic{im}{iday})))) = nan;
+            
+            % shfl
+            r_Ei_Ei_shfl{im}{iday}(logical(eye(size(r_Ei_Ei{im}{iday})))) = nan; 
+            r_Ec_Ec_shfl{im}{iday}(logical(eye(size(r_Ec_Ec{im}{iday})))) = nan;
+            r_Ii_Ii_shfl{im}{iday}(logical(eye(size(r_Ii_Ii{im}{iday})))) = nan;
+            r_Ic_Ic_shfl{im}{iday}(logical(eye(size(r_Ic_Ic{im}{iday})))) = nan;            
+        end
+    end
+end
+
+
+
+
+%% Set averaged pairwise correlations 
+% Assuming each neuron is connected to all other neurons, to estimate the
+% neuron's (N) connectivity strength with a particular population ("P",
+% either Eipsi, Econtra, Iipsi, or Icontra), we average pairwise
+% correlation of the neuron (N) with all the neurons in that population
+% (P). This way we can compare connectivity of N with different populations 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%% Now average corr of each neuron with all neurons of the ipsi (or contra) population.
+
+rAve_Ei_Ei = cell(1, length(mice));
+rAve_Ec_Ec = cell(1, length(mice));
+rAve_Ii_Ii = cell(1, length(mice));
+rAve_Ic_Ic = cell(1, length(mice));
+rAve_Ei_Ec = cell(1, length(mice));
+rAve_Ec_Ei = cell(1, length(mice));
+rAve_Ii_Ic = cell(1, length(mice));
+rAve_Ic_Ii = cell(1, length(mice));
+rAve_Ei_Ii = cell(1, length(mice));
+rAve_Ii_Ei = cell(1, length(mice));
+rAve_Ec_Ic = cell(1, length(mice));
+rAve_Ic_Ec = cell(1, length(mice));
+rAve_Ei_Ic = cell(1, length(mice));
+rAve_Ic_Ei = cell(1, length(mice));
+rAve_Ec_Ii = cell(1, length(mice));
+rAve_Ii_Ec = cell(1, length(mice));
+rAve_EE_same = cell(1, length(mice));
+rAve_II_same = cell(1, length(mice));
+rAve_EE_diff = cell(1, length(mice));
+rAve_II_diff = cell(1, length(mice));
+rAve_Ei_Ii_both = cell(1, length(mice));
+rAve_Ec_Ic_both = cell(1, length(mice));
+rAve_EI_same = cell(1, length(mice));
+rAve_IE_same = cell(1, length(mice));
+rAve_Ei_Ic_both = cell(1, length(mice));
+rAve_Ec_Ii_both = cell(1, length(mice));
+rAve_EI_diff = cell(1, length(mice));
+rAve_IE_diff = cell(1, length(mice));
+% shfl
+rAve_Ei_Ei_shfl = cell(1, length(mice));
+rAve_Ec_Ec_shfl = cell(1, length(mice));
+rAve_Ii_Ii_shfl = cell(1, length(mice));
+rAve_Ic_Ic_shfl = cell(1, length(mice));
+rAve_Ei_Ec_shfl = cell(1, length(mice));
+rAve_Ec_Ei_shfl = cell(1, length(mice));
+rAve_Ii_Ic_shfl = cell(1, length(mice));
+rAve_Ic_Ii_shfl = cell(1, length(mice));
+rAve_Ei_Ii_shfl = cell(1, length(mice));
+rAve_Ii_Ei_shfl = cell(1, length(mice));
+rAve_Ec_Ic_shfl = cell(1, length(mice));
+rAve_Ic_Ec_shfl = cell(1, length(mice));
+rAve_Ei_Ic_shfl = cell(1, length(mice));
+rAve_Ic_Ei_shfl = cell(1, length(mice));
+rAve_Ec_Ii_shfl = cell(1, length(mice));
+rAve_Ii_Ec_shfl = cell(1, length(mice));
+rAve_EE_same_shfl = cell(1, length(mice));
+rAve_II_same_shfl = cell(1, length(mice));
+rAve_EE_diff_shfl = cell(1, length(mice));
+rAve_II_diff_shfl = cell(1, length(mice));
+rAve_Ei_Ii_both_shfl = cell(1, length(mice));
+rAve_Ec_Ic_both_shfl = cell(1, length(mice));
+rAve_EI_same_shfl = cell(1, length(mice));
+rAve_Ei_Ic_both_shfl = cell(1, length(mice));
+rAve_Ec_Ii_both_shfl = cell(1, length(mice));
+rAve_EI_diff_shfl = cell(1, length(mice));
+
+for im = 1:length(mice)
+    for iday = 1:nAllDays(im)
+        if mnTrNum_allMice{im}(iday) >= thMinTrs
+            
+            %%%%%%%%%%%% EE_same
+            rAve_Ei_Ei{im}{iday} = nanmean(r_Ei_Ei{im}{iday}, 1);
+            rAve_Ec_Ec{im}{iday} = nanmean(r_Ec_Ec{im}{iday}, 1);
+            % pool the two above
+            rAve_EE_same{im}{iday} = [rAve_Ei_Ei{im}{iday}, rAve_Ec_Ec{im}{iday}];
+            
+            %%%%%%%%%%%% II_same
+            rAve_Ii_Ii{im}{iday} = nanmean(r_Ii_Ii{im}{iday}, 1);
+            rAve_Ic_Ic{im}{iday} = nanmean(r_Ic_Ic{im}{iday}, 1);
+            % pool the two above
+            rAve_II_same{im}{iday} = [rAve_Ii_Ii{im}{iday}, rAve_Ic_Ic{im}{iday}];
+            
+            
+            %%%%%%%%%%%% EE_diff
+            rAve_Ei_Ec{im}{iday} = nanmean(r_Ei_Ec{im}{iday}, 2)'; % corr of each Ei with all Ecs averaged
+            rAve_Ec_Ei{im}{iday} = nanmean(r_Ei_Ec{im}{iday}, 1); % corr of each Ec with all Eis averaged
+            % pool the two above
+            rAve_EE_diff{im}{iday} = [rAve_Ei_Ec{im}{iday}, rAve_Ec_Ei{im}{iday}];
+            
+            %%%%%%%%%%%% II_diff
+            rAve_Ii_Ic{im}{iday} = nanmean(r_Ii_Ic{im}{iday}, 2)'; % corr of each Ii with all Ics averaged
+            rAve_Ic_Ii{im}{iday} = nanmean(r_Ii_Ic{im}{iday}, 1); % corr of each Ic with all Iis averaged
+            % pool the two above
+            rAve_II_diff{im}{iday} = [rAve_Ii_Ic{im}{iday}, rAve_Ic_Ii{im}{iday}];
+            
+            
+            %%%%%%%%%%%% EI_same
+            rAve_Ei_Ii{im}{iday} = nanmean(r_Ei_Ii{im}{iday}, 2)'; % corr of each Ei with all Iis averaged
+            rAve_Ii_Ei{im}{iday} = nanmean(r_Ei_Ii{im}{iday}, 1); % corr of each Ii with all Eis averaged
+            % pool the two above
+            rAve_Ei_Ii_both{im}{iday} = [rAve_Ei_Ii{im}{iday}, rAve_Ii_Ei{im}{iday}];
+            
+            rAve_Ec_Ic{im}{iday} = nanmean(r_Ec_Ic{im}{iday}, 2)'; % corr of each Ec with all Ics averaged
+            rAve_Ic_Ec{im}{iday} = nanmean(r_Ec_Ic{im}{iday}, 1); % corr of each Ic with all Ecs averaged
+            % pool the two above
+            rAve_Ec_Ic_both{im}{iday} = [rAve_Ec_Ic{im}{iday}, rAve_Ic_Ec{im}{iday}];
+            
+            % pool EI_i and EI_c
+            rAve_EI_same{im}{iday} = [rAve_Ei_Ii_both{im}{iday} , rAve_Ec_Ic_both{im}{iday}];
+%             rAve_EI_same{im}{iday} = [rAve_Ei_Ii{im}{iday} , rAve_Ec_Ic{im}{iday}];
+%             rAve_IE_same{im}{iday} = [rAve_Ii_Ei{im}{iday} , rAve_Ic_Ec{im}{iday}];
+            
+            
+            %%%%%%%%%%%% EI_diff
+            rAve_Ei_Ic{im}{iday} = nanmean(r_Ei_Ic{im}{iday}, 2)'; % corr of each Ei with all Ics averaged
+            rAve_Ic_Ei{im}{iday} = nanmean(r_Ei_Ic{im}{iday}, 1); % corr of each Ic with all Eis averaged
+            % pool the two above
+            rAve_Ei_Ic_both{im}{iday} = [rAve_Ei_Ic{im}{iday}, rAve_Ic_Ei{im}{iday}];
+            
+            rAve_Ec_Ii{im}{iday} = nanmean(r_Ec_Ii{im}{iday}, 2)'; % corr of each Ec with all Iis averaged
+            rAve_Ii_Ec{im}{iday} = nanmean(r_Ec_Ii{im}{iday}, 1); % corr of each Ii with all Ecs averaged
+            % pool the two above
+            rAve_Ec_Ii_both{im}{iday} = [rAve_Ec_Ii{im}{iday}, rAve_Ii_Ec{im}{iday}];
+            
+            % pool EiIc and EcIi
+            rAve_EI_diff{im}{iday} = [rAve_Ei_Ic_both{im}{iday} , rAve_Ec_Ii_both{im}{iday}];
+%             rAve_EI_diff{im}{iday} = [rAve_Ei_Ic{im}{iday} , rAve_Ec_Ii{im}{iday}];
+%             rAve_IE_diff{im}{iday} = [rAve_Ic_Ei{im}{iday} , rAve_Ii_Ec{im}{iday}];
+            
+            
+            
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%%%%%%%% shfl %%%%%%%%%%%
+            rAve_Ei_Ei_shfl{im}{iday} = nanmean(r_Ei_Ei_shfl{im}{iday}, 1);
+            rAve_Ec_Ec_shfl{im}{iday} = nanmean(r_Ec_Ec_shfl{im}{iday}, 1);
+            % pool the two above
+            rAve_EE_same_shfl{im}{iday} = [rAve_Ei_Ei_shfl{im}{iday}, rAve_Ec_Ec_shfl{im}{iday}];
+            
+            rAve_Ii_Ii_shfl{im}{iday} = nanmean(r_Ii_Ii_shfl{im}{iday}, 1);
+            rAve_Ic_Ic_shfl{im}{iday} = nanmean(r_Ic_Ic_shfl{im}{iday}, 1);
+            % pool the two above
+            rAve_II_same_shfl{im}{iday} = [rAve_Ii_Ii_shfl{im}{iday}, rAve_Ic_Ic_shfl{im}{iday}];
+            
+            rAve_Ei_Ec_shfl{im}{iday} = nanmean(r_Ei_Ec_shfl{im}{iday}, 2)'; % corr of each Ei with all Ecs averaged
+            rAve_Ec_Ei_shfl{im}{iday} = nanmean(r_Ei_Ec_shfl{im}{iday}, 1); % corr of each Ec with all Eis averaged
+            % pool the two above
+            rAve_EE_diff_shfl{im}{iday} = [rAve_Ei_Ec_shfl{im}{iday}, rAve_Ec_Ei_shfl{im}{iday}];
+            
+            rAve_Ii_Ic_shfl{im}{iday} = nanmean(r_Ii_Ic_shfl{im}{iday}, 2)'; % corr of each Ii with all Ics averaged
+            rAve_Ic_Ii_shfl{im}{iday} = nanmean(r_Ii_Ic_shfl{im}{iday}, 1); % corr of each Ic with all Iis averaged
+            % pool the two above
+            rAve_II_diff_shfl{im}{iday} = [rAve_Ii_Ic_shfl{im}{iday}, rAve_Ic_Ii_shfl{im}{iday}];
+            
+            rAve_Ei_Ii_shfl{im}{iday} = nanmean(r_Ei_Ii_shfl{im}{iday}, 2)'; % corr of each Ei with all Iis averaged
+            rAve_Ii_Ei_shfl{im}{iday} = nanmean(r_Ei_Ii_shfl{im}{iday}, 1); % corr of each Ii with all Eis averaged
+            % pool the two above
+            rAve_Ei_Ii_both_shfl{im}{iday} = [rAve_Ei_Ii_shfl{im}{iday}, rAve_Ii_Ei_shfl{im}{iday}];
+            
+            rAve_Ec_Ic_shfl{im}{iday} = nanmean(r_Ec_Ic_shfl{im}{iday}, 2)'; % corr of each Ec with all Ics averaged
+            rAve_Ic_Ec_shfl{im}{iday} = nanmean(r_Ec_Ic_shfl{im}{iday}, 1); % corr of each Ic with all Ecs averaged
+            % pool the two above
+            rAve_Ec_Ic_both_shfl{im}{iday} = [rAve_Ec_Ic_shfl{im}{iday}, rAve_Ic_Ec_shfl{im}{iday}];
+            
+            % pool EI_i and EI_c
+            rAve_EI_same_shfl{im}{iday} = [rAve_Ei_Ii_both_shfl{im}{iday} , rAve_Ec_Ic_both_shfl{im}{iday}];
+            
+            
+            rAve_Ei_Ic_shfl{im}{iday} = nanmean(r_Ei_Ic_shfl{im}{iday}, 2)'; % corr of each Ei with all Ics averaged
+            rAve_Ic_Ei_shfl{im}{iday} = nanmean(r_Ei_Ic_shfl{im}{iday}, 1); % corr of each Ic with all Eis averaged
+            % pool the two above
+            rAve_Ei_Ic_both_shfl{im}{iday} = [rAve_Ei_Ic_shfl{im}{iday}, rAve_Ic_Ei_shfl{im}{iday}];
+            
+            rAve_Ec_Ii_shfl{im}{iday} = nanmean(r_Ec_Ii_shfl{im}{iday}, 2)'; % corr of each Ec with all Iis averaged
+            rAve_Ii_Ec_shfl{im}{iday} = nanmean(r_Ec_Ii_shfl{im}{iday}, 1); % corr of each Ii with all Ecs averaged
+            % pool the two above
+            rAve_Ec_Ii_both_shfl{im}{iday} = [rAve_Ec_Ii_shfl{im}{iday}, rAve_Ii_Ec_shfl{im}{iday}];
+            
+            % pool EiIc and EcIi
+            rAve_EI_diff_shfl{im}{iday} = [rAve_Ei_Ic_both_shfl{im}{iday} , rAve_Ec_Ii_both_shfl{im}{iday}];
+            
+        end
+    end
+end
+
+
+
+%% Any change in corr_diff and corr_same across days?  compare mean of corr_same and corr_diff across days of training
+
+for im = 1:length(mice)
+    
+    figure('name', mice{im}); 
+
+    %%%%%%%% EI %%%%%%%%
+    corrSameAveEachDay = cellfun(@mean, rAve_EI_same{im});
+    corrDiffAveEachDay = cellfun(@mean, rAve_EI_diff{im});
+    
+    subplot(231)
+    plot([corrSameAveEachDay; corrDiffAveEachDay]');
+    legend('Same tuning', 'Diff tuning')
+    ylabel('corr (avePairWise)')
+    xlabel('Training days')
+    title('EI')
+    
+    subplot(234)
+    plot(corrSameAveEachDay ./ corrDiffAveEachDay);
+    ylabel('corrSame/corrDiff')
+    xlabel('Training days')
+
+    
+    %%%%%%%% EE %%%%%%%%
+    corrSameAveEachDay = cellfun(@mean, rAve_EE_same{im});
+    corrDiffAveEachDay = cellfun(@mean, rAve_EE_diff{im});
+    
+    subplot(232)
+    plot([corrSameAveEachDay; corrDiffAveEachDay]');
+%     legend('Same tuning', 'Diff tuning')
+    ylabel('corr (avePairWise)')
+    xlabel('Training days')
+    title('EE')
+    
+    subplot(235)
+    plot(corrSameAveEachDay ./ corrDiffAveEachDay);
+    ylabel('corrSame/corrDiff')
+    xlabel('Training days')
+
+
+    %%%%%%%% II %%%%%%%%
+    corrSameAveEachDay = cellfun(@mean, rAve_II_same{im});
+    corrDiffAveEachDay = cellfun(@mean, rAve_II_diff{im});
+    
+    subplot(233)
+    plot([corrSameAveEachDay; corrDiffAveEachDay]');
+%     legend('Same tuning', 'Diff tuning')
+    ylabel('corr (avePairWise)')
+    xlabel('Training days')
+    title('II')
+    
+    subplot(236)
+    plot(corrSameAveEachDay ./ corrDiffAveEachDay);
+    ylabel('corrSame/corrDiff')
+    xlabel('Training days')
+    
+    if saveFigs
+        namv = sprintf('corrFR_avePairwise_trainingDays_sameDiffTun_FR%s_ROC%s_%s_curr%s_%s_%s', alFR, al, time2an, o2a, mice{im}, nowStr);
+        
+        d = fullfile(dirn0fr, mice{im}, nnow);
+        if ~exist(d,'dir')
+            mkdir(d)
+        end
+        fn = fullfile(dirn0fr, mice{im}, nnow, namv);
+        
+        savefig(gcf, fn)
+    end    
+    
+end
+
+%{
+%%%%% Compare number of pairs with hi_corrDiff and lo_corrDiff across days of training.
+
+% Set the same corr bins for all mice
+rall = cell(1, length(mice));
+for im = 1:length(mice)
+    rall{im} = [rAve_EI_same{im}{:}, rAve_EI_diff{im}{:}, rAve_EE_same{im}{:}, rAve_EE_diff{im}{:}, rAve_II_same{im}{:}, rAve_II_diff{im}{:}];
+end
+
+mn0 = min(cellfun(@min, rall));
+mx0 = max(cellfun(@max, rall));
+disp([mn0, mx0])
+% r1 = round(mn0-.05,1); 
+r2 = round(mx0+.05,1);
+% bins = r1 : (r2-r1)/10 : r2; 
+bins = [0, .02, r2]; % bins = [0, .2, r2];
+
+
+I_inds_corrAveLoDiff = cell(1, length(mice));
+I_inds_corrAveHiDiff = cell(1, length(mice));
+E_inds_corrAveLoDiff = cell(1, length(mice));
+E_inds_corrAveHiDiff = cell(1, length(mice));
+
+I_inds_corrAveHiSameLoDiff = cell(1, length(mice));
+I_inds_corrAveLoSameHiDiff = cell(1, length(mice));
+E_inds_corrAveHiSameLoDiff = cell(1, length(mice));
+E_inds_corrAveLoSameHiDiff = cell(1, length(mice));
+
+I_inds_corrAveLoSame = cell(1, length(mice));
+I_inds_corrAveHiSame = cell(1, length(mice));
+E_inds_corrAveLoSame = cell(1, length(mice));
+E_inds_corrAveHiSame = cell(1, length(mice));
+
+for im = 1:length(mice)    
+    
+    dn = mnTrNum_allMice{im} < thMinTrs;
+    I_inds_corrAveLoDiff{im}(dn) = nan;
+    I_inds_corrAveHiDiff{im}(dn) = nan;
+    E_inds_corrAveLoDiff{im}(dn) = nan;
+    E_inds_corrAveHiDiff{im}(dn) = nan;
+
+    I_inds_corrAveHiSameLoDiff{im}(dn) = nan;
+    I_inds_corrAveLoSameHiDiff{im}(dn) = nan;
+    E_inds_corrAveHiSameLoDiff{im}(dn) = nan;
+    E_inds_corrAveLoSameHiDiff{im}(dn) = nan;
+
+    I_inds_corrAveLoSame{im}(dn) = nan;
+    I_inds_corrAveHiSame{im}(dn) = nan;
+    E_inds_corrAveLoSame{im}(dn) = nan;
+    E_inds_corrAveHiSame{im}(dn) = nan;
+    
+
+    for iday = 1:nAllDays(im)
+        if mnTrNum_allMice{im}(iday) >= thMinTrs
+            % inh
+            binsI = bins;
+            a = [rAve_Ii_Ei_shfl{im}{iday}, rAve_Ii_Ec_shfl{im}{iday}, rAve_Ic_Ec{im}{iday}, rAve_Ic_Ei{im}{iday}];
+            binsI(2) = quantile(a, .95);  fprintf('threshold corr = %.3f\n', binsI(2))    
+            
+            % exc
+            binsE = bins;
+            a = [rAve_Ei_Ii_shfl{im}{iday}, rAve_Ei_Ic_shfl{im}{iday}, rAve_Ec_Ic_shfl{im}{iday}, rAve_Ec_Ii_shfl{im}{iday}];
+            binsE(2) = quantile(a, .95);  fprintf('threshold corr = %.3f\n', binsE(2))
+            
+            %%%%%%%%%%%%%%%%%%%% Inh %%%%%%%%%%%%%%%%%%%%
+            %%%%% Ii
+            % same
+            [n0, ~, i_rAve_Ii_Ei] = histcounts(rAve_Ii_Ei{im}{iday}, binsI);        
+            % diff
+            [n0, ~, i_rAve_Ii_Ec] = histcounts(rAve_Ii_Ec{im}{iday}, binsI);
+            % i==1: low corr ; % i==2: high corr
+
+            %%%%% Ic
+            % same
+            [n0, ~, i_rAve_Ic_Ec] = histcounts(rAve_Ic_Ec{im}{iday}, binsI);        
+            % diff
+            [n0, ~, i_rAve_Ic_Ei] = histcounts(rAve_Ic_Ei{im}{iday}, binsI);
+
+
+            %%%%%% Now get indeces of neurons that have hi corrAve_same and lo corrAve_diff (or negative corrAve_diff)
+            Ii_inds_corrAveLoDiff = sum(i_rAve_Ii_Ec == 1); %(rAve_Ii_Ec{im}{iday}<0); %
+            Ic_inds_corrAveLoDiff = sum(i_rAve_Ic_Ei == 1); %(rAve_Ic_Ei{im}{iday}<0); %
+            I_inds_corrAveLoDiff{im}(iday) = Ii_inds_corrAveLoDiff + Ic_inds_corrAveLoDiff;
+
+            Ii_inds_corrAveHiSameLoDiff = sum((i_rAve_Ii_Ei == 2) & (i_rAve_Ii_Ec == 1));
+            Ic_inds_corrAveHiSameLoDiff = sum((i_rAve_Ic_Ec == 2) & (i_rAve_Ic_Ei == 1)); %(rAve_Ic_Ei{im}{iday}<0); %
+            I_inds_corrAveHiSameLoDiff{im}(iday) = Ii_inds_corrAveHiSameLoDiff + Ic_inds_corrAveHiSameLoDiff;
+
+            Ii_inds_corrAveHiSame = sum(i_rAve_Ii_Ei == 2);
+            Ic_inds_corrAveHiSame = sum(i_rAve_Ic_Ec == 2); %(rAve_Ic_Ei{im}{iday}<0); %
+            I_inds_corrAveHiSame{im}(iday) = Ii_inds_corrAveHiSame + Ic_inds_corrAveHiSame;
+            
+            %%%%%% Now get indeces of neurons that have lo corrAve_same and hi corrAve_diff
+            Ii_inds_corrAveHiDiff = sum(i_rAve_Ii_Ec == 2);
+            Ic_inds_corrAveHiDiff = sum(i_rAve_Ic_Ei == 2);
+            I_inds_corrAveHiDiff{im}(iday) = Ii_inds_corrAveHiDiff + Ic_inds_corrAveHiDiff;
+
+            Ii_inds_corrAveLoSameHiDiff = sum((i_rAve_Ii_Ei == 1) & (i_rAve_Ii_Ec == 2));
+            Ic_inds_corrAveLoSameHiDiff = sum((i_rAve_Ic_Ec == 1) & (i_rAve_Ic_Ei==2));
+            I_inds_corrAveLoSameHiDiff{im}(iday) = Ii_inds_corrAveLoSameHiDiff + Ic_inds_corrAveLoSameHiDiff;
+
+            Ii_inds_corrAveLoSame = sum(i_rAve_Ii_Ei == 1);
+            Ic_inds_corrAveLoSame = sum(i_rAve_Ic_Ec == 1);
+            I_inds_corrAveLoSame{im}(iday) = Ii_inds_corrAveLoSame + Ic_inds_corrAveLoSame;            
+            
+            
+            %%%%%%%%%%%%%%%%%%%% Exc %%%%%%%%%%%%%%%%%%%%
+            %%%%% Ei
+            % same
+            [n0, ~, i_rAve_Ei_Ii] = histcounts(rAve_Ei_Ii{im}{iday}, binsE);        
+            % diff
+            [n0, ~, i_rAve_Ei_Ic] = histcounts(rAve_Ei_Ic{im}{iday}, binsE);
+            % i==1: low corr ; % i==2: high corr
+
+            %%%%% Ec
+            % same
+            [n0, ~, i_rAve_Ec_Ic] = histcounts(rAve_Ec_Ic{im}{iday}, binsE);        
+            % diff
+            [n0, ~, i_rAve_Ec_Ii] = histcounts(rAve_Ec_Ii{im}{iday}, binsE);
+
+
+            %%%%%% Now get indeces of neurons that have hi corrAve_same and lo
+            %%%%%% corrAve_diff (or nagative corrAve_diff)
+            Ei_inds_corrAveLoDiff = sum(i_rAve_Ei_Ic == 1); %(rAve_Ei_Ic{im}{iday}<0); %
+            Ec_inds_corrAveLoDiff = sum(i_rAve_Ec_Ii == 1); %(rAve_Ec_Ii{im}{iday}<0); %
+            E_inds_corrAveLoDiff{im}(iday) = Ei_inds_corrAveLoDiff + Ec_inds_corrAveLoDiff;
+
+            Ei_inds_corrAveHiSameLoDiff = sum((i_rAve_Ei_Ii == 2) & (i_rAve_Ei_Ic == 1)); %(rAve_Ei_Ic{im}{iday}<0); %
+            Ec_inds_corrAveHiSameLoDiff = sum((i_rAve_Ec_Ic == 2) & (i_rAve_Ec_Ii == 1)); %(rAve_Ec_Ii{im}{iday}<0); %
+            E_inds_corrAveHiSameLoDiff{im}(iday) = Ei_inds_corrAveHiSameLoDiff + Ec_inds_corrAveHiSameLoDiff;
+            
+            Ei_inds_corrAveHiSame = sum(i_rAve_Ei_Ii == 2); %
+            Ec_inds_corrAveHiSame = sum(i_rAve_Ec_Ic == 2); %
+            E_inds_corrAveHiSame{im}(iday) = Ei_inds_corrAveHiSame + Ec_inds_corrAveHiSame;
+            
+            
+            %%%%%% Now get indeces of neurons that have lo corrAve_same and hi corrAve_diff
+            Ei_inds_corrAveHiDiff = sum(i_rAve_Ei_Ic == 2);
+            Ec_inds_corrAveHiDiff = sum(i_rAve_Ec_Ii==2);
+            E_inds_corrAveHiDiff{im}(iday) = Ei_inds_corrAveHiDiff + Ec_inds_corrAveHiDiff;
+
+            Ei_inds_corrAveLoSameHiDiff = sum((i_rAve_Ei_Ii == 1) & (i_rAve_Ei_Ic == 2));
+            Ec_inds_corrAveLoSameHiDiff = sum((i_rAve_Ec_Ic == 1) & (i_rAve_Ec_Ii==2));
+            E_inds_corrAveLoSameHiDiff{im}(iday) = Ei_inds_corrAveLoSameHiDiff + Ec_inds_corrAveLoSameHiDiff;
+            
+            Ei_inds_corrAveLoSame = sum(i_rAve_Ei_Ii == 1);
+            Ec_inds_corrAveLoSame = sum(i_rAve_Ec_Ic == 1);
+            E_inds_corrAveLoSame{im}(iday) = Ei_inds_corrAveLoSame + Ec_inds_corrAveLoSame;            
+            
+        end
+    end
+end
+
+
+%%
+for im = 1:length(mice)
+%     fI = figure('name', mice{im}); plot([I_inds_corrAveLoDiff{im};    I_inds_corrAveHiDiff{im}]', 'r.-'); hold on
+%     fE = figure('name', mice{im}); plot([E_inds_corrAveLoDiff{im};    E_inds_corrAveHiDiff{im}]', 'k.-'); hold on
+
+%     figure(fI); plot([I_inds_corrAveLoSame{im};    I_inds_corrAveHiSame{im}]', 'r.-.'); %); set(gca, 'colororder', ['r','r'])
+%     figure(fE); plot([E_inds_corrAveLoSame{im};    E_inds_corrAveHiSame{im}]', 'k.-.')
+
+%     figure('name', mice{im}); plot([I_inds_corrAveHiSameLoDiff{im};    I_inds_corrAveLoSameHiDiff{im}]')
+%     figure('name', mice{im}); plot([E_inds_corrAveHiSameLoDiff{im};    E_inds_corrAveLoSameHiDiff{im}]')    
+
+    figure('name', mice{im}); plot([I_inds_corrAveHiSameLoDiff{im}  ./    I_inds_corrAveLoSameHiDiff{im}]')
+    hold on; plot([E_inds_corrAveHiSameLoDiff{im}   ./    E_inds_corrAveLoSameHiDiff{im}]')    
+    hline(1)
+    
+%     figure('name', mice{im});  hold on;
+%     plot([I_inds_corrAveLoDiff{im} ./ I_inds_corrAveHiDiff{im}]')
+%     plot([E_inds_corrAveLoDiff{im} ./   E_inds_corrAveHiDiff{im}]')
+    
+end
+
+
+ILoDiffAve = cellfun(@nanmean, I_inds_corrAveLoDiff);
+IHiDiffAve = cellfun(@nanmean, I_inds_corrAveHiDiff);
+ELoDiffAve = cellfun(@nanmean, E_inds_corrAveLoDiff);
+EHiDiffAve = cellfun(@nanmean, E_inds_corrAveHiDiff);
+
+ILoSameAve = cellfun(@nanmean, I_inds_corrAveLoSame);
+IHiSameAve = cellfun(@nanmean, I_inds_corrAveHiSame);
+ELoSameAve = cellfun(@nanmean, E_inds_corrAveLoSame);
+EHiSameAve = cellfun(@nanmean, E_inds_corrAveHiSame);
+
+ILoDiffSd = cellfun(@nanstd, I_inds_corrAveLoDiff);
+IHiDiffSd = cellfun(@nanstd, I_inds_corrAveHiDiff);
+ELoDiffSd = cellfun(@nanstd, E_inds_corrAveLoDiff);
+EHiDiffSd = cellfun(@nanstd, E_inds_corrAveHiDiff);
+
+ILoSameSd = cellfun(@nanstd, I_inds_corrAveLoSame);
+IHiSameSd = cellfun(@nanstd, I_inds_corrAveHiSame);
+ELoSameSd = cellfun(@nanstd, E_inds_corrAveLoSame);
+EHiSameSd = cellfun(@nanstd, E_inds_corrAveHiSame);
+
+figure; errorbar([1:4;1:4]', [ILoDiffAve; ILoSameAve]', [ILoDiffSd; ILoSameSd]')
+hold on; errorbar([1:4;1:4]', [IHiDiffAve; IHiSameAve]', [IHiDiffSd; IHiSameSd]')
+%}
+
+
+%% Each mouse : plot histograms for each mouse of averaged correlations computed above... comparing corrs for pairs of neurons with same vs opposite tuning for choice
+
+nBins = 50;
+doSmooth = 0;
+linestylesShfl = {':',':'};
+linestylesData = {'-','-'};
+
+for im = 1:length(mice)
+    
+    fh = figure('name', mice{im}, 'position', [27         404        1370         521]); %[27   404   419   521]);         
+    
+    %%%%%%%%%% Plot EI %%%%%%%%%%%
+    typeNs = 'EI';    
+    sp = [231,234];
+    [~,binsSh] = plotHist([rAve_EI_same_shfl{im}{:}], [rAve_EI_diff_shfl{im}{:}], '', '', {'', ''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+    [~,bins] = plotHist([rAve_EI_same{im}{:}], [rAve_EI_diff{im}{:}], 'Corr coef (avePairWise)', 'Fract Ns', {'same E,I', 'diff E,I'}, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+%     [~,bins] = plotHist([rAve_IE_same{im}{:}], [rAve_IE_diff{im}{:}], 'Corr coef (avePairWise)', 'Fract Ns', {'same E,I', 'diff E,I'}, cols, [], fh, nBins, doSmooth); 
+    xlim([binsSh(1),bins(end)])
+    subplot(sp(1)), title(typeNs)
+    %{
+    if saveFigs
+        namv = sprintf('corrFR_avePairwise_%s_sameDiffTun_FR%s_ROC%s_%s_curr%s_%s_%s', typeNs, alFR, al, time2an, o2a, mice{im}, nowStr);
+        fn = fullfile(dirn0fr, mice{im}, namv);
+        savefig(gcf, fn)
+        
+        % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+    end
+    %}
+    
+    
+    %%%%%%%%%% Plot EE %%%%%%%%%%%
+    typeNs = 'EE';
+    sp = [232,235];
+%     fh = figure('name', [mice{im}, '-', typeNs], 'position', [27   404   419   521]);         
+    [~,binsSh] = plotHist([rAve_EE_same_shfl{im}{:}], [rAve_EE_diff_shfl{im}{:}], '', '', {'', ''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+    [~,bins] = plotHist([rAve_EE_same{im}{:}], [rAve_EE_diff{im}{:}], 'Corr coef (avePairWise)', 'Fract Ns', {'same E,E', 'diff E,E'}, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+    xlim([binsSh(1),bins(end)])
+    subplot(sp(1)), title(typeNs)
+    %{
+    if saveFigs
+        namv = sprintf('corrFR_avePairwise_%s_sameDiffTun_FR%s_ROC%s_%s_curr%s_%s_%s', typeNs, alFR, al, time2an, o2a, mice{im}, nowStr);
+        fn = fullfile(dirn0fr, mice{im}, namv);
+        savefig(gcf, fn)
+        
+        % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+    end    
+    %}
+    
+    %%%%%%%%%% Plot II %%%%%%%%%%%
+    typeNs = 'II';
+    sp = [233,236];
+%     fh = figure('name', [mice{im}, '-', typeNs], 'position', [27   404   419   521]);         
+    [~,binsSh] = plotHist([rAve_EE_same_shfl{im}{:}], [rAve_EE_diff_shfl{im}{:}], '', '', {'', ''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+    [~,bins] = plotHist([rAve_II_same{im}{:}], [rAve_II_diff{im}{:}], 'Corr coef (avePairWise)', 'Fract Ns', {'same I,I', 'diff I,I'}, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+    xlim([binsSh(1),bins(end)])
+    subplot(sp(1)), title(typeNs)
+    
+    if saveFigs
+        namv = sprintf('corrFR_avePairwise_distDaysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_%s_%s', alFR, al, time2an, o2a, mice{im}, nowStr);
+        
+        d = fullfile(dirn0fr, mice{im}, nnow);
+        if ~exist(d,'dir')
+            mkdir(d)
+        end
+        fn = fullfile(dirn0fr, mice{im}, nnow, namv);
+        
+        savefig(gcf, fn)
+        
+        % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+    end    
+end
+
+
+
+%% Pool all neurons of all mice
+
+rAve_EE_same_allMiceNs = [rAve_EE_same{:}];
+rAve_EE_same_allMiceNs = [rAve_EE_same_allMiceNs{:}];
+rAve_EE_diff_allMiceNs = [rAve_EE_diff{:}];
+rAve_EE_diff_allMiceNs = [rAve_EE_diff_allMiceNs{:}];
+rAve_II_same_allMiceNs = [rAve_II_same{:}];
+rAve_II_same_allMiceNs = [rAve_II_same_allMiceNs{:}];
+rAve_II_diff_allMiceNs = [rAve_II_diff{:}];
+rAve_II_diff_allMiceNs = [rAve_II_diff_allMiceNs{:}];
+rAve_EI_same_allMiceNs = [rAve_EI_same{:}];
+rAve_EI_same_allMiceNs = [rAve_EI_same_allMiceNs{:}];
+rAve_EI_diff_allMiceNs = [rAve_EI_diff{:}];
+rAve_EI_diff_allMiceNs = [rAve_EI_diff_allMiceNs{:}];
+% shfl
+rAve_EE_same_allMiceNs_shfl = [rAve_EE_same_shfl{:}];
+rAve_EE_same_allMiceNs_shfl = [rAve_EE_same_allMiceNs_shfl{:}];
+rAve_EE_diff_allMiceNs_shfl = [rAve_EE_diff_shfl{:}];
+rAve_EE_diff_allMiceNs_shfl = [rAve_EE_diff_allMiceNs_shfl{:}];
+rAve_II_same_allMiceNs_shfl = [rAve_II_same_shfl{:}];
+rAve_II_same_allMiceNs_shfl = [rAve_II_same_allMiceNs_shfl{:}];
+rAve_II_diff_allMiceNs_shfl = [rAve_II_diff_shfl{:}];
+rAve_II_diff_allMiceNs_shfl = [rAve_II_diff_allMiceNs_shfl{:}];
+rAve_EI_same_allMiceNs_shfl = [rAve_EI_same_shfl{:}];
+rAve_EI_same_allMiceNs_shfl = [rAve_EI_same_allMiceNs_shfl{:}];
+rAve_EI_diff_allMiceNs_shfl = [rAve_EI_diff_shfl{:}];
+rAve_EI_diff_allMiceNs_shfl = [rAve_EI_diff_allMiceNs_shfl{:}];
+
+
+%% All mice: plot histograms of all mice neurons, comparing corr between same vs oppositely tuned neurons
+
+nBins = 50;
+doSmooth = 0;
+
+fh = figure('name', mice{im}, 'position', [27         404        1370         521]);
+
+typeNs = 'EI';
+% fh = figure('name', ['All Mice-',typeNs], 'position', [27   404   419   521]);         
+sp = [231,234];
+[~,binsSh] = plotHist(rAve_EI_same_allMiceNs_shfl, rAve_EI_diff_allMiceNs_shfl, '', '', {'', ''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+[~,bins] = plotHist(rAve_EI_same_allMiceNs, rAve_EI_diff_allMiceNs, 'Corr coef (avePairWise)', 'Fract Ns', {'same E,I', 'diff E,I'}, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+xlim([binsSh(1),bins(end)])
+subplot(sp(1)), title(typeNs)
+%{
+if saveFigs
+    namv = sprintf('corrFR_avePairwise_%s_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', typeNs, alFR, al, time2an, o2a, nowStr);
+    fn = fullfile(dirn0fr, namv);
+    savefig(gcf, fn)
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end    
+%}
+
+typeNs = 'EE';
+% fh = figure('name', ['All Mice-',typeNs], 'position', [27   404   419   521]);         
+sp = [232,235];
+[~,binsSh] = plotHist(rAve_EE_same_allMiceNs_shfl, rAve_EE_diff_allMiceNs_shfl, '', '', {'', ''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+[~,bins] = plotHist(rAve_EE_same_allMiceNs, rAve_EE_diff_allMiceNs, 'Corr coef (avePairWise)', 'Fract Ns', {'same E,E', 'diff E,E'}, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+xlim([binsSh(1),bins(end)])
+subplot(sp(1)), title(typeNs)
+%{
+if saveFigs
+    namv = sprintf('corrFR_avePairwise_%s_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', typeNs, alFR, al, time2an, o2a, nowStr);
+    fn = fullfile(dirn0fr, namv);
+    savefig(gcf, fn)
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end    
+%}
+
+typeNs = 'II';
+% fh = figure('name', ['All Mice-',typeNs], 'position', [27   404   419   521]);         
+sp = [233,236];
+[~,binsSh] = plotHist(rAve_II_same_allMiceNs_shfl, rAve_II_diff_allMiceNs_shfl, '', '', {'', ''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+[~,bins] = plotHist(rAve_II_same_allMiceNs, rAve_II_diff_allMiceNs, 'Corr coef (avePairWise)', 'Fract Ns', {'same I,I', 'diff I,I'}, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+xlim([binsSh(1),bins(end)])
+subplot(sp(1)), title(typeNs)
+
+
+if saveFigs
+    namv = sprintf('corrFR_avePairwise_distMiceDaysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', alFR, al, time2an, o2a, nowStr);
+    
+    d = fullfile(dirn0fr, ['sumAllMice_',nnow]);
+    if ~exist(d,'dir')
+        mkdir(d)
+    end
+    fn = fullfile(d, namv);
+    
+    savefig(gcf, fn)
+    
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end    
+
+
+
+
+
+
+
+
+%% Set pairwise correlations between FR of pairs of FRs(without averaging)
+% We don't average pairwise correlations (unlike what we did above). 
+% We get a lot of negative correlations in this way... neurons are not
+% firing much so makes sense that corrs will become negative.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Set the upper triangular of Ei_Ei, etc to nan (bc they are symmetric)
+% remember you don't want to have the upper triu as nan for the above
+% sections ... but here you change the values of r_Ei_Ei, etc ...
+
+for im = 1:length(mice)
+    for iday = 1:nAllDays(im)
+        if mnTrNum_allMice{im}(iday) >= thMinTrs
+
+            r_Ei_Ei{im}{iday} = triu_nan(r_Ei_Ei{im}{iday});
+            r_Ec_Ec{im}{iday} = triu_nan(r_Ec_Ec{im}{iday});
+            r_Ii_Ii{im}{iday} = triu_nan(r_Ii_Ii{im}{iday});
+            r_Ic_Ic{im}{iday} = triu_nan(r_Ic_Ic{im}{iday});
+            % set diagonal to nan
+%             r_Ei_Ei{im}{iday}(logical(eye(size(r_Ei_Ei{im}{iday})))) = nan; 
+%             r_Ec_Ec{im}{iday}(logical(eye(size(r_Ec_Ec{im}{iday})))) = nan;
+%             r_Ii_Ii{im}{iday}(logical(eye(size(r_Ii_Ii{im}{iday})))) = nan;
+%             r_Ic_Ic{im}{iday}(logical(eye(size(r_Ic_Ic{im}{iday})))) = nan;
+
+            %%%% shfl
+            r_Ei_Ei_shfl{im}{iday} = triu_nan(r_Ei_Ei_shfl{im}{iday});
+            r_Ec_Ec_shfl{im}{iday} = triu_nan(r_Ec_Ec_shfl{im}{iday});
+            r_Ii_Ii_shfl{im}{iday} = triu_nan(r_Ii_Ii_shfl{im}{iday});
+            r_Ic_Ic_shfl{im}{iday} = triu_nan(r_Ic_Ic_shfl{im}{iday});            
+        end
+    end
+end
+
+
+
+%% Pool the pairwise corrs into a vertical vector (that includes all possible pairs of neurons)
+
+r_Ei_Ei_alln = cell(1,length(mice));
+r_Ec_Ec_alln = cell(1,length(mice));
+r_Ei_Ec_alln = cell(1,length(mice));
+r_Ii_Ii_alln = cell(1,length(mice));
+r_Ic_Ic_alln = cell(1,length(mice));
+r_Ii_Ic_alln = cell(1,length(mice));
+r_Ei_Ii_alln = cell(1,length(mice));
+r_Ec_Ic_alln = cell(1,length(mice));
+r_Ei_Ic_alln = cell(1,length(mice));
+r_Ec_Ii_alln = cell(1,length(mice));
+
+r_EI_same_alln = cell(1,length(mice));
+r_EI_diff_alln = cell(1,length(mice));
+r_EE_same_alln = cell(1,length(mice));
+r_EE_diff_alln = cell(1,length(mice));
+r_II_same_alln = cell(1,length(mice));
+r_II_diff_alln = cell(1,length(mice));
+            
+p_Ei_Ei_alln = cell(1,length(mice));
+p_Ec_Ec_alln = cell(1,length(mice));
+p_Ei_Ec_alln = cell(1,length(mice));
+p_Ii_Ii_alln = cell(1,length(mice));
+p_Ic_Ic_alln = cell(1,length(mice));
+p_Ii_Ic_alln = cell(1,length(mice));
+p_Ei_Ii_alln = cell(1,length(mice));
+p_Ec_Ic_alln = cell(1,length(mice));
+p_Ei_Ic_alln = cell(1,length(mice));
+p_Ec_Ii_alln = cell(1,length(mice));
+
+% shfl
+r_Ei_Ei_alln_shfl = cell(1,length(mice));
+r_Ec_Ec_alln_shfl = cell(1,length(mice));
+r_Ei_Ec_alln_shfl = cell(1,length(mice));
+r_Ii_Ii_alln_shfl = cell(1,length(mice));
+r_Ic_Ic_alln_shfl = cell(1,length(mice));
+r_Ii_Ic_alln_shfl = cell(1,length(mice));
+r_Ei_Ii_alln_shfl = cell(1,length(mice));
+r_Ec_Ic_alln_shfl = cell(1,length(mice));
+r_Ei_Ic_alln_shfl = cell(1,length(mice));
+r_Ec_Ii_alln_shfl = cell(1,length(mice));
+
+r_EI_same_alln_shfl = cell(1,length(mice));
+r_EI_diff_alln_shfl = cell(1,length(mice));
+r_EE_same_alln_shfl = cell(1,length(mice));
+r_EE_diff_alln_shfl = cell(1,length(mice));
+r_II_same_alln_shfl = cell(1,length(mice));
+r_II_diff_alln_shfl = cell(1,length(mice));
+
+for im = 1:length(mice)
+    for iday = 1:nAllDays(im)
+        if mnTrNum_allMice{im}(iday) >= thMinTrs
+            r_Ei_Ei_alln{im}{iday} = r_Ei_Ei{im}{iday}(:)';
+            r_Ec_Ec_alln{im}{iday} = r_Ec_Ec{im}{iday}(:)';
+            r_Ei_Ec_alln{im}{iday} = r_Ei_Ec{im}{iday}(:)';
+            r_Ii_Ii_alln{im}{iday} = r_Ii_Ii{im}{iday}(:)';
+            r_Ic_Ic_alln{im}{iday} = r_Ic_Ic{im}{iday}(:)';
+            r_Ii_Ic_alln{im}{iday} = r_Ii_Ic{im}{iday}(:)';            
+            r_Ei_Ii_alln{im}{iday} = r_Ei_Ii{im}{iday}(:)';
+            r_Ec_Ic_alln{im}{iday} = r_Ec_Ic{im}{iday}(:)';
+            r_Ei_Ic_alln{im}{iday} = r_Ei_Ic{im}{iday}(:)';
+            r_Ec_Ii_alln{im}{iday} = r_Ec_Ii{im}{iday}(:)';            
+            % pool same, diff
+            r_EI_same_alln{im}{iday} = [r_Ei_Ii_alln{im}{iday}, r_Ec_Ic_alln{im}{iday}];
+            r_EI_diff_alln{im}{iday} = [r_Ei_Ic_alln{im}{iday}, r_Ec_Ii_alln{im}{iday}];  
+            r_EE_same_alln{im}{iday} = [r_Ei_Ei_alln{im}{iday}, r_Ec_Ec_alln{im}{iday}];
+            r_EE_diff_alln{im}{iday} = [r_Ei_Ec_alln{im}{iday}];            
+            r_II_same_alln{im}{iday} = [r_Ii_Ii_alln{im}{iday}, r_Ic_Ic_alln{im}{iday}];
+            r_II_diff_alln{im}{iday} = [r_Ii_Ic_alln{im}{iday}];                        
+            
+            p_Ei_Ei_alln{im}{iday} = p_Ei_Ei{im}{iday}(:)';
+            p_Ec_Ec_alln{im}{iday} = p_Ec_Ec{im}{iday}(:)';
+            p_Ei_Ec_alln{im}{iday} = p_Ei_Ec{im}{iday}(:)';
+            p_Ii_Ii_alln{im}{iday} = p_Ii_Ii{im}{iday}(:)';
+            p_Ic_Ic_alln{im}{iday} = p_Ic_Ic{im}{iday}(:)';
+            p_Ii_Ic_alln{im}{iday} = p_Ii_Ic{im}{iday}(:)';            
+            p_Ei_Ii_alln{im}{iday} = p_Ei_Ii{im}{iday}(:)';
+            p_Ec_Ic_alln{im}{iday} = p_Ec_Ic{im}{iday}(:)';
+            p_Ei_Ic_alln{im}{iday} = p_Ei_Ic{im}{iday}(:)';
+            p_Ec_Ii_alln{im}{iday} = p_Ec_Ii{im}{iday}(:)';  
+            
+            
+            %%%%% shfl
+            r_Ei_Ei_alln_shfl{im}{iday} = r_Ei_Ei_shfl{im}{iday}(:)';
+            r_Ec_Ec_alln_shfl{im}{iday} = r_Ec_Ec_shfl{im}{iday}(:)';
+            r_Ei_Ec_alln_shfl{im}{iday} = r_Ei_Ec_shfl{im}{iday}(:)';
+            r_Ii_Ii_alln_shfl{im}{iday} = r_Ii_Ii_shfl{im}{iday}(:)';
+            r_Ic_Ic_alln_shfl{im}{iday} = r_Ic_Ic_shfl{im}{iday}(:)';
+            r_Ii_Ic_alln_shfl{im}{iday} = r_Ii_Ic_shfl{im}{iday}(:)';            
+            r_Ei_Ii_alln_shfl{im}{iday} = r_Ei_Ii_shfl{im}{iday}(:)';
+            r_Ec_Ic_alln_shfl{im}{iday} = r_Ec_Ic_shfl{im}{iday}(:)';
+            r_Ei_Ic_alln_shfl{im}{iday} = r_Ei_Ic_shfl{im}{iday}(:)';
+            r_Ec_Ii_alln_shfl{im}{iday} = r_Ec_Ii_shfl{im}{iday}(:)';                        
+            
+            % pool same, diff
+            r_EI_same_alln_shfl{im}{iday} = [r_Ei_Ii_alln_shfl{im}{iday}, r_Ec_Ic_alln_shfl{im}{iday}];
+            r_EI_diff_alln_shfl{im}{iday} = [r_Ei_Ic_alln_shfl{im}{iday}, r_Ec_Ii_alln_shfl{im}{iday}];  
+            r_EE_same_alln_shfl{im}{iday} = [r_Ei_Ei_alln_shfl{im}{iday}, r_Ec_Ec_alln_shfl{im}{iday}];
+            r_EE_diff_alln_shfl{im}{iday} = [r_Ei_Ec_alln_shfl{im}{iday}];            
+            r_II_same_alln_shfl{im}{iday} = [r_Ii_Ii_alln_shfl{im}{iday}, r_Ic_Ic_alln_shfl{im}{iday}];
+            r_II_diff_alln_shfl{im}{iday} = [r_Ii_Ic_alln_shfl{im}{iday}];              
+        end
+    end
+end
+
+
+%% 
+%%%%%%%%%%%%%%% Pairwair corrs averaged per day %%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% For each day, average corr across all neuron pairs, done for each population seperately.
+
+r_EI_same_aveDays = cell(1,length(mice));
+r_EI_diff_aveDays = cell(1,length(mice));
+r_EE_same_aveDays = cell(1,length(mice));
+r_EE_diff_aveDays = cell(1,length(mice));
+r_II_same_aveDays = cell(1,length(mice));
+r_II_diff_aveDays = cell(1,length(mice));
+% shfl
+r_EI_same_shfl_aveDays = cell(1,length(mice));
+r_EI_diff_shfl_aveDays = cell(1,length(mice));
+r_EE_same_shfl_aveDays = cell(1,length(mice));
+r_EE_diff_shfl_aveDays = cell(1,length(mice));
+r_II_same_shfl_aveDays = cell(1,length(mice));
+r_II_diff_shfl_aveDays = cell(1,length(mice));
+
+for im = 1:length(mice)
+    r_EI_same_aveDays{im} = cellfun(@nanmean, r_EI_same_alln{im});
+    r_EI_diff_aveDays{im} = cellfun(@nanmean, r_EI_diff_alln{im});
+    r_EE_same_aveDays{im} = cellfun(@nanmean, r_EE_same_alln{im});
+    r_EE_diff_aveDays{im} = cellfun(@nanmean, r_EE_diff_alln{im});
+    r_II_same_aveDays{im} = cellfun(@nanmean, r_II_same_alln{im});
+    r_II_diff_aveDays{im} = cellfun(@nanmean, r_II_diff_alln{im});
+    
+    % shfl
+    r_EI_same_shfl_aveDays{im} = cellfun(@nanmean, r_EI_same_alln_shfl{im});
+    r_EI_diff_shfl_aveDays{im} = cellfun(@nanmean, r_EI_diff_alln_shfl{im});
+    r_EE_same_shfl_aveDays{im} = cellfun(@nanmean, r_EE_same_alln_shfl{im});
+    r_EE_diff_shfl_aveDays{im} = cellfun(@nanmean, r_EE_diff_alln_shfl{im});
+    r_II_same_shfl_aveDays{im} = cellfun(@nanmean, r_II_same_alln_shfl{im});
+    r_II_diff_shfl_aveDays{im} = cellfun(@nanmean, r_II_diff_alln_shfl{im});    
+    
+end
+
+
+%% Each mouse : plot histogram of correlations  (averaged across pair of neurons for each day), all days pooled
+
+nBins = 35;
+doSmooth = 0;
+ylab = 'Fraction Days';
+xlab = 'Corr coef (avePerDay)';
+
+for im = 1:length(mice)    
+
+    fh = figure('name', mice{im}, 'position', [27         404        1370         521]);
+        
+    % 'EI\_same','EI\_diff'
+    sp = [231,234];
+    plotHist(r_EI_same_shfl_aveDays{im}, r_EI_diff_shfl_aveDays{im},'','', {'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+    plotHist(r_EI_same_aveDays{im}, r_EI_diff_aveDays{im},xlab,ylab, {'EI\_same','EI\_diff'}, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+    % mark corr significancy value 
+%     corrSig = min([min(abs(r_EI_same_aveDays{im}(p_EI_same_aveDays{im}<=.05))), min(abs(r_EI_diff_aveDays{im}(p_EI_diff_aveDays{im}<=.05)))]);
+%     subplot(sp(1)), title('EI')
+%     vline(corrSig, 'k:')
+%     vline(-corrSig, 'k:')
+    
+    % 'EE\_same','EE\_diff'
+    sp = [232,235];
+    plotHist(r_EE_same_shfl_aveDays{im}, r_EE_diff_shfl_aveDays{im},'','', {'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp);     
+    plotHist(r_EE_same_aveDays{im}, r_EE_diff_aveDays{im},xlab,ylab, {'EE\_same','EE\_diff'}, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+    % mark corr significancy value 
+%     corrSig = min([min(abs(r_EE_same_aveDays{im}(p_EE_same_aveDays{im}<=.05))), min(abs(r_EE_diff_aveDays{im}(p_EE_diff_aveDays{im}<=.05)))]);
+%     subplot(sp(1)), title('EE')
+%     vline(corrSig, 'k:')
+%     vline(-corrSig, 'k:')
+
+    % 'II\_same','II\_diff'
+    sp = [233,236];
+    plotHist(r_II_same_shfl_aveDays{im}, r_II_diff_shfl_aveDays{im},'','', {'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp);         
+    plotHist(r_II_same_aveDays{im}, r_II_diff_aveDays{im},xlab,ylab, {'II\_same','II\_diff'}, cols, [], fh, nBins, doSmooth, linestylesData, sp);   
+    % mark corr significancy value     
+%     corrSig = min([min(abs(r_II_same_aveDays{im}(p_II_same_aveDays{im}<=.05))), min(abs(r_II_diff_aveDays{im}(p_II_diff_aveDays{im}<=.05)))]);
+%     subplot(sp(1)), title('II')
+%     vline(corrSig, 'k:')
+%     vline(-corrSig, 'k:')
+    
+
+    if saveFigs
+        namv = sprintf('corrFR_pairwise_rsAvedPerDay_distDaysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_%s', alFR, al, time2an, o2a, nowStr);
+
+        d = fullfile(dirn0fr, mice{im}, nnow);
+        fn = fullfile(dirn0fr, mice{im}, nnow, namv); 
+        
+        savefig(gcf, fn)
+    end      
+end
+
+
+
+%% All mice: plot histogram of correlations (averaged across pair of neurons for each day), all days of all mice pooled
+
+nBins = 50;
+doSmooth = 0;
+ylab = 'Fraction days (all mice)';
+
+
+fh = figure('name', 'allMice', 'position', [27         404        1370         521]);
+
+typeNs = 'EI';
+leg = {'EI\_same','EI\_diff'};
+y1 = [r_EI_same_aveDays{:}];
+y2 = [r_EI_diff_aveDays{:}];
+sp = [231,234];
+% fh = figure('name', ['All Mice-',typeNs], 'position', [27   404   419   521]);         
+plotHist([r_EI_same_shfl_aveDays{:}], [r_EI_diff_shfl_aveDays{:}],'','',{'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+plotHist(y1, y2, xlab,ylab,leg, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+% mark corr significancy value     
+% corrSig = min([min(abs(y1([p_EI_same_aveDays{:}]<=.05))), min(abs(y2([p_EI_diff_aveDays{:}]<=.05)))]);
+% subplot(sp(1)), title('EI')
+% vline(corrSig, 'k:')
+% vline(-corrSig, 'k:')
+% figure; errorbar(1:2, [nanmean(y1), mean(y2)], [nanstd(y1), std(y2)])
+% xlim([0,3])
+%{
+if saveFigs
+    namv = sprintf('corrFR_pairwise_%s_sameDiffTun_FR%s_ROC%s_%s_curr%s_aveDays_%s', typeNs, alFR, al, time2an, o2a, nowStr);
+    fn = fullfile(dirn0fr, namv);
+    savefig(gcf, fn)
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end  
+%}
+
+
+typeNs = 'EE';
+leg = {'EE\_same','EE\_diff'};
+y1 = [r_EE_same_aveDays{:}];
+y2 = [r_EE_diff_aveDays{:}];
+sp = [232,235];
+% fh = figure('name', ['All Mice-',typeNs], 'position', [27   404   419   521]);         
+plotHist([r_EE_same_shfl_aveDays{:}], [r_EE_diff_shfl_aveDays{:}],'','',{'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+plotHist(y1, y2, xlab,ylab,leg, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+% mark corr significancy value     
+% corrSig = min([min(abs(y1([p_EE_same_aveDays{:}]<=.05))), min(abs(y2([p_EE_diff_aveDays{:}]<=.05)))]);
+% subplot(sp(1)), title('EE')
+% vline(corrSig, 'k:')
+% vline(-corrSig, 'k:')
+% figure; errorbar(1:2, [nanmean(y1), mean(y2)], [nanstd(y1), std(y2)])
+% xlim([0,3])
+%{
+if saveFigs
+    namv = sprintf('corrFR_pairwise_%s_sameDiffTun_FR%s_ROC%s_%s_curr%s_aveDays_%s', typeNs, alFR, al, time2an, o2a, nowStr);
+    fn = fullfile(dirn0fr, namv);
+    savefig(gcf, fn)
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end  
+%}
+
+
+typeNs = 'II';
+leg = {'II\_same','II\_diff'};
+y1 = [r_II_same_aveDays{:}];
+y2 = [r_II_diff_aveDays{:}];
+sp = [233,236];
+% fh = figure('name', ['All Mice-',typeNs], 'position', [27   404   419   521]);         
+plotHist([r_II_same_shfl_aveDays{:}], [r_II_diff_shfl_aveDays{:}],'','',{'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+plotHist(y1, y2, xlab,ylab,leg, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+% mark corr significancy value     
+% corrSig = min([min(abs(y1([p_II_same_aveDays{:}]<=.05))), min(abs(y2([p_II_diff_aveDays{:}]<=.05)))]);
+% subplot(sp(1)), title('II')
+% vline(corrSig, 'k:')
+% vline(-corrSig, 'k:')
+% figure; errorbar(1:2, [nanmean(y1), mean(y2)], [nanstd(y1), std(y2)])
+% xlim([0,3])
+
+
+%%%
+if saveFigs
+    namv = sprintf('corrFR_pairwise_rsAvedPerDay_distMiceDaysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', alFR, al, time2an, o2a, nowStr);
+    
+    d = fullfile(dirn0fr, ['sumAllMice_',nnow]);
+    if ~exist(d,'dir')
+        mkdir(d)
+    end
+    fn = fullfile(d, namv);
+    
+    savefig(gcf, fn)
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end    
+
+
+
+
+%% Any change in corr_diff and corr_same across days?  compare mean of corr_same and corr_diff across days of training
+% figures are almost same as corrAve figures we got from the avePairWise method above... makes sense,
+% we are averaging pw corrs in both cases! ... so even though hists look
+% different between corrAve and pw corr cases, ave figres (like this one)
+% look the same.
+
+for im = 1:length(mice)
+    
+    figure('name', mice{im}); 
+
+    %%%%%%%% EI %%%%%%%%
+    subplot(231)
+    plot([r_EI_same_aveDays{im}; r_EI_diff_aveDays{im}]');
+    legend('Same tuning', 'Diff tuning')
+    ylabel('corr (pairWise)')
+    xlabel('Training days')
+    title('EI')
+    
+    subplot(234)
+    plot(r_EI_same_aveDays{im} ./ r_EI_diff_aveDays{im});
+    ylabel('corrSame/corrDiff')
+    xlabel('Training days')
+
+    
+    %%%%%%%% EE %%%%%%%%   
+    subplot(232)
+    plot([r_EE_same_aveDays{im}; r_EE_diff_aveDays{im}]');
+%     legend('Same tuning', 'Diff tuning')
+    ylabel('corr (pairWise)')
+    xlabel('Training days')
+    title('EE')
+    
+    subplot(235)
+    plot(r_EE_same_aveDays{im} ./ r_EE_diff_aveDays{im});
+    ylabel('corrSame/corrDiff')
+    xlabel('Training days')
+
+
+    %%%%%%%% II %%%%%%%%    
+    subplot(233)
+    plot([r_II_same_aveDays{im}; r_II_diff_aveDays{im}]');
+%     legend('Same tuning', 'Diff tuning')
+    ylabel('corr (pairWise)')
+    xlabel('Training days')
+    title('II')
+    
+    subplot(236)
+    plot(r_II_same_aveDays{im} ./ r_II_diff_aveDays{im});
+    ylabel('corrSame/corrDiff')
+    xlabel('Training days')
+    
+    
+    if saveFigs
+        namv = sprintf('corrFR_pairwise_trainingDays_sameDiffTun_FR%s_ROC%s_%s_curr%s_%s_%s', alFR, al, time2an, o2a, mice{im}, nowStr);
+        
+        d = fullfile(dirn0fr, mice{im}, nnow);
+        fn = fullfile(d, namv);
+        
+        savefig(gcf, fn)
+    end    
+    
+end
+
+
+%% 
+%%%%%%%%%%%%%%% Pairwair corrs without any averaging %%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Pool across days (for each mouse) corrs for same-tuning and opposite-tunning neurons
+
+r_EI_same_allMice = cell(1,length(mice));
+r_EI_diff_allMice = cell(1,length(mice));
+r_EE_same_allMice = cell(1,length(mice));
+r_EE_diff_allMice = cell(1,length(mice));
+r_II_same_allMice = cell(1,length(mice));
+r_II_diff_allMice = cell(1,length(mice));
+
+p_EI_same_allMice = cell(1,length(mice));
+p_EI_diff_allMice = cell(1,length(mice));
+p_EE_same_allMice = cell(1,length(mice));
+p_EE_diff_allMice = cell(1,length(mice));
+p_II_same_allMice = cell(1,length(mice));
+p_II_diff_allMice = cell(1,length(mice));
+
+% shfl
+r_EI_same_shfl_allMice = cell(1,length(mice));
+r_EI_diff_shfl_allMice = cell(1,length(mice));
+r_EE_same_shfl_allMice = cell(1,length(mice));
+r_EE_diff_shfl_allMice = cell(1,length(mice));
+r_II_same_shfl_allMice = cell(1,length(mice));
+r_II_diff_shfl_allMice = cell(1,length(mice));
+
+for im = 1:length(mice)    
+
+    % 'EI\_same','EI\_diff'
+    r_EI_same_allMice{im} = [r_Ei_Ii_alln{im}{:}, r_Ec_Ic_alln{im}{:}];
+    r_EI_diff_allMice{im} = [r_Ei_Ic_alln{im}{:}, r_Ec_Ii_alln{im}{:}];    
+    r_EI_same_shfl_allMice{im} = [r_Ei_Ii_alln_shfl{im}{:}, r_Ec_Ic_alln_shfl{im}{:}];
+    r_EI_diff_shfl_allMice{im} = [r_Ei_Ic_alln_shfl{im}{:}, r_Ec_Ii_alln_shfl{im}{:}];    
+
+    p_EI_same_allMice{im} = [p_Ei_Ii_alln{im}{:}, p_Ec_Ic_alln{im}{:}];
+    p_EI_diff_allMice{im} = [p_Ei_Ic_alln{im}{:}, p_Ec_Ii_alln{im}{:}];    
+    
+    
+    % 'EE\_same','EE\_diff'
+    r_EE_same_allMice{im} = [r_Ei_Ei_alln{im}{:}, r_Ec_Ec_alln{im}{:}];
+    r_EE_diff_allMice{im} = [r_Ei_Ec_alln{im}{:}];
+    r_EE_same_shfl_allMice{im} = [r_Ei_Ei_alln_shfl{im}{:}, r_Ec_Ec_alln_shfl{im}{:}];
+    r_EE_diff_shfl_allMice{im} = [r_Ei_Ec_alln_shfl{im}{:}];    
+    
+    p_EE_same_allMice{im} = [p_Ei_Ei_alln{im}{:}, p_Ec_Ec_alln{im}{:}];
+    p_EE_diff_allMice{im} = [p_Ei_Ec_alln{im}{:}];
+    
+    
+    % 'II\_same','II\_diff'
+    r_II_same_allMice{im} = [r_Ii_Ii_alln{im}{:}, r_Ic_Ic_alln{im}{:}];
+    r_II_diff_allMice{im} = [r_Ii_Ic_alln{im}{:}];
+    r_II_same_shfl_allMice{im} = [r_Ii_Ii_alln_shfl{im}{:}, r_Ic_Ic_alln_shfl{im}{:}];
+    r_II_diff_shfl_allMice{im} = [r_Ii_Ic_alln_shfl{im}{:}];    
+    
+    p_II_same_allMice{im} = [p_Ii_Ii_alln{im}{:}, p_Ic_Ic_alln{im}{:}];
+    p_II_diff_allMice{im} = [p_Ii_Ic_alln{im}{:}];
+
+end
+
+
+%% Each mouse : plot histogram of correlations, all neuron pairs pooled
+
+nBins = 500;
+doSmooth = 0;
+ylab = 'Fraction neuron pairs';
+xlab = 'Corr coef';
+
+for im = 1:length(mice)    
+
+    fh = figure('name', mice{im}, 'position', [27         404        1370         521]);
+        
+    % 'EI\_same','EI\_diff'
+    sp = [231,234];
+    plotHist(r_EI_same_shfl_allMice{im}, r_EI_diff_shfl_allMice{im},'','', {'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+    plotHist(r_EI_same_allMice{im}, r_EI_diff_allMice{im},xlab,ylab, {'EI\_same','EI\_diff'}, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+    % mark corr significancy value 
+    corrSig = min([min(abs(r_EI_same_allMice{im}(p_EI_same_allMice{im}<=.05))), min(abs(r_EI_diff_allMice{im}(p_EI_diff_allMice{im}<=.05)))]);
+    subplot(sp(1)), title('EI')
+    vline(corrSig, 'k:')
+    vline(-corrSig, 'k:')
+    
+    % 'EE\_same','EE\_diff'
+    sp = [232,235];
+    plotHist(r_EE_same_shfl_allMice{im}, r_EE_diff_shfl_allMice{im},'','', {'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp);     
+    plotHist(r_EE_same_allMice{im}, r_EE_diff_allMice{im},xlab,ylab, {'EE\_same','EE\_diff'}, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+    % mark corr significancy value 
+    corrSig = min([min(abs(r_EE_same_allMice{im}(p_EE_same_allMice{im}<=.05))), min(abs(r_EE_diff_allMice{im}(p_EE_diff_allMice{im}<=.05)))]);
+    subplot(sp(1)), title('EE')
+    vline(corrSig, 'k:')
+    vline(-corrSig, 'k:')
+
+    % 'II\_same','II\_diff'
+    sp = [233,236];
+    plotHist(r_II_same_shfl_allMice{im}, r_II_diff_shfl_allMice{im},'','', {'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp);         
+    plotHist(r_II_same_allMice{im}, r_II_diff_allMice{im},xlab,ylab, {'II\_same','II\_diff'}, cols, [], fh, nBins, doSmooth, linestylesData, sp);   
+    % mark corr significancy value     
+    corrSig = min([min(abs(r_II_same_allMice{im}(p_II_same_allMice{im}<=.05))), min(abs(r_II_diff_allMice{im}(p_II_diff_allMice{im}<=.05)))]);
+    subplot(sp(1)), title('II')
+    vline(corrSig, 'k:')
+    vline(-corrSig, 'k:')
+    
+
+    if saveFigs
+        namv = sprintf('corrFR_pairwise_distNsDaysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_%s', alFR, al, time2an, o2a, nowStr);
+
+        d = fullfile(dirn0fr, mice{im}, nnow);
+        fn = fullfile(dirn0fr, mice{im}, nnow, namv); 
+        
+        savefig(gcf, fn)
+    end      
+end
+
+
+
+%% All mice: plot histogram of correlations for all mice, all neuron pairs pooled
+
+nBins = 500;
+doSmooth = 0;
+
+fh = figure('name', 'allMice', 'position', [27         404        1370         521]);
+
+typeNs = 'EI';
+leg = {'EI\_same','EI\_diff'};
+y1 = [r_EI_same_allMice{:}];
+y2 = [r_EI_diff_allMice{:}];
+sp = [231,234];
+% fh = figure('name', ['All Mice-',typeNs], 'position', [27   404   419   521]);         
+plotHist([r_EI_same_shfl_allMice{:}], [r_EI_diff_shfl_allMice{:}],'','',{'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+plotHist(y1, y2, xlab,ylab,leg, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+% mark corr significancy value     
+corrSig = min([min(abs(y1([p_EI_same_allMice{:}]<=.05))), min(abs(y2([p_EI_diff_allMice{:}]<=.05)))]);
+subplot(sp(1)), title('EI')
+vline(corrSig, 'k:')
+vline(-corrSig, 'k:')
+% figure; errorbar(1:2, [nanmean(y1), mean(y2)], [nanstd(y1), std(y2)])
+% xlim([0,3])
+%{
+if saveFigs
+    namv = sprintf('corrFR_pairwise_%s_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', typeNs, alFR, al, time2an, o2a, nowStr);
+    fn = fullfile(dirn0fr, namv);
+    savefig(gcf, fn)
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end  
+%}
+
+
+typeNs = 'EE';
+leg = {'EE\_same','EE\_diff'};
+y1 = [r_EE_same_allMice{:}];
+y2 = [r_EE_diff_allMice{:}];
+sp = [232,235];
+% fh = figure('name', ['All Mice-',typeNs], 'position', [27   404   419   521]);         
+plotHist([r_EE_same_shfl_allMice{:}], [r_EE_diff_shfl_allMice{:}],'','',{'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+plotHist(y1, y2, xlab,ylab,leg, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+% mark corr significancy value     
+corrSig = min([min(abs(y1([p_EE_same_allMice{:}]<=.05))), min(abs(y2([p_EE_diff_allMice{:}]<=.05)))]);
+subplot(sp(1)), title('EE')
+vline(corrSig, 'k:')
+vline(-corrSig, 'k:')
+% figure; errorbar(1:2, [nanmean(y1), mean(y2)], [nanstd(y1), std(y2)])
+% xlim([0,3])
+%{
+if saveFigs
+    namv = sprintf('corrFR_pairwise_%s_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', typeNs, alFR, al, time2an, o2a, nowStr);
+    fn = fullfile(dirn0fr, namv);
+    savefig(gcf, fn)
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end  
+%}
+
+
+typeNs = 'II';
+leg = {'II\_same','II\_diff'};
+y1 = [r_II_same_allMice{:}];
+y2 = [r_II_diff_allMice{:}];
+sp = [233,236];
+% fh = figure('name', ['All Mice-',typeNs], 'position', [27   404   419   521]);         
+plotHist([r_II_same_shfl_allMice{:}], [r_II_diff_shfl_allMice{:}],'','',{'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+plotHist(y1, y2, xlab,ylab,leg, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+% mark corr significancy value     
+corrSig = min([min(abs(y1([p_II_same_allMice{:}]<=.05))), min(abs(y2([p_II_diff_allMice{:}]<=.05)))]);
+subplot(sp(1)), title('II')
+vline(corrSig, 'k:')
+vline(-corrSig, 'k:')
+% figure; errorbar(1:2, [nanmean(y1), mean(y2)], [nanstd(y1), std(y2)])
+% xlim([0,3])
+
+
+if saveFigs
+    namv = sprintf('corrFR_pairwise_distMiceDaysNsPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', alFR, al, time2an, o2a, nowStr);
+    
+    d = fullfile(dirn0fr, ['sumAllMice_',nnow]);
+    if ~exist(d,'dir')
+        mkdir(d)
+    end
+    fn = fullfile(d, namv);
+    
+    savefig(gcf, fn)
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end    
+
+
+
+
+
+
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%% Correlation between population-averaged FRs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% For each day, we average FR across neurons of each population
+% (Ei,Ec,Ii,Ic), then we compute correlations between different
+% populations. So for each day we get one number (for each correlation).
+% non-specific connectivity: both E_ipsi and E_contra should have corr with
+% I...  (though we already know we have I_ipsi and I_contra...)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%% Compute correlations in population-averaged FR between exc and inh (FR averaged across neurons of each population) for each day
+
+% ipsi_contra_all = [1,0,0]; %[1,0,0]; % what trials to use: ipsi, contra, all
+
+corr_exci_inhi = cell(1, length(mice));
+corr_excc_inhc = cell(1, length(mice));
+corr_exci_inhc = cell(1, length(mice));
+corr_excc_inhi = cell(1, length(mice));
+
+corr_exci_exci = cell(1, length(mice));
+corr_excc_excc = cell(1, length(mice));
+corr_exci_excc = cell(1, length(mice));
+corr_excc_exci = cell(1, length(mice));
+
+corr_inhi_inhi = cell(1, length(mice));
+corr_inhc_inhc = cell(1, length(mice));
+corr_inhi_inhc = cell(1, length(mice));
+corr_inhc_inhi = cell(1, length(mice));
+
+rPop_EI_same_allMice = cell(1, length(mice));
+rPop_EI_diff_allMice = cell(1, length(mice));
+rPop_EE_same_allMice = cell(1, length(mice));
+rPop_EE_diff_allMice = cell(1, length(mice));
+rPop_II_same_allMice = cell(1, length(mice));
+rPop_II_diff_allMice = cell(1, length(mice));
+rPop_EI_same_shfl_allMice = cell(1, length(mice));
+rPop_EI_diff_shfl_allMice = cell(1, length(mice));
+rPop_EE_same_shfl_allMice = cell(1, length(mice));
+rPop_EE_diff_shfl_allMice = cell(1, length(mice));
+rPop_II_same_shfl_allMice = cell(1, length(mice));
+rPop_II_diff_shfl_allMice = cell(1, length(mice));
+
+p_corr_exci_inhi = cell(1, length(mice));
+p_corr_excc_inhc = cell(1, length(mice));
+p_corr_exci_inhc = cell(1, length(mice));
+p_corr_excc_inhi = cell(1, length(mice));
+
+p_corr_exci_exci = cell(1, length(mice));
+p_corr_excc_excc = cell(1, length(mice));
+p_corr_exci_excc = cell(1, length(mice));
+p_corr_excc_exci = cell(1, length(mice));
+
+p_corr_inhi_inhi = cell(1, length(mice));
+p_corr_inhc_inhc = cell(1, length(mice));
+p_corr_inhi_inhc = cell(1, length(mice));
+p_corr_inhc_inhi = cell(1, length(mice));
+
+% shfl
+corr_exci_inhi_shfl = cell(1, length(mice));
+corr_excc_inhc_shfl = cell(1, length(mice));
+corr_exci_inhc_shfl = cell(1, length(mice));
+corr_excc_inhi_shfl = cell(1, length(mice));
+
+corr_exci_exci_shfl = cell(1, length(mice));
+corr_excc_excc_shfl = cell(1, length(mice));
+corr_exci_excc_shfl = cell(1, length(mice));
+corr_excc_exci_shfl = cell(1, length(mice));
+
+corr_inhi_inhi_shfl = cell(1, length(mice));
+corr_inhc_inhc_shfl = cell(1, length(mice));
+corr_inhi_inhc_shfl = cell(1, length(mice));
+corr_inhc_inhi_shfl = cell(1, length(mice));
+
+
+for im = 1:length(mice)
+    for iday = 1:nAllDays(im)
+        
+        if mnTrNum_allMice{im}(iday) >= thMinTrs
+            
+            if ipsi_contra_all(1)==1
+                trs = ipsiTrs_allDays_allMice{im}{iday};
+            elseif ipsi_contra_all(2)==1
+                trs = contraTrs_allDays_allMice{im}{iday};
+            elseif ipsi_contra_all(3)==1
+                trs = true(1, size(fr_exc_ipsi_timeM1{im}{iday}, 2)); %1:length(ipsiTrs_allDays_allMice{im}{iday});
+            end
+
+            %%%%%%%%%% EI %%%%%%%%%%
+            % E_ipsi , I_ipsi
+            [corr_exci_inhi{im}(iday), p_corr_exci_inhi{im}(iday)] = corr(fr_exc_ipsi_timeM1_aveNs{im}{iday}(trs)' , fr_inh_ipsi_timeM1_aveNs{im}{iday}(trs)');
+            % E_contra , I_contra
+            [corr_excc_inhc{im}(iday), p_corr_excc_inhc{im}(iday)] = corr(fr_exc_contra_timeM1_aveNs{im}{iday}(trs)' , fr_inh_contra_timeM1_aveNs{im}{iday}(trs)');
+            %%% pool (set corr for same and oppositely tuned populations (each day has one corr valule for same and one corr value for oppositely tuned populations))
+            rPop_EI_same_allMice{im}(iday) = mean([corr_exci_inhi{im}(iday), corr_excc_inhc{im}(iday)]);
+            
+            % E_ipsi , I_contra
+            [corr_exci_inhc{im}(iday), p_corr_exci_inhc{im}(iday)] = corr(fr_exc_ipsi_timeM1_aveNs{im}{iday}(trs)' , fr_inh_contra_timeM1_aveNs{im}{iday}(trs)');           
+            % E_contra , I_ipsi
+            [corr_excc_inhi{im}(iday), p_corr_excc_inhi{im}(iday)] = corr(fr_exc_contra_timeM1_aveNs{im}{iday}(trs)' , fr_inh_ipsi_timeM1_aveNs{im}{iday}(trs)');
+            %%% pool
+            rPop_EI_diff_allMice{im}(iday) = mean([corr_exci_inhc{im}(iday), corr_excc_inhi{im}(iday)]);
+            
+            
+            %%%%%%%%%% EE %%%%%%%%%%
+            % well EE_same will obviously be 1!! (corr between the same popultion!)
+            % E_ipsi , E_ipsi
+            [corr_exci_exci{im}(iday), p_corr_exci_exci{im}(iday)] = corr(fr_exc_ipsi_timeM1_aveNs{im}{iday}(trs)' , fr_exc_ipsi_timeM1_aveNs{im}{iday}(trs)');
+            % E_contra , E_contra
+            [corr_excc_excc{im}(iday), p_corr_excc_excc{im}(iday)] = corr(fr_exc_contra_timeM1_aveNs{im}{iday}(trs)' , fr_exc_contra_timeM1_aveNs{im}{iday}(trs)');
+            %%% pool
+            rPop_EE_same_allMice{im}(iday) = mean([corr_exci_exci{im}(iday), corr_excc_excc{im}(iday)]);
+
+            % E_ipsi , E_contra
+            [rPop_EE_diff_allMice{im}(iday), p_corr_exci_excc{im}(iday)] = corr(fr_exc_ipsi_timeM1_aveNs{im}{iday}(trs)' , fr_exc_contra_timeM1_aveNs{im}{iday}(trs)');
+            
+
+            %%%%%%%%%% II %%%%%%%%%%
+            % well II_same will obviously be 1!! (corr between the same popultion!)
+            % I_ipsi , I_ipsi
+            [corr_inhi_inhi{im}(iday), p_corr_inhi_inhi{im}(iday)] = corr(fr_inh_ipsi_timeM1_aveNs{im}{iday}(trs)' , fr_inh_ipsi_timeM1_aveNs{im}{iday}(trs)');
+            % I_contra , I_contra
+            [corr_inhc_inhc{im}(iday), p_corr_inhc_inhc{im}(iday)] = corr(fr_inh_contra_timeM1_aveNs{im}{iday}(trs)' , fr_inh_contra_timeM1_aveNs{im}{iday}(trs)');
+            %%% pool
+            rPop_II_same_allMice{im}(iday) = mean([corr_inhi_inhi{im}(iday), corr_inhc_inhc{im}(iday)]);
+
+            % I_ipsi , I_contra
+            [rPop_II_diff_allMice{im}(iday), p_corr_inhi_inhc{im}(iday)] = corr(fr_inh_ipsi_timeM1_aveNs{im}{iday}(trs)' , fr_inh_contra_timeM1_aveNs{im}{iday}(trs)');
+            
+
+            
+            %%%%%%%%%%%%%%%%%%%%%%%%% shuffled: corr between neurons after shuffling trials %%%%%%%%%%%%%%%%%%%%%%%%%            
+            %%%%% exc,exc: corr between similarly-tuned neurons
+            ntrs = sum(trs);
+            
+            %%%%%%%%%% EI %%%%%%%%%%
+            % E_ipsi , I_ipsi
+            [corr_exci_inhi_shfl{im}(iday)] = corr(fr_exc_ipsi_timeM1_aveNs{im}{iday}(randperm(ntrs))' , fr_inh_ipsi_timeM1_aveNs{im}{iday}(randperm(ntrs))');            
+            % E_contra , I_contra
+            [corr_excc_inhc_shfl{im}(iday)] = corr(fr_exc_contra_timeM1_aveNs{im}{iday}(randperm(ntrs))' , fr_inh_contra_timeM1_aveNs{im}{iday}(randperm(ntrs))');
+            %%% pool
+            rPop_EI_same_shfl_allMice{im}(iday) = mean([corr_exci_inhi_shfl{im}(iday), corr_excc_inhc_shfl{im}(iday)]);            
+            
+            % E_ipsi , I_contra
+            [corr_exci_inhc_shfl{im}(iday)] = corr(fr_exc_ipsi_timeM1_aveNs{im}{iday}(randperm(ntrs))' , fr_inh_contra_timeM1_aveNs{im}{iday}(randperm(ntrs))');            
+            % E_contra , I_ipsi
+            [corr_excc_inhi_shfl{im}(iday)] = corr(fr_exc_contra_timeM1_aveNs{im}{iday}(randperm(ntrs))' , fr_inh_ipsi_timeM1_aveNs{im}{iday}(randperm(ntrs))');
+            %%% pool
+            rPop_EI_diff_shfl_allMice{im}(iday) = mean([corr_exci_inhc_shfl{im}(iday), corr_excc_inhi_shfl{im}(iday)]);
+            
+            
+            %%%%%%%%%% EE %%%%%%%%%%
+            % E_ipsi , E_ipsi
+            [corr_exci_exci_shfl{im}(iday)] = corr(fr_exc_ipsi_timeM1_aveNs{im}{iday}(randperm(ntrs))' , fr_exc_ipsi_timeM1_aveNs{im}{iday}(randperm(ntrs))');
+            % E_contra , E_contra
+            [corr_excc_excc_shfl{im}(iday)] = corr(fr_exc_contra_timeM1_aveNs{im}{iday}(randperm(ntrs))' , fr_exc_contra_timeM1_aveNs{im}{iday}(randperm(ntrs))');
+            %%% pool
+            rPop_EE_same_shfl_allMice{im}(iday) = mean([corr_exci_exci_shfl{im}(iday), corr_excc_excc_shfl{im}(iday)]);
+            
+            % E_ipsi , E_contra
+            [rPop_EE_diff_shfl_allMice{im}(iday)] = corr(fr_exc_ipsi_timeM1_aveNs{im}{iday}(randperm(ntrs))' , fr_exc_contra_timeM1_aveNs{im}{iday}(randperm(ntrs))');
+            
+
+            %%%%%%%%%% II %%%%%%%%%%
+            % I_ipsi , I_ipsi
+            [corr_inhi_inhi_shfl{im}(iday)] = corr(fr_inh_ipsi_timeM1_aveNs{im}{iday}(randperm(ntrs))' , fr_inh_ipsi_timeM1_aveNs{im}{iday}(randperm(ntrs))');
+            % I_contra , I_contra
+            [corr_inhc_inhc_shfl{im}(iday)] = corr(fr_inh_contra_timeM1_aveNs{im}{iday}(randperm(ntrs))' , fr_inh_contra_timeM1_aveNs{im}{iday}(randperm(ntrs))');
+            %%% pool
+            rPop_II_same_shfl_allMice{im}(iday) = mean([corr_inhi_inhi_shfl{im}(iday), corr_inhc_inhc_shfl{im}(iday)]);
+            
+            % I_ipsi , I_contra
+            [rPop_II_diff_shfl_allMice{im}(iday)] = corr(fr_inh_ipsi_timeM1_aveNs{im}{iday}(randperm(ntrs))' , fr_inh_contra_timeM1_aveNs{im}{iday}(randperm(ntrs))');
+         
+        else
+            rPop_EI_same_allMice{im}(iday) = nan;
+            rPop_EI_diff_allMice{im}(iday) = nan;
+            rPop_EE_same_allMice{im}(iday) = nan;
+            rPop_EE_diff_allMice{im}(iday) = nan;
+            rPop_II_same_allMice{im}(iday) = nan;
+            rPop_II_diff_allMice{im}(iday) = nan;
+            rPop_EI_same_shfl_allMice{im}(iday) = nan;
+            rPop_EI_diff_shfl_allMice{im}(iday) = nan;
+            rPop_EE_same_shfl_allMice{im}(iday) = nan;
+            rPop_EE_diff_shfl_allMice{im}(iday) = nan;
+            rPop_II_same_shfl_allMice{im}(iday) = nan;
+            rPop_II_diff_shfl_allMice{im}(iday) = nan;            
+        end
+    end
+end
+
+
+
+%% Each mouse: plot histogram of corr_same, corr_diff (corr of population-averaged FR)
+
+nBins = 15;
+doSmooth = 0;
+ylab = 'Fraction days';
+xlab = 'Corr coef (population)';
+
+for im = 1:length(mice)    
+
+    fh = figure('name', mice{im}, 'position', [27         404        1370         521]);
+        
+    typeNs = 'EI';
+    sp = [231,234];
+    [~,binsSh] = plotHist(rPop_EI_same_shfl_allMice{im}, rPop_EI_diff_shfl_allMice{im},'','', {'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+    [~,bins] = plotHist(rPop_EI_same_allMice{im}, rPop_EI_diff_allMice{im},xlab,ylab, {'EI\_same','EI\_diff'}, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+    xlim([binsSh(1),bins(end)])
+    subplot(sp(1)), title(typeNs)    
+    % mark corr significancy value 
+    corrSig = min([min(abs(corr_exci_inhi{im}(p_corr_exci_inhi{im}<=.05))), min(abs(corr_excc_inhc{im}(p_corr_excc_inhc{im}<=.05))), ...
+        min(abs(corr_exci_inhc{im}(p_corr_exci_inhc{im}<=.05))), min(abs(corr_excc_inhi{im}(p_corr_excc_inhi{im}<=.05)))]);
+    vline(corrSig, 'k:')
+    vline(-corrSig, 'k:')
+    
+    typeNs = 'EE';
+    sp = [232,235];
+    [~,binsSh] = plotHist(rPop_EE_same_shfl_allMice{im}, rPop_EE_diff_shfl_allMice{im},'','', {'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp);     
+    [~,bins] = plotHist(rPop_EE_same_allMice{im}, rPop_EE_diff_allMice{im},xlab,ylab, {'EE\_same','EE\_diff'}, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+    xlim([binsSh(1),bins(end)])
+    subplot(sp(1)), title(typeNs)    
+    % mark corr significancy value 
+    corrSig = min([min(abs(corr_exci_exci{im}(p_corr_exci_exci{im}<=.05))), min(abs(corr_excc_excc{im}(p_corr_excc_excc{im}<=.05))), ...
+        min(abs(rPop_EE_diff_allMice{im}(p_corr_exci_excc{im}<=.05)))]);
+    vline(corrSig, 'k:')
+    vline(-corrSig, 'k:')
+
+    typeNs = 'II';
+    sp = [233,236];
+    [~,binsSh] = plotHist(rPop_II_same_shfl_allMice{im}, rPop_II_diff_shfl_allMice{im},'','', {'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp);         
+    [~,bins] = plotHist(rPop_II_same_allMice{im}, rPop_II_diff_allMice{im},xlab,ylab, {'II\_same','II\_diff'}, cols, [], fh, nBins, doSmooth, linestylesData, sp);   
+    xlim([binsSh(1),bins(end)])
+    subplot(sp(1)), title(typeNs)    
+    % mark corr significancy value     
+    corrSig = min([min(abs(corr_inhi_inhi{im}(p_corr_inhi_inhi{im}<=.05))), min(abs(corr_inhc_inhc{im}(p_corr_inhc_inhc{im}<=.05))), ...
+        min(abs(rPop_II_diff_allMice{im}(p_corr_inhi_inhc{im}<=.05)))]);
+    vline(corrSig, 'k:')
+    vline(-corrSig, 'k:')
+    
+
+    if saveFigs
+        namv = sprintf('corrFR_popAveFRs_distDaysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_%s', alFR, al, time2an, o2a, nowStr);
+
+        d = fullfile(dirn0fr, mice{im}, nnow);
+        fn = fullfile(dirn0fr, mice{im}, nnow, namv); 
+        
+        savefig(gcf, fn)
+    end      
+    
+end
+
+% hist of corrs, (EiEi is not pooled with EiEc, etc)
+%{
+for im = 1:length(mice)
+    figure('name', mice{im}); 
+
+    subplot(221); hold on
+    histogram(corr_exci_inhi{im})
+    plot(nanmean(corr_exci_inhi{im}), 1, 'r*')
+    title('E\_ipsi , I\_ipsi')
+    xlabel('corr coef')
+    ylabel('num days')
+
+    subplot(223); hold on
+    histogram(corr_excc_inhc{im})
+    plot(nanmean(corr_excc_inhc{im}), 1, 'r*')
+    title('E\_contra , I\_contra')
+    xlabel('corr coef')
+    ylabel('num days')
+    
+    %
+    subplot(222); hold on
+    histogram(corr_exci_inhc{im})
+    plot(nanmean(corr_exci_inhc{im}), 1, 'r*')
+    title('E\_ipsi , I\_contra')
+    xlabel('corr coef')
+    ylabel('num days')
+    
+    subplot(224); hold on
+    histogram(corr_excc_inhi{im})    
+    plot(nanmean(corr_excc_inhi{im}), 1, 'r*')
+    title('E\_contra , I\_ipsi')
+    xlabel('corr coef')
+    ylabel('num days')
+end
+%}
+
+
+%% Now plot all mice...% pool days of all mice and get a histogram...
+
+nBins = 20;
+doSmooth = 0;
+
+fh = figure('name', 'allMice', 'position', [27         404        1370         521]);
+
+typeNs = 'EI';
+leg = {'EI\_same','EI\_diff'};
+y1 = [rPop_EI_same_allMice{:}];
+y2 = [rPop_EI_diff_allMice{:}];
+sp = [231,234];
+% fh = figure('name', ['All Mice-',typeNs], 'position', [27   404   419   521]);         
+[~,binsSh] = plotHist([rPop_EI_same_shfl_allMice{:}], [rPop_EI_diff_shfl_allMice{:}],'','',{'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+[~,bins] = plotHist(y1, y2, xlab,ylab,leg, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+xlim([binsSh(1),bins(end)])
+subplot(sp(1)), title(typeNs)    
+%{
+% mark corr significancy value     
+corrSig = min([min(abs(y1([p_EI_same_allMice{:}]<=.05))), min(abs(y2([p_EI_diff_allMice{:}]<=.05)))]);
+subplot(sp(1)), title('EI')
+vline(corrSig, 'k:')
+vline(-corrSig, 'k:')
+%}
+% figure; errorbar(1:2, [nanmean(y1), mean(y2)], [nanstd(y1), std(y2)])
+% xlim([0,3])
+%{
+if saveFigs
+    namv = sprintf('corrFR_pairwise_%s_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', typeNs, alFR, al, time2an, o2a, nowStr);
+    fn = fullfile(dirn0fr, namv);
+    savefig(gcf, fn)
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end  
+%}
+
+
+typeNs = 'EE';
+leg = {'EE\_same','EE\_diff'};
+y1 = [rPop_EE_same_allMice{:}];
+y2 = [rPop_EE_diff_allMice{:}];
+sp = [232,235];
+% fh = figure('name', ['All Mice-',typeNs], 'position', [27   404   419   521]);         
+[~,binsSh] = plotHist([rPop_EE_same_shfl_allMice{:}], [rPop_EE_diff_shfl_allMice{:}],'','',{'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+[~,bins] = plotHist(y1, y2, xlab,ylab,leg, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+xlim([binsSh(1),bins(end)])
+subplot(sp(1)), title(typeNs)    
+%{
+% mark corr significancy value     
+corrSig = min([min(abs(y1([p_EE_same_allMice{:}]<=.05))), min(abs(y2([p_EE_diff_allMice{:}]<=.05)))]);
+subplot(sp(1)), title('EE')
+vline(corrSig, 'k:')
+vline(-corrSig, 'k:')
+%}
+% figure; errorbar(1:2, [nanmean(y1), mean(y2)], [nanstd(y1), std(y2)])
+% xlim([0,3])
+%{
+if saveFigs
+    namv = sprintf('corrFR_pairwise_%s_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', typeNs, alFR, al, time2an, o2a, nowStr);
+    fn = fullfile(dirn0fr, namv);
+    savefig(gcf, fn)
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end  
+%}
+
+
+typeNs = 'II';
+leg = {'II\_same','II\_diff'};
+y1 = [rPop_II_same_allMice{:}];
+y2 = [rPop_II_diff_allMice{:}];
+sp = [233,236];
+% fh = figure('name', ['All Mice-',typeNs], 'position', [27   404   419   521]);         
+[~,binsSh] = plotHist([rPop_II_same_shfl_allMice{:}], [rPop_II_diff_shfl_allMice{:}],'','',{'',''}, cols, [], fh, nBins, doSmooth, linestylesShfl, sp); 
+[~,bins] = plotHist(y1, y2, xlab,ylab,leg, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
+xlim([binsSh(1),bins(end)])
+subplot(sp(1)), title(typeNs)    
+%{
+% mark corr significancy value     
+corrSig = min([min(abs(y1([p_II_same_allMice{:}]<=.05))), min(abs(y2([p_II_diff_allMice{:}]<=.05)))]);
+subplot(sp(1)), title('II')
+vline(corrSig, 'k:')
+vline(-corrSig, 'k:')
+%}
+% figure; errorbar(1:2, [nanmean(y1), mean(y2)], [nanstd(y1), std(y2)])
+% xlim([0,3])
+
+
+if saveFigs
+    namv = sprintf('corrFR_popAveFRs_distMiceDaysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', alFR, al, time2an, o2a, nowStr);
+    
+    d = fullfile(dirn0fr, ['sumAllMice_',nnow]);
+    if ~exist(d,'dir')
+        mkdir(d)
+    end
+    fn = fullfile(d, namv);
+    
+    savefig(gcf, fn)
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%% Bin firing rates ... and look at corr vs FR for each bin of FR
+
+% average FR across trials for each neuron
+frAv_Ei = cell(1, length(mice));
+frAv_Ec = cell(1, length(mice));
+frAv_Ii = cell(1, length(mice));
+frAv_Ic = cell(1, length(mice));
+for im = 1 : length(mice)
+    for iday = 1:nAllDays(im)
+        if mnTrNum_allMice{im}(iday) >= thMinTrs
+               
+            if ipsi_contra_all(1)==1
+                trs = ipsiTrs_allDays_allMice{im}{iday};
+            elseif ipsi_contra_all(2)==1
+                trs = contraTrs_allDays_allMice{im}{iday};
+            elseif ipsi_contra_all(3)==1
+                trs = 1:length(ipsiTrs_allDays_allMice{im}{iday});
+            end
+            
+            frAv_Ei{im} = [frAv_Ei{im}; mean(fr_exc_ipsi_timeM1{im}{iday}(:,trs), 2)]; % nNeurons
+            frAv_Ec{im} = [frAv_Ec{im}; mean(fr_exc_contra_timeM1{im}{iday}(:,trs), 2)];
+            frAv_Ii{im} = [frAv_Ii{im}; mean(fr_inh_ipsi_timeM1{im}{iday}(:,trs), 2)]; % nNeurons
+            frAv_Ic{im} = [frAv_Ic{im}; mean(fr_inh_contra_timeM1{im}{iday}(:,trs), 2)];
+        end
+    end
+end
+
+% pool all mice
+frAv_Ei = cell2mat(cat(1, frAv_Ei)');
+frAv_Ec = cell2mat(cat(1, frAv_Ec)');
+frAv_Ii = cell2mat(cat(1, frAv_Ii)');
+frAv_Ic = cell2mat(cat(1, frAv_Ic)');
+
+
+nBins = 30;
+
+% set the bins
+ally = [frAv_Ei(:); frAv_Ec(:); frAv_Ii(:); frAv_Ic(:)];
+r1 = min(ally); %round(min(ally),1); 
+r2 = max(ally); %round(max(ally)+.05,1);
+bins = r1 : (r2-r1)/nBins : r2;
+bins(end) = r2 + .001;
+% set x for plotting hists as the center of bins
+x = mode(bins(2)-bins(1))/2 + bins; x = x(1:end-1);
+
+% get the counts in each bin
+[n_Ei0, e, b_Ei] = histcounts(frAv_Ei, bins);
+[n_Ec0, e, b_Ec] = histcounts(frAv_Ec, bins);
+[n_Ii0, e, b_Ii] = histcounts(frAv_Ii, bins);
+[n_Ic0, e, b_Ic] = histcounts(frAv_Ic, bins);
+
+%
+n_Ei = n_Ei0/sum(n_Ei0); 
+n_Ec = n_Ec0/sum(n_Ec0); 
+n_Ii = n_Ii0/sum(n_Ii0); 
+n_Ic = n_Ic0/sum(n_Ic0);
+% ye = smooth(ye);
+
+figure(); hold on
+plot(x, n_Ei, 'b')
+plot(x, n_Ec, 'g')
+plot(x, n_Ii, 'r')
+plot(x, n_Ic, 'm')
+legend(sprintf('Ei (n=%d)', sum(n_Ei0)), sprintf('Ec (n=%d)', sum(n_Ec0)), sprintf('Ii (n=%d)', sum(n_Ii0)), sprintf('Ic (n=%d)', sum(n_Ic0)))
+xlabel('FR (trial-averaged)')
+ylabel('Fraction neurons')
+
+if saveFigs
+    namv = sprintf('FR_EI_ipsiContra_aveTr_allMiceDaysPooled_curr_%s%s_%s.fig', alFR, o2a, nowStr);
+    savefig(gcf, fullfile(dirn0fr, namv))
+end
+
+
+%{
+% compare means of Ei_Ii, Ec_Ic with 
+% Ei_Ic, Ec_Ii
+[mean([frAv_Ei; frAv_Ii]), mean([frAv_Ec; frAv_Ic])];
+[mean([frAv_Ei; frAv_Ic]), mean([frAv_Ec; frAv_Ii])];
+
+% is FR of Ei and Ii different from the FR of Ei and Ic
+[n_EiIi, e, b_EiIi] = histcounts([frAv_Ei; frAv_Ii], bins);
+[n_EiIc, e, b_EiIc] = histcounts([frAv_Ei; frAv_Ic], bins);
+n_EiIi = n_EiIi/sum(n_EiIi);
+n_EiIc = n_EiIc/sum(n_EiIc);
+figure(); hold on
+plot(x, n_EiIi)
+plot(x, n_EiIc)
+[h,p] = ttest2([frAv_Ei; frAv_Ii], [frAv_Ei; frAv_Ic])
+
+% is EcIc FR different from EcIi FR
+[n_EcIc, e, b_EcIc] = histcounts([frAv_Ec; frAv_Ic], bins);
+[n_EcIi, e, b_EcIi] = histcounts([frAv_Ec; frAv_Ii], bins);
+n_EcIc = n_EcIc/sum(n_EcIc);
+n_EcIi = n_EcIi/sum(n_EcIi);
+figure(); hold on
+plot(x, n_EcIc)
+plot(x, n_EcIi)
+[h,p] = ttest2([frAv_Ec; frAv_Ic], [frAv_Ec; frAv_Ii])
+%}
+
+%%%%%%%%%%%%%%%%%%%%
+%%
+corrAveBin_Ei_Ei = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ec_Ec = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ei_Ec = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+
+corrAveBin_Ii_Ii = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ic_Ic = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ii_Ic = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+
+corrAveBin_Ei_Ii = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ec_Ic = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ei_Ic = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ec_Ii = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+
+% median
+corrMedBin_Ei_Ei = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrMedBin_Ec_Ec = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrMedBin_Ei_Ec = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+
+corrMedBin_Ii_Ii = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrMedBin_Ic_Ic = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrMedBin_Ii_Ic = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+
+corrMedBin_Ei_Ii = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrMedBin_Ec_Ic = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrMedBin_Ei_Ic = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrMedBin_Ec_Ii = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+    
+for im = 1 : length(mice)
+    for iday = 1:nAllDays(im)
+        if mnTrNum_allMice{im}(iday) >= thMinTrs
+
+            frAv_Ei0 = mean(fr_exc_ipsi_timeM1{im}{iday}, 2);
+            frAv_Ec0 = mean(fr_exc_contra_timeM1{im}{iday}, 2);
+            frAv_Ii0 = mean(fr_inh_ipsi_timeM1{im}{iday}, 2); % nNeurons
+            frAv_Ic0 = mean(fr_inh_contra_timeM1{im}{iday}, 2);
+            
+            % get the counts in each bin
+			[n_Ei, e, b_Ei] = histcounts(frAv_Ei0, bins);
+			[n_Ec, e, b_Ec] = histcounts(frAv_Ec0, bins);
+			[n_Ii, e, b_Ii] = histcounts(frAv_Ii0, bins);
+			[n_Ic, e, b_Ic] = histcounts(frAv_Ic0, bins);
+
+            for ibin1 = 1:length(bins)-1
+                for ibin2 = 1:length(bins)-1
+
+                    % b==ibin; % index of ns whose FR is in bin ibin
+                    % Take a subset of corrs ... in which neurons FR is in bins ibin1 and ibin2
+                    a_Ei_Ei = r_Ei_Ei{im}{iday}(b_Ei==ibin1 , b_Ei==ibin2);
+                    a_Ec_Ec = r_Ec_Ec{im}{iday}(b_Ec==ibin1 , b_Ec==ibin2);
+                    a_Ei_Ec = r_Ei_Ec{im}{iday}(b_Ei==ibin1 , b_Ec==ibin2);
+
+                    a_Ii_Ii = r_Ii_Ii{im}{iday}(b_Ii==ibin1 , b_Ii==ibin2);
+                    a_Ic_Ic = r_Ic_Ic{im}{iday}(b_Ic==ibin1 , b_Ic==ibin2);
+                    a_Ii_Ic = r_Ii_Ic{im}{iday}(b_Ii==ibin1 , b_Ic==ibin2);    
+
+                    a_Ei_Ii = r_Ei_Ii{im}{iday}(b_Ei==ibin1 , b_Ii==ibin2);
+                    a_Ec_Ic = r_Ec_Ic{im}{iday}(b_Ec==ibin1 , b_Ic==ibin2);
+                    a_Ei_Ic = r_Ei_Ic{im}{iday}(b_Ei==ibin1 , b_Ic==ibin2);
+                    a_Ec_Ii = r_Ec_Ii{im}{iday}(b_Ec==ibin1 , b_Ii==ibin2);
+
+                    
+                    if ibin1==ibin2 % it's symmetric so set upper triu to nan
+                        a_Ei_Ei = triu_nan(a_Ei_Ei);
+                        a_Ec_Ec = triu_nan(a_Ec_Ec);
+
+                        a_Ii_Ii = triu_nan(a_Ii_Ii);
+                        a_Ic_Ic = triu_nan(a_Ic_Ic);
+                    end
+
+                    %{ 
+                    % not sure if you want to apply this condition!
+                    if sum(~isnan(a_Ei_Ei(:))) < thNpairs % we need at least 10 pairs of neurons for each combination of FR bins to rely on their average corr value.
+                        a_Ei_Ei = nan;
+                        a_Ec_Ec = nan;
+                        a_Ei_Ec = nan;
+
+                        a_Ii_Ii = nan;
+                        a_Ic_Ic = nan;
+                        a_Ii_Ic = nan;
+
+                        a_Ei_Ii = nan;
+                        a_Ec_Ic = nan;
+                        a_Ei_Ic = nan;                        
+                        a_Ec_Ii = nan;                        
+                    end
+                    %}
+                    % get mean corr of these neurons (each neuron has its FR in a specific bin)
+                    corrAveBin_Ei_Ei{im}{iday}(ibin1, ibin2) = nanmean(a_Ei_Ei(:));
+                    corrAveBin_Ec_Ec{im}{iday}(ibin1, ibin2) = nanmean(a_Ec_Ec(:));
+                    corrAveBin_Ei_Ec{im}{iday}(ibin1, ibin2) = nanmean(a_Ei_Ec(:));
+
+                    corrAveBin_Ii_Ii{im}{iday}(ibin1, ibin2) = nanmean(a_Ii_Ii(:));
+                    corrAveBin_Ic_Ic{im}{iday}(ibin1, ibin2) = nanmean(a_Ic_Ic(:));
+                    corrAveBin_Ii_Ic{im}{iday}(ibin1, ibin2) = nanmean(a_Ii_Ic(:));
+
+                    corrAveBin_Ei_Ii{im}{iday}(ibin1, ibin2) = nanmean(a_Ei_Ii(:));
+                    corrAveBin_Ec_Ic{im}{iday}(ibin1, ibin2) = nanmean(a_Ec_Ic(:));
+                    corrAveBin_Ei_Ic{im}{iday}(ibin1, ibin2) = nanmean(a_Ei_Ic(:));
+                    corrAveBin_Ec_Ii{im}{iday}(ibin1, ibin2) = nanmean(a_Ec_Ii(:));
+
+
+                    % median
+                    corrMedBin_Ei_Ei{im}{iday}(ibin1, ibin2) = nanmedian(a_Ei_Ei(:));
+                    corrMedBin_Ec_Ec{im}{iday}(ibin1, ibin2) = nanmedian(a_Ec_Ec(:));
+                    corrMedBin_Ei_Ec{im}{iday}(ibin1, ibin2) = nanmedian(a_Ei_Ec(:));
+
+                    corrMedBin_Ii_Ii{im}{iday}(ibin1, ibin2) = nanmedian(a_Ii_Ii(:));
+                    corrMedBin_Ic_Ic{im}{iday}(ibin1, ibin2) = nanmedian(a_Ic_Ic(:));
+                    corrMedBin_Ii_Ic{im}{iday}(ibin1, ibin2) = nanmedian(a_Ii_Ic(:));
+
+                    corrMedBin_Ei_Ii{im}{iday}(ibin1, ibin2) = nanmean(a_Ei_Ii(:));
+                    corrMedBin_Ec_Ic{im}{iday}(ibin1, ibin2) = nanmean(a_Ec_Ic(:));
+                    corrMedBin_Ei_Ic{im}{iday}(ibin1, ibin2) = nanmean(a_Ei_Ic(:));
+                    corrMedBin_Ec_Ii{im}{iday}(ibin1, ibin2) = nanmean(a_Ec_Ii(:));
+
+                end
+            end
+        end
+    end
+end
+
+
+% plot corrs of individual populations
+%{
+figure; 
+subplot(211); plot(x, corrAveBin_Ei_Ei, 'o-')
+subplot(212);  plot(x, corrMedBin_Ei_Ei, 'o-')
+
+figure; 
+subplot(211); plot(x, corrAveBin_Ec_Ec, 'o-')
+subplot(212);  plot(x, corrMedBin_Ec_Ec, 'o-')
+
+figure; 
+subplot(211); plot(x, corrAveBin_Ei_Ec, 'o-')
+subplot(212);  plot(x, corrMedBin_Ei_Ec, 'o-')
+
+% inh
+figure; 
+subplot(211); plot(x, corrAveBin_Ii_Ii, 'o-')
+subplot(212);  plot(x, corrMedBin_Ii_Ii, 'o-')
+
+figure; 
+subplot(211); plot(x, corrAveBin_Ic_Ic, 'o-')
+subplot(212);  plot(x, corrMedBin_Ic_Ic, 'o-')
+
+figure; 
+subplot(211); plot(x, corrAveBin_Ii_Ic, 'o-')
+subplot(212);  plot(x, corrMedBin_Ii_Ic, 'o-')
+
+%
+figure; 
+subplot(211); plot(x, corrAveBin_Ei_Ii, 'o-')
+subplot(212);  plot(x, corrMedBin_Ei_Ii, 'o-')
+
+figure; 
+subplot(211); plot(x, corrAveBin_Ec_Ic, 'o-')
+subplot(212);  plot(x, corrMedBin_Ec_Ic, 'o-')
+
+figure; 
+subplot(211); plot(x, corrAveBin_Ei_Ic, 'o-')
+subplot(212);  plot(x, corrMedBin_Ei_Ic, 'o-')
+
+figure; 
+subplot(211); plot(x, corrAveBin_Ec_Ii, 'o-')
+subplot(212); plot(x, corrMedBin_Ec_Ii, 'o-')
+%}
+
+% pool all different neurons
+%{
+a = [corrAveBin_Ei_Ei; corrAveBin_Ec_Ec; corrAveBin_Ei_Ec; corrAveBin_Ii_Ii; corrAveBin_Ic_Ic; corrAveBin_Ii_Ic; corrAveBin_Ei_Ii; corrAveBin_Ec_Ic; corrAveBin_Ei_Ic; corrAveBin_Ec_Ii];
+figure; 
+subplot(211); plot(x, a, 'o')
+xlabel('FR'); ylabel('corr coef')
+subplot(212); plot(x, nanmean(a), 'bo')
+%}
+
+%%%%%%%%%%% For one day of one mouse:
+%{
+a = cat(3, corrAveBin_Ei_Ei, corrAveBin_Ec_Ec, corrAveBin_Ei_Ec, corrAveBin_Ii_Ii, corrAveBin_Ic_Ic, corrAveBin_Ii_Ic, corrAveBin_Ei_Ii, corrAveBin_Ec_Ic, corrAveBin_Ei_Ic, corrAveBin_Ec_Ii);
+aa = nanmean(a,3);
+figure; imagesc(aa)
+
+figure; plot(x, nanmean(aa(1:10,:),1), 'bo')
+figure; plot(x, nanmean(aa(end-20:end,:),1), 'bo')
+
+% both neurons in the same bin of FR
+figure; plot(x, diag(aa), 'bo'), xlabel('FR'); ylabel('corr coef')
+
+% low FR .. both neurons in the low FR bin (not necessarily the same bin though)
+a0 = aa(1:10,1:10);
+% how FR .. both neurons in the low FR bin (not necessarily the same bin though)
+a00 = aa(end-20:end , end-20:end);
+[nanmean(a0(:)), nanmean(a00(:))]
+%}
+
+
+
+
+%%%%% Pool all days of all mice
+corrAveBin_Ei_Ei_allDaysPooledAve = nanmean(reshape(cell2mat(vertcat([corrAveBin_Ei_Ei{:}])), 50,50,[]), 3);
+corrAveBin_Ec_Ec_allDaysPooledAve = nanmean(reshape(cell2mat(vertcat([corrAveBin_Ec_Ec{:}])), 50,50,[]), 3);
+corrAveBin_Ei_Ec_allDaysPooledAve = nanmean(reshape(cell2mat(vertcat([corrAveBin_Ei_Ec{:}])), 50,50,[]), 3);
+
+corrAveBin_Ii_Ii_allDaysPooledAve = nanmean(reshape(cell2mat(vertcat([corrAveBin_Ii_Ii{:}])), 50,50,[]), 3);
+corrAveBin_Ic_Ic_allDaysPooledAve = nanmean(reshape(cell2mat(vertcat([corrAveBin_Ic_Ic{:}])), 50,50,[]), 3);
+corrAveBin_Ii_Ic_allDaysPooledAve = nanmean(reshape(cell2mat(vertcat([corrAveBin_Ii_Ic{:}])), 50,50,[]), 3);
+
+corrAveBin_Ei_Ii_allDaysPooledAve = nanmean(reshape(cell2mat(vertcat([corrAveBin_Ei_Ii{:}])), 50,50,[]), 3);
+corrAveBin_Ec_Ic_allDaysPooledAve = nanmean(reshape(cell2mat(vertcat([corrAveBin_Ec_Ic{:}])), 50,50,[]), 3);
+corrAveBin_Ei_Ic_allDaysPooledAve = nanmean(reshape(cell2mat(vertcat([corrAveBin_Ei_Ic{:}])), 50,50,[]), 3);
+corrAveBin_Ec_Ii_allDaysPooledAve = nanmean(reshape(cell2mat(vertcat([corrAveBin_Ec_Ii{:}])), 50,50,[]), 3);
+
+% pool all different population corrs
+a = cat(3, corrAveBin_Ei_Ei_allDaysPooledAve, corrAveBin_Ec_Ec_allDaysPooledAve, corrAveBin_Ei_Ec_allDaysPooledAve, corrAveBin_Ii_Ii_allDaysPooledAve, corrAveBin_Ic_Ic_allDaysPooledAve, corrAveBin_Ii_Ic_allDaysPooledAve, corrAveBin_Ei_Ii_allDaysPooledAve, corrAveBin_Ec_Ic_allDaysPooledAve, corrAveBin_Ei_Ic_allDaysPooledAve, corrAveBin_Ec_Ii_allDaysPooledAve);
+% a = cat(3, corrAveBin_Ei_Ei_allDaysPooledAve, corrAveBin_Ec_Ec_allDaysPooledAve, corrAveBin_Ii_Ii_allDaysPooledAve, corrAveBin_Ic_Ic_allDaysPooledAve, corrAveBin_Ei_Ii_allDaysPooledAve, corrAveBin_Ec_Ic_allDaysPooledAve);
+% a = cat(3, corrAveBin_Ei_Ec_allDaysPooledAve, corrAveBin_Ii_Ic_allDaysPooledAve, corrAveBin_Ei_Ic_allDaysPooledAve, corrAveBin_Ec_Ii_allDaysPooledAve);
+% a = cat(3, corrAveBin_Ei_Ei_allDaysPooledAve, corrAveBin_Ec_Ec_allDaysPooledAve, corrAveBin_Ii_Ii_allDaysPooledAve, corrAveBin_Ic_Ic_allDaysPooledAve);
+% a = cat(3, corrAveBin_Ei_Ic_allDaysPooledAve, corrAveBin_Ec_Ii_allDaysPooledAve);
+% a = corrAveBin_Ii_Ic_allDaysPooledAve;
+
+figure('name', 'avePooledDays, E-I'); 
+a = cat(3, corrAveBin_Ei_Ii_allDaysPooledAve, corrAveBin_Ec_Ic_allDaysPooledAve);
+aa = nanmean(a,3);
+subplot(224); imagesc(aa); % set(gca, 'xticklabel'
+subplot(221); hold on; plot(x, nanmean(aa(1:10,:),1), 'o')
+subplot(223); hold on; plot(x, nanmean(aa(end-20:end,:),1), 'o')
+% both neurons in the same bin of FR
+subplot(222); hold on; plot(x, diag(aa), 'o'), xlabel('FR'); ylabel('corr coef')
+
+a = cat(3, corrAveBin_Ei_Ic_allDaysPooledAve, corrAveBin_Ec_Ii_allDaysPooledAve);
+aa = nanmean(a,3);
+subplot(224); imagesc(aa); % set(gca, 'xticklabel'
+subplot(221); hold on; plot(x, nanmean(aa(1:10,:),1), 'o')
+subplot(223); hold on; plot(x, nanmean(aa(end-20:end,:),1), 'o')
+% both neurons in the same bin of FR
+subplot(222); hold on; plot(x, diag(aa), 'o'), xlabel('FR'); ylabel('corr coef')
+
+
+figure('name', 'avePooledDays, E-E'); 
+a = cat(3, corrAveBin_Ei_Ei_allDaysPooledAve, corrAveBin_Ec_Ec_allDaysPooledAve);
+aa = nanmean(a,3);
+subplot(224); imagesc(aa); % set(gca, 'xticklabel'
+subplot(221); hold on; plot(x, nanmean(aa(1:10,:),1), 'o')
+subplot(223); hold on; plot(x, nanmean(aa(end-20:end,:),1), 'o')
+% both neurons in the same bin of FR
+subplot(222); hold on; plot(x, diag(aa), 'o'), xlabel('FR'); ylabel('corr coef')
+
+a = corrAveBin_Ei_Ec_allDaysPooledAve;
+aa = nanmean(a,3);
+subplot(224); imagesc(aa); % set(gca, 'xticklabel'
+subplot(221); hold on; plot(x, nanmean(aa(1:10,:),1), 'o')
+subplot(223); hold on; plot(x, nanmean(aa(end-20:end,:),1), 'o')
+% both neurons in the same bin of FR
+subplot(222); hold on; plot(x, diag(aa), 'o'), xlabel('FR'); ylabel('corr coef')
+
+
+figure('name', 'avePooledDays, I-I'); 
+a = cat(3, corrAveBin_Ii_Ii_allDaysPooledAve, corrAveBin_Ic_Ic_allDaysPooledAve);
+aa = nanmean(a,3);
+subplot(224); imagesc(aa); % set(gca, 'xticklabel'
+subplot(221); hold on; plot(x, nanmean(aa(1:10,:),1), 'o')
+subplot(223); hold on; plot(x, nanmean(aa(end-20:end,:),1), 'o')
+% both neurons in the same bin of FR
+subplot(222); hold on; plot(x, diag(aa), 'o'), xlabel('FR'); ylabel('corr coef')
+
+a = corrAveBin_Ii_Ic_allDaysPooledAve;
+aa = nanmean(a,3);
+subplot(224); imagesc(aa); % set(gca, 'xticklabel'
+subplot(221); hold on; plot(x, nanmean(aa(1:10,:),1), 'o')
+subplot(223); hold on; plot(x, nanmean(aa(end-20:end,:),1), 'o')
+% both neurons in the same bin of FR
+subplot(222); hold on; plot(x, diag(aa), 'o'), xlabel('FR'); ylabel('corr coef')
+
+
+
+% low FR .. both neurons in the low FR bin (not necessarily the same bin though)
+a0 = aa(1:10,1:10);
+% how FR .. both neurons in the low FR bin (not necessarily the same bin though)
+a00 = aa(end-20:end , end-20:end);
+[nanmean(a0(:)), nanmean(a00(:))]
+
+
+
+
+% average across days for each mouse
+%%%%%%%%%%%%%%%%%%%%
+corrAveBin_Ei_Ei_avDays = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ec_Ec_avDays = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ei_Ec_avDays = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+
+corrAveBin_Ii_Ii_avDays = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ic_Ic_avDays = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ii_Ic_avDays = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+
+corrAveBin_Ei_Ii_avDays = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ec_Ic_avDays = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ei_Ic_avDays = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+corrAveBin_Ec_Ii_avDays = cell(1, length(mice)); % nan(length(bins)-1 , length(bins)-1);
+
+for im = 1 : length(mice)
+    % concat all days, then take an average across days
+    corrAveBin_Ei_Ei_avDays{im} = nanmean(reshape(cell2mat(corrAveBin_Ei_Ei{im}), nBins,nBins,[]),3);
+    corrAveBin_Ec_Ec_avDays{im} = nanmean(reshape(cell2mat(corrAveBin_Ec_Ec{im}), nBins,nBins,[]),3);
+    corrAveBin_Ei_Ec_avDays{im} = nanmean(reshape(cell2mat(corrAveBin_Ei_Ec{im}), nBins,nBins,[]),3);
+    
+    corrAveBin_Ii_Ii_avDays{im} = nanmean(reshape(cell2mat(corrAveBin_Ii_Ii{im}), nBins,nBins,[]),3);
+    corrAveBin_Ic_Ic_avDays{im} = nanmean(reshape(cell2mat(corrAveBin_Ic_Ic{im}), nBins,nBins,[]),3);
+    corrAveBin_Ii_Ic_avDays{im} = nanmean(reshape(cell2mat(corrAveBin_Ii_Ic{im}), nBins,nBins,[]),3);
+
+    corrAveBin_Ei_Ii_avDays{im} = nanmean(reshape(cell2mat(corrAveBin_Ei_Ii{im}), nBins,nBins,[]),3);
+    corrAveBin_Ec_Ic_avDays{im} = nanmean(reshape(cell2mat(corrAveBin_Ec_Ic{im}), nBins,nBins,[]),3);
+    corrAveBin_Ei_Ic_avDays{im} = nanmean(reshape(cell2mat(corrAveBin_Ei_Ic{im}), nBins,nBins,[]),3);    
+    corrAveBin_Ec_Ii_avDays{im} = nanmean(reshape(cell2mat(corrAveBin_Ec_Ii{im}), nBins,nBins,[]),3);    
+end
+
+% average across mice
+corrAveBin_Ei_Ei_avMice = nanmean(reshape(cell2mat(corrAveBin_Ei_Ei_avDays), nBins,nBins,[]),3);
+corrAveBin_Ec_Ec_avMice = nanmean(reshape(cell2mat(corrAveBin_Ec_Ec_avDays), nBins,nBins,[]),3);
+corrAveBin_Ei_Ec_avMice = nanmean(reshape(cell2mat(corrAveBin_Ei_Ec_avDays), nBins,nBins,[]),3);
+
+corrAveBin_Ii_Ii_avMice = nanmean(reshape(cell2mat(corrAveBin_Ii_Ii_avDays), nBins,nBins,[]),3);
+corrAveBin_Ic_Ic_avMice = nanmean(reshape(cell2mat(corrAveBin_Ic_Ic_avDays), nBins,nBins,[]),3);
+corrAveBin_Ii_Ic_avMice = nanmean(reshape(cell2mat(corrAveBin_Ii_Ic_avDays), nBins,nBins,[]),3);
+
+corrAveBin_Ei_Ii_avMice = nanmean(reshape(cell2mat(corrAveBin_Ei_Ii_avDays), nBins,nBins,[]),3);
+corrAveBin_Ec_Ic_avMice = nanmean(reshape(cell2mat(corrAveBin_Ec_Ic_avDays), nBins,nBins,[]),3);
+corrAveBin_Ei_Ic_avMice = nanmean(reshape(cell2mat(corrAveBin_Ei_Ic_avDays), nBins,nBins,[]),3);
+corrAveBin_Ec_Ii_avMice = nanmean(reshape(cell2mat(corrAveBin_Ec_Ii_avDays), nBins,nBins,[]),3);
+
+% pool all different population corrs
+a = cat(3, corrAveBin_Ei_Ei_avMice, corrAveBin_Ec_Ec_avMice, corrAveBin_Ei_Ec_avMice, corrAveBin_Ii_Ii_avMice, corrAveBin_Ic_Ic_avMice, corrAveBin_Ii_Ic_avMice, corrAveBin_Ei_Ii_avMice, corrAveBin_Ec_Ic_avMice, corrAveBin_Ei_Ic_avMice, corrAveBin_Ec_Ii_avMice);
+aa = nanmean(a,3);
+figure('name', 'aveMice'); 
+subplot(224); imagesc(aa)
+
+subplot(221); plot(x, nanmean(aa(1:10,:),1), 'bo')
+subplot(223); plot(x, nanmean(aa(end-20:end,:),1), 'bo')
+
+% both neurons in the same bin of FR
+subplot(222); plot(x, diag(aa), 'bo'), xlabel('FR'); ylabel('corr coef')
+
+% low FR .. both neurons in the low FR bin (not necessarily the same bin though)
+a0 = aa(1:10,1:10);
+% how FR .. both neurons in the low FR bin (not necessarily the same bin though)
+a00 = aa(end-20:end , end-20:end);
+[nanmean(a0(:)), nanmean(a00(:))]
+
+
+
+%%%%%%%%%%%% each mouse
+for im = 1:length(mice)
+    % pool all different population corrs
+    a = cat(3, corrAveBin_Ei_Ei_avDays{im}, corrAveBin_Ec_Ec_avDays{im}, corrAveBin_Ei_Ec_avDays{im}, corrAveBin_Ii_Ii_avDays{im}, corrAveBin_Ic_Ic_avDays{im}, corrAveBin_Ii_Ic_avDays{im}, corrAveBin_Ei_Ii_avDays{im}, corrAveBin_Ec_Ic_avDays{im}, corrAveBin_Ei_Ic_avDays{im}, corrAveBin_Ec_Ii_avDays{im});
+    aa = nanmean(a,3);
+    figure('name',mice{im}); 
+    subplot(224); imagesc(aa)
+
+%     figure('name',mice{im}); 
+    subplot(221); plot(x, nanmean(aa(1:10,:),1), 'bo')
+    subplot(223);  plot(x, nanmean(aa(end-20:end,:),1), 'bo')
+
+    % both neurons in the same bin of FR
+    subplot(222);  plot(x, diag(aa), 'bo'), xlabel('FR'); ylabel('corr coef')
+
+    % low FR .. both neurons in the low FR bin (not necessarily the same bin though)
+    a0 = aa(1:10,1:10);
+    % how FR .. both neurons in the low FR bin (not necessarily the same bin though)
+    a00 = aa(end-20:end , end-20:end);
+    [nanmean(a0(:)), nanmean(a00(:))]
+end
+
+
+%%%%%%%%%%%% each day
+for im = 1:length(mice)
+    % pool all different population corrs
+    a = cat(3, corrAveBin_Ei_Ei{im}{iday}, corrAveBin_Ec_Ec{im}{iday}, corrAveBin_Ei_Ec{im}{iday}, corrAveBin_Ii_Ii{im}{iday}, corrAveBin_Ic_Ic{im}{iday}, corrAveBin_Ii_Ic{im}{iday}, corrAveBin_Ei_Ii{im}{iday}, corrAveBin_Ec_Ic{im}{iday}, corrAveBin_Ei_Ic{im}{iday}, corrAveBin_Ec_Ii{im}{iday});
+    aa = nanmean(a,3);
+    figure('name',mice{im}); 
+    subplot(224); imagesc(aa)
+
+%     figure('name',mice{im}); 
+    subplot(221); plot(x, nanmean(aa(1:10,:),1), 'bo')
+    subplot(223);  plot(x, nanmean(aa(end-20:end,:),1), 'bo')
+
+    % both neurons in the same bin of FR
+    subplot(222);  plot(x, diag(aa), 'bo'), xlabel('FR'); ylabel('corr coef')
+
+    % low FR .. both neurons in the low FR bin (not necessarily the same bin though)
+    a0 = aa(1:10,1:10);
+    % how FR .. both neurons in the low FR bin (not necessarily the same bin though)
+    a00 = aa(end-20:end , end-20:end);
+    [nanmean(a0(:)), nanmean(a00(:))]
+end
+
+
+%{
+figure;
+for iN = 1:length(y1) % corr of n1 with n2
+    n1corrs = r_Ei_Ei{im}{iday}(:,iN);
+
+    % what's their average FR
+%     y1([1,2])
+
+    % or see if N1's corr with other ns depends on their fr?
+    subplot(211); plot(y1, n1corrs, '.'); hold on; plot(y1(iN), 0, 'r*')
+    subplot(212); plot(y1/y1(iN), n1corrs, '.'); hold on; plot(1, 0, 'r*')
+    pause
+    subplot(211); cla
+    subplot(212); cla
+end
+%}
+
+

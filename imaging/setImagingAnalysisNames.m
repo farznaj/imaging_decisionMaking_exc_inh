@@ -45,12 +45,17 @@ if ~exist(tifFold, 'dir')
     end
 end
 
-% date_major = sprintf('%s_%03d', imagingFolder(1:6), mdfFileNumber);
-r = repmat('%03d-', 1, length(mdfFileNumber));
-r(end) = [];
-date_major = sprintf(['%s_', r], imagingFolder, mdfFileNumber);
+if ~isempty(mdfFileNumber)
+    % date_major = sprintf('%s_%03d', imagingFolder(1:6), mdfFileNumber);
+    r = repmat('%03d-', 1, length(mdfFileNumber));
+    r(end) = [];
+    date_major = sprintf(['%s_', r], imagingFolder, mdfFileNumber);
 
-imfilename = fullfile(tifFold, date_major);
+    imfilename = fullfile(tifFold, date_major);
+else
+    imfilename = '';
+end
+
 
 if exist('signalCh', 'var')
     if postNProvided

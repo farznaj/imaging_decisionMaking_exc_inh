@@ -429,6 +429,7 @@ def predictMan(X,w,b,th=0): # set th to nan if you are predicting on svr (since 
 
 
 #%% Function to only show left and bottom axes of plots, make tick directions outward, remove every other tick label if requested.
+
 def makeNicePlots(ax, rmv2ndXtickLabel=0, rmv2ndYtickLabel=0):
     # Hide the right and top spines
     ax.spines['right'].set_visible(False)
@@ -457,6 +458,7 @@ def makeNicePlots(ax, rmv2ndXtickLabel=0, rmv2ndYtickLabel=0):
     #ax.xaxis.label.set_color('red')    
 #    plt.gca().spines['left'].set_color('white')
     #plt.gca().yaxis.set_visible(False)
+
 
 #%%    
      #import matplotlib.pyplot as plt
@@ -1930,7 +1932,10 @@ def set_nprepost_allMice(trace_allMice, eventI_ds_allDays_allMice, corr_hr_lr_al
     
     for im in range(len(trace_allMice)):
         
-        mn_corr = np.min(corr_hr_lr_allMice[im], axis=1) # number of trials of each class. 90% of this was used for training, and 10% for testing.
+        if np.ndim(corr_hr_lr_allMice[im])==2:
+            mn_corr = np.min(corr_hr_lr_allMice[im], axis=1) # number of trials of each class. 90% of this was used for training, and 10% for testing.
+        elif np.ndim(corr_hr_lr_allMice[im])==1: # mn_corr is already provided; we dont need to take te min..
+            mn_corr = corr_hr_lr_allMice[im]
         
         nPreMin = np.nanmin(eventI_ds_allDays_allMice[im][mn_corr >= thTrained]).astype('int') # number of frames before the common eventI, also the index of common eventI.     
         totLen = trace_allMice[im].shape[1] #nPreMin + nPostMin +1         # trace_allMice = classAccurTMS_allExc[im]
@@ -1998,6 +2003,8 @@ def alTrace_frfr(trace, eventI_ds_allDays, nPreMin, nPostMin, mn_corr=np.nan, th
     # frsDim = nan --> default: dimensions 0 and 1 of trace are frames. otherwise frsDim 
     # the first 2 dimensions of trace must be frames (unless frsDim other than nan)
     # output: days x alignedFrs x alignedFrs
+    
+    # if each element of trace is for each mouse, and it includes traces of all days, mn_corr must be nan, ie u must first remove bad days ... bc u cannot do it here.
 
     numDays = len(trace)
 
@@ -2008,7 +2015,7 @@ def alTrace_frfr(trace, eventI_ds_allDays, nPreMin, nPostMin, mn_corr=np.nan, th
         trace = [np.transpose(trace[im], ([frsDim[0],frsDim[1],nonFrDim])) for im in range(numDays)]
 
     
-    if np.isnan(mn_corr).any():
+    if type(mn_corr)==float and np.isnan(mn_corr).any():
         mn_corr = np.full((numDays), thTrained+1, dtype=int) # so all days are analyzed    
     
 #    totLen = nPreMin + nPostMin + 1  # len(time_aligned) # nPreMin + nPostMin + 1   
@@ -2548,4 +2555,216 @@ def plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap='jet', cblab='', x
 #    plt.gca().set_xlim([extent[0]-10 , extent[1]+10])
     
     makeNicePlots(plt.gca(), 1, 1)
+
+
+
+#%% Plot heatmaps of Angles averaged across days for data, shfl, shfl-data (plot angle between decoders at different time points)        
+
+def plotAngsAll(nPreMin, time_aligned, angInh_av, angExc_av, angAllExc_av, angExc_excsh_av, angInhS_av, angExcS_av, angAllExcS_av, angExc_excshS_av, pei, dnow, fnam, cblab = 'Angle between decoders', CA=0):
+    
+    # Make a large figure including 3 subfigues: data, shfl, data-shfl; each subfigure has 3 subplots for exc, inh, allN
+    
+    # CA: if 1, plotting class accur, if 0, plotting angles.
+    # set angInhS_av to 0 if you want to only plot data
+    # set angInh_av to 0 if you want to only plot data-shfl
+    
+    ################## set vars ##################
+    
+    if 'doExcSamps' not in locals():
+        doExcSamps = 1 # exc was first averaged across trial samps, then across exc samps... for each mouse
+        
+    totLen = len(time_aligned) 
+
+    if chAl:
+        cha = 'chAl_'
+    else:
+        cha = 'stAl_'
+    
+    if CA==1:
+        cmap = 'jet'
+        cblab = 'Class accuracy (%)'        
+        xl = 'Testing t (ms)'
+        yl = 'Decoder training t (ms)'
+        cblabd = 'Class accuracy (data-shfl)'
+        cblabdd = 'Inh-Exc: class accur'        
+#        cmax = 100
+        cmax = np.ceil(np.max([np.nanmax(angInh_av), np.nanmax(angExc_excsh_av), np.nanmax(angAllExc_av)])*100)/100
+    else:
+        cmap = 'jet_r' # lower angles: more aligned: red
+        cblab = 'Angle between decoders'
+        xl = 'Time since choice onset (ms)'
+        yl = xl
+        cblabd = 'Alignment rel. shuffle'
+        cblabdd = 'Inh-Exc: angle between decoders'        
+        cmax = 90
+        
+    ################## start plotting ##################
+        
+    if type(angInh_av)==int or type(angInhS_av)==int: # we set angInh_av to 0, when angInhS_av is in fact shfl-data and we only want to plot shfl-data; # similary we set angInhS_av to 0 when we want to only plot data!        
+        # plot either just data, or just data-shfl        
+        plt.figure(figsize=(8,8))  
+        rows = 2; cols = 2; 
+        sp11 = 1; sp13 = 3; sp12 = 2; sp14 = 4  # for data - shfl        
+    else: # plot data, shfl, data-shfl
+        plt.figure(figsize=(8,22))
+        rows = 6; cols = 2; 
+        sp11 = 1+8; sp13 = 3+8; sp12 = 2+8; sp14 = 4+8   
+    sp1 = 1; sp3 = 3; sp2 = 2; sp4 = 4        # for data        
+    
+    ########################### data figure ###########################    
+    if type(angInh_av)!=int: 
+        if doExcSamps:
+            ex = angExc_excsh_av
+        else:
+            ex = angExc_av        
+        
+        cmin = np.floor(np.min([np.nanmin(angInh_av), np.nanmin(ex), np.nanmin(angAllExc_av)])*100)/100
+        
+        plt.subplot(rows,cols,sp1); lab = 'inh (data)'; 
+        top = angInh_av; 
+        plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
+        plt.xlabel(xl); plt.ylabel(yl)
+        
+        plt.subplot(rows,cols,sp3); lab = 'exc (data)'; 
+        top = ex; 
+        plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
+        plt.xlabel(xl); plt.ylabel(yl)
+        
+        plt.subplot(rows,cols,sp2); lab = labAll+' (data)'; 
+        top = angAllExc_av; 
+        plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
+        plt.xlabel(xl); plt.ylabel(yl)
+        
+        plt.subplots_adjust(hspace=.2, wspace=.3)        
+                
+
+    ########################### shfl figure ###########################
+    if type(angInhS_av)!=int:         
+        if doExcSamps:
+            ex = angExc_excshS_av
+        else:
+            ex = angExcS_av        
+    #    plt.figure(figsize=(8,8))
+        cmin = np.floor(np.min([np.nanmin(angInhS_av), np.nanmin(ex), np.nanmin(angAllExcS_av)]))
+#        cmax = 90
+#        cmap = 'jet_r' # lower angles: more aligned: red
+#        cblab = 'Angle between decoders'
+    
+        plt.subplot(625); lab = 'inh (shfl)'; 
+        top = angInhS_av; 
+        plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
+        plt.xlabel(xl); plt.ylabel(yl)
+    
+        plt.subplot(627); lab = 'exc (shfl)'; 
+        top = ex; 
+        plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
+        plt.xlabel(xl); plt.ylabel(yl)
+    
+        plt.subplot(626); lab = labAll+' (shfl)'; 
+        top = angAllExcS_av; 
+        plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab)
+        plt.xlabel(xl); plt.ylabel(yl)
+    
+        plt.subplots_adjust(hspace=.2, wspace=.3)
+        
+    
+    
+    ########################### shfl-data figure (most useful plot) ###########################    
+    if type(angInhS_av)!=int:         
+        if doExcSamps:
+            ex = angExc_excshS_av - angExc_excsh_av
+        else:
+            ex = angExcS_av - angExc_av     
+        if CA==1:
+            ex = -ex # data-shfl (instead of shfl-data which is what we do for angles)
+    
+        inhd = angInhS_av-angInh_av
+        if CA==1:
+            inhd = -inhd
+    
+        allNd = angAllExcS_av-angAllExc_av
+        if CA==1:
+            allNd = -allNd
+    
+    #    plt.figure(figsize=(8,8))        
+        cmin = np.floor(np.min([np.nanmin(inhd), np.nanmin(ex), np.nanmin(allNd)]))
+        cmax = np.floor(np.max([np.nanmax(inhd), np.nanmax(ex), np.nanmax(allNd)]))
+        cmap = 'jet' # larger value: lower angle for real: more aligned: red
+        
+        plt.subplot(rows,cols,sp11);  lab = 'inh (shfl-data)';     
+        top = inhd #    top[np.triu_indices(len(top),k=0)] = np.nan # plot only the lower triangle (since values are rep)
+        plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblabd)
+        plt.xlabel(xl); plt.ylabel(yl)
+        
+        plt.subplot(rows,cols,sp13); lab = 'exc (shfl-data)'; 
+        top = ex #    top[np.triu_indices(len(top),k=0)] = np.nan
+        plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblabd)
+        plt.xlabel(xl); plt.ylabel(yl)
+            
+        plt.subplot(rows,cols,sp12); lab = labAll+' (shfl-data)'; 
+        top = allNd #    top[np.triu_indices(len(top),k=0)] = np.nan
+        plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblabd)
+        plt.xlabel(xl); plt.ylabel(yl)        
+            
+        # last subplot: inh(shfl-real) - exc(shfl-real)
+        cmin = np.nanmin(inhd - ex) 
+        cmax = np.nanmax(inhd - ex)
+    #    cmap = 'jet' # more diff: higher inh: lower angle for inh: inh more aligned: red    
+        
+        plt.subplot(rows,cols,sp14); lab = 'inh-exc'; 
+        top = inhd - ex #    top[np.triu_indices(len(top),k=0)] = np.nan
+        plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblabdd)
+        plt.xlabel(xl); plt.ylabel(yl)
+            
+        # Is inh and exc stability different? 
+        # for each population (inh,exc) subtract shuffle-averaged angles from real angles... do ttest across days for each pair of time points
+    #    _,pei = stats.ttest_ind(angleInh_aligned - angleInhS_aligned_avSh , angleExc_aligned - angleExcS_aligned_avSh, axis=-1)     
+    #    _,pei = stats.ttest_ind(angInh_av_allMice_al - angInhS_av_allMice_al ,   angExc_excsh_av_allMice_al - angExc_excshS_av_allMice_al, axis=0) 
+    #    pei[np.triu_indices(len(pei),k=0)] = np.nan
+        # mark sig points by a dot:
+        for f1 in range(totLen):
+            for f2 in range(totLen): #np.delete(range(totLen),f1): #
+                if pei[f1,f2]<.05:
+                    plt.plot(f2,f1, marker='*', color='b', markersize=5)
+    
+    
+    
+    plt.subplots_adjust(hspace=.2, wspace=.5)
+    
+    ################## save the figure ##################
+    if savefigs:
+        d = os.path.join(svmdir+dnow) #,mousename)       
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)            
+            
+        fign = os.path.join(d, suffn[0:5]+cha+fnam+'.'+fmt[0])    
+        plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+        
+
+
+
+#%% Plot heatmaps of a meaure showing all days : day vs time(during trial)
+
+def plotStabScore(top, lab, cmins, cmaxs, cmap='jet', cblab='', ax=plt):
+#    img = ax.imshow(top, cmap)
+    extent = setExtent_imshow(time_aligned, np.arange(0, top.shape[0])[::-1]) # mark y axis every 5 days.
+    img = ax.imshow(top, cmap, vmin=cmins, vmax=cmaxs, extent=extent)
+    
+#    plt.plot([nPreMin, nPreMin], [0, len(dayinds)], color='r')
+#            ax.set_xlim([-1, len(time_aligned)])
+#            ax.set_ylim([-2, len(dayinds)][::-1])
+#    ax.autoscale(False)
+#            ax.axvline(x=nPreMin, c='w', lw=1)
+    ax.axvline(x=0, c='w', lw=1)
+#    fig.colorbar(label=cblab);     
+#    plt.clim(cmins, cmaxs)
+#            ax.set_xticks(x)
+#            ax.set_xticklabels(np.round(time_aligned[x]).astype(int))
+    ax.set_ylabel('Days')
+    ax.set_xlabel(xl)
+    ax.set_title(lab)
+    makeNicePlots(ax)
+    return img
+ 
     

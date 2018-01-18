@@ -3,23 +3,30 @@
 
 %% %%%%%% Load ROC vars and set vars required for plotting for each mouse %%%%%%
 
+outcome2ana = ''; %'corr';
+% alFR = 'initAl'; % the firing rate traces were aligned on what
+
 fni18_rmvDay4 = 1; % if 1, remove 4th day of fni18.
 eachMouse_do_savefigs = [1,1]; % Whether to make plots and to save them for each mouse
 sumMice_do_savefigs = [1,1]; % Whether to make plots and to save them for the summary of mice
-doChoicePref = 2; 
+doChoicePref = 0; %2; 
     % doChoicePref=0;  % use area under ROC curve % cares about ipsi bigger than contra or vice versa
     % doChoicePref=1;  % use choice pref = 2(AUC-.5) % cares about ipsi bigger than contra or vice versa
     % doChoicePref=2;  % Compute abs deviation of AUC from chance (.5); % doesnt care about ipsi bigger than contra or vice versa
+% normX = 1; % load FRs % after downsampling set max peak to 1. Makes sense to do, since traces before downsampling are normalized to max    
+
+chAl = 1;
 thMinTrs = 10; % days with fewer than this number wont go into analysis      
 mice = {'fni16','fni17','fni18','fni19'};
-chAl = 1;
-outcome2ana = 'corr';
 thStimStrength = 0;
 plotchance = 0; % it didnt make almost any difference so go with shuffled not chance % if 0, look at shuffled (tr shuffled, if imbalance hr and lr, it would be different from chance); % if 1, plot chance (where 0s and 1s were manually made the same number). % redefine _shfl vars as _chance vars, bc we want to look at chance values
 
+
+%%
 frameLength = 1000/30.9; % sec.
 regressBins = round(100/frameLength); % 100ms # set to nan if you don't want to downsample.
-dirn0 = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/ROC';
+% dirn0 = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/ROC';
+% dirn0fr = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/FR';
 dm0 = char(strcat(join(mice, '_'),'_'));
 % doplots = 1; % make plots for each mouse 
 if doChoicePref==1  % use choice pref = 2*(auc-.5) % care about ipsi bigger than contra or vice versa.   % now ipsi is positive bc we do minus, in the original model contra is positive
@@ -50,32 +57,70 @@ else
     namz = '';
 end
 
+if chAl
+    al = 'chAl'; 
+elseif initAl==1
+    al = 'initAl'; 
+end
+        
+% if normX, nmd = '_norm2max'; else, nmd = ''; end
+
+if strcmp(outcome2ana, 'corr')
+    o2a = '_corr'; 
+elseif strcmp(outcome2ana, 'incorr')
+    o2a = '_incorr';  
+else
+    o2a = '_allOutcome';
+end      
+
 
 %%
 nPreMin_allMice = nan(1, length(mice));
 time_aligned_allMice = cell(1, length(mice));
+
 choicePref_exc_aligned_allMice = cell(1, length(mice));
 choicePref_inh_aligned_allMice = cell(1, length(mice));
 % choicePref_exc_aligned_allMice_shfl0 = cell(1, length(mice));
 % choicePref_inh_aligned_allMice_shfl0 = cell(1, length(mice));
 choicePref_exc_aligned_allMice_shfl = cell(1, length(mice));
 choicePref_inh_aligned_allMice_shfl = cell(1, length(mice));
+
 nowStr_allMice = cell(1, length(mice));
 mnTrNum_allMice = cell(1, length(mice));
 days_allMice = cell(1, length(mice));
 corr_ipsi_contra_allMice = cell(1, length(mice));
+%{
+fr_exc_aligned_allMice = cell(1, length(mice));
+fr_inh_aligned_allMice = cell(1, length(mice));
 
+ipsiTrs_allDays_allMice = cell(1, length(mice));
+contraTrs_allDays_allMice = cell(1, length(mice));
+%}
+
+%%
 % im = 1;
 for im = 1:length(mice)
 
     mouse = mice{im};
-
-    %%% Set dir    
-    dirn = fullfile(dirn0, mouse);
-%     cd(dirn)
+    [~,~,dirn] = setImagingAnalysisNames(mouse, 'analysis', []); 
     
-    if chAl==1, al = 'chAl'; else, al = 'stAl'; end        
-    if strcmp(outcome2ana, 'corr'), o2a = '_corr'; else, o2a = '';  end       
+    
+    %% Load FR vars
+    %{
+    dirn = fullfile(dirn0fr, mouse);
+    namv = sprintf('FR%s_curr_%s%s_stimstr%d%s_%s_*.mat', nmd, alFR,o2a,thStimStrength,namz,mouse);    
+    a = dir(fullfile(dirn,namv));
+    a = a(end); % use the latest saved file
+    namatfr = a.name;
+    
+    load(fullfile(dirn, namatfr), 'X_svm_all_alld_exc', 'X_svm_all_alld_inh', 'ipsiTrs_allDays', 'contraTrs_allDays') % each cell is for a day and has size: frs x units x trials
+    ipsiTrs_allDays_allMice{im} = ipsiTrs_allDays;
+    contraTrs_allDays_allMice{im} = contraTrs_allDays;
+    %}
+    
+    %% Set dir for loading ROC vars
+    
+%     dirn = fullfile(dirn0, mouse);
     namv = sprintf('ROC_curr_%s%s_stimstr%d%s_%s_*.mat', al,o2a,thStimStrength,namz,mouse);    
     a = dir(fullfile(dirn,namv));
     a = a(end); % use the latest saved file
@@ -187,7 +232,29 @@ for im = 1:length(mice)
     %}
     size(time_aligned)
             
-            
+
+    %% Align FRs of all days on the common eventI; exclude days with too few trials.
+    %%% REMEMBER: you are doing this weird thing for convenience: 
+        % for days with few trials, we use nans for arbitrarily 3 neurons and 3 trials!
+    %{        
+    fr_exc_aligned = cell(1,length(days)); % each cell: nFrames_aligned x neurons x trials (for days with few trials, we use nans and arbitrarily 3 neurons!)
+    fr_inh_aligned = cell(1,length(days));
+    
+    for iday = 1:length(days)
+        if mnTrNum(iday,:) >= thMinTrs                        
+            % data: frs x ns x trs
+            fr_exc_aligned{iday} = X_svm_all_alld_exc{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :, :); 
+            fr_inh_aligned{iday} = X_svm_all_alld_inh{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :, :); 
+        else
+            %%% REMEMBER: you are doing this weird thing for convenience: 
+            % for days with few trials, we use nans and arbitrarily 3 neurons!
+            fr_exc_aligned{iday} = nan(nPreMin + nPostMin + 1 , 3, 3); % set to nan so number of neurons and trials dont matter... I just picked 3.
+            fr_inh_aligned{iday} = nan(nPreMin + nPostMin + 1 , 3, 3);
+        end
+    end
+    %}
+    
+    
     %% Align choice pref traces of all days on the common eventI, exclude days with too few trials.
     %%% REMEMBER: you are doing this weird thing for convenience: 
     % for days with few trials, we use nans and arbitrarily 3 neurons!
@@ -219,6 +286,7 @@ for im = 1:length(mice)
                     choicePref_exc_aligned_shfl{iday} = mean(choicePref_exc_aligned_shfl0{iday},3);
                     choicePref_inh_aligned_shfl{iday} = mean(choicePref_inh_aligned_shfl0{iday},3);
                 end
+                
             elseif doChoicePref==2  % Compute abs deviation of AUC from chance (.5); we want to compute
                 % |AUC-.5|, since choice pref = 2*(auc-.5), therefore |auc-.5| = 1/2 * |choice pref|
 %                 namc = 'absDevAUC';   yy = [];                
@@ -286,6 +354,7 @@ for im = 1:length(mice)
 
     nPreMin_allMice(im) = nPreMin;
     time_aligned_allMice{im} = time_aligned;
+    
     choicePref_exc_aligned_allMice{im} = choicePref_exc_aligned; % days; each day: frs x ns
     choicePref_inh_aligned_allMice{im} = choicePref_inh_aligned;
     if doshfl
@@ -294,7 +363,10 @@ for im = 1:length(mice)
         choicePref_exc_aligned_allMice_shfl{im} = choicePref_exc_aligned_shfl; % days; each day: frs x ns
         choicePref_inh_aligned_allMice_shfl{im} = choicePref_inh_aligned_shfl;    
     end
-    
+    %{
+    fr_exc_aligned_allMice{im} = fr_exc_aligned;
+    fr_inh_aligned_allMice{im} = fr_inh_aligned;
+    %}
 end
 
 
@@ -326,6 +398,21 @@ time_al_a = time_aligned_allMice{im}(nPreMin_allMice(im)+1 : nPreMin_allMice(im)
 
 time_al = [time_al_b, time_al_a];
 
+
+%% Align FRs
+%{
+fr_exc_al_allMice = cell(1, length(mice));
+fr_inh_al_allMice = cell(1, length(mice));
+
+for im = 1:length(mice)
+    
+    ev = nPreMin_allMice(im)+1; % eventI of the day-aligned traces for mouse im    
+    for iday = 1:length(fr_exc_aligned_allMice{im})        
+        fr_exc_al_allMice{im}{iday} = fr_exc_aligned_allMice{im}{iday}(ev - nPreMin  :  ev + nPostMin, :, :); % nAlignedFrs (across mice) x neurons
+        fr_inh_al_allMice{im}{iday} = fr_inh_aligned_allMice{im}{iday}(ev - nPreMin  :  ev + nPostMin, :, :); % nAlignedFrs (across mice) x neurons
+    end
+end
+%}
 
 %% Align choice pref traces of all mice on the common eventI. (Traces of all days of each mouse are already aligned)
     
@@ -390,6 +477,11 @@ for im = 1:length(mice)
 end
 nAllDays
 nGoodDays
+
+
+
+%%
+no
 
 
 %%
