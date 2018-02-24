@@ -25,8 +25,8 @@
 % with those with low corrAve_same and high corrAve_diff
 % the former group is expected to have higher tuning.
 
-thq = .8; %.95; thq = .95; % we get closer number of elements for hi vs lo corr with .8 than .95 % to set the threshold corr for identifying hi vs lo corr % to do so we take the .95 quantile of the shuffled corr (separately done for each mouse, all days pooled... assuming that data corrs > .95 of shfl corrs are significant) 
-
+% thqHi = .8; %thq = .95; % we get closer number of elements for hi vs lo corr with .8 than .95 % to set the threshold corr for identifying hi vs lo corr % to do so we take the .95 quantile of the shuffled corr (separately done for each mouse, all days pooled... assuming that data corrs > .95 of shfl corrs are significant) 
+thqLo = .8;
 
 cols = {'k', 'r'};
 ylab = 'Fraction neurons';
@@ -47,6 +47,8 @@ disp([mn0, mx0])
 r2 = round(mx0+.05,1);
 % bins = r1 : (r2-r1)/10 : r2; 
 bins = [0, .02, r2]; % bins = [0, .2, r2]; % we only study positive correlations ... also we use abs for corrs below...
+% bins = [0, .02, .02, r2];
+hiBin = length(bins)-1;
 
 
 %%
@@ -62,14 +64,17 @@ for im = 1:length(mice)
     % inh
     binsI = bins;
     a = abs([rAve_Ii_Ei_shfl{im}{:}, rAve_Ii_Ec_shfl{im}{:}, rAve_Ic_Ec{im}{:}, rAve_Ic_Ei{im}{:}]);
-    binsI(2) = quantile(a, thq); fprintf('threshold corr = %.3f\n', binsI(2))    
+    binsI(2) = quantile(a, thqLo); %fprintf('threshold corr = %.3f\n', binsI(2))    
+%     binsI(3) = quantile(a, thqHi);
+    
     % exc
     binsE = bins;
     a = abs([rAve_Ei_Ii_shfl{im}{:}, rAve_Ei_Ic_shfl{im}{:}, rAve_Ec_Ic_shfl{im}{:}, rAve_Ec_Ii_shfl{im}{:}]);
-    binsE(2) = quantile(a, thq); fprintf('threshold corr = %.3f\n', binsE(2))
+    binsE(2) = quantile(a, thqLo); %fprintf('threshold corr = %.3f\n', binsE(2))
+%     binsI(3) = quantile(a, thqHi);
     
     
-    for iday = 1:nAllDays(im)    
+    for iday = 1:numDaysAll(im)    
         
         %%%%% EI case %%%%%
         
@@ -88,15 +93,15 @@ for im = 1:length(mice)
        
         
         %%% set indeces of neurons that have hi corrAve_same and lo corrAve_diff (or negative corrAve_diff)
-        Ii_inds_corrAveLoDiff = (i_rAve_Ii_Ei == 2) & (i_rAve_Ii_Ec == 1); %(rAve_Ii_Ec{im}{iday}<0); %
-        Ic_inds_corrAveLoDiff = (i_rAve_Ic_Ec == 2) & (i_rAve_Ic_Ei == 1); %(rAve_Ic_Ei{im}{iday}<0); %
+        Ii_inds_corrAveLoDiff = (i_rAve_Ii_Ei == hiBin) & (i_rAve_Ii_Ec == 1); %(rAve_Ii_Ec{im}{iday}<0); %
+        Ic_inds_corrAveLoDiff = (i_rAve_Ic_Ec == hiBin) & (i_rAve_Ic_Ei == 1); %(rAve_Ic_Ei{im}{iday}<0); %
 %         Ii_inds_corrAveHiSameLoDiff = (i_rAve_Ii_Ec == 1); 
 %         Ic_inds_corrAveHiSameLoDiff = (i_rAve_Ic_Ei == 1); 
         
         %%% set indeces of neurons that have lo corrAve_same and hi corrAve_diff
-        Ii_inds_corrAveHiDiff = (i_rAve_Ii_Ei == 2) & (i_rAve_Ii_Ec == 2);
-        Ic_inds_corrAveHiDiff = (i_rAve_Ic_Ec == 2) & (i_rAve_Ic_Ei == 2);
-%         Ii_inds_corrAveLoSameHiDiff = (i_rAve_Ii_Ec == 2);
+        Ii_inds_corrAveHiDiff = (i_rAve_Ii_Ei == hiBin) & (i_rAve_Ii_Ec == hiBin);
+        Ic_inds_corrAveHiDiff = (i_rAve_Ic_Ec == hiBin) & (i_rAve_Ic_Ei == hiBin);
+%         Ii_inds_corrAveLoSameHiDiff = (i_rAve_Ii_Ec == hiBin);
 %         Ic_inds_corrAveLoSameHiDiff = (i_rAve_Ic_Ei==2);
         
 
@@ -132,15 +137,15 @@ for im = 1:length(mice)
        
         
         %%% set indeces of neurons that have hi corrAve_same and lo corrAve_diff (or nagative corrAve_diff)
-        Ei_inds_corrAveLoDiff = (i_rAve_Ei_Ii == 2) & (i_rAve_Ei_Ic == 1); %(rAve_Ei_Ic{im}{iday}<0); %
-        Ec_inds_corrAveLoDiff = (i_rAve_Ec_Ic == 2) & (i_rAve_Ec_Ii == 1); %(rAve_Ec_Ii{im}{iday}<0); %
+        Ei_inds_corrAveLoDiff = (i_rAve_Ei_Ii == hiBin) & (i_rAve_Ei_Ic == 1); %(rAve_Ei_Ic{im}{iday}<0); %
+        Ec_inds_corrAveLoDiff = (i_rAve_Ec_Ic == hiBin) & (i_rAve_Ec_Ii == 1); %(rAve_Ec_Ii{im}{iday}<0); %
 %         Ei_inds_corrAveHiSameLoDiff = (i_rAve_Ei_Ic == 1); 
 %         Ec_inds_corrAveHiSameLoDiff = (i_rAve_Ec_Ii == 1); 
         
         %%% set indeces of neurons that have lo corrAve_same and hi corrAve_diff
-        Ei_inds_corrAveHiDiff = (i_rAve_Ei_Ii == 2) & (i_rAve_Ei_Ic == 2);
-        Ec_inds_corrAveHiDiff = (i_rAve_Ec_Ic == 2) & (i_rAve_Ec_Ii == 2);
-%         Ei_inds_corrAveLoSameHiDiff = (i_rAve_Ei_Ic == 2);
+        Ei_inds_corrAveHiDiff = (i_rAve_Ei_Ii == hiBin) & (i_rAve_Ei_Ic == hiBin);
+        Ec_inds_corrAveHiDiff = (i_rAve_Ec_Ic == hiBin) & (i_rAve_Ec_Ii == hiBin);
+%         Ei_inds_corrAveLoSameHiDiff = (i_rAve_Ei_Ic == hiBin);
 %         Ec_inds_corrAveLoSameHiDiff = (i_rAve_Ec_Ii==2);
         
 
@@ -180,25 +185,73 @@ inh_ = [ROC_I_rAveLoDiff_daysPooled ; ROC_I_rAveHiDiff_daysPooled]
 exc_ = [ROC_E_rAveLoDiff_daysPooled ; ROC_E_rAveHiDiff_daysPooled]
 
 
+%% Plot errorbar, showing each mouse, ave +/- se of rAve across days (already averaged across neurons for each day)
+
+x = 1:length(mice);
+gp = .2;
+marg = .2;
+
+figure('name', 'All mice', 'position', [9   631   516   297]); 
+set(gca, 'position', [0.2919    0.1908    0.5229    0.7095])
+
+%%%%%%%%%% Plot EI %%%%%%%%%%%
+typeNs = 'Inh';    
+subplot(121); hold on
+h1 = errorbar(x, cellfun(@mean, ROC_I_rAveHiDiff_daysPooled), cellfun(@std, ROC_I_rAveHiDiff_daysPooled) ./ sqrt(cellfun(@length, ROC_I_rAveHiDiff_daysPooled)), 'r.', 'linestyle', 'none');
+h2 = errorbar(x+gp, cellfun(@mean, ROC_I_rAveLoDiff_daysPooled), cellfun(@std, ROC_I_rAveLoDiff_daysPooled) ./ sqrt(cellfun(@length, ROC_I_rAveLoDiff_daysPooled)), 'k.', 'linestyle', 'none');
+xlim([x(1)-marg, x(end)+gp+marg])
+set(gca,'xtick', x)
+set(gca,'xticklabel', mice)
+title(typeNs)
+ylabel('ROC (absDev; mean +/- se neurons)')
+legend([h1,h2], {'hiDiff','loDiff'})
+
+
+typeNs = 'Exc';    
+subplot(122); hold on
+h1 = errorbar(x, cellfun(@mean, ROC_E_rAveHiDiff_daysPooled), cellfun(@std, ROC_E_rAveHiDiff_daysPooled) ./ sqrt(cellfun(@length, ROC_E_rAveHiDiff_daysPooled)), 'r.', 'linestyle', 'none');
+h2 = errorbar(x+gp, cellfun(@mean, ROC_E_rAveLoDiff_daysPooled), cellfun(@std, ROC_E_rAveLoDiff_daysPooled) ./ sqrt(cellfun(@length, ROC_E_rAveLoDiff_daysPooled)), 'k.', 'linestyle', 'none');
+xlim([x(1)-marg, x(end)+gp+marg])
+set(gca,'xtick', x)
+set(gca,'xticklabel', mice)
+title(typeNs)
+ylabel('ROC (absDev; mean +/- se neurons)')
+% legend([h1,h2], {'hiDiff','loDiff'})
+
+
+if saveFigs
+    namv = sprintf('ROC_loHiCorrFR_avePairwise_aveSeNs_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', alFR, al, time2an, o2a, nowStr);
+    
+    d = fullfile(dirn0fr, 'sumAllMice', nnow);
+    fn = fullfile(d, namv);
+    
+    savefig(gcf, fn)
+    
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end    
+
+
 %% Plot histograms for each mouse to compare ROC of I neurons with hi corrAveSame and lo corrAveDiff with I neurons with lo corrAveSDame and hi corrAveDiff
 
 nBins = 15;
-doSmooth = 0;
+doSmooth = 1;
 
 leg = {'lowDiff & hiSame avePairwise', 'hiDiff & hiSame avePairwise'};
 
-for im = 1:length(mice)
+for im = 1%:length(mice)
 
-    fh = figure('name', mice{im}, 'position', [22   399   991   528]);              %fh = figure('name', [mice{im}, ' - EI'], 'position', [27         404        1370         521]);
+    fh = figure('name', mice{im}, 'position', [92   350   869   528]); %[22   399   991   528]);              %fh = figure('name', [mice{im}, ' - EI'], 'position', [27         404        1370         521]);
         
-    typeNs = 'inh';
+    typeNs = 'Inh';
     sp = [221,223];
     plotHist(ROC_I_rAveLoDiff_daysPooled{im}, ROC_I_rAveHiDiff_daysPooled{im}, xlab, ylab, ...
         leg, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
     subplot(sp(1)), title(typeNs)
     
     
-    typeNs = 'exc';  
+    typeNs = 'Exc';  
     sp = [222,224];
     plotHist(ROC_E_rAveLoDiff_daysPooled{im}, ROC_E_rAveHiDiff_daysPooled{im}, xlab, ylab, ...
         leg, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
@@ -214,7 +267,7 @@ for im = 1:length(mice)
     %}
     
     if saveFigs
-        namv = sprintf('ROC_loHiCorrFR_avePairwise_daysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_%s_%s', alFR, al, time2an, o2a, mice{im}, nowStr);
+        namv = sprintf('ROC_loHiCorrFR_avePairwise_distDaysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_%s_%s', alFR, al, time2an, o2a, mice{im}, nowStr);
         
         d = fullfile(dirn0fr, mice{im}, nnow);
         fn = fullfile(d, namv);
@@ -233,19 +286,19 @@ end
 inh_ = [length([ROC_I_rAveLoDiff_daysPooled{:}]), length([ROC_I_rAveHiDiff_daysPooled{:}])]
 exc_ = [length([ROC_E_rAveLoDiff_daysPooled{:}]), length([ROC_E_rAveHiDiff_daysPooled{:}])]
 
-nBins = 30;
-doSmooth = 0;
+nBins = 20;
+doSmooth = 1;
 
 fh = figure('name', 'All mice', 'position', [22   399   991   528]);              %fh = figure('name', [mice{im}, ' - EI'], 'position', [27         404        1370         521]);
 
-typeNs = 'inh';
+typeNs = 'Inh';
 sp = [221,223];
 plotHist([ROC_I_rAveLoDiff_daysPooled{:}], [ROC_I_rAveHiDiff_daysPooled{:}], xlab, ylab, ...
     leg, cols, [], fh, nBins, doSmooth, linestylesData, sp);
 subplot(sp(1)), title(typeNs)
 
 
-typeNs = 'exc';
+typeNs = 'Exc';
 sp = [222,224];
 plotHist([ROC_E_rAveLoDiff_daysPooled{:}], [ROC_E_rAveHiDiff_daysPooled{:}], xlab, ylab, ...
     leg, cols, [], fh, nBins, doSmooth, linestylesData, sp);
@@ -261,9 +314,9 @@ subplot(sp(1)), title(typeNs)
 %}
 
 if saveFigs
-    namv = sprintf('ROC_loHiCorrFR_avePairwise_daysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', alFR, al, time2an, o2a, nowStr);
+    namv = sprintf('ROC_loHiCorrFR_avePairwise_distDaysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', alFR, al, time2an, o2a, nowStr);
     
-    d = fullfile(dirn0fr, ['sumAllMice_',nnow]);
+    d = fullfile(dirn0fr, 'sumAllMice', nnow);
     fn = fullfile(d, namv);
     
     savefig(gcf, fn)
@@ -301,8 +354,8 @@ end
 
 
 %%
-thq = .95; % we get closer number of elements for hi vs lo corr with .95 than .8.
-
+% thqHi = .95; % we get closer number of elements for hi vs lo corr with .95 than .8.
+thqLo = .95;
 
 rocInh = roc_inh_timeM1;
 rocExc = roc_exc_timeM1; % like inh, exc also will be more tuned (ie hi roc) if its corr_E_I_diff is low.
@@ -315,6 +368,8 @@ mx0 = max([max(cellfun(@max, corr_exci_inhi)), max(cellfun(@max, corr_excc_inhc)
 r2 = round(mx0+.05,1);
 % bins = r1 : (r2-r1)/10 : r2;
 bins = [0, .02, r2]; % bins = [0, .2, r2]; % we only study positive correlations ... also we use abs for corrs below...
+% bins = [0, .02, .02, r2];
+hiBin = length(bins)-1;
 
 
 %%
@@ -326,7 +381,8 @@ roc_exc_hiDiff = cell(1, length(mice));
 for im = 1:length(mice)    
     
     a = abs([corr_exci_inhi_shfl{im} , corr_excc_inhc_shfl{im} , corr_exci_inhc_shfl{im} , corr_excc_inhi_shfl{im}]);
-    bins(2) = quantile(a, thq); fprintf('threshold corr = %.3f\n', bins(2))
+    bins(2) = quantile(a, thqLo); %fprintf('threshold corr = %.3f\n', bins(2))
+%     bins(3) = quantile(a, thqHi);
     
     % same
     [n0, ~, i_bin_EiIi_allMice] = histcounts(abs(corr_exci_inhi{im}), bins);
@@ -340,15 +396,15 @@ for im = 1:length(mice)
     %%%%%%%%%%%%%%%%%%%%% INH %%%%%%%%%%%%%%%%%%%%%
     %%% inh: hi same and low diff
     % ipsi
-    days_Ii_loDiff = (i_bin_EiIi_allMice == 2) & (i_bin_EcIi_allMice == 1);
+    days_Ii_loDiff = (i_bin_EiIi_allMice == hiBin) & (i_bin_EcIi_allMice == 1);
     % contra
-    days_Ic_loDiff = (i_bin_EcIc_allMice == 2) & (i_bin_EiIc_allMice == 1);
+    days_Ic_loDiff = (i_bin_EcIc_allMice == hiBin) & (i_bin_EiIc_allMice == 1);
     
     %%% inh: hi same and hi diff
     % ipsi
-    days_Ii_hiDiff = (i_bin_EiIi_allMice == 2) & (i_bin_EcIi_allMice == 2);
+    days_Ii_hiDiff = (i_bin_EiIi_allMice == hiBin) & (i_bin_EcIi_allMice == hiBin);
     % contra
-    days_Ic_hiDiff = (i_bin_EcIc_allMice == 2) & (i_bin_EiIc_allMice == 2);
+    days_Ic_hiDiff = (i_bin_EcIc_allMice == hiBin) & (i_bin_EiIc_allMice == hiBin);
     
     
     %%%%%%% ROC %%%%%%%
@@ -382,15 +438,15 @@ for im = 1:length(mice)
     %%%%%%%%%%%%%%%%%%%%% EXC %%%%%%%%%%%%%%%%%%%%%
     %%% exc: hi same and low diff
     % ipsi
-    days_Ei_loDiff = (i_bin_EiIi_allMice == 2) & (i_bin_EiIc_allMice == 1);
+    days_Ei_loDiff = (i_bin_EiIi_allMice == hiBin) & (i_bin_EiIc_allMice == 1);
     % contra
-    days_Ec_loDiff = (i_bin_EcIc_allMice == 2) & (i_bin_EcIi_allMice == 1);
+    days_Ec_loDiff = (i_bin_EcIc_allMice == hiBin) & (i_bin_EcIi_allMice == 1);
     
     %%% exc: hi same and hi diff
     % ipsi
-    days_Ei_hiDiff = (i_bin_EiIi_allMice == 2) & (i_bin_EiIc_allMice == 2);
+    days_Ei_hiDiff = (i_bin_EiIi_allMice == hiBin) & (i_bin_EiIc_allMice == hiBin);
     % contra
-    days_Ec_hiDiff = (i_bin_EcIc_allMice == 2) & (i_bin_EcIi_allMice == 2);
+    days_Ec_hiDiff = (i_bin_EcIc_allMice == hiBin) & (i_bin_EcIi_allMice == hiBin);
     
     
     %%%%%%% ROC %%%%%%%
@@ -425,6 +481,54 @@ inh_ = [roc_inh_loDiff ; roc_inh_hiDiff]
 exc_ = [roc_exc_loDiff ; roc_exc_hiDiff]
 
 
+%% Plot errorbar, showing each mouse, ave +/- se of rAve across days (already averaged across neurons for each day)
+
+x = 1:length(mice);
+gp = .2;
+marg = .2;
+
+figure('name', 'All mice', 'position', [9   631   516   297]); 
+set(gca, 'position', [0.2919    0.1908    0.5229    0.7095])
+
+%%%%%%%%%% Plot EI %%%%%%%%%%%
+typeNs = 'Inh';    
+subplot(121); hold on
+h1 = errorbar(x, cellfun(@mean, roc_inh_hiDiff), cellfun(@std, roc_inh_hiDiff) ./ sqrt(cellfun(@length, roc_inh_hiDiff)), 'r.', 'linestyle', 'none');
+h2 = errorbar(x+gp, cellfun(@mean, roc_inh_loDiff), cellfun(@std, roc_inh_loDiff) ./ sqrt(cellfun(@length, roc_inh_loDiff)), 'k.', 'linestyle', 'none');
+xlim([x(1)-marg, x(end)+gp+marg])
+set(gca,'xtick', x)
+set(gca,'xticklabel', mice)
+title(typeNs)
+ylabel('ROC (absDev; mean +/- se neurons)')
+legend([h1,h2], {'hiDiff','loDiff'})
+
+
+typeNs = 'Exc';    
+subplot(122); hold on
+h1 = errorbar(x, cellfun(@mean, roc_exc_hiDiff), cellfun(@std, roc_exc_hiDiff) ./ sqrt(cellfun(@length, roc_exc_hiDiff)), 'r.', 'linestyle', 'none');
+h2 = errorbar(x+gp, cellfun(@mean, roc_exc_loDiff), cellfun(@std, roc_exc_loDiff) ./ sqrt(cellfun(@length, roc_exc_loDiff)), 'k.', 'linestyle', 'none');
+xlim([x(1)-marg, x(end)+gp+marg])
+set(gca,'xtick', x)
+set(gca,'xticklabel', mice)
+title(typeNs)
+ylabel('ROC (absDev; mean +/- se neurons)')
+% legend([h1,h2], {'hiDiff','loDiff'})
+
+
+if saveFigs
+    namv = sprintf('ROC_loHiCorrFR_popAveFRs_aveSeNs_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', alFR, al, time2an, o2a, nowStr);
+    
+    d = fullfile(dirn0fr, 'sumAllMice', nnow);
+    fn = fullfile(d, namv);
+    
+    savefig(gcf, fn)
+    
+    % print to pdf
+%         axpos{1} = [0.2578    0.6276    0.4948    0.3089];     axpos{2} = [0.2578    0.1651    0.4948    0.3089];
+%         figs_adj_poster_ax(fn, axpos)                
+end    
+
+
 %% Plot histograms for each mouse to compare ROC of I neurons with hi corrAveSame and lo corrAveDiff with I neurons with lo corrAveSDame and hi corrAveDiff
 
 nBins = 20;
@@ -436,13 +540,13 @@ for im = 1:length(mice)
 
     fh = figure('name', mice{im}, 'position', [22   399   991   528]);   %fh = figure('name', [mice{im}, ' - EI'], 'position', [27         404        1370         521]);
         
-    typeNs = 'inh';
+    typeNs = 'Inh';
     sp = [221,223];
     plotHist(roc_inh_loDiff{im}, roc_inh_hiDiff{im}, xlab, ylab, leg, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
     subplot(sp(1)), title(typeNs)
     
     
-    typeNs = 'exc';  
+    typeNs = 'Exc';  
     sp = [222,224];
     plotHist(roc_exc_loDiff{im}, roc_exc_hiDiff{im}, xlab, ylab, leg, cols, [], fh, nBins, doSmooth, linestylesData, sp); 
     subplot(sp(1)), title(typeNs)
@@ -457,7 +561,7 @@ for im = 1:length(mice)
     %}
     
     if saveFigs
-        namv = sprintf('ROC_loHiCorrFR_popAveFRs_daysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_%s_%s', alFR, al, time2an, o2a, mice{im}, nowStr);
+        namv = sprintf('ROC_loHiCorrFR_popAveFRs_distDaysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_%s_%s', alFR, al, time2an, o2a, mice{im}, nowStr);
         
         d = fullfile(dirn0fr, mice{im}, nnow);
         fn = fullfile(d, namv);
@@ -481,14 +585,14 @@ doSmooth = 0;
 
 fh = figure('name', 'All mice', 'position', [22   399   991   528]);              %fh = figure('name', [mice{im}, ' - EI'], 'position', [27         404        1370         521]);
 
-typeNs = 'inh';
+typeNs = 'Inh';
 sp = [221,223];
 plotHist([roc_inh_loDiff{:}], [roc_inh_hiDiff{:}], xlab, ylab, ...
     leg, cols, [], fh, nBins, doSmooth, linestylesData, sp);
 subplot(sp(1)), title(typeNs)
 
 
-typeNs = 'exc';
+typeNs = 'Exc';
 sp = [222,224];
 plotHist([roc_exc_loDiff{:}], [roc_exc_hiDiff{:}], xlab, ylab, ...
     leg, cols, [], fh, nBins, doSmooth, linestylesData, sp);
@@ -504,9 +608,9 @@ subplot(sp(1)), title(typeNs)
 %}
 
 if saveFigs
-    namv = sprintf('ROC_loHiCorrFR_popAveFRs_daysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', alFR, al, time2an, o2a, nowStr);
+    namv = sprintf('ROC_loHiCorrFR_popAveFRs_distDaysPooled_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', alFR, al, time2an, o2a, nowStr);
     
-    d = fullfile(dirn0fr, ['sumAllMice_',nnow]);
+    d = fullfile(dirn0fr, 'sumAllMice', nnow);
     fn = fullfile(d, namv);
     
     savefig(gcf, fn)

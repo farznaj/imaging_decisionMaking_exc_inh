@@ -1,3 +1,6 @@
+
+dirn0 = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/ROC';
+
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -13,7 +16,8 @@ colss = [0,.8,.8; .8,.5,.8]; % exc,inh colors for shuffled data
 for im = 1:length(mice)
 
     mouse = mice{im};    
-    dirn = fullfile(dirn0, mouse);
+    dirnFig = fullfile(dirn0, mouse);
+    [~,~,dirn] = setImagingAnalysisNames(mouse, 'analysis', []); 
     cd(dirn)
     
     % these are vars that are aligned across days for each mouse (they are
@@ -92,11 +96,11 @@ for im = 1:length(mice)
 
     %%%%%%%%% Average and se across days; each day is already averaged across neurons; done seperately for each time bin
     subplot(121); hold on
-    h1 = boundedline(time_aligned, nanmean(aveexc,2), nanstd(aveexc,0,2)/sqrt(nGoodDays(im)), 'b', 'alpha'); % sum(mnTrNum>=thMinTrs)
-    h2 = boundedline(time_aligned, nanmean(aveinh,2), nanstd(aveinh,0,2)/sqrt(nGoodDays(im)), 'r', 'alpha');
+    h1 = boundedline(time_aligned, nanmean(aveexc,2), nanstd(aveexc,0,2)/sqrt(numDaysGood(im)), 'b', 'alpha'); % sum(mnTrNum>=thMinTrs)
+    h2 = boundedline(time_aligned, nanmean(aveinh,2), nanstd(aveinh,0,2)/sqrt(numDaysGood(im)), 'r', 'alpha');
     if doshfl % shfl
-        h1 = boundedline(time_aligned, nanmean(aveexc_shfl,2), nanstd(aveexc_shfl,0,2)/sqrt(nGoodDays(im)), 'cmap', colss(1,:), 'alpha'); % sum(mnTrNum>=thMinTrs)
-        h2 = boundedline(time_aligned, nanmean(aveinh_shfl,2), nanstd(aveinh_shfl,0,2)/sqrt(nGoodDays(im)), 'cmap', colss(2,:), 'alpha');    
+        h1 = boundedline(time_aligned, nanmean(aveexc_shfl,2), nanstd(aveexc_shfl,0,2)/sqrt(numDaysGood(im)), 'cmap', colss(1,:), 'alpha'); % sum(mnTrNum>=thMinTrs)
+        h2 = boundedline(time_aligned, nanmean(aveinh_shfl,2), nanstd(aveinh_shfl,0,2)/sqrt(numDaysGood(im)), 'cmap', colss(2,:), 'alpha');    
     end
     a = get(gca, 'ylim');    
     plot(time_aligned, hh0*(a(2)-.05*diff(a)), 'k.')    
@@ -137,8 +141,8 @@ for im = 1:length(mice)
     
     % save figure
     if savefigs        
-        savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveDays_', nowStr,'.fig']))
-        print(fh, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveDays_', nowStr]))
+        savefig(fh, fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveDays_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveDays_', nowStr]))
     end  
 
 
@@ -154,6 +158,7 @@ for im = 1:length(mice)
     y1 = aveexc(:);
     y2 = aveinh(:);
     fh = plotHist(y1,y2,xlab,ylab,leg, cols, yy,fh);
+%     fh = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth, lineStyles, sp, bins); 
     if doshfl % shfl
         y1 = aveexc_shfl(:);
         y2 = aveinh_shfl(:);        
@@ -161,8 +166,8 @@ for im = 1:length(mice)
     end
 
     if savefigs
-        savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_aveNeurs_frsDaysPooled_', nowStr,'.fig']))
-        print(fh, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_aveNeurs_frsDaysPooled_', nowStr]))
+        savefig(fh, fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_dist_aveNeurs_frsDaysPooled_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_dist_aveNeurs_frsDaysPooled_', nowStr]))
     end
 
     % abs
@@ -194,8 +199,8 @@ for im = 1:length(mice)
     end
 
     if savefigs        
-        savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_frsDaysNeursPooled_', nowStr,'.fig']))
-        print(fh, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_frsDaysNeursPooled_', nowStr]))
+        savefig(fh, fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_dist_frsDaysNeursPooled_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_dist_frsDaysNeursPooled_', nowStr]))
     end            
 
 
@@ -229,8 +234,8 @@ for im = 1:length(mice)
     end
 
     if savefigs        
-        savefig(fign, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_eachFr_daysNeursPooled_', nowStr,'.fig']))
-        print(fign, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_dist_eachFr_daysNeursPooled_', nowStr]))
+        savefig(fign, fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_dist_eachFr_daysNeursPooled_', nowStr,'.fig']))
+        print(fign, '-dpdf', fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_dist_eachFr_daysNeursPooled_', nowStr]))
     end  
 
     
@@ -285,8 +290,8 @@ for im = 1:length(mice)
 
 
     if savefigs
-        savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_eachDay_', nowStr,'.fig']))
-        print(fh, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_eachDay_', nowStr]))
+        savefig(fh, fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_eachDay_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_eachDay_', nowStr]))
     end
 
 
@@ -350,8 +355,8 @@ for im = 1:length(mice)
     
     
     if savefigs
-        savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_allDaysSup_', nowStr,'.fig']))
-        print(fh, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_allDaysSup_', nowStr]))
+        savefig(fh, fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_allDaysSup_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_allDaysSup_', nowStr]))
     end
 
     % go back to default color order
@@ -389,8 +394,8 @@ for im = 1:length(mice)
     title(ha(2), sprintf('time rel2 choice = %d ms',round(time_aligned(1))))
 
     if savefigs
-        savefig(fh, fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveNeurs_eachFrame_', nowStr,'.fig']))
-        print(fh, '-dpdf', fullfile(dirn, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveNeurs_eachFrame_', nowStr]))
+        savefig(fh, fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveNeurs_eachFrame_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveNeurs_eachFrame_', nowStr]))
     end
     
 end

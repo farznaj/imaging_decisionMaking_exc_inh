@@ -37,7 +37,7 @@ ylabel(namc)
 % title('mean+se mice (Ns aved per day;days aved per mouse)')
 xlim([time_al(1)-50, time_al(end)+50])
 
-figs_adj_poster_ax
+% figs_adj_poster_ax(fh)
 
 if savefigs
     fdn = fullfile(dirn0, strcat(namc,'_','ROC_curr_chAl_excInh_timeCourse_aveMice_aveDays_aveNs_', dm0, nowStr));
@@ -49,11 +49,11 @@ end
 %% Plot average and se of pooled days (of all mice; they are already averaged across neurons for each day)
 
 fh = figure; hold on
-h1 = boundedline(time_al, nanmean(exc_allDaysPooled_allMice,2), nanstd(exc_allDaysPooled_allMice,[],2)/sqrt(sum(nGoodDays)), 'b', 'alpha');
-h2 = boundedline(time_al, nanmean(inh_allDaysPooled_allMice,2), nanstd(inh_allDaysPooled_allMice,[],2)/sqrt(sum(nGoodDays)), 'r', 'alpha');
+h1 = boundedline(time_al, nanmean(exc_allDaysPooled_allMice,2), nanstd(exc_allDaysPooled_allMice,[],2)/sqrt(sum(numDaysGood)), 'b', 'alpha');
+h2 = boundedline(time_al, nanmean(inh_allDaysPooled_allMice,2), nanstd(inh_allDaysPooled_allMice,[],2)/sqrt(sum(numDaysGood)), 'r', 'alpha');
 if doshfl % shfl
-    h11 = boundedline(time_al, nanmean(exc_allDaysPooled_allMice_shfl,2), nanstd(exc_allDaysPooled_allMice_shfl,[],2)/sqrt(sum(nGoodDays)), 'cmap', colss(1,:), 'alpha');
-    h12 = boundedline(time_al, nanmean(inh_allDaysPooled_allMice_shfl,2), nanstd(inh_allDaysPooled_allMice_shfl,[],2)/sqrt(sum(nGoodDays)), 'cmap', colss(2,:), 'alpha');
+    h11 = boundedline(time_al, nanmean(exc_allDaysPooled_allMice_shfl,2), nanstd(exc_allDaysPooled_allMice_shfl,[],2)/sqrt(sum(numDaysGood)), 'cmap', colss(1,:), 'alpha');
+    h12 = boundedline(time_al, nanmean(inh_allDaysPooled_allMice_shfl,2), nanstd(inh_allDaysPooled_allMice_shfl,[],2)/sqrt(sum(numDaysGood)), 'cmap', colss(2,:), 'alpha');
 end
 a = get(gca, 'ylim');    
 plot(time_al, hh_allm*(a(2)-.05*diff(a)), 'k.')    
@@ -67,7 +67,7 @@ xlabel('Time since choice onset (ms)')
 ylabel(namc)
 % title('mean+se pooled days (Ns aved per day)')
 
-figs_adj_poster_ax
+% figs_adj_poster_ax(fh)
 
 if savefigs
     fdn = fullfile(dirn0, strcat(namc,'_','ROC_curr_chAl_excInh_timeCourse_avePooledDaysAllMice_aveNs_', dm0, nowStr));
@@ -126,11 +126,15 @@ time2an = -1;
 e = nPreMin+1;
 fr = e+time2an;
 
+nBins = 50;
+doSmooth = 1;
+
 fign = figure; % f = nan(1,1); f(1) = axes();
 
 y1 = exc_allNsDaysMicePooled(fr,:);
 y2 = inh_allNsDaysMicePooled(fr,:);
-plotHist(y1,y2,xlab,ylab,leg, cols, yy,fign);
+% plotHist(y1,y2,xlab,ylab,leg, cols, yy,fign);
+plotHist(y1,y2,xlab,ylab,leg, cols, yy, fign, nBins, doSmooth)%, lineStyles, sp, bins); 
 if doshfl % shfl
     y1s = exc_allNsDaysMicePooled_shfl(fr,:);
     y2s = inh_allNsDaysMicePooled_shfl(fr,:);

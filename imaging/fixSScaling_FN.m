@@ -69,9 +69,13 @@ for u = 1:nUnits
   nA(u) = mean(allNA);
   %}
   if scalePeak
+    %{
     taus(1) = -1 / log(rg(1)); % decay time constant
     taus(2) = -1 / log(rg(2));
+    %}
+    taus = tau_d2c(g,frameLength); % tau(:,1) is rise, and tau(:,2) is decay time constant (in ms).
 
+    
     % Time lag to peak response (starting from the equation for a
     % second-order autoregressive process):
     %

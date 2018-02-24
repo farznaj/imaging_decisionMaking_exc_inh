@@ -1065,6 +1065,7 @@ def plthistfr(a,b,dnow0,dpm0):
             print 'creating folder'
             os.makedirs(d)
         
+        # file name below is not really correct; it should be allNsDaysPooled (not allTrs!)
         fign = os.path.join(d, suffn[0:5]+cha+'FR_time-1_dist_allNsTrsDaysPooled'+dp+dpm0+'.'+fmt[0]) # FR_time-1_dist_allNsTrsDaysMicePooled
         print fign
         plt.savefig(fign, bbox_inches='tight') 

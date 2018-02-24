@@ -1,4 +1,4 @@
-function [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth, lineStyles, sp) 
+function [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth, lineStyles, sp, bins) 
     
     % optional:
     % yy: draw a vertical line at yy
@@ -12,21 +12,25 @@ function [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth
     ylab = 'Fraction neurons';
     xlab = 'ROC';
     %}
-    
-    if ~exist('nBins','var')
-        nBins = 10;
-    end
-    
-    if ~exist('fh','var')
-        fh = [];
+
+    if ~iscell(cols)
+        cols = mat2cell(cols,[1,1]);
     end
     
     if ~exist('yy','var')
         yy = [];
     end
     
-    if ~iscell(cols)
-        cols = mat2cell(cols,[1,1]);
+    if ~exist('fh','var')
+        fh = [];
+    end
+    
+    if ~exist('nBins','var')
+        nBins = 10;
+    end
+
+    if ~exist('doSmooth','var')
+        doSmooth = 0;
     end
     
     if ~exist('lineStyles', 'var')
@@ -37,14 +41,19 @@ function [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth
         sp = [211, 212];
     end
     
+    if ~exist('bins', 'var')
+        bins = [];
+    end
     
     %% set the histogram vars
     
     % set the bins
-    ally = [y1(:);y2(:)];
-    r1 = round(min(ally)-.05, 1);  %min(ally); %   % round(min(ally), 1); 
-    r2 = round(max(ally)+.05, 1);
-    bins = r1 : (r2-r1)/nBins : r2;
+    if isempty(bins)
+        ally = [y1(:);y2(:)];
+        r1 = round(min(ally)-.05, 1);  %min(ally); %   % round(min(ally), 1); 
+        r2 = round(max(ally)+.05, 1);
+        bins = r1 : (r2-r1)/nBins : r2;
+    end
     
     % get the counts in each bin
     [nexc, e] = histcounts(y1(:), bins);
@@ -78,12 +87,12 @@ function [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth
     end
     
     subplot(sp(1)), hold on
-    h1=plot(x, ye, 'color', cols{1}, 'linestyle', lineStyles{1});
-    h2=plot(x, yi, 'color', cols{2}, 'linestyle', lineStyles{1});
+    h1 = plot(x, ye, 'color', cols{1}, 'linestyle', lineStyles{1});
+    h2 = plot(x, yi, 'color', cols{2}, 'linestyle', lineStyles{2});
     xlabel(xlab); ylabel(ylab)  %     xlim([r1,r2])
     legend([h1,h2], leg)
     if ~isempty(yy)
-        plot([yy yy],[0 max([ye,yi])], 'k:')
+        plot([yy yy],[0 max([ye;yi])], 'k:')
     end
     a = gca;
     [h,p] = ttest2(y1(:), y2(:));
@@ -91,8 +100,8 @@ function [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth
     
     %%%%%%%%%% cumsum %%%%%%%%%%
     subplot(sp(2)), hold on
-    h1=plot(x, ye_cs, 'color', cols{1}, 'linestyle', lineStyles{1});
-    h2=plot(x, yi_cs, 'color', cols{2}, 'linestyle', lineStyles{1});
+    h1 = plot(x, ye_cs, 'color', cols{1}, 'linestyle', lineStyles{1});
+    h2 = plot(x, yi_cs, 'color', cols{2}, 'linestyle', lineStyles{2});
     xlabel(xlab); ylabel('Cumulative sum')    
     legend([h1,h2], leg)
     if ~isempty(yy)

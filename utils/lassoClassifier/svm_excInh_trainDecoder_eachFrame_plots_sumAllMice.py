@@ -18,7 +18,8 @@ Created on Sun Mar 12 15:12:29 2017
 #%%
 mice = 'fni16', 'fni17', 'fni18', 'fni19' # if you want to use only one mouse, make sure you put comma at the end; eg. mice = 'fni19',
 
-shflTrsEachNeuron = 1  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
+do_excInhHalf = 1 # 0: Load vars for inh,exc,allExc, 1: Load exc,inh SVM vars for excInhHalf (ie when the population consists of half exc and half inh) and allExc2inhSize (ie when populatin consists of allExc but same size as 2*inh size)
+shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
 savefigs = 1
 
 doAllN = 1 # plot allN, instead of allExc
@@ -40,11 +41,21 @@ regressBins = int(np.round(100/frameLength)) # must be same regressBins used in 
 chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
 stAl = ch_st_goAl[1]
 goToneAl = ch_st_goAl[2]
+
+if do_excInhHalf:
+    doAllN = 0
+    labInh = 'InhExcHalf'
+    num2AnInhAllexcEqexc = 2
+else:
+    labInh = 'inh'
+    
 if doAllN==1:
     labAll = 'allN'
 else:
     labAll = 'allExc'    
 dnow0 = '/excInh_trainDecoder_eachFrame/'
+if do_excInhHalf:
+    dnow0 = dnow0+'InhExcHalf/'
 #dnow0 = '/excInh_trainDecoder_eachFrame/frame'+str(time2an)+'/'
 #loadInhAllexcEqexc = 1 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)        
 from datetime import datetime
@@ -84,11 +95,10 @@ av_test_chance_allExc_allMice = []
 sd_test_chance_allExc_allMice = []
 
 corr_hr_lr_allMice = []
-
-
+numGoodDays_allMice = np.full(np.shape(mice), 0.)
 
 #%% Loop through mice
-
+# im = 0
 for im in range(len(mice)):
         
     mousename = mice[im] # mousename = 'fni16' #'fni17'
@@ -109,11 +119,16 @@ for im in range(len(mice)):
     
 #    execfile("svm_plots_setVars_n.py")      
     days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
-#    execfile("svm_plots_setVars.py")      
+#    execfile("svm_plots_setVars.py")  
+    # remove some days if needed:
+#    if mousename == 'fni17':
+#        days = np.delete(days, [10])
     
     #%% 
 #    if loadInhAllexcEqexc==1:
     dnow = '/excInh_trainDecoder_eachFrame/'+mousename+'/'
+    if do_excInhHalf:
+        dnow = dnow+'InhExcHalf/'    
     if shflTrsEachNeuron:
         dnow = dnow+'trsShfledPerNeuron/'
 #    else:
@@ -145,6 +160,9 @@ for im in range(len(mice)):
     eventI_ds_allDays = np.full((len(days)), np.nan)    
     eventI_allDays = np.full((len(days)), np.nan) # frame at which choice happened (if traces were downsampled in svm_eachFrame, it will be the downsampled frame number)       
 
+
+    #%%
+#    iday = 0
     for iday in range(len(days)): 
     
         #%%            
@@ -185,7 +203,13 @@ for im in range(len(mice)):
         
         #%% Load SVM vars
     
-        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron)
+        if do_excInhHalf==0:
+            perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron)
+#            perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron)
+        else:
+            # numShufflesExc x numSamples x numFrames
+            perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, w_data_inh, w_data_allExc, b_data_inh, b_data_allExc, svmName_excInh = loadSVM_excInh_excInhHalf(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, loadWeights, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0)
+            perClassErrorTest_data_exc = 0; perClassErrorTest_shfl_exc = 0; perClassErrorTest_chance_exc = 0; 
         
         ##%% Get number of inh and exc        
         if loadWeights==1:
@@ -195,20 +219,30 @@ for im in range(len(mice)):
         
         #%% Get class error values at a specific time bin: right before the choice 
         
-        perClassErrorTest_data_inh = perClassErrorTest_data_inh[:,eventI_ds+time2an].squeeze() # numSamps
-        perClassErrorTest_shfl_inh = perClassErrorTest_shfl_inh[:,eventI_ds+time2an].squeeze() # numSamps
-        perClassErrorTest_chance_inh = perClassErrorTest_chance_inh[:,eventI_ds+time2an].squeeze() # numSamps
-        
-        perClassErrorTest_data_allExc = perClassErrorTest_data_allExc[:,eventI_ds+time2an].squeeze() # numSamps
-        perClassErrorTest_shfl_allExc = perClassErrorTest_shfl_allExc[:,eventI_ds+time2an].squeeze() # numSamps
-        perClassErrorTest_chance_allExc = perClassErrorTest_chance_allExc[:,eventI_ds+time2an].squeeze() # numSamps
-
-        if num2AnInhAllexcEqexc == 3:
-            perClassErrorTest_data_exc = perClassErrorTest_data_exc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
-            perClassErrorTest_shfl_exc = perClassErrorTest_shfl_exc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
-            perClassErrorTest_chance_exc = perClassErrorTest_chance_exc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
+        if do_excInhHalf==0:
+            perClassErrorTest_data_inh = perClassErrorTest_data_inh[:,eventI_ds+time2an].squeeze() # numSamps
+            perClassErrorTest_shfl_inh = perClassErrorTest_shfl_inh[:,eventI_ds+time2an].squeeze() # numSamps
+            perClassErrorTest_chance_inh = perClassErrorTest_chance_inh[:,eventI_ds+time2an].squeeze() # numSamps
+            
+            perClassErrorTest_data_allExc = perClassErrorTest_data_allExc[:,eventI_ds+time2an].squeeze() # numSamps
+            perClassErrorTest_shfl_allExc = perClassErrorTest_shfl_allExc[:,eventI_ds+time2an].squeeze() # numSamps
+            perClassErrorTest_chance_allExc = perClassErrorTest_chance_allExc[:,eventI_ds+time2an].squeeze() # numSamps
     
+            if num2AnInhAllexcEqexc == 3:
+                perClassErrorTest_data_exc = perClassErrorTest_data_exc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
+                perClassErrorTest_shfl_exc = perClassErrorTest_shfl_exc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
+                perClassErrorTest_chance_exc = perClassErrorTest_chance_exc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
     
+        else:
+            perClassErrorTest_data_inh = perClassErrorTest_data_inh[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
+            perClassErrorTest_shfl_inh = perClassErrorTest_shfl_inh[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
+            perClassErrorTest_chance_inh = perClassErrorTest_chance_inh[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
+                
+            perClassErrorTest_data_allExc = perClassErrorTest_data_allExc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
+            perClassErrorTest_shfl_allExc = perClassErrorTest_shfl_allExc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps
+            perClassErrorTest_chance_allExc = perClassErrorTest_chance_allExc[:,:,eventI_ds+time2an].squeeze() # numShufflesExc x numSamps            
+            
+            
         #%% Keep vars for all days
         
         perClassErrorTest_data_inh_all.append(perClassErrorTest_data_inh) # days x samps
@@ -239,35 +273,19 @@ for im in range(len(mice)):
 
 
 
+
+    #%% Done with all days
     ######################################################################################################################################################
     ######################################################################################################################################################        
-    #%% Done with all days
-    
-    eventI_allDays = eventI_allDays.astype('int')
-    eventI_ds_allDays = eventI_ds_allDays.astype('int')
-    
-    perClassErrorTest_data_inh_all = np.array(perClassErrorTest_data_inh_all) # days x samps
-    perClassErrorTest_shfl_inh_all = np.array(perClassErrorTest_shfl_inh_all) 
-    perClassErrorTest_chance_inh_all = np.array(perClassErrorTest_chance_inh_all)
-    
-    perClassErrorTest_data_allExc_all = np.array(perClassErrorTest_data_allExc_all) # days x samps
-    perClassErrorTest_shfl_allExc_all = np.array(perClassErrorTest_shfl_allExc_all)
-    perClassErrorTest_chance_allExc_all = np.array(perClassErrorTest_chance_allExc_all)
-
-    if num2AnInhAllexcEqexc == 3:
-        perClassErrorTest_data_exc_all = np.array(perClassErrorTest_data_exc_all) # days x numShufflesExc x numSamples
-        perClassErrorTest_shfl_exc_all = np.array(perClassErrorTest_shfl_exc_all)
-        perClassErrorTest_chance_exc_all = np.array(perClassErrorTest_chance_exc_all)
-    
+    ######################################################################################################################################################
+    ######################################################################################################################################################        
     
     #%% Keep original days before removing low tr days.
     
     numDays0 = numDays
-    days0 = days
+    days0 = days    
     
-    
-    #%% Decide what days to analyze: exclude days with too few trials used for training SVM, also exclude incorr from days with too few incorr trials.
-    
+    ##%% Decide what days to analyze: exclude days with too few trials used for training SVM, also exclude incorr from days with too few incorr trials.    
     # th for min number of trs of each class
     '''
     thTrained = 30 #25; # 1/10 of this will be the testing tr num! and 9/10 was used for training
@@ -281,38 +299,88 @@ for im in range(len(mice)):
     numDays = sum(mn_corr>=thTrained)
     days = np.array(days)[mn_corr>=thTrained]
     
+    numGoodDays_allMice[im] = numDays
+
+    
+    #%%
+    eventI_allDays = eventI_allDays.astype('int')
+    eventI_ds_allDays = eventI_ds_allDays.astype('int')
+    
+    perClassErrorTest_data_inh_all = np.array(perClassErrorTest_data_inh_all) # days x samps (if do_excInhHalf=1, then size will be : # days x numShufflesExc x numSamples)
+    perClassErrorTest_shfl_inh_all = np.array(perClassErrorTest_shfl_inh_all) 
+    perClassErrorTest_chance_inh_all = np.array(perClassErrorTest_chance_inh_all)
+    
+    perClassErrorTest_data_allExc_all = np.array(perClassErrorTest_data_allExc_all) # days x samps
+    perClassErrorTest_shfl_allExc_all = np.array(perClassErrorTest_shfl_allExc_all)
+    perClassErrorTest_chance_allExc_all = np.array(perClassErrorTest_chance_allExc_all)
+
+    if num2AnInhAllexcEqexc == 3:
+        perClassErrorTest_data_exc_all = np.array(perClassErrorTest_data_exc_all) # days x numShufflesExc x numSamples
+        perClassErrorTest_shfl_exc_all = np.array(perClassErrorTest_shfl_exc_all)
+        perClassErrorTest_chance_exc_all = np.array(perClassErrorTest_chance_exc_all)
+
+   
     
     #%% For each day set average and std of class accuracies across CV samples in timebin time2an 
     # For exc average across both cv samps and exc shufls.
     #### ONLY include days with enough trs used for svm training!
     
-    numSamples = np.shape(perClassErrorTest_data_inh_all[0])[0]
+    if do_excInhHalf==0:
+        numSamples = np.shape(perClassErrorTest_data_inh_all[0])[0]
+        if num2AnInhAllexcEqexc == 3:
+            numExcSamples = np.shape(perClassErrorTest_data_exc_all[0])[0]
+        
+        av_test_data_inh = 100-np.mean(perClassErrorTest_data_inh_all[mn_corr >= thTrained,:], axis=1) # numDays
+        sd_test_data_inh = np.std(perClassErrorTest_data_inh_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
+        av_test_shfl_inh = 100-np.mean(perClassErrorTest_shfl_inh_all[mn_corr >= thTrained,:], axis=1)
+        sd_test_shfl_inh = np.std(perClassErrorTest_shfl_inh_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
+        av_test_chance_inh = 100-np.mean(perClassErrorTest_chance_inh_all[mn_corr >= thTrained,:], axis=1)
+        sd_test_chance_inh = np.std(perClassErrorTest_chance_inh_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
+        
+        av_test_data_allExc = 100-np.mean(perClassErrorTest_data_allExc_all[mn_corr >= thTrained,:], axis=1) # numDays
+        sd_test_data_allExc = np.std(perClassErrorTest_data_allExc_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
+        av_test_shfl_allExc = 100-np.mean(perClassErrorTest_shfl_allExc_all[mn_corr >= thTrained,:], axis=1)
+        sd_test_shfl_allExc = np.std(perClassErrorTest_shfl_allExc_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
+        av_test_chance_allExc = 100-np.mean(perClassErrorTest_chance_allExc_all[mn_corr >= thTrained,:], axis=1)
+        sd_test_chance_allExc = np.std(perClassErrorTest_chance_allExc_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
+        
+        if num2AnInhAllexcEqexc == 3:
+            av_test_data_exc = 100-np.mean(perClassErrorTest_data_exc_all[mn_corr >= thTrained,:,:], axis=(1,2)) # numDays  # average across cv samples and excShuffles
+            sd_test_data_exc = np.std(perClassErrorTest_data_exc_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
+            av_test_shfl_exc = 100-np.mean(perClassErrorTest_shfl_exc_all[mn_corr >= thTrained,:,:], axis=(1,2))
+            sd_test_shfl_exc = np.std(perClassErrorTest_shfl_exc_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
+            av_test_chance_exc = 100-np.mean(perClassErrorTest_chance_exc_all[mn_corr >= thTrained,:,:], axis=(1,2))
+            sd_test_chance_exc = np.std(perClassErrorTest_chance_exc_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
+    
+    else:
+        numSamples = np.shape(perClassErrorTest_data_inh_all[0])[1]
+        numExcSamples = np.shape(perClassErrorTest_data_inh_all[0])[0]
+        
+        ######### excInhHalf
+        av_test_data_inh = 100-np.mean(perClassErrorTest_data_inh_all[mn_corr >= thTrained,:,:], axis=(1,2)) # numDays  # average across cv samples and excShuffles
+        sd_test_data_inh = np.std(perClassErrorTest_data_inh_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
+        av_test_shfl_inh = 100-np.mean(perClassErrorTest_shfl_inh_all[mn_corr >= thTrained,:,:], axis=(1,2))
+        sd_test_shfl_inh = np.std(perClassErrorTest_shfl_inh_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
+        av_test_chance_inh = 100-np.mean(perClassErrorTest_chance_inh_all[mn_corr >= thTrained,:,:], axis=(1,2))
+        sd_test_chance_inh = np.std(perClassErrorTest_chance_inh_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
+        
+        ######### allExc2inhSize    
+        av_test_data_allExc = 100-np.mean(perClassErrorTest_data_allExc_all[mn_corr >= thTrained,:,:], axis=(1,2)) # numDays  # average across cv samples and excShuffles
+        sd_test_data_allExc = np.std(perClassErrorTest_data_allExc_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
+        av_test_shfl_allExc = 100-np.mean(perClassErrorTest_shfl_allExc_all[mn_corr >= thTrained,:,:], axis=(1,2))
+        sd_test_shfl_allExc = np.std(perClassErrorTest_shfl_allExc_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
+        av_test_chance_allExc = 100-np.mean(perClassErrorTest_chance_allExc_all[mn_corr >= thTrained,:,:], axis=(1,2))
+        sd_test_chance_allExc = np.std(perClassErrorTest_chance_allExc_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
+
+    
+    # print p values... across days, are exc and inh CAs different?
+    _,pcorrtrace = stats.ttest_ind(av_test_data_inh, av_test_data_allExc) # p value of class accuracy being different from 50
+    print pcorrtrace 
     if num2AnInhAllexcEqexc == 3:
-        numExcSamples = np.shape(perClassErrorTest_data_exc_all[0])[0]
-    
-    av_test_data_inh = 100-np.mean(perClassErrorTest_data_inh_all[mn_corr >= thTrained,:], axis=1) # numDays
-    sd_test_data_inh = np.std(perClassErrorTest_data_inh_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
-    av_test_shfl_inh = 100-np.mean(perClassErrorTest_shfl_inh_all[mn_corr >= thTrained,:], axis=1)
-    sd_test_shfl_inh = np.std(perClassErrorTest_shfl_inh_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
-    av_test_chance_inh = 100-np.mean(perClassErrorTest_chance_inh_all[mn_corr >= thTrained,:], axis=1)
-    sd_test_chance_inh = np.std(perClassErrorTest_chance_inh_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
-    
-    av_test_data_allExc = 100-np.mean(perClassErrorTest_data_allExc_all[mn_corr >= thTrained,:], axis=1) # numDays
-    sd_test_data_allExc = np.std(perClassErrorTest_data_allExc_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
-    av_test_shfl_allExc = 100-np.mean(perClassErrorTest_shfl_allExc_all[mn_corr >= thTrained,:], axis=1)
-    sd_test_shfl_allExc = np.std(perClassErrorTest_shfl_allExc_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
-    av_test_chance_allExc = 100-np.mean(perClassErrorTest_chance_allExc_all[mn_corr >= thTrained,:], axis=1)
-    sd_test_chance_allExc = np.std(perClassErrorTest_chance_allExc_all[mn_corr >= thTrained,:], axis=1) / np.sqrt(numSamples)
-    
-    if num2AnInhAllexcEqexc == 3:
-        av_test_data_exc = 100-np.mean(perClassErrorTest_data_exc_all[mn_corr >= thTrained,:,:], axis=(1,2)) # numDays  # average across cv samples and excShuffles
-        sd_test_data_exc = np.std(perClassErrorTest_data_exc_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
-        av_test_shfl_exc = 100-np.mean(perClassErrorTest_shfl_exc_all[mn_corr >= thTrained,:,:], axis=(1,2))
-        sd_test_shfl_exc = np.std(perClassErrorTest_shfl_exc_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
-        av_test_chance_exc = 100-np.mean(perClassErrorTest_chance_exc_all[mn_corr >= thTrained,:,:], axis=(1,2))
-        sd_test_chance_exc = np.std(perClassErrorTest_chance_exc_all[mn_corr >= thTrained,:,:], axis=(1,2)) / np.sqrt(numSamples+numExcSamples)
-    
-    
+        _,pcorrtrace = stats.ttest_ind(av_test_data_inh, av_test_data_exc) # p value of class accuracy being different from 50
+        print pcorrtrace     
+        
+        
     #%% Keep values of all mice (cvSample-averages for each session)
     
     corr_hr_lr_allMice.append(corr_hr_lr)
@@ -341,9 +409,9 @@ for im in range(len(mice)):
 
 
     #%%
-    ######################## PLOTS ########################
+    ######################## PLOTS (each mouse) ########################
     
-    #%% Plot class accuracy in the frame before the choice onset for each day
+    #%% Plot class accuracy in the frame before the choice for each day
     # Class accuracy vs day number
     
     plt.figure(figsize=(6,10))
@@ -351,7 +419,7 @@ for im in range(len(mice)):
 
     ### data - shuffle
     plt.subplot(311)
-    plt.errorbar(range(numDays), av_test_data_inh - av_test_shfl_inh, sd_test_data_inh, label='inh', color='r')
+    plt.errorbar(range(numDays), av_test_data_inh - av_test_shfl_inh, sd_test_data_inh, label=labInh, color='r')
     plt.errorbar(range(numDays), av_test_data_allExc - av_test_shfl_allExc, sd_test_data_allExc, label=labAll, color='k')
     if num2AnInhAllexcEqexc == 3:
         plt.errorbar(range(numDays), av_test_data_exc - av_test_shfl_exc, sd_test_data_exc, label='exc', color='b')
@@ -365,7 +433,7 @@ for im in range(len(mice)):
 
     ### data
     plt.subplot(312)
-    plt.errorbar(range(numDays), av_test_data_inh, sd_test_data_inh, label='inh', color='r')
+    plt.errorbar(range(numDays), av_test_data_inh, sd_test_data_inh, label=labInh, color='r')
     plt.errorbar(range(numDays), av_test_data_allExc, sd_test_data_allExc, label=labAll, color='k')
     if num2AnInhAllexcEqexc == 3:
         plt.errorbar(range(numDays), av_test_data_exc, sd_test_data_exc, label='exc', color='b')        
@@ -379,7 +447,7 @@ for im in range(len(mice)):
 
     ### shuffle
     plt.subplot(313)
-    plt.errorbar(range(numDays), av_test_shfl_inh, sd_test_data_inh, label='inh', color='r')
+    plt.errorbar(range(numDays), av_test_shfl_inh, sd_test_data_inh, label=labInh, color='r')
     plt.errorbar(range(numDays), av_test_shfl_allExc, sd_test_data_allExc, label=labAll, color='k')
     if num2AnInhAllexcEqexc == 3:
         plt.errorbar(range(numDays), av_test_shfl_exc, sd_test_data_exc, label='exc', color='b')
@@ -407,13 +475,17 @@ for im in range(len(mice)):
     
         plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
 
-    if num2AnInhAllexcEqexc == 3:
-        _,pcorrtrace = stats.ttest_ind(av_test_data_inh, av_test_data_exc) # p value of class accuracy being different from 50
-        print pcorrtrace     
 
 
+
+
+
+#%% Done with all mice
 ######################################################################################################################################################        
 ######################################################################################################################################################        
+######################################################################################################################################################        
+######################################################################################################################################################        
+
 #%% each element is ave and se across cv samps. (we dont really use se across cv samps below... below we plot ave and sd of cv-samped averages across sessions)
     
 av_test_data_inh_allMice = np.array(av_test_data_inh_allMice) #numMice; each mouse: numDays
@@ -442,29 +514,42 @@ if num2AnInhAllexcEqexc == 3:
 #%% Average and se of classErr across sessions for each mouse
 
 numMice = len(mice)
+#numGoodDays_allMice0 = numGoodDays_allMice
+#numGoodDays_allMice = [1,1,1,1] # if you want sd and not se
 
 av_av_test_data_inh_allMice = np.array([np.nanmean(av_test_data_inh_allMice[im], axis=0) for im in range(numMice)]) # numMice; each mouse: numDays
-sd_av_test_data_inh_allMice = np.array([np.nanstd(av_test_data_inh_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_data_inh_allMice = np.array([np.nanstd(av_test_data_inh_allMice[im], axis=0)/np.sqrt(numGoodDays_allMice[im]) for im in range(numMice)])
 av_av_test_shfl_inh_allMice = np.array([np.nanmean(av_test_shfl_inh_allMice[im], axis=0) for im in range(numMice)])
-sd_av_test_shfl_inh_allMice = np.array([np.nanstd(av_test_shfl_inh_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_shfl_inh_allMice = np.array([np.nanstd(av_test_shfl_inh_allMice[im], axis=0)/np.sqrt(numGoodDays_allMice[im]) for im in range(numMice)])
 av_av_test_chance_inh_allMice = np.array([np.nanmean(av_test_chance_inh_allMice[im], axis=0) for im in range(numMice)])
-sd_av_test_chance_inh_allMice = np.array([np.nanstd(av_test_chance_inh_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_chance_inh_allMice = np.array([np.nanstd(av_test_chance_inh_allMice[im], axis=0)/np.sqrt(numGoodDays_allMice[im]) for im in range(numMice)])
 
 av_av_test_data_allExc_allMice = np.array([np.nanmean(av_test_data_allExc_allMice[im], axis=0) for im in range(numMice)])
-sd_av_test_data_allExc_allMice = np.array([np.nanstd(av_test_data_allExc_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_data_allExc_allMice = np.array([np.nanstd(av_test_data_allExc_allMice[im], axis=0)/np.sqrt(numGoodDays_allMice[im]) for im in range(numMice)])
 av_av_test_shfl_allExc_allMice = np.array([np.nanmean(av_test_shfl_allExc_allMice[im], axis=0) for im in range(numMice)])
-sd_av_test_shfl_allExc_allMice = np.array([np.nanstd(av_test_shfl_allExc_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_shfl_allExc_allMice = np.array([np.nanstd(av_test_shfl_allExc_allMice[im], axis=0)/np.sqrt(numGoodDays_allMice[im]) for im in range(numMice)])
 av_av_test_chance_allExc_allMice = np.array([np.nanmean(av_test_chance_allExc_allMice[im], axis=0) for im in range(numMice)])
-sd_av_test_chance_allExc_allMice = np.array([np.nanstd(av_test_chance_allExc_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+sd_av_test_chance_allExc_allMice = np.array([np.nanstd(av_test_chance_allExc_allMice[im], axis=0)/np.sqrt(numGoodDays_allMice[im]) for im in range(numMice)])
 
 if num2AnInhAllexcEqexc == 3:
     av_av_test_data_exc_allMice = np.array([np.nanmean(av_test_data_exc_allMice[im], axis=0) for im in range(numMice)])
-    sd_av_test_data_exc_allMice = np.array([np.nanstd(av_test_data_exc_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+    sd_av_test_data_exc_allMice = np.array([np.nanstd(av_test_data_exc_allMice[im], axis=0)/np.sqrt(numGoodDays_allMice[im]) for im in range(numMice)])
     av_av_test_shfl_exc_allMice = np.array([np.nanmean(av_test_shfl_exc_allMice[im], axis=0) for im in range(numMice)])
-    sd_av_test_shfl_exc_allMice = np.array([np.nanstd(av_test_shfl_exc_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+    sd_av_test_shfl_exc_allMice = np.array([np.nanstd(av_test_shfl_exc_allMice[im], axis=0)/np.sqrt(numGoodDays_allMice[im]) for im in range(numMice)])
     av_av_test_chance_exc_allMice = np.array([np.nanmean(av_test_chance_exc_allMice[im], axis=0) for im in range(numMice)])
-    sd_av_test_chance_exc_allMice = np.array([np.nanstd(av_test_chance_exc_allMice[im], axis=0)/np.sqrt(numMice) for im in range(numMice)])
+    sd_av_test_chance_exc_allMice = np.array([np.nanstd(av_test_chance_exc_allMice[im], axis=0)/np.sqrt(numGoodDays_allMice[im]) for im in range(numMice)])
 
+
+
+# for each mouse compute ttest p value between exc and inh (CA in last time bin before the choice, each averaged across samps)    
+pei_allMice = np.full(len(mice), np.nan)    
+for im in range(len(mice)):
+    if num2AnInhAllexcEqexc == 3:
+        _,pei = stats.ttest_ind(av_test_data_inh_allMice[im] , av_test_data_exc_allMice[im])
+    else:
+        _,pei = stats.ttest_ind(av_test_data_inh_allMice[im] , av_test_data_allExc_allMice[im])
+    pei_allMice[im] = pei
+print pei_allMice    
 
 
 #%% Plot classErr (averaged across all sessions) for each mouse
@@ -472,15 +557,16 @@ if num2AnInhAllexcEqexc == 3:
 plt.figure(figsize=(2,3))
 
 # testing data
-plt.errorbar(range(numMice), av_av_test_data_inh_allMice, sd_av_test_data_inh_allMice, fmt='o', label='inh', color='r')
+plt.errorbar(range(numMice), av_av_test_data_inh_allMice, sd_av_test_data_inh_allMice, fmt='o', label=labInh, color='r')
 plt.errorbar(range(numMice), av_av_test_data_allExc_allMice, sd_av_test_data_allExc_allMice, fmt='o', label=labAll, color='k')
 if num2AnInhAllexcEqexc == 3:
     plt.errorbar(range(numMice), av_av_test_data_exc_allMice, sd_av_test_data_exc_allMice, fmt='o', label='exc', color='b')
 
 # shfl
 plt.errorbar(range(numMice), av_av_test_shfl_inh_allMice, sd_av_test_shfl_inh_allMice, color='r', fmt='o', alpha=.3)
-plt.errorbar(range(numMice), av_av_test_shfl_exc_allMice, sd_av_test_shfl_exc_allMice, color='b', fmt='o', alpha=.3)
 plt.errorbar(range(numMice), av_av_test_shfl_allExc_allMice, sd_av_test_shfl_allExc_allMice, color='k', fmt='o', alpha=.3)
+if num2AnInhAllexcEqexc == 3:
+    plt.errorbar(range(numMice), av_av_test_shfl_exc_allMice, sd_av_test_shfl_exc_allMice, color='b', fmt='o', alpha=.3)
 
 
 plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)#, frameon=False) 
@@ -490,14 +576,8 @@ plt.xlim([-.2,len(mice)-1+.2])
 plt.xticks(range(len(mice)),mice)
 ax = plt.gca()
 makeNicePlots(ax)
-
-
-# for each mouse compute ttest p value between exc and inh (CA in last time bin before the choice, each averaged across samps)    
-pei_allMice = np.full(len(mice), np.nan)    
-for im in range(len(mice)):
-    _,pei = stats.ttest_ind(av_test_data_inh_allMice[im] , av_test_data_exc_allMice[im])
-    pei_allMice[im] = pei
-    
+yl = ax.get_ylim()
+plt.ylim([yl[0]-2, yl[1]])
 
 if savefigs:#% Save the figure
     if shflTrsEachNeuron:
@@ -510,12 +590,12 @@ if savefigs:#% Save the figure
     else:
         dd = 'stAl_aveDays_time' + str(time2an) + '_' + labAll + '_' + sn + '_'.join(mice) + '_' + nowStr # + days[0][0:6] + '-to-' + days[-1][0:6]
         
-    d = os.path.join(svmdir+dnow)
+    d = os.path.join(svmdir+dnow0)
     if not os.path.exists(d):
         print 'creating folder'
         os.makedirs(d)
             
-    fign = os.path.join(svmdir+dnow0, suffn[0:5]+dd+'.'+fmt[0])
+    fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0])
 
     plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
 

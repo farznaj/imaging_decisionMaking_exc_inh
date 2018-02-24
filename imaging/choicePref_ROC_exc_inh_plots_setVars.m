@@ -126,6 +126,8 @@ for im = 1:length(mice)
     a = a(end); % use the latest saved file
     namatf = a.name;
     fprintf('%s\n',namatf)    
+    
+    %%% Set nowStr_allMice
     nam = namatf(end-4-12:end-4);
     if fni18_rmvDay4 && im==imfni18
         nam = strcat('fni18NoDay4_', nam);
@@ -469,14 +471,14 @@ end
 
 %% Number of valid days for each mouse
 
-nAllDays = nan(1,length(mice));
-nGoodDays = nan(1,length(mice));
+numDaysAll = nan(1,length(mice));
+numDaysGood = nan(1,length(mice));
 for im = 1:length(mice)
-    nAllDays(im) = size(aveexc_allMice{im},2);
-    nGoodDays(im) = sum(~isnan(aveexc_allMice{im}(1,:)));
+    numDaysAll(im) = size(aveexc_allMice{im},2);
+    numDaysGood(im) = sum(~isnan(aveexc_allMice{im}(1,:)));
 end
-nAllDays
-nGoodDays
+numDaysAll
+numDaysGood
 
 
 
@@ -502,10 +504,10 @@ p0
 
 %%% se across days for each mouse (traces are already averaged across neurons)
 exc_sdDays_eachMouse = cell2mat(cellfun(@(x)nanstd(x,[],2), aveexc_allMice, 'uniformoutput',0)); %nFrs x nMice
-exc_seDays_eachMouse = bsxfun(@rdivide, exc_sdDays_eachMouse, sqrt(nGoodDays));
+exc_seDays_eachMouse = bsxfun(@rdivide, exc_sdDays_eachMouse, sqrt(numDaysGood));
 
 inh_sdDays_eachMouse = cell2mat(cellfun(@(x)nanstd(x,[],2), aveinh_allMice, 'uniformoutput',0)); %nFrs x nMice
-inh_seDays_eachMouse = bsxfun(@rdivide, inh_sdDays_eachMouse, sqrt(nGoodDays));
+inh_seDays_eachMouse = bsxfun(@rdivide, inh_sdDays_eachMouse, sqrt(numDaysGood));
 
 %%% Plot each mouse:
 %{
@@ -532,10 +534,10 @@ if doshfl %%%%%%%%% shfl % average across days (already averaged across samps)
 
     %%% se across days (already averaged across samps) for each mouse (traces are already averaged across neurons)
     exc_sdDays_eachMouse_shfl = cell2mat(cellfun(@(x)nanstd(x,[],2), aveexc_allMice_shfl, 'uniformoutput',0)); %nFrs x nMice
-    exc_seDays_eachMouse_shfl = bsxfun(@rdivide, exc_sdDays_eachMouse_shfl, sqrt(nGoodDays));
+    exc_seDays_eachMouse_shfl = bsxfun(@rdivide, exc_sdDays_eachMouse_shfl, sqrt(numDaysGood));
 
     inh_sdDays_eachMouse_shfl = cell2mat(cellfun(@(x)nanstd(x,[],2), aveinh_allMice_shfl, 'uniformoutput',0)); %nFrs x nMice
-    inh_seDays_eachMouse_shfl = bsxfun(@rdivide, inh_sdDays_eachMouse_shfl, sqrt(nGoodDays));
+    inh_seDays_eachMouse_shfl = bsxfun(@rdivide, inh_sdDays_eachMouse_shfl, sqrt(numDaysGood));
 end
 
 

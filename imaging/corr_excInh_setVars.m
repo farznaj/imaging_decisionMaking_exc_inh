@@ -3,7 +3,9 @@
 
 %% %%%%%% Load ROC vars and set vars required for plotting for each mouse %%%%%%
 
-alFR = 'chAl'; %'initAl'; %'chAl'; % the firing rate traces were aligned on what
+downSampSpikes = 0; %1; % downsample spike traces (non-overalapping moving average of 3 frames).
+
+alFR = 'initAl'; % 'chAl'; % the firing rate traces were aligned on what
 outcome2ana = ''; %'corr';
 
 fni18_rmvDay4 = 1; % if 1, remove 4th day of fni18.
@@ -23,8 +25,13 @@ plotchance = 0; % it didnt make almost any difference so go with shuffled not ch
 
 % eachMouse_do_savefigs = [1,1]; % Whether to make plots and to save them for each mouse
 % sumMice_do_savefigs = [1,1]; % Whether to make plots and to save them for the summary of mice
-frameLength = 1000/30.9; % sec.
-regressBins = round(100/frameLength); % 100ms # set to nan if you don't want to downsample.
+if downSampSpikes    
+    frameLength = 1000/30.9; % sec.
+    regressBins = round(100/frameLength); % 100ms # set to nan if you don't want to downsample.
+else
+    regressBins = nan;
+end
+
 % dirn0 = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/ROC';
 % dirn0fr = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/FR';
 dm0 = char(strcat(join(mice, '_'),'_'));
@@ -69,6 +76,8 @@ else
     o2a = '_allOutcome';
 end      
 
+if isnan(regressBins), dsn = '_noDownSamp'; else dsn = ''; end
+
 
 %%
 nPreMin_allMice = nan(1, length(mice));
@@ -84,7 +93,7 @@ fr_inh_aligned_allMice = cell(1, length(mice));
 
 ipsiTrs_allDays_allMice = cell(1, length(mice));
 contraTrs_allDays_allMice = cell(1, length(mice));
-
+       
 
 %%
 % im = 1;
@@ -96,7 +105,7 @@ for im = 1:length(mice)
     
     %% Load FR vars
 
-    namv = sprintf('FR%s_curr_%s%s_stimstr%d%s_%s_*.mat', nmd, alFR,o2a,thStimStrength,namz,mouse);    
+    namv = sprintf('FR%s%s_curr_%s%s_stimstr%d%s_%s_*.mat', dsn, nmd, alFR,o2a,thStimStrength,namz,mouse);    
     a = dir(fullfile(dirn,namv));
     a = a(end); % use the latest saved file
     namatfr = a.name;
@@ -306,14 +315,14 @@ end
 
 %% Number of valid days for each mouse
 
-nAllDays = nan(1,length(mice));
-nGoodDays = nan(1,length(mice));
+numDaysAll = nan(1,length(mice));
+numDaysGood = nan(1,length(mice));
 for im = 1:length(mice)
-    nAllDays(im) = length(fr_exc_al_allMice{im});
-    nGoodDays(im) = sum(mnTrNum_allMice{im}>=thMinTrs); % sum(~isnan(aveexc_allMice{im}(1,:)));
+    numDaysAll(im) = length(fr_exc_al_allMice{im});
+    numDaysGood(im) = sum(mnTrNum_allMice{im}>=thMinTrs); % sum(~isnan(aveexc_allMice{im}(1,:)));
 end
-nAllDays
-nGoodDays
+numDaysAll
+numDaysGood
 
 
 %% So the vars are not confused with ROC vars
@@ -326,4 +335,7 @@ nowStr_allMice_fr = nowStr_allMice;
 mnTrNum_allMice_fr = mnTrNum_allMice;
 days_allMice_fr = days_allMice;
 corr_ipsi_contra_allMice_fr = corr_ipsi_contra_allMice;
+
+numDaysAll_fr = numDaysAll;
+nDaysGood_fr = numDaysGood;
 

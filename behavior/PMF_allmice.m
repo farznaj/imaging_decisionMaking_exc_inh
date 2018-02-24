@@ -1,4 +1,4 @@
-%% Set PMF plots for each individual mice (pooling trials of all sessions). 
+%% Set PMF plots for each individual mouse (pooling trials of all sessions). 
 % Also fit GLM.
 
 rmvMice_5_8 = 0; % remove 5th and 8th mice below (fni16,fni19)

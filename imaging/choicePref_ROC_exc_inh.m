@@ -1,14 +1,13 @@
 outcome2ana = ''; %'corr'; 'incorr'; '';
 
+downSampSpikes = 0; %1; % downsample spike traces (non-overalapping moving average of 3 frames).
 saveVars = 1; % if 1, vars will be saved.
-doshfl = 0; % 1: shuffle trial labels; also do the chance version (ieset half of them to 0, other half to 1); 0: dont do either. If 1, in addition to doing roc on actual traces, we shuffle trial labels to get roc values for shuffled case as well.
 
-% vars related to setting firing rates
 setFRsOnly = 1; % only set FRs (not ROC valus)
 normX = 1; % after downsampling set max peak to 1. Makes sense to do, since traces before downsampling are normalized to max
 
-chAl = 1; %1;
-initAl = 0;%1; 
+chAl = 0; 
+initAl = 1;
 
 
 mice = {'fni16','fni17','fni18','fni19'};
@@ -16,26 +15,28 @@ thStimStrength = 0; % 2; % what stim strength you want to use for computing choi
 useEqualNumTrs = 0; % if true, equal number of trials for HR and LR will be used to compute ROC.
 trialHistAnalysis = 0;
 makeplots = 0;
-frameLength = 1000/30.9; % sec.
-regressBins = round(100/frameLength); % 100ms # set to nan if you don't want to downsample.
+doshfl = 0; % 1: shuffle trial labels; also do the chance version (ieset half of them to 0, other half to 1); 0: dont do either. If 1, in addition to doing roc on actual traces, we shuffle trial labels to get roc values for shuffled case as well.
 
+if downSampSpikes    
+    frameLength = 1000/30.9; % sec.
+    regressBins = round(100/frameLength); % 100ms # set to nan if you don't want to downsample.
+else
+    regressBins = nan;
+end
+%{
 dirn0 = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/'; % dirn0 = '/home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/ROC';
 if setFRsOnly, dirn0 = fullfile(dirn0,'FR'); else dirn0 = fullfile(dirn0,'ROC'); end
-
+%}
 nowStr = datestr(now, 'yymmdd-HHMMSS');
 zScoreX = 0; % % it doesnt make any difference, bc z scoring is a linear operation, so it doesnt change ROC values. %if 1, trace of each neuron (at each frame) will be z scored, ie mean of that neuron across all trials will be subtracted from each trial and then it will be divided by the std of the neuron across all trials. 
 if zScoreX
     softNorm = 1; % soft normalziation : neurons with sd<thAct wont have too large values after normalization
     thAct = 5e-4; % it will be used for soft normalization #1e-5 # neurons whose average activity during ep is less than thAct will be called non-active and will be excluded.
     namz = '_zscoredX';
-else
-    namz = '';
+else namz = ''; 
 end
-if normX
-    nmd = '_norm2max';
-else
-    nmd = '';
-end
+
+if normX, nmd = '_norm2max'; else nmd = ''; end
 
 
 %%
@@ -198,7 +199,7 @@ for im = 1:length(mice)
         
         %% Downsample X: average across multiple times (downsampling, not a moving average. we only average every regressBins points.)
 
-        if isnan(regressBins)==0 % set to nan if you don't want to downsample.
+        if isnan(regressBins)==0 % set to nan if you don't want to downsample
 
             %%%%%%%%%% set frames before frame0 (not including it)
             e = eventI-1;
@@ -229,21 +230,23 @@ for im = 1:length(mice)
             
             %%%%%%%%%% set downsampled eventI
             eventI_ds = size(xdb,1)+1;
+        
+            %% After downsampling normalize X_svm so each neuron's max is at 1 (you do this in matlab for S traces before downsampling... so it makes sense to again normalize the traces After downsampling so max peak is at 1)                
+
+            if normX
+                % find the max of each neurons across all trials and frames # max(X_svm.flatten())            
+                m = max(X_svm, [], 3); % max across trials
+                m = max(m, [], 1);  % max across frames            
+                X_svm = bsxfun(@rdivide, X_svm, m);
+            end
+            
+        else % don't downsample
+            eventI_ds = nan;
         end
 
         eventI_ds_allDays(iday) = eventI_ds;
-
-        
-        %% After downsampling normalize X_svm so each neuron's max is at 1 (you do this in matlab for S traces before downsampling... so it makes sense to again normalize the traces After downsampling so max peak is at 1)                
-        
-        if normX
-            % find the max of each neurons across all trials and frames # max(X_svm.flatten())            
-            m = max(X_svm, [], 3); % max across trials
-            m = max(m, [], 1);  % max across frames            
-            X_svm = bsxfun(@rdivide, X_svm, m);
-        end
            
-        sum(find(X_svm(:,1,1)<0))
+        
         %% Keep a copy of X_svm before z scoring
         
         if zScoreX
@@ -393,10 +396,8 @@ for im = 1:length(mice)
     %% Save vars to a mat file
     
     if saveVars
-        d = fullfile(dirn0, mouse);
-        if ~exist(d, 'dir')
-            mkdir(d)
-        end
+        mouse = mice{im};    
+        [~,~,d] = setImagingAnalysisNames(mouse, 'analysis', []);    % dirn = fullfile(dirn0fr, mouse);        d = fullfile(dirn, mouse); %dirn0         if ~exist(d, 'dir')            mkdir(d)        end
 
         if chAl, al = 'chAl'; 
         elseif initAl==1, al = 'initAl'; end % 'stAl'
@@ -410,8 +411,10 @@ for im = 1:length(mice)
         end        
         
 %         if doshfl==-1, cn='_chance'; else cn=''; end
-        if setFRsOnly, fnam = sprintf('FR%s', nmd); else fnam = 'ROC'; end
+        if isnan(regressBins), dsn = '_noDownSamp'; else dsn = ''; end
         
+        if setFRsOnly, fnam = sprintf('FR%s%s', dsn, nmd); else fnam = 'ROC'; end
+            
         if trialHistAnalysis
             namv = sprintf('%s_prev_%s%s_stimstr%d%s_%s_%s.mat', fnam, al,o2a,thStimStrength, namz, mouse, nowStr);
         else
