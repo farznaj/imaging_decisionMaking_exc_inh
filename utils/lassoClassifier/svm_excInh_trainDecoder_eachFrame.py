@@ -56,14 +56,14 @@ if 'ipykernel' in sys.modules:
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni16' #'fni17' #'fni16' #
-    imagingFolder = '151006' #30'#'150923' #'151023' #'151023' #'151001' #
-    mdfFileNumber = [1,2] #[1] 
+    mousename = 'fni17' #''fni19' #'fni16' #fni16' #
+    imagingFolder = '151102' #'151019' #'151006' #30'#'150923' #'151023' #'151023' #'151001' #
+    mdfFileNumber = [1,2]
 
     shflTrLabs = 0 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
     shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations in neurons FRs across trials.
     outcome2ana = 'corr' #'all' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
-    doInhAllexcEqexc = [0,1,0] # [0,1,0,1]
+    doInhAllexcEqexc = [1,0,0,1] # [0,1,0] # 
     #    1st element: analyze inhibitory neurons (train SVM for numSamples for each value of C)
     #    2nd element: analyze all excitatory neurons (train SVM for numSamples for each value of C)   
     #    3rd element: if 1: analyze excitatory neurons, equal number to inhibitory neurons (train SVM for numSamples for each value of C, repeat this numShufflesExc times (each time subselecting n exc neurons))
@@ -71,7 +71,8 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
                     # if 3: take lenInh*2 of only exc and run svm. 
     # if there is a 4th element (eg [0,1,0,1]), the following analysis will be done (still we need to specify whether we want to analyze inh or allExc): Ns will be added 1 by 1 based on their ROC choice tuning
     
-    doPlots = 1 # Whether to make plots or not.
+    doPlots = 0 # Whether to make plots or not.
+    saveResults = 1 # save results in mat file.
 
     chAl = 1 # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM.     
     numSamples = 3 #100; # number of iterations for finding the best c (inverse of regularization parameter)
@@ -81,8 +82,6 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     useEqualTrNums = 1 # Make sure both classes have the same number of trials when training the classifier
     winLen = 100 # ms, length of window for downsampling; svm will be trained in non-overlapping windows of size winLen ms.
     
-    
-    saveResults = 0 # save results in mat file.
 
     regType = 'l2' # 'l2' : regularization type
     kfold = 10
@@ -143,6 +142,9 @@ if trialHistAnalysis==1:
     
 print 'Analyzing %s' %(mousename+'_'+imagingFolder+'_'+str(mdfFileNumber)) 
 print 'Analyzing %s neurons' %(ntName)
+if len(doInhAllexcEqexc)==4:
+    addNs_roc = 1 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
+    print 'Adding neurons 1 by 1 for SVM analysis' 
 if chAl==1:
     print 'Using choice-aligned traces'
 else:
@@ -196,8 +198,6 @@ eps = sys.float_info.epsilon #2.2204e-16
 frameLength = 1000/30.9; # sec.
 regressBins = int(np.round(winLen/frameLength)) # 100ms # set to nan if you don't want to downsample.
 
-if len(doInhAllexcEqexc)==4:
-    addNs_roc = 1 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
 
     
 #%% Import libraries
@@ -304,6 +304,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     if not os.path.exists(tifFold):
         if 'altDataPath' in locals():
             tifFold = os.path.join(altDataPath+mousename, 'imaging', imagingFolder)
+            dataPath = altDataPath
         else:
             sys.exit('Data directory does not exist!')
 
@@ -414,7 +415,8 @@ print(moreName)
 
 
 
-#%%
+#%% If shflTrLabs=1 => svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles
+
 if shflTrLabs: # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.
     
     corrTrained = 1
@@ -1155,8 +1157,7 @@ X_svm = X_svm_N
     
 
 
-#%% ###############################################################################
-##%% Define function to shuffle trials in X_svm (for each neuron independently) to break correlations in neurons FRs across trials.
+#%% Define function to shuffle trials in X_svm (for each neuron independently) to break correlations in neurons FRs across trials.
     # we want to see how choice decoding would be different when :
     # 1) potential correlations between neurons in a trial are broken.
     # 2) any trial-history effect on neural responses will be shuffled out.
@@ -1905,7 +1906,7 @@ if addNs_roc==0:   # run svm on all neurons (ie not adding neurons one by one!)
 
 ################################################################################################################################
 ################################################################################################################################
-#%% Same as above but run SVM for populations of different size (adding neurons 1 by 1 based on their tuning strength)
+#%% Same as above but run SVM for populations of increasingly bigger size (adding neurons 1 by 1 based on their tuning strength)
 
 if addNs_roc:
 

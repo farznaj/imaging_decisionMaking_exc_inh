@@ -325,6 +325,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder=[], mdfFileNumber=1, **opt
         if not os.path.exists(tifFold):
             if 'altDataPath' in locals():
                 tifFold = os.path.join(altDataPath+mousename, 'imaging', imagingFolder)
+                dataPath = altDataPath
             else:
                 sys.exit('Data directory does not exist!')
     
@@ -1609,6 +1610,11 @@ def colorOrder(nlines=30):
 def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc=[], regressBins=3, useEqualTrNums=1, corrTrained=0, shflTrsEachNeuron=0, shflTrLabs=0):
     import glob
 
+    if len(doInhAllexcEqexc)>3:
+        diffn = 'diffNumNsROC_'
+    else:
+        diffn = ''
+    
     if chAl==1:
         al = 'chAl'
     else:
@@ -1658,14 +1664,14 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
         
     if trialHistAnalysis:
         if useEqualTrNums:
-            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_eqTrs_*' %(o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
+            svmn = '%sexcInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_eqTrs_*' %(diffn,o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
         else:
-            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_*' %(o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
+            svmn = '%sexcInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_*' %(diffn,o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
     else:
         if useEqualTrNums:
-            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_eqTrs_*' %(o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
+            svmn = '%sexcInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_eqTrs_*' %(diffn,o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
         else:
-            svmn = 'excInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_*' %(o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
+            svmn = '%sexcInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_*' %(diffn,o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
         
         
         
@@ -2561,6 +2567,100 @@ def loadSVM_excInh_excInhHalf(pnevFileName, trialHistAnalysis, chAl, regressBins
     
     
     
+
+#%% Load exc,inh SVM vars for the following analysis : add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
+        
+def loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, loadWeights, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0):
+    # loadWeights: 
+    # 0: don't load weights, only load class accur
+    # 1 : load weights and class cccur
+    # 2 : load only weights and not class accur
+
+    svmName_excInh = []
+    for idi in [0,1]:
+        
+        doInhAllexcEqexc = np.full((4), 0, dtype=int)
+        doInhAllexcEqexc[idi] = 1
+
+        svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron, shflTrLabs)[0]
+        svmName_excInh.append(svmName)
+#        svmName = svmName[0] # use [0] for the latest file; use [-1] for the earliest file
+        print os.path.basename(svmName)    
+
+        ######### inh
+        if doInhAllexcEqexc[0] == 1: 
+            if loadWeights==1:
+                Datai = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_inh_numNs', 'perClassErrorTest_shfl_inh_numNs', 'perClassErrorTest_chance_inh_numNs', 'w_data_inh_numNs', 'b_data_inh_numNs'])
+            elif loadWeights==2:                
+                Datai = scio.loadmat(svmName, variable_names=['w_data_inh_numNs','b_data_inh_numNs'])
+            else:
+                Datai = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_inh_numNs', 'perClassErrorTest_shfl_inh_numNs', 'perClassErrorTest_chance_inh_numNs'])
+        
+        ######### allExc
+        elif doInhAllexcEqexc[1] == 1: 
+            if loadWeights==1:
+                Dataae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_allExc_numNs', 'perClassErrorTest_shfl_allExc_numNs', 'perClassErrorTest_chance_allExc_numNs', 'w_data_allExc_numNs', 'b_data_allExc_numNs'])
+            elif loadWeights==2:                
+                Dataae = scio.loadmat(svmName, variable_names=['w_data_allExc_numNs', 'b_data_allExc_numNs'])
+            else:
+                Dataae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_allExc_numNs', 'perClassErrorTest_shfl_allExc_numNs', 'perClassErrorTest_chance_allExc_numNs'])
+
+        
+
+        
+    ###%%             
+    if loadWeights!=2:   # 2: only download weights, no CA                                     
+        perClassErrorTest_data_inh = Datai.pop('perClassErrorTest_data_inh_numNs')
+        perClassErrorTest_shfl_inh = Datai.pop('perClassErrorTest_shfl_inh_numNs')
+        perClassErrorTest_chance_inh = Datai.pop('perClassErrorTest_chance_inh_numNs') 
+    if loadWeights>=1:
+        w_data_inh = Datai.pop('w_data_inh_numNs') 
+        b_data_inh = Datai.pop('b_data_inh_numNs')         
+    else:
+        w_data_inh = []
+        b_data_inh = []
+
+        
+    if loadWeights!=2:
+        perClassErrorTest_data_allExc = Dataae.pop('perClassErrorTest_data_allExc_numNs')
+        perClassErrorTest_shfl_allExc = Dataae.pop('perClassErrorTest_shfl_allExc_numNs')
+        perClassErrorTest_chance_allExc = Dataae.pop('perClassErrorTest_chance_allExc_numNs')   
+    if loadWeights>=1:
+        w_data_allExc = Dataae.pop('w_data_allExc_numNs') 
+        b_data_allExc = Dataae.pop('b_data_allExc_numNs') 
+    else:
+        w_data_allExc = []
+        b_data_allExc = []
+    
+
+       
+    ######%% Set class errors to 50 if less than .05 fraction of neurons in a sample have non-0 weights, and set all samples class error to 50, if less than 10 samples satisfy this condition.
+   
+    if loadWeights==1:
+        perClassErrorTest_data_inh = setTo50classErr(perClassErrorTest_data_inh, w_data_inh, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+        perClassErrorTest_shfl_inh = setTo50classErr(perClassErrorTest_shfl_inh, w_data_inh, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+        perClassErrorTest_chance_inh = setTo50classErr(perClassErrorTest_chance_inh, w_data_inh, thNon0Ws = .05, thSamps = 10, eps = 1e-10)    
+        
+        perClassErrorTest_data_allExc = setTo50classErr(perClassErrorTest_data_allExc, w_data_allExc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+        perClassErrorTest_shfl_allExc = setTo50classErr(perClassErrorTest_shfl_allExc, w_data_allExc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+        perClassErrorTest_chance_allExc = setTo50classErr(perClassErrorTest_chance_allExc, w_data_allExc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)    
+        
+        ##%% Get number of inh and exc        
+#        numInh[iday] = w_data_inh.shape[1]
+#        numAllexc[iday] = w_data_allExc.shape[1]
+
+    if loadWeights==2:   # 2: only download weights, no CA                                     
+        perClassErrorTest_data_inh = []
+        perClassErrorTest_shfl_inh = []
+        perClassErrorTest_chance_inh = []
+        perClassErrorTest_data_allExc = []
+        perClassErrorTest_shfl_allExc = []
+        perClassErrorTest_chance_allExc = []
+    
+
+    return perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, w_data_inh, w_data_allExc, b_data_inh, b_data_allExc, svmName_excInh
+    
+    
     
 #%% Average and st error of class accuracies across CV samples ... for each day
 
@@ -2638,6 +2738,40 @@ def av_se_CA_trsamps_excInhHalf(numD, perClassErrorTest_data_inh_all, perClassEr
     
     
     return numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, \
+        av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc
+
+
+
+#%% Same as above but for the analysis of adding neurons 1 by 1
+
+def av_se_CA_trsamps_addNs1by1(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, 
+                                perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all, fr2an, eventI_ds_allDays):
+    
+#    numD = len(eventI_allDays)
+    numSamples = np.shape(perClassErrorTest_data_allExc_all[0])[1]
+    
+    #### inh
+    av_test_data_inh = np.array([100-np.nanmean(perClassErrorTest_data_inh_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) for iday in range(numD)]) # numDays; each day: number of neurons in the decoder
+    sd_test_data_inh = np.array([np.nanstd(perClassErrorTest_data_inh_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) / np.sqrt(numSamples) for iday in range(numD)])  
+    
+    av_test_shfl_inh = np.array([100-np.nanmean(perClassErrorTest_shfl_inh_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) for iday in range(numD)]) 
+    sd_test_shfl_inh = np.array([np.nanstd(perClassErrorTest_shfl_inh_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) / np.sqrt(numSamples) for iday in range(numD)])  
+    
+    av_test_chance_inh = np.array([100-np.nanmean(perClassErrorTest_chance_inh_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) for iday in range(numD)]) # 
+    sd_test_chance_inh = np.array([np.nanstd(perClassErrorTest_chance_inh_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) / np.sqrt(numSamples) for iday in range(numD)])  
+ 
+    #### allExc
+    av_test_data_allExc = np.array([100-np.nanmean(perClassErrorTest_data_allExc_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) for iday in range(numD)]) # 
+    sd_test_data_allExc = np.array([np.nanstd(perClassErrorTest_data_allExc_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) / np.sqrt(numSamples) for iday in range(numD)])  
+    
+    av_test_shfl_allExc = np.array([100-np.nanmean(perClassErrorTest_shfl_allExc_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) for iday in range(numD)]) # 
+    sd_test_shfl_allExc = np.array([np.nanstd(perClassErrorTest_shfl_allExc_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) / np.sqrt(numSamples) for iday in range(numD)])  
+    
+    av_test_chance_allExc = np.array([100-np.nanmean(perClassErrorTest_chance_allExc_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) for iday in range(numD)]) # 
+    sd_test_chance_allExc = np.array([np.nanstd(perClassErrorTest_chance_allExc_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) / np.sqrt(numSamples) for iday in range(numD)])  
+
+    
+    return numSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, \
         av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc
 
 
