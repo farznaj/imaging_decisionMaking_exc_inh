@@ -451,7 +451,9 @@ def makeNicePlots(ax, rmv2ndXtickLabel=0, rmv2ndYtickLabel=0):
         
     if rmv2ndYtickLabel:
         [label.set_visible(False) for label in ax.yaxis.get_ticklabels()[::2]]
-    
+#        a = np.array(ax.yaxis.get_ticklabels())[np.arange(0,len(ax.yaxis.get_ticklabels()),2).astype(int).flatten()]
+#        [label.set_visible(False) for label in a]
+        
     # gap between tick labeles and axis
 #    ax.tick_params(axis='x', pad=30)
 
@@ -2577,7 +2579,7 @@ def loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins,
     # 2 : load only weights and not class accur
 
     svmName_excInh = []
-    for idi in [0,1]:
+    for idi in [0,1,2]:
         
         doInhAllexcEqexc = np.full((4), 0, dtype=int)
         doInhAllexcEqexc[idi] = 1
@@ -2605,6 +2607,14 @@ def loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins,
             else:
                 Dataae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_allExc_numNs', 'perClassErrorTest_shfl_allExc_numNs', 'perClassErrorTest_chance_allExc_numNs'])
 
+        ######### eqExc
+        elif doInhAllexcEqexc[2] == 1: 
+            if loadWeights==1:
+                Datae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_exc_numNs', 'perClassErrorTest_shfl_exc_numNs', 'perClassErrorTest_chance_exc_numNs', 'w_data_exc_numNs', 'b_data_exc_numNs'])                                                 
+            elif loadWeights==2:                                
+                Datae = scio.loadmat(svmName, variable_names=['w_data_exc_numNs', 'b_data_exc_numNs'])                                                 
+            else:
+                Datae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_exc_numNs', 'perClassErrorTest_shfl_exc_numNs', 'perClassErrorTest_chance_exc_numNs'])
         
 
         
@@ -2633,7 +2643,18 @@ def loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins,
         b_data_allExc = []
     
 
-       
+    if loadWeights!=2:
+        perClassErrorTest_data_exc = Datae.pop('perClassErrorTest_data_exc_numNs')    
+        perClassErrorTest_shfl_exc = Datae.pop('perClassErrorTest_shfl_exc_numNs')
+        perClassErrorTest_chance_exc = Datae.pop('perClassErrorTest_chance_exc_numNs')
+    if loadWeights>=1:    
+        w_data_exc = Datae.pop('w_data_exc_numNs') 
+        b_data_exc = Datae.pop('b_data_exc_numNs') 
+    else:
+        w_data_exc = []
+        b_data_exc = []
+        
+        
     ######%% Set class errors to 50 if less than .05 fraction of neurons in a sample have non-0 weights, and set all samples class error to 50, if less than 10 samples satisfy this condition.
    
     if loadWeights==1:
@@ -2644,6 +2665,11 @@ def loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins,
         perClassErrorTest_data_allExc = setTo50classErr(perClassErrorTest_data_allExc, w_data_allExc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
         perClassErrorTest_shfl_allExc = setTo50classErr(perClassErrorTest_shfl_allExc, w_data_allExc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
         perClassErrorTest_chance_allExc = setTo50classErr(perClassErrorTest_chance_allExc, w_data_allExc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)    
+
+        perClassErrorTest_data_exc = setTo50classErr(perClassErrorTest_data_exc, w_data_exc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+        perClassErrorTest_shfl_exc = setTo50classErr(perClassErrorTest_shfl_exc, w_data_exc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)
+        perClassErrorTest_chance_exc = setTo50classErr(perClassErrorTest_chance_exc, w_data_exc, thNon0Ws = .05, thSamps = 10, eps = 1e-10)    
+        
         
         ##%% Get number of inh and exc        
 #        numInh[iday] = w_data_inh.shape[1]
@@ -2656,11 +2682,15 @@ def loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins,
         perClassErrorTest_data_allExc = []
         perClassErrorTest_shfl_allExc = []
         perClassErrorTest_chance_allExc = []
+        perClassErrorTest_data_exc = []
+        perClassErrorTest_shfl_exc = []
+        perClassErrorTest_chance_exc = []        
+            
+
+#    return perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, w_data_inh, w_data_allExc, b_data_inh, b_data_allExc, svmName_excInh    
+    return perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh
     
 
-    return perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, w_data_inh, w_data_allExc, b_data_inh, b_data_allExc, svmName_excInh
-    
-    
     
 #%% Average and st error of class accuracies across CV samples ... for each day
 
@@ -2702,7 +2732,9 @@ def av_se_CA_trsamps(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shf
     av_test_chance_allExc = np.array([100-np.nanmean(perClassErrorTest_chance_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
     sd_test_chance_allExc = np.array([np.nanstd(perClassErrorTest_chance_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
     
-    return numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_exc, sd_test_data_exc, av_test_shfl_exc, sd_test_shfl_exc, av_test_chance_exc, sd_test_chance_exc, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc
+    return numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, \
+        av_test_data_exc, sd_test_data_exc, av_test_shfl_exc, sd_test_shfl_exc, av_test_chance_exc, sd_test_chance_exc, \
+        av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc
 
 
 
@@ -2745,10 +2777,12 @@ def av_se_CA_trsamps_excInhHalf(numD, perClassErrorTest_data_inh_all, perClassEr
 #%% Same as above but for the analysis of adding neurons 1 by 1
 
 def av_se_CA_trsamps_addNs1by1(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, 
+                                perClassErrorTest_data_exc_all, perClassErrorTest_shfl_exc_all, perClassErrorTest_chance_exc_all, 
                                 perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all, fr2an, eventI_ds_allDays):
-    
+        
 #    numD = len(eventI_allDays)
-    numSamples = np.shape(perClassErrorTest_data_allExc_all[0])[1]
+    numSamples = np.shape(perClassErrorTest_data_allExc_all[0])[1] # number of neurons in the decoder x nSamps x nFrs
+    numExcSamples = np.shape(perClassErrorTest_data_exc_all[0])[0] # numShufflesExc x number of neurons in the decoder x numSamples x nFrs
     
     #### inh
     av_test_data_inh = np.array([100-np.nanmean(perClassErrorTest_data_inh_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) for iday in range(numD)]) # numDays; each day: number of neurons in the decoder
@@ -2760,6 +2794,29 @@ def av_se_CA_trsamps_addNs1by1(numD, perClassErrorTest_data_inh_all, perClassErr
     av_test_chance_inh = np.array([100-np.nanmean(perClassErrorTest_chance_inh_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) for iday in range(numD)]) # 
     sd_test_chance_inh = np.array([np.nanstd(perClassErrorTest_chance_inh_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) / np.sqrt(numSamples) for iday in range(numD)])  
  
+
+    #### exc (average across cv samples and exc shuffles)
+    av_test_data_exc = np.array([100-np.nanmean(perClassErrorTest_data_exc_all[iday][:,:,:, eventI_ds_allDays[iday]+fr2an], axis=(0,2)) for iday in range(numD)]) # numDays
+    sd_test_data_exc = np.array([np.nanstd(perClassErrorTest_data_exc_all[iday][:,:,:, eventI_ds_allDays[iday]+fr2an], axis=(0,2)) / np.sqrt(numSamples+numExcSamples) for iday in range(numD)])  
+    
+    av_test_shfl_exc = np.array([100-np.nanmean(perClassErrorTest_shfl_exc_all[iday][:,:,:, eventI_ds_allDays[iday]+fr2an], axis=(0,2)) for iday in range(numD)]) # numDays
+    sd_test_shfl_exc = np.array([np.nanstd(perClassErrorTest_shfl_exc_all[iday][:,:,:, eventI_ds_allDays[iday]+fr2an], axis=(0,2)) / np.sqrt(numSamples+numExcSamples) for iday in range(numD)])  
+    
+    av_test_chance_exc = np.array([100-np.nanmean(perClassErrorTest_chance_exc_all[iday][:,:,:, eventI_ds_allDays[iday]+fr2an], axis=(0,2)) for iday in range(numD)]) # numDays
+    sd_test_chance_exc = np.array([np.nanstd(perClassErrorTest_chance_exc_all[iday][:,:,:, eventI_ds_allDays[iday]+fr2an], axis=(0,2)) / np.sqrt(numSamples+numExcSamples) for iday in range(numD)])  
+    # 1 exc subsample
+    '''
+    shf = rng.permutation(numExcSamples)
+    av_test_data_exc = np.array([100-np.nanmean(perClassErrorTest_data_exc_all[iday][shf[iday],:,:, eventI_ds_allDays[iday]+fr2an], axis=1) for iday in range(numD)]) # numDays
+    sd_test_data_exc = np.array([np.nanstd(perClassErrorTest_data_exc_all[iday][shf[iday],:,:, eventI_ds_allDays[iday]+fr2an], axis=1) / np.sqrt(numSamples) for iday in range(numD)])  
+    
+    av_test_shfl_exc = np.array([100-np.nanmean(perClassErrorTest_shfl_exc_all[iday][shf[iday],:,:, eventI_ds_allDays[iday]+fr2an], axis=1) for iday in range(numD)]) # numDays
+    sd_test_shfl_exc = np.array([np.nanstd(perClassErrorTest_shfl_exc_all[iday][shf[iday],:,:, eventI_ds_allDays[iday]+fr2an], axis=1) / np.sqrt(numSamples) for iday in range(numD)])  
+    
+    av_test_chance_exc = np.array([100-np.nanmean(perClassErrorTest_chance_exc_all[iday][shf[iday],:,:, eventI_ds_allDays[iday]+fr2an], axis=1) for iday in range(numD)]) # numDays
+    sd_test_chance_exc = np.array([np.nanstd(perClassErrorTest_chance_exc_all[iday][shf[iday],:,:, eventI_ds_allDays[iday]+fr2an], axis=1) / np.sqrt(numSamples) for iday in range(numD)])  
+    '''
+    
     #### allExc
     av_test_data_allExc = np.array([100-np.nanmean(perClassErrorTest_data_allExc_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) for iday in range(numD)]) # 
     sd_test_data_allExc = np.array([np.nanstd(perClassErrorTest_data_allExc_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) / np.sqrt(numSamples) for iday in range(numD)])  
@@ -2770,10 +2827,12 @@ def av_se_CA_trsamps_addNs1by1(numD, perClassErrorTest_data_inh_all, perClassErr
     av_test_chance_allExc = np.array([100-np.nanmean(perClassErrorTest_chance_allExc_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) for iday in range(numD)]) # 
     sd_test_chance_allExc = np.array([np.nanstd(perClassErrorTest_chance_allExc_all[iday][:,:, eventI_ds_allDays[iday]+fr2an], axis=1) / np.sqrt(numSamples) for iday in range(numD)])  
 
-    
-    return numSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, \
-        av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc
 
+    return numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, \
+        av_test_data_exc, sd_test_data_exc, av_test_shfl_exc, sd_test_shfl_exc, av_test_chance_exc, sd_test_chance_exc, \
+        av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc    
+#    return numSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, \
+#        av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc
 
 
 #%% Set extent for imshow, so x axis has values corresponding to time_aligned

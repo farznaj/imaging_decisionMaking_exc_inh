@@ -63,13 +63,13 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     shflTrLabs = 0 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
     shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations in neurons FRs across trials.
     outcome2ana = 'corr' #'all' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
-    doInhAllexcEqexc = [1,0,0,1] # [0,1,0] # 
+    doInhAllexcEqexc = [0,0,1,1] # [0,1,0]  
     #    1st element: analyze inhibitory neurons (train SVM for numSamples for each value of C)
     #    2nd element: analyze all excitatory neurons (train SVM for numSamples for each value of C)   
     #    3rd element: if 1: analyze excitatory neurons, equal number to inhibitory neurons (train SVM for numSamples for each value of C, repeat this numShufflesExc times (each time subselecting n exc neurons))
                     # if 2: take half exc, half inh, and run svm
                     # if 3: take lenInh*2 of only exc and run svm. 
-    # if there is a 4th element (eg [0,1,0,1]), the following analysis will be done (still we need to specify whether we want to analyze inh or allExc): Ns will be added 1 by 1 based on their ROC choice tuning
+    # if there is a 4th element (eg [0,1,0,1]), the following analysis will be done (still we need to specify whether we want to analyze inh,allExc or eqEx; if eqExc, exc ns are first subsampled then they are sorted based on ROC; and then svm is run): Ns will be added 1 by 1 based on their ROC choice tuning
     
     doPlots = 0 # Whether to make plots or not.
     saveResults = 1 # save results in mat file.
@@ -1635,10 +1635,10 @@ shuffleTrs = False # set to 0 so for each iteration of numSamples, all frames ar
    
 nFrs = np.shape(X_svm)[0]   
 lenInh = (inhRois==1).sum()
-excI = np.argwhere(inhRois==0)    
+excI = np.argwhere(inhRois==0).squeeze() # indeces of exc neurons (out of X_svm which includes all neurons)
     
 ## Set Xexc for n exc (pick numShufflesEx sets of n exc neurons) and 2n exc (n=lenInh)
-if addNs_roc==0:    
+if doInhAllexcEqexc[2]!=0 or addNs_roc==0:    
     if np.logical_or(doInhAllexcEqexc[2] == 1 , doInhAllexcEqexc[2] == 2): ###### n exc (pick numShufflesEx sets of n exc neurons)
         if shflTrLabs: # we already have saved exc neuron indeces for each exc samp, so we use those same samps
             XexcEq = []
@@ -1647,13 +1647,15 @@ if addNs_roc==0:
                 XexcEq.append(Xexc)            
         else:
             XexcEq = []       
-            excNsEachSamp = []
+            excNsEachSamp = [] # numShufflesExc x frs x units x trials
+            excNsEachSamp_indsOutOfExcNs = [] # numShufflesExc x frs x units x trials
             for ii in range(numShufflesExc):  # select n random exc (n = number of inh)         
                 en = rng.permutation(excI)[0:lenInh].squeeze() # n randomly selected exc neurons.    
                 Xexc = X_svm[:, en,:]
                 XexcEq.append(Xexc)    
-                excNsEachSamp.append(en) # indeces of exc neurons (our of X_svm) used for svm training in each exc shfl (below).... you need this if you want to get svm projections for a particular exc shfl (eg w_data_exc[nExcShfl,:,:,:])
-            
+                excNsEachSamp.append(en) # indeces of exc neurons (out of X_svm which includes all neurons) used to create XexcEq.... you need this if you want to get svm projections for a particular exc shfl (eg w_data_exc[nExcShfl,:,:,:])
+                excNsEachSamp_indsOutOfExcNs.append(np.argwhere(np.in1d(excI, en)).squeeze()) # indeces of exc neurons (out of X_svm for exc neurons which includes only exc neurons) used to create XexcEq.
+                
     # set 2*lenInh population made of all exc neurons; as a control for the population made of half exc, half inh
     if doInhAllexcEqexc[2] == 3: ###### allExc2inhSize      
         XallExc2inhSize = []
@@ -1733,7 +1735,7 @@ if addNs_roc==0:   # run svm on all neurons (ie not adding neurons one by one!)
             b_data_allExc[:,ifr] = bAllC_allExc[:,indBestC,ifr].squeeze()
         
     
-    ######################### n exc (n=lenInh) (pick numShufflesEx sets of n exc neurons) ########################
+    ######################### n exc (n=lenInh) (pick random sets of n exc neurons (do it numShufflesEx times)) ########################
     elif doInhAllexcEqexc[2] == 1: 
         if shflTrLabs:
             cbestAll_exc = cbest_exc
@@ -2036,7 +2038,85 @@ if addNs_roc:
         b_data_allExc_numNs = np.array(b_data_allExc_numNs)
         cbest_allExc_numNs = np.array(cbest_allExc_numNs)
    
-   
+
+    ######################### n exc (n=lenInh) (pick random sets of n exc neurons (do it numShufflesEx times)) ########################
+    # first subsample exc neurons, then sort them based on ROC values; finally run svm.
+    elif doInhAllexcEqexc[2] == 1:         
+#        cbestAll_exc_numNs = []
+        cbest_exc_numNs = []
+        perClassErrorTrain_data_exc_numNs = []
+        perClassErrorTest_data_exc_numNs = []
+        perClassErrorTest_shfl_exc_numNs = []
+        perClassErrorTest_chance_exc_numNs = []
+        w_data_exc_numNs = []
+        b_data_exc_numNs = []
+        
+        for ii in range(numShufflesExc):    
+            print '\n\n-------- Exc shuffle %d --------' %(ii)
+            
+            # Take a subsample of exc neurons
+            Xnow = XexcEq[ii]
+            # Set indeces (in Xnow) to sort it based on choice tuning from high to low
+            cp = choicePref_exc[frROC, excNsEachSamp_indsOutOfExcNs[ii]] # choice preference of neurons that are in Xnow
+            exc_roc_sort = np.argsort(cp)[::-1] # index of neurons in XexcEq[ii] from high to low ROC values                
+        
+            # Loop over number of neurons in the population: from 1 to the entire population size        
+            perClassErrorTrain_data_exc_numNs0 = []
+            perClassErrorTest_data_exc_numNs0 = []
+            perClassErrorTest_shfl_exc_numNs0 = []
+            perClassErrorTest_chance_exc_numNs0 = []
+            w_data_exc_numNs0 = []
+            b_data_exc_numNs0 = []
+            cbest_exc_numNs0 = []
+    
+            for numNs in np.arange(1,Xnow.shape[1]+1): 
+                # set X_svm for the numNs neurons with the highest choice tuning
+                XExc = Xnow[:,exc_roc_sort[0:numNs],:] # neurons are added based on their tuning (abs ROC AUC): the highest tuning is added first            
+                cbest_now = np.nan                    
+                
+                perClassErrorTrain_exc, perClassErrorTest_exc, wAllC_exc, bAllC_exc, cbestAll_exc0, cbest_exc0, cvect, perClassErrorTestShfl_exc, perClassErrorTestChance_exc = setbesc_frs(XExc,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_now, frs) # outputs have size the number of shuffles in setbestc (shuffles per c value)
+        
+                # Take the values at bestc that you computed above (for all samples)
+                perClassErrorTrain_data_exc0 = np.full((numSamples, nFrs), np.nan)
+                perClassErrorTest_data_exc0 = np.full((numSamples, nFrs), np.nan)
+                perClassErrorTest_shfl_exc0 = np.full((numSamples, nFrs), np.nan)
+                perClassErrorTest_chance_exc0 = np.full((numSamples, nFrs), np.nan)
+                w_data_exc0 = np.full((numSamples, XExc.shape[1], nFrs), np.nan)
+                b_data_exc0 = np.full((numSamples, nFrs), np.nan)
+                for ifr in frs: # range(nFrs):    
+                    if shflTrLabs:
+                        indBestC = 0
+                    else:
+                        indBestC = np.in1d(cvect, cbest_exc0[ifr])
+                    perClassErrorTrain_data_exc0[:,ifr] = perClassErrorTrain_exc[:,indBestC,ifr].squeeze()
+                    perClassErrorTest_data_exc0[:,ifr] = perClassErrorTest_exc[:,indBestC,ifr].squeeze()
+                    perClassErrorTest_shfl_exc0[:,ifr] = perClassErrorTestShfl_exc[:,indBestC,ifr].squeeze()
+                    perClassErrorTest_chance_exc0[:,ifr] = perClassErrorTestChance_exc[:,indBestC,ifr].squeeze()
+                    w_data_exc0[:,:,ifr] = wAllC_exc[:,indBestC,:,ifr]#.squeeze()
+                    b_data_exc0[:,ifr] = bAllC_exc[:,indBestC,ifr].squeeze()
+            
+                # collect vars for different number of neurons in the decoder
+                perClassErrorTrain_data_exc_numNs0.append(perClassErrorTrain_data_exc0) # number of neurons in the decoder x nSamps x nFrs ... if SVM was run on only 1 frame then values of all other frames will be nan
+                perClassErrorTest_data_exc_numNs0.append(perClassErrorTest_data_exc0)
+                perClassErrorTest_shfl_exc_numNs0.append(perClassErrorTest_shfl_exc0)
+                perClassErrorTest_chance_exc_numNs0.append(perClassErrorTest_chance_exc0)
+                w_data_exc_numNs0.append(np.transpose(w_data_exc0, (1,0,2))) # otherwise np.array and scio.savemat wont work... bc the first two dimensions will be the same for all elements but not the rest... and it will try to combine them, but it cant, so I make sure the 2nd dimension is nNs_inTheDecoder instead of nSamps
+                b_data_exc_numNs0.append(b_data_exc0)
+                cbest_exc_numNs0.append(cbest_exc0) # number of neurons in the decoder x nFrs           
+            
+            
+            # collect values of all exc shuffles    
+            if shflTrLabs==False:
+#                cbestAll_exc_numNs.append(cbestAll_exc_numNs0)
+                cbest_exc_numNs.append(cbest_exc_numNs0) # numShufflesExc x number of neurons in the decoder x nFrs 
+            perClassErrorTrain_data_exc_numNs.append(perClassErrorTrain_data_exc_numNs0) # numShufflesExc x number of neurons in the decoder x numSamples x nFrs
+            perClassErrorTest_data_exc_numNs.append(perClassErrorTest_data_exc_numNs0)
+            perClassErrorTest_shfl_exc_numNs.append(perClassErrorTest_shfl_exc_numNs0)
+            perClassErrorTest_chance_exc_numNs.append(perClassErrorTest_chance_exc_numNs0)
+            w_data_exc_numNs.append(w_data_exc_numNs0)  # numShufflesExc x number of neurons in the decoder # each element: numNeurons x numSamples x numFrames
+            b_data_exc_numNs.append(b_data_exc_numNs0)
+            
+       
     # Plots: how choice prediction varies by increasing the population size, compare exc vs inh
     '''
     # data
@@ -2165,6 +2245,14 @@ if saveResults:
                                    'perClassErrorTest_shfl_allExc_numNs':perClassErrorTest_shfl_allExc_numNs,
                                    'perClassErrorTest_chance_allExc_numNs':perClassErrorTest_chance_allExc_numNs})
                                    
+        elif doInhAllexcEqexc[2] == 1:
+            scio.savemat(svmName, {'thAct':thAct, 'numShufflesExc':numShufflesExc, 'numSamples':numSamples, 'softNorm':softNorm, 'meanX_fr':meanX_fr, 'stdX_fr':stdX_fr,
+                                   'winLen':winLen, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'regType':regType, 'cvect':cvect, 'eventI_ds':eventI_ds, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
+                                   'cbest_exc_numNs':cbest_exc_numNs, 'w_data_exc_numNs':w_data_exc_numNs, 'b_data_exc_numNs':b_data_exc_numNs, 'hr_shfl_all':hr_shfl_all, 'lr_shfl_all':lr_shfl_all,
+                                   'perClassErrorTrain_data_exc_numNs':perClassErrorTrain_data_exc_numNs,
+                                   'perClassErrorTest_data_exc_numNs':perClassErrorTest_data_exc_numNs,
+                                   'perClassErrorTest_shfl_exc_numNs':perClassErrorTest_shfl_exc_numNs,
+                                   'perClassErrorTest_chance_exc_numNs':perClassErrorTest_chance_exc_numNs})    
 else:
     print 'Not saving .mat file'
 

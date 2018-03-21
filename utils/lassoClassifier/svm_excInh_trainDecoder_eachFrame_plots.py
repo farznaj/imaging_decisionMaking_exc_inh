@@ -13,7 +13,7 @@ Created on Sun Mar 12 15:12:29 2017
 
 #%% Change the following vars:
 
-mousename = 'fni18' #'fni17'
+mousename = 'fni17'
 
 addNs_roc = 1 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
 do_excInhHalf = 0 # 0: Load vars for inh,exc,allExc, 1: Load exc,inh SVM vars for excInhHalf (ie when the population consists of half exc and half inh) and allExc2inhSize (ie when populatin consists of allExc but same size as 2*inh size)
@@ -98,7 +98,6 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 #####################################################################################################################################################   
 #####################################################################################################################################################
 '''            
-#% 
 eventI_allDays = np.full((len(days)), np.nan) # frame at which choice happened (if traces were downsampled in svm_eachFrame, it will be the downsampled frame number)
 eventI_ds_allDays = np.full((len(days)), np.nan)
 perClassErrorTest_data_inh_all = []
@@ -161,8 +160,9 @@ for iday in range(len(days)):
 
     if addNs_roc:    
         # number of neurons in the decoder x nSamps x nFrs
-        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, w_data_inh, w_data_allExc, b_data_inh, b_data_allExc, svmName_excInh = loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, loadWeights, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0)
-        perClassErrorTest_data_exc = 0; perClassErrorTest_shfl_exc = 0; perClassErrorTest_chance_exc = 0; 
+#        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, w_data_inh, w_data_allExc, b_data_inh, b_data_allExc, svmName_excInh = loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, loadWeights, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0)
+#        perClassErrorTest_data_exc = 0; perClassErrorTest_shfl_exc = 0; perClassErrorTest_chance_exc = 0; 
+        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh = loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, loadWeights, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0)
         
     elif do_excInhHalf:
         # numShufflesExc x numSamples x numFrames
@@ -186,8 +186,8 @@ for iday in range(len(days)):
     perClassErrorTest_data_allExc_all.append(perClassErrorTest_data_allExc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs
     perClassErrorTest_shfl_allExc_all.append(perClassErrorTest_shfl_allExc)
     perClassErrorTest_chance_allExc_all.append(perClassErrorTest_chance_allExc) 
-    if np.logical_and(do_excInhHalf==0, addNs_roc==0):
-        perClassErrorTest_data_exc_all.append(perClassErrorTest_data_exc) # each day: numShufflesExc x numSamples x numFrames    
+    if do_excInhHalf==0: #np.logical_and(do_excInhHalf==0, addNs_roc==0):
+        perClassErrorTest_data_exc_all.append(perClassErrorTest_data_exc) # each day: numShufflesExc x numSamples x numFrames   # if addNs_roc: # numShufflesExc x number of neurons in the decoder x numSamples x nFrs 
         perClassErrorTest_shfl_exc_all.append(perClassErrorTest_shfl_exc)
         perClassErrorTest_chance_exc_all.append(perClassErrorTest_chance_exc)
 
@@ -199,7 +199,7 @@ for iday in range(len(days)):
 
 eventI_allDays = eventI_allDays.astype(int)   
 eventI_ds_allDays = eventI_ds_allDays.astype(int)
-numD = len(eventI_allDays)
+numD = len(perClassErrorTest_data_inh_all)
 
 
 #%%    
@@ -214,8 +214,10 @@ numD = len(eventI_allDays)
 if addNs_roc:
     fr2an = -1 # relative to eventI_ds_allDays
     # av_test_data_inh : # numDays; each day: number of neurons in the decoder
-    numSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc \
-        = av_se_CA_trsamps_addNs1by1(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all, fr2an, eventI_ds_allDays)
+#    numSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc \
+#        = av_se_CA_trsamps_addNs1by1(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all, fr2an, eventI_ds_allDays)
+    numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_exc, sd_test_data_exc, av_test_shfl_exc, sd_test_shfl_exc, av_test_chance_exc, sd_test_chance_exc, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc \
+        = av_se_CA_trsamps_addNs1by1(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, perClassErrorTest_data_exc_all, perClassErrorTest_shfl_exc_all, perClassErrorTest_chance_exc_all, perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all, fr2an, eventI_ds_allDays)
     
 elif do_excInhHalf:
     numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc \
@@ -246,7 +248,7 @@ if chAl==1:
     av_test_chance_allExc_ch = av_test_chance_allExc + 0
     sd_test_chance_allExc_ch = sd_test_chance_allExc + 0
     
-    if np.logical_and(do_excInhHalf==0, addNs_roc==0):
+    if do_excInhHalf==0: #np.logical_and(do_excInhHalf==0, addNs_roc==0):
         av_test_data_exc_ch = av_test_data_exc + 0
         sd_test_data_exc_ch = sd_test_data_exc + 0
         av_test_shfl_exc_ch = av_test_shfl_exc + 0
@@ -275,51 +277,279 @@ thTrained = 30 #25; # 1/10 of this will be the testing tr num! and 9/10 was used
 thIncorr = 4 #5
 '''
 mn_corr = np.min(corr_hr_lr,axis=1) # number of trials of each class. 90% of this was used for training, and 10% for testing.
-
+#mn_corr = np.delete(mn_corr, [46]) # #np.append(mn_corr,[12,12])
 print '%d days will be excluded: too few trials for svm training' %(sum(mn_corr < thTrained))
 
 print np.array(days)[mn_corr < thTrained]
 
 
 
-#%%
+#%% Plots of adding neurons 1 by 1
 ##################################################################################################
 ##################################################################################################
 ##################################################################################################
-# Plots of adding neurons 1 by 1:
 
-#%% Plot each day: how choice prediction varies by increasing the population size, compare exc vs inh
-
-if addNs_roc:
-    
+if addNs_roc:   
     dnow = '/excInh_trainDecoder_eachFrame_addNs1by1ROC/'+mousename+'/'
     alph = .5
-    colors = ['b','r']
-    labs = ['exc','inh']
+    colors = ['k','r','b']
+    labs = ['allExc','inh', 'exc']
+        
     
-    plt.figure(figsize=(3, 3.5*numDays))    
+    ########### add nan for days with num neurons < mxNumNeur, so you can get an average across days
+    def sameMaxNs(CAav_alig, mxNumNeur, nanEnd=1): 
+        CAav_alig_sameMaxN = []
+        for iday in range(len(CAav_alig)):
+            # create a nan array
+            a = np.full((mxNumNeur), np.nan)
+            if nanEnd:# fill in the begining part of a with CAav_alig vals, so the end part of a includes nans
+                a[0: min(mxNumNeur, CAav_alig[iday].shape[0])] = CAav_alig[iday][0: min(mxNumNeur, CAav_alig[iday].shape[0])]
+            else: # fill in the end part of a with CAav_alig values, so the begining part of a includes nans
+                a[-min(mxNumNeur, CAav_alig[iday].shape[0]):] = CAav_alig[iday][0: min(mxNumNeur, CAav_alig[iday].shape[0])]
+            
+            CAav_alig_sameMaxN.append(a) # numDays x max_numNeurs_used_for_training x nFrs    
+            
+        CAav_alig_sameMaxN = np.array(CAav_alig_sameMaxN)
+        return CAav_alig_sameMaxN 
+
+
+
+    #%% Make the traces for all days the same length in order to set average and se across days 
+    
+    ########## Define mxNumNeur for the function sameMaxNs
+    numInh = np.array([len(av_test_data_inh_ch[iday]) for iday in range(numD)])
+    numExc = np.array([len(av_test_data_allExc_ch[iday]) for iday in range(numD)])
+#    numExcSubsamp = np.array([len(av_test_data_exc_ch[iday]) for iday in range(numD)]) # here exc was first subsampled (to take n exc, n=numInh), then it was ordered based on ROC    
+    pv = 100 # add nan for days with num neurons < 20th percentile of nInh (or nExc)... so you can get an average across days (with max number of neurons in the decoder = 20th percentile (instead of min) number of inh neurons across days)
+    pInh = np.percentile(numInh,pv).astype(int)
+    pExc = np.percentile(numExc,pv).astype(int)
+#    pInh = max(numInh[mn_corr>=thTrained])
+#    pExc = max(numExc[mn_corr>=thTrained])    
+    
+    for nanEnd in [0,1]: 
+        # if 0, nans will be added at the begining of the traces (do this when you want to see how going from max to 1 nN in the decoder changes CA). 
+        # if 1, nans will be added at the end (do this when you want to see how going from 1 to max nN in the decoder changes CA)
+    
+        ########### Make the traces for all days the same length (remember days have different number of neurons in the decoder): add nan for days with num neurons < pInh (eg 20th percentile of nInh (or nExc))... so you can get an average across days (with max number of neurons in the decoder = 20th percentile (instead of min) number of inh neurons across days)            
+        av_test_data_inh_samePN = sameMaxNs(av_test_data_inh[mn_corr>=thTrained], pInh, nanEnd) # numDays x nNs in the decoder (20th perc number neurons across days)
+        av_test_data_allExc_samePN = sameMaxNs(av_test_data_allExc[mn_corr>=thTrained], pExc, nanEnd)
+        av_test_data_exc_samePN = sameMaxNs(av_test_data_exc[mn_corr>=thTrained], pInh, nanEnd)
+        
+        
+        ##### for each value of number of neurons in the decoder how many days contributed (ie had non-nan values): (days that did not contribute are the ones whose numNs was less than 20th percentile of nNs across days)
+        nDaysPinh = np.array([np.sum(~np.isnan(av_test_data_inh_samePN[:,iN])) for iN in range(av_test_data_inh_samePN.shape[1])])
+        nDaysPexc = np.array([np.sum(~np.isnan(av_test_data_allExc_samePN[:,iN])) for iN in range(av_test_data_allExc_samePN.shape[1])])
+        nDaysPexcSubsamp = np.array([np.sum(~np.isnan(av_test_data_exc_samePN[:,iN])) for iN in range(av_test_data_exc_samePN.shape[1])])
+        
+        if pv==100: #### If you went with pv=100 (ie you went up to max nN across days), then make sure you set to nan (in all days) those x values (nN in the deocder) that have too few non-nan days ... so those x values don't  contribute to nanmean across days.        
+            
+            thds = 5
+            
+            thD = min(numDays, thds) #10
+            av_test_data_inh_samePN[:,nDaysPinh<thD] = np.nan ##### For all days, set to nan nNs in decoder (x values) which are so large that only very few days (<thD) have that number and hence will contribute to average across days
+            av_test_data_allExc_samePN[:,nDaysPexc<thD] = np.nan
+            av_test_data_exc_samePN[:,nDaysPexcSubsamp<thD] = np.nan
+    
+        
+        ######################### Average and se across days #########################
+        avD_av_test_data_inh_samePN = np.nanmean(av_test_data_inh_samePN, axis=0) # nInh (20th perc)
+        seD_av_test_data_inh_samePN = np.nanstd(av_test_data_inh_samePN, axis=0) / np.sqrt(nDaysPinh) # nInh (20th perc)
+        
+        avD_av_test_data_allExc_samePN = np.nanmean(av_test_data_allExc_samePN, axis=0) # nExc (20th perc)
+        seD_av_test_data_allExc_samePN = np.nanstd(av_test_data_allExc_samePN, axis=0) / np.sqrt(nDaysPexc)
+    
+        avD_av_test_data_exc_samePN = np.nanmean(av_test_data_exc_samePN, axis=0) # nExc (20th perc)
+        seD_av_test_data_exc_samePN = np.nanstd(av_test_data_exc_samePN, axis=0) / np.sqrt(nDaysPexcSubsamp)    
+            
+        
+           
+        ######################### Plot average and se across days: SVM performance vs number of neurons in the decoder #########################
+    
+        plt.figure(figsize=(4.5,3))
+        
+        ##### allExc
+        i = 0
+        av = avD_av_test_data_allExc_samePN
+        sd = seD_av_test_data_allExc_samePN
+        x = np.arange(1, len(av)+1)     
+        if nanEnd==0: # reverse the traces so we go from max number of N to fewest number of N in the decoder (for the x axis)
+            av = av[::-1]
+            sd = sd[::-1]
+            xtix = np.full(len(nDaysPexc), np.nan)
+            xtix[0:sum(nDaysPexc>=thD)] = np.arange(1, sum(nDaysPexc>=thD)+1)[::-1]        
+        plt.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
+        plt.plot(x, av, colors[i], label=labs[i]) #, marker='.')
+    
+        ax1 = plt.gca()           
+        xti = ax1.get_xticks().astype(int)
+        if nanEnd==0:
+            ax2 = ax1.twiny()    
+            ax2.set_xticks(xti)
+            xti = np.delete(xti, np.argwhere(xti>len(nDaysPexc)))
+            xtx = xtix[xti].astype(int)
+#            xtx = [str(x) for x in xtx[:-1]] + ['']
+            ax2.set_xticklabels(xtx)
+        else:
+            xtix = x
+            plt.xticks(xti, xtix[xti])    
+      
+        
+        ##### inh
+        i = 1
+        av = avD_av_test_data_inh_samePN
+        sd = seD_av_test_data_inh_samePN
+        x = np.arange(1, len(av)+1).astype(float)    
+        if nanEnd==0: # reverse the traces so we go from max number of N to fewest number of N in the decoder (for the x axis)
+            av = av[::-1]
+            sd = sd[::-1]
+            xtix = np.full(len(nDaysPinh), np.nan)
+            xtix[0:sum(nDaysPinh>=thD)] = np.arange(1, sum(nDaysPinh>=thD)+1)[::-1]
+        ax1.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
+        ax1.plot(x, av, colors[i], label=labs[i]) #, marker='.')
+       
+        
+        
+        ##### exc
+        i = 2
+        av = avD_av_test_data_exc_samePN
+        sd = seD_av_test_data_exc_samePN
+        x = np.arange(1, len(av)+1)    
+        if nanEnd==0: # reverse the traces so we go from max number of N to fewest number of N in the decoder (for the x axis)
+            av = av[::-1]
+            sd = sd[::-1]
+        ax1.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
+        ax1.plot(x, av, colors[i], label=labs[i]) #, marker='.')
+    
+        if nanEnd==0:
+            xti = np.arange(0,sum(nDaysPinh>=thD),20) #len(x),20) #plt.gca().get_xticks().astype(int)        
+            ax1.set_xticks(xti)
+            ax1.set_xticklabels(xtix[xti].astype(int))
+        
+        
+        ax1.set_xlim([-5, sum(nDaysPexc>=thD)+4])   #pExc
+        ax1.set_xlabel('Numbers of neurons in the decoder')
+        ax1.set_ylabel('% Class accuracy')    
+        ax1.legend(loc='center left', bbox_to_anchor=(.6, .2), frameon=False) 
+        
+        if nanEnd==0:
+            ax2.set_xlim([-5, sum(nDaysPexc>=thD)+4])  
+            ax1.tick_params(direction='out')    
+            ax2.tick_params(direction='out')    
+            
+            ax1.spines['right'].set_visible(False)       
+            ax2.spines['right'].set_visible(False)           
+            ax1.yaxis.set_ticks_position('left')
+            ax2.yaxis.set_ticks_position('left')
+        else:
+            makeNicePlots(plt.gca())      
+        
+        
+        
+        if savefigs:       
+            if nanEnd==0:
+                nN = 'dropNs_thDays%d_' %(thds)
+            else:
+                nN = 'addNs_thDays%d_' %(thds)
+            if chAl==1:
+                dd = 'chAl_avSeDays_'+nN+'addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            else:
+                dd = 'stAl_avSeDays_'+nN+'addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                
+            d = os.path.join(svmdir+dnow)
+            if not os.path.exists(d):
+                print 'creating folder'
+                os.makedirs(d)
+                    
+            fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])         
+            plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
+            
+    
+    
+        ######################### Plot diff of ave +/- se across days ... to better see when it plateaus #########################        
+#        if nanEnd==0:
+#            ai = avD_av_test_data_inh_samePN[::-1]
+#            aa = avD_av_test_data_allExc_samePN[::-1]
+#            ae = avD_av_test_data_exc_samePN[::-1]            
+#        else:
+        if nanEnd:
+            ai = avD_av_test_data_inh_samePN
+            aa = avD_av_test_data_allExc_samePN
+            ae = avD_av_test_data_exc_samePN
+            
+            di = np.diff(ai)
+            de = np.diff(aa)
+            des = np.diff(ae)
+            
+            
+            plt.figure(figsize=(4.5,3))
+            plt.plot(de, color='k', label='allExc')
+            plt.plot(di, color='r', label='inh')
+            plt.plot(des, color='b', label='exc')
+            plt.xlim([-5, pExc+4])  
+            makeNicePlots(plt.gca())  
+            plt.xlabel('Numbers Neurons in the decoder')
+            plt.ylabel('% Change in class accuracy')    
+            plt.legend(loc='center left', bbox_to_anchor=(.7, .7), frameon=False) 
+            
+            
+            if savefigs: 
+                if nanEnd==0:
+                    nN = 'dropNs_thDays%d_' %(thds)
+                else:
+                    nN = 'addNs_thDays%d_' %(thds)
+
+                if chAl==1:
+                    dd = 'chAl_diff_avSeDays_'+nN+'addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                else:
+                    dd = 'stAl_diff_avSeDays_'+nN+'addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                    
+                d = os.path.join(svmdir+dnow)
+                if not os.path.exists(d):
+                    print 'creating folder'
+                    os.makedirs(d)
+                        
+                fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
+             
+                plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
+                
+
+
+    #%%
+    ######################### Plots of each day #########################
+    ##%% Plot each day: how choice prediction varies by increasing the population size, compare exc vs inh
+   
+    plt.figure(figsize=(3, 3.5*numD))    
     cnt = 0
-    for iday in range(numDays):    
+    for iday in range(numD):    
         if mn_corr[iday] >= thTrained:
             cnt = cnt+1
                    
-            plt.subplot(numDays,1,cnt)
-            i = 0
-            x = np.arange(1, len(av_test_data_allExc_ch[iday])+1)
+            plt.subplot(numD,1,cnt)
+            
+            # allExc
+            i = 0            
             av = av_test_data_allExc_ch[iday]
-            sd = sd_test_data_allExc_ch[iday]
-            
+            sd = sd_test_data_allExc_ch[iday]            
+            x = np.arange(1, len(av)+1)
             plt.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
-            plt.plot(np.arange(1, len(av_test_data_allExc_ch[iday])+1), av_test_data_allExc_ch[iday], colors[i], label=labs[i])
+            plt.plot(x, av, colors[i], label=labs[i])
             
-            
+            # inh
             i = 1
-            x = np.arange(1, len(av_test_data_inh_ch[iday])+1)
             av = av_test_data_inh_ch[iday]
-            sd = sd_test_data_inh_ch[iday]
-            
+            sd = sd_test_data_inh_ch[iday]            
+            x = np.arange(1, len(av)+1)
             plt.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
-            plt.plot(np.arange(1, len(av_test_data_inh_ch[iday])+1), av_test_data_inh_ch[iday], colors[i], label=labs[i])
+            plt.plot(x, av, colors[i], label=labs[i])            
+            
+            # exc
+            i = 2
+            av = av_test_data_exc_ch[iday]
+            sd = sd_test_data_exc_ch[iday]            
+            x = np.arange(1, len(av)+1)
+            plt.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
+            plt.plot(x, av, colors[i], label=labs[i])
+                        
             
             plt.title(days[iday])        
             plt.xlim([-5, len(av_test_data_allExc_ch[iday])+4])  
@@ -348,121 +578,64 @@ if addNs_roc:
         
         
         
-    #%% Plot average and se across days: SVM performance vs number of neurons in the decoder
+        
+    #%% For each day compute CA when all Ns are in the deocder (do separately for inh, exc and allExc)
     
-    ########### add nan for days with num neurons < 20th percentile of nInh (or nExc)... so you can get an average across days
-    numInh = np.array([len(av_test_data_inh_ch[iday]) for iday in range(numDays)])
-    numExc = np.array([len(av_test_data_allExc_ch[iday]) for iday in range(numDays)])
+    # get vals at nN in decoder = max nN        
+    av_test_data_inh_maxNinDecode = np.array([av_test_data_inh[iday][-1] for iday in range(numD)])
+    av_test_data_allExc_maxNinDecode = np.array([av_test_data_allExc[iday][-1] for iday in range(numD)])
+    av_test_data_exc_maxNinDecode = np.array([av_test_data_exc[iday][-1] for iday in range(numD)])
     
-    mnInh = min(numInh[mn_corr>=thTrained])
-    mnExc = min(numExc[mn_corr>=thTrained])
+    # set ave across days and se
+    aa = av_test_data_allExc_maxNinDecode.mean()
+    ai = av_test_data_inh_maxNinDecode.mean()
+    ae = av_test_data_exc_maxNinDecode.mean()
     
-    pInh = np.percentile(numInh,20).astype(int)
-    pExc = np.percentile(numExc,20).astype(int)
+    sa = av_test_data_allExc_maxNinDecode.std() / np.sqrt(numD)
+    si = av_test_data_inh_maxNinDecode.std() / np.sqrt(numD)
+    se = av_test_data_exc_maxNinDecode.std() / np.sqrt(numD)
     
-    #_, inh_nPreMin, inh_nPostMin = set_nprepost(av_test_data_inh_ch, nInhPerDay, mn_corr, thTrained, regressBins)
-    #_, exc_nPreMin, exc_nPostMin = set_nprepost(av_test_data_allExc_ch, nExcPerDay, mn_corr, thTrained, regressBins)    
-    #avDays_av_test_data_inh_ch = np.array([av_test_data_inh_ch[iday][0:mnInh+1] for iday in range(numDays)])
+    ######### Plot
+    plt.figure(figsize=(2,3))
     
-    def sameMaxNs(CAav_alig, mxNumNeur):
-        CAav_alig_sameMaxN = []
-        for iday in range(len(days)):
-            a = np.full((mxNumNeur), np.nan)
-            a[0: min(mxNumNeur, CAav_alig[iday].shape[0])] = CAav_alig[iday][0: min(mxNumNeur, CAav_alig[iday].shape[0])]
-            CAav_alig_sameMaxN.append(a) # numDays x max_numNeurs_used_for_training x nFrs    
-        CAav_alig_sameMaxN = np.array(CAav_alig_sameMaxN)
-        return CAav_alig_sameMaxN 
-            
-            
-    av_test_data_inh_samePN = sameMaxNs(av_test_data_inh, pInh) # numDays x nNs in the decoder
-    av_test_data_allExc_samePN = sameMaxNs(av_test_data_allExc, pExc)
+    plt.errorbar(0, aa, sa, fmt='o', label='allExc', color='k')
+    plt.errorbar(1, ai, si, fmt='o', label='inh', color='r')
+    plt.errorbar(2, ae, se, fmt='o', label='exc', color='b')
     
-    # for each value of number of neurons in the decoder how many days contributed (ie had non-nan values):
-    nDaysPinh = np.array([np.sum(~np.isnan(av_test_data_inh_samePN[:,iN])) for iN in range(av_test_data_inh_samePN.shape[1])])
-    nDaysPexc = np.array([np.sum(~np.isnan(av_test_data_allExc_samePN[:,iN])) for iN in range(av_test_data_allExc_samePN.shape[1])])
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)#, frameon=False) 
+    #plt.xlabel('Population', fontsize=11)
+    plt.ylabel('Classification accuracy (%)\n [-97 0] ms rel. choice', fontsize=11)
+    plt.xlim([-.2,3-1+.2])
+    plt.xticks(range(3), ['allExc','inh','exc'])
+    ax = plt.gca()
+    makeNicePlots(ax)
+    yl = ax.get_ylim()
+    plt.ylim([yl[0]-2, yl[1]])
     
-    # Average and se across days 
-    avD_av_test_data_inh_samePN = np.nanmean(av_test_data_inh_samePN[mn_corr>=thTrained], axis=0) # nInh (20th perc)
-    seD_av_test_data_inh_samePN = np.nanstd(av_test_data_inh_samePN[mn_corr>=thTrained], axis=0) / np.sqrt(nDaysPinh) # nInh (20th perc)
-    
-    avD_av_test_data_allExc_samePN = np.nanmean(av_test_data_allExc_samePN[mn_corr>=thTrained], axis=0) # nExc (20th perc)
-    seD_av_test_data_allExc_samePN = np.nanstd(av_test_data_allExc_samePN[mn_corr>=thTrained], axis=0) / np.sqrt(nDaysPexc)
-    
-    
-    
-    ###################### plot ave +/- se across days
-    plt.figure(figsize=(4.5,3))
-    
-    i = 0
-    x = np.arange(1, len(avD_av_test_data_allExc_samePN)+1)
-    av = avD_av_test_data_allExc_samePN
-    sd = seD_av_test_data_allExc_samePN
-    
-    plt.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
-    plt.plot(np.arange(1, len(avD_av_test_data_allExc_samePN)+1), avD_av_test_data_allExc_samePN, colors[i], label=labs[i]) #, marker='.')
-    
-    
-    i = 1
-    x = np.arange(1, len(avD_av_test_data_inh_samePN)+1)
-    av = avD_av_test_data_inh_samePN
-    sd = seD_av_test_data_inh_samePN
-    
-    plt.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
-    plt.plot(np.arange(1, len(avD_av_test_data_inh_samePN)+1), avD_av_test_data_inh_samePN, colors[i], label=labs[i])
-    
-    plt.xlim([-5, pExc+4])  
-    makeNicePlots(plt.gca())      
-    plt.xlabel('Numbers Neurons in the decoder')
-    plt.ylabel('% Class accuracy')    
-    plt.legend(loc='center left', bbox_to_anchor=(.7, .2), frameon=False) 
-    
-    
-    if savefigs:               
-        if chAl==1:
-            dd = 'chAl_avSeDays_addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+    '''
+    if savefigs:#% Save the figure
+        if shflTrsEachNeuron:
+            sn = 'shflTrsPerN_'
         else:
-            dd = 'stAl_avSeDays_addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            sn = ''
             
-        d = os.path.join(svmdir+dnow)
+        if chAl==1:
+            dd = 'chAl_aveDays_time' + str(time2an) + '_' + labAll + '_' + sn + '_'.join(mice) + '_' + nowStr # + days[0][0:6] + '-to-' + days[-1][0:6]
+        else:
+            dd = 'stAl_aveDays_time' + str(time2an) + '_' + labAll + '_' + sn + '_'.join(mice) + '_' + nowStr # + days[0][0:6] + '-to-' + days[-1][0:6]
+            
+        d = os.path.join(svmdir+dnow0)
         if not os.path.exists(d):
             print 'creating folder'
             os.makedirs(d)
                 
-        fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
-     
-        plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
-        
+        fign = os.path.join(d, suffn[0:5]+dd+'.'+fmt[0])
+    
+        plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+    '''
+    
 
 
-    ###################### plot diff of ave +/- se across days ... to better see when it plateaus
-    di = np.diff(avD_av_test_data_inh_samePN)
-    de = np.diff(avD_av_test_data_allExc_samePN)
-    
-    plt.figure(figsize=(4.5,3))
-    plt.plot(de, color='b', label='exc')
-    plt.plot(di, color='r', label='inh')
-    plt.xlim([-5, pExc+4])  
-    makeNicePlots(plt.gca())  
-    plt.xlabel('Numbers Neurons in the decoder')
-    plt.ylabel('% Chanbe in class accuracy')    
-    plt.legend(loc='center left', bbox_to_anchor=(.7, .7), frameon=False) 
-    
-    
-    if savefigs:               
-        if chAl==1:
-            dd = 'chAl_diff_avSeDays_addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-        else:
-            dd = 'stAl_diff_avSeDays_addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-            
-        d = os.path.join(svmdir+dnow)
-        if not os.path.exists(d):
-            print 'creating folder'
-            os.makedirs(d)
-                
-        fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
-     
-        plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
-        
 
 
 
@@ -609,6 +782,12 @@ if addNs_roc==0:
         
     #%% Plot class accur trace for all days (only use days with svm trained trials above thTrained) on top of each other
     
+    if do_excInhHalf:
+        Cols = 'm','b'
+    else:
+        Cols = 'r','k'
+        
+        
     plt.figure()
     
     for iday in range(len(days)):    
@@ -636,22 +815,22 @@ if addNs_roc==0:
             plt.subplot(221)
             if do_excInhHalf==0:
                 plt.errorbar(time_al, av_test_data_exc_ch[iday], yerr = sd_test_data_exc_ch[iday], label='exc', color='b')
-            plt.errorbar(time_al, av_test_data_inh_ch[iday], yerr = sd_test_data_inh_ch[iday], label=labInh, color='r')    
-            plt.errorbar(time_al, av_test_data_allExc_ch[iday], yerr = sd_test_data_allExc_ch[iday], label=labAll, color='k')
+            plt.errorbar(time_al, av_test_data_inh_ch[iday], yerr = sd_test_data_inh_ch[iday], label=labInh, color=Cols[0])    
+            plt.errorbar(time_al, av_test_data_allExc_ch[iday], yerr = sd_test_data_allExc_ch[iday], label=labAll, color=Cols[1])
     #        plt.title(days[iday])
         
             plt.subplot(222)
             if do_excInhHalf==0:
                 plt.plot(time_al, av_test_shfl_exc_ch[iday], label=' ', color='b')        
-            plt.plot(time_al, av_test_shfl_inh_ch[iday], label=' ', color='r')    
-            plt.plot(time_al, av_test_shfl_allExc_ch[iday], label=' ', color='k')        
+            plt.plot(time_al, av_test_shfl_inh_ch[iday], label=' ', color=Cols[0])    
+            plt.plot(time_al, av_test_shfl_allExc_ch[iday], label=' ', color=Cols[1])        
             
             
             plt.subplot(223)
             if do_excInhHalf==0:
                 h0,=plt.plot(time_al, av_test_chance_exc_ch[iday], label='exc', color='b')        
-            h1,=plt.plot(time_al, av_test_chance_inh_ch[iday], label=labInh, color='r')    
-            h2,=plt.plot(time_al, av_test_chance_allExc_ch[iday], label=labAll, color='k')        
+            h1,=plt.plot(time_al, av_test_chance_inh_ch[iday], label=labInh, color=Cols[0])    
+            h2,=plt.plot(time_al, av_test_chance_allExc_ch[iday], label=labAll, color=Cols[1])        
             
         #    plt.subplot(223)
         #    plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
@@ -705,22 +884,22 @@ if addNs_roc==0:
         
     
        
-    #%% Plot a few example sessions (exc, inh, allExc superimposed)
-       
-    '''   
+    #%% Plot a few example sessions (exc, inh, allExc superimposed)      
+    
     # fni17, 151015: example day, excShfl 3
     ####### pick an example exc shfl
-    iexcshfl = rng.permutation(perClassErrorTest_data_exc_all[iday].shape[0])[0]
-    print iexcshfl
-    
-    av_test_data_exc_1shfl = np.array([100-np.nanmean(perClassErrorTest_data_exc_all[iday][iexcshfl], axis=0,) for iday in range(numD)]) # numDays
-    sd_test_data_exc_1shfl = np.array([np.nanstd(perClassErrorTest_data_exc_all[iday][iexcshfl], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
-    
-    av_test_shfl_exc_1shfl = np.array([100-np.nanmean(perClassErrorTest_shfl_exc_all[iday][iexcshfl], axis=0) for iday in range(numD)]) # numDays
-    sd_test_shfl_exc_1shfl = np.array([np.nanstd(perClassErrorTest_shfl_exc_all[iday][iexcshfl], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
-    
-    av_test_chance_exc_1shfl = np.array([100-np.nanmean(perClassErrorTest_chance_exc_all[iday][iexcshfl], axis=0) for iday in range(numD)]) # numDays
-    sd_test_chance_exc_1shfl = np.array([np.nanstd(perClassErrorTest_chance_exc_all[iday][iexcshfl], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+    if do_excInhHalf==0:
+        iexcshfl = rng.permutation(perClassErrorTest_data_exc_all[iday].shape[0])[0]
+        print iexcshfl
+        
+        av_test_data_exc_1shfl = np.array([100-np.nanmean(perClassErrorTest_data_exc_all[iday][iexcshfl], axis=0,) for iday in range(numD)]) # numDays
+        sd_test_data_exc_1shfl = np.array([np.nanstd(perClassErrorTest_data_exc_all[iday][iexcshfl], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+        
+        av_test_shfl_exc_1shfl = np.array([100-np.nanmean(perClassErrorTest_shfl_exc_all[iday][iexcshfl], axis=0) for iday in range(numD)]) # numDays
+        sd_test_shfl_exc_1shfl = np.array([np.nanstd(perClassErrorTest_shfl_exc_all[iday][iexcshfl], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+        
+        av_test_chance_exc_1shfl = np.array([100-np.nanmean(perClassErrorTest_chance_exc_all[iday][iexcshfl], axis=0) for iday in range(numD)]) # numDays
+        sd_test_chance_exc_1shfl = np.array([np.nanstd(perClassErrorTest_chance_exc_all[iday][iexcshfl], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
     
     
     ####### plot
@@ -733,14 +912,15 @@ if addNs_roc==0:
         #### testing data
         plt.subplot(221)
         # exc
-        plt.fill_between(time_al, av_test_data_exc_1shfl[iday] - sd_test_data_exc_1shfl[iday], av_test_data_exc_1shfl[iday] + sd_test_data_exc_1shfl[iday], alpha=0.5, edgecolor='b', facecolor='b')
-        plt.plot(time_al, av_test_data_exc_1shfl[iday], 'b', label='exc')
+        if do_excInhHalf==0:
+            plt.fill_between(time_al, av_test_data_exc_1shfl[iday] - sd_test_data_exc_1shfl[iday], av_test_data_exc_1shfl[iday] + sd_test_data_exc_1shfl[iday], alpha=0.5, edgecolor='b', facecolor='b')
+            plt.plot(time_al, av_test_data_exc_1shfl[iday], 'b', label='exc')
         # inh
-        plt.fill_between(time_al, av_test_data_inh[iday] - sd_test_data_inh[iday], av_test_data_inh[iday] + sd_test_data_inh[iday], alpha=0.5, edgecolor='r', facecolor='r')
-        plt.plot(time_al, av_test_data_inh[iday], 'r', label='inh')
+        plt.fill_between(time_al, av_test_data_inh[iday] - sd_test_data_inh[iday], av_test_data_inh[iday] + sd_test_data_inh[iday], alpha=0.5, edgecolor=Cols[0], facecolor=Cols[0])
+        plt.plot(time_al, av_test_data_inh[iday], color=Cols[0], label=labInh)
         # allExc
-        plt.fill_between(time_al, av_test_data_allExc[iday] - sd_test_data_allExc[iday], av_test_data_allExc[iday] + sd_test_data_allExc[iday], alpha=0.5, edgecolor='k', facecolor='k')
-        plt.plot(time_al, av_test_data_allExc[iday], 'k', label=labAll)
+        plt.fill_between(time_al, av_test_data_allExc[iday] - sd_test_data_allExc[iday], av_test_data_allExc[iday] + sd_test_data_allExc[iday], alpha=0.5, edgecolor=Cols[1], facecolor=Cols[1])
+        plt.plot(time_al, av_test_data_allExc[iday], color=Cols[1], label=labAll)
         
         if chAl==1:
             plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
@@ -762,14 +942,15 @@ if addNs_roc==0:
         #### shfl
         
         # exc
-        plt.fill_between(time_al, av_test_shfl_exc_1shfl[iday] - sd_test_shfl_exc_1shfl[iday], av_test_shfl_exc_1shfl[iday] + sd_test_shfl_exc_1shfl[iday], alpha=0.3, edgecolor='b', facecolor='b')
-        plt.plot(time_al, av_test_shfl_exc_1shfl[iday], 'b')
+        if do_excInhHalf==0:
+            plt.fill_between(time_al, av_test_shfl_exc_1shfl[iday] - sd_test_shfl_exc_1shfl[iday], av_test_shfl_exc_1shfl[iday] + sd_test_shfl_exc_1shfl[iday], alpha=0.3, edgecolor='b', facecolor='b')
+            plt.plot(time_al, av_test_shfl_exc_1shfl[iday], 'b')
         # inh
-        plt.fill_between(time_al, av_test_shfl_inh[iday] - sd_test_shfl_inh[iday], av_test_shfl_inh[iday] + sd_test_shfl_inh[iday], alpha=0.3, edgecolor='r', facecolor='r')
-        plt.plot(time_al, av_test_shfl_inh[iday], 'r')
+        plt.fill_between(time_al, av_test_shfl_inh[iday] - sd_test_shfl_inh[iday], av_test_shfl_inh[iday] + sd_test_shfl_inh[iday], alpha=0.3, edgecolor=Cols[0], facecolor=Cols[0])
+        plt.plot(time_al, av_test_shfl_inh[iday], color=Cols[0])
         # allExc
-        plt.fill_between(time_al, av_test_shfl_allExc[iday] - sd_test_shfl_allExc[iday], av_test_shfl_allExc[iday] + sd_test_shfl_allExc[iday], alpha=0.3, edgecolor='k', facecolor='k')
-        plt.plot(time_al, av_test_shfl_allExc[iday], 'k')
+        plt.fill_between(time_al, av_test_shfl_allExc[iday] - sd_test_shfl_allExc[iday], av_test_shfl_allExc[iday] + sd_test_shfl_allExc[iday], alpha=0.3, edgecolor=Cols[1], facecolor=Cols[1])
+        plt.plot(time_al, av_test_shfl_allExc[iday], color=Cols[1])
         
         ax = plt.gca()
         makeNicePlots(ax,1,1)
@@ -782,12 +963,16 @@ if addNs_roc==0:
         #plt.xlim([-1400,500])
         
         ##%% Save the figure    
-        if savefigs:
-    
-            if chAl==1:
-                dd = 'chAl_day' + days[iday][0:6] + '_exShfl' + str(iexcshfl) + '_' + nowStr
+        if savefigs:            
+            if do_excInhHalf==0:
+                n0 = '_exShfl' + str(iexcshfl)
             else:
-                dd = 'stAl_day' + days[iday][0:6] + '_exShfl' + str(iexcshfl) + '_' + nowStr
+                n0 = ''
+                
+            if chAl==1:
+                dd = 'chAl_day' + days[iday][0:6] + n0 + '_' + nowStr
+            else:
+                dd = 'stAl_day' + days[iday][0:6] + n0 + '_' + nowStr
         
             if superimpose==1:        
                 dd = dd+'_sup'
@@ -803,7 +988,7 @@ if addNs_roc==0:
         #    fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+'svg')
         #    plt.savefig(fign, dpi=300, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
     
-    '''
+    
     
         
     #%%#####################%% Plot the average of aligned traces across all days (exc, inh, allExc superimposed)
@@ -818,11 +1003,11 @@ if addNs_roc==0:
         plt.fill_between(time_aligned, av_av_test_data_exc_aligned - sd_av_test_data_exc_aligned, av_av_test_data_exc_aligned + sd_av_test_data_exc_aligned, alpha=0.5, edgecolor='b', facecolor='b')
         plt.plot(time_aligned, av_av_test_data_exc_aligned, 'b', label='exc')
     # inh
-    plt.fill_between(time_aligned, av_av_test_data_inh_aligned - sd_av_test_data_inh_aligned, av_av_test_data_inh_aligned + sd_av_test_data_inh_aligned, alpha=0.5, edgecolor='r', facecolor='r')
-    plt.plot(time_aligned, av_av_test_data_inh_aligned, 'r', label=labInh)
+    plt.fill_between(time_aligned, av_av_test_data_inh_aligned - sd_av_test_data_inh_aligned, av_av_test_data_inh_aligned + sd_av_test_data_inh_aligned, alpha=0.5, edgecolor=Cols[0], facecolor=Cols[0])
+    plt.plot(time_aligned, av_av_test_data_inh_aligned, color=Cols[0], label=labInh)
     # allExc
-    plt.fill_between(time_aligned, av_av_test_data_allExc_aligned - sd_av_test_data_allExc_aligned, av_av_test_data_allExc_aligned + sd_av_test_data_allExc_aligned, alpha=0.5, edgecolor='k', facecolor='k')
-    plt.plot(time_aligned, av_av_test_data_allExc_aligned, 'k', label=labAll)
+    plt.fill_between(time_aligned, av_av_test_data_allExc_aligned - sd_av_test_data_allExc_aligned, av_av_test_data_allExc_aligned + sd_av_test_data_allExc_aligned, alpha=0.5, edgecolor=Cols[1], facecolor=Cols[1])
+    plt.plot(time_aligned, av_av_test_data_allExc_aligned, color=Cols[1], label=labAll)
     
     if chAl==1:
         plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
@@ -838,7 +1023,7 @@ if addNs_roc==0:
     # Plot a dot for significant time points
     ymin, ymax = ax.get_ylim()
     pp = pcorrtrace+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax
-    plt.plot(time_aligned, pp, color='k')
+    plt.plot(time_aligned, pp, color=Cols[1])
     
     
     #### shfl
@@ -849,11 +1034,11 @@ if addNs_roc==0:
         plt.fill_between(time_aligned, av_av_test_shfl_exc_aligned - sd_av_test_shfl_exc_aligned, av_av_test_shfl_exc_aligned + sd_av_test_shfl_exc_aligned, alpha=0.3, edgecolor='b', facecolor='b')
         plt.plot(time_aligned, av_av_test_shfl_exc_aligned, 'b')
     # inh
-    plt.fill_between(time_aligned, av_av_test_shfl_inh_aligned - sd_av_test_shfl_inh_aligned, av_av_test_shfl_inh_aligned + sd_av_test_shfl_inh_aligned, alpha=0.3, edgecolor='r', facecolor='r')
-    plt.plot(time_aligned, av_av_test_shfl_inh_aligned, 'r')
+    plt.fill_between(time_aligned, av_av_test_shfl_inh_aligned - sd_av_test_shfl_inh_aligned, av_av_test_shfl_inh_aligned + sd_av_test_shfl_inh_aligned, alpha=0.3, edgecolor=Cols[0], facecolor=Cols[0])
+    plt.plot(time_aligned, av_av_test_shfl_inh_aligned, color=Cols[0])
     # allExc
-    plt.fill_between(time_aligned, av_av_test_shfl_allExc_aligned - sd_av_test_shfl_allExc_aligned, av_av_test_shfl_allExc_aligned + sd_av_test_shfl_allExc_aligned, alpha=0.3, edgecolor='k', facecolor='k')
-    plt.plot(time_aligned, av_av_test_shfl_allExc_aligned, 'k')
+    plt.fill_between(time_aligned, av_av_test_shfl_allExc_aligned - sd_av_test_shfl_allExc_aligned, av_av_test_shfl_allExc_aligned + sd_av_test_shfl_allExc_aligned, alpha=0.3, edgecolor=Cols[1], facecolor=Cols[1])
+    plt.plot(time_aligned, av_av_test_shfl_allExc_aligned, color=Cols[1])
     if superimpose==0:    
         plt.title('Shuffled Y')
     ax = plt.gca()
@@ -868,11 +1053,11 @@ if addNs_roc==0:
             plt.fill_between(time_aligned, av_av_test_chance_exc_aligned - sd_av_test_chance_exc_aligned, av_av_test_chance_exc_aligned + sd_av_test_chance_exc_aligned, alpha=0.5, edgecolor='b', facecolor='b')
             plt.plot(time_aligned, av_av_test_chance_exc_aligned, 'b')
         # inh
-        plt.fill_between(time_aligned, av_av_test_chance_inh_aligned - sd_av_test_chance_inh_aligned, av_av_test_chance_inh_aligned + sd_av_test_chance_inh_aligned, alpha=0.5, edgecolor='r', facecolor='r')
-        plt.plot(time_aligned, av_av_test_chance_inh_aligned, 'r')
+        plt.fill_between(time_aligned, av_av_test_chance_inh_aligned - sd_av_test_chance_inh_aligned, av_av_test_chance_inh_aligned + sd_av_test_chance_inh_aligned, alpha=0.5, edgecolor=Cols[0], facecolor=Cols[0])
+        plt.plot(time_aligned, av_av_test_chance_inh_aligned, color=Cols[0])
         # allExc
-        plt.fill_between(time_aligned, av_av_test_chance_allExc_aligned - sd_av_test_chance_allExc_aligned, av_av_test_chance_allExc_aligned + sd_av_test_chance_allExc_aligned, alpha=0.5, edgecolor='k', facecolor='k')
-        plt.plot(time_aligned, av_av_test_chance_allExc_aligned, 'k')
+        plt.fill_between(time_aligned, av_av_test_chance_allExc_aligned - sd_av_test_chance_allExc_aligned, av_av_test_chance_allExc_aligned + sd_av_test_chance_allExc_aligned, alpha=0.5, edgecolor=Cols[1], facecolor=Cols[1])
+        plt.plot(time_aligned, av_av_test_chance_allExc_aligned, color=Cols[1])
         plt.title('Chance Y')
         ax = plt.gca()
         makeNicePlots(ax,1,1)

@@ -51,8 +51,8 @@ else:
     noExtraStimDays = np.nan
 
     
-trialHistAnalysis = 0;
-iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
+trialHistAnalysis = 0
+iTiFlg = 2 # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
 #execfile("svm_plots_setVars_n.py")  
 days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
 
@@ -88,7 +88,7 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 
 execfile("defFuns.py")
 
-    
+   
 #%% 
 '''
 #####################################################################################################################################################   
