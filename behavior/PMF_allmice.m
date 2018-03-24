@@ -1,14 +1,15 @@
-%% Set PMF plots for each individual mouse (pooling trials of all sessions). 
+%% Set PMF plots for each individual mouse (pooling trials of all sessions).
 % Also fit GLM.
 
 rmvMice_5_8 = 0; % remove 5th and 8th mice below (fni16,fni19)
 
-miceNames = {'fn03', 'fn04', 'fn05', 'fn06', 'fni16', 'fni17', 'fni18', 'fni19', 'hni01', 'hni04'};
+miceNames = {'fni16', 'fni17', 'fni18', 'fni19'}; %{'fn03', 'fn04', 'fn05', 'fn06', 'fni16', 'fni17', 'fni18', 'fni19', 'hni01', 'hni04'}; % imaged mice: 'fni16', 'fni17', 'fni18', 'fni19'
+imaging = 0; % set to 1 to include imaged days of fni16,17,18,19.
+
 allowCorrectResp = 'change';
 uncommittedResp = 'nothing'; % 'change'; %'remove'; % % 'remove', 'change', 'nothing';
 excludeShortWaitDur = true; % waitdur_th = .032; % sec  % trials w waitdur less than this will be excluded.
 excludeExtraStim = false;
-
 
 
 %%
@@ -19,6 +20,7 @@ vec_rates_all = cell(1,length(miceNames));
 up_all = cell(1,length(miceNames));
 lo_all = cell(1,length(miceNames));
 nSamples_all = cell(1,length(miceNames));
+alldata_all = cell(1,length(miceNames));
 
 for imouse = 1:length(miceNames)
     
@@ -26,7 +28,7 @@ for imouse = 1:length(miceNames)
     
     fprintf('--------------------------\n')
     mouse = miceNames{imouse};
-    [day, dayLast, days2exclude] = setMouseAnalysisDays(mouse);
+    [day, dayLast, days2exclude] = setMouseAnalysisDays(mouse, imaging);
     
     [alldata_fileNames, days_all] = setBehavFileNames(mouse, day, dayLast, days2exclude);
     fprintf('Total number of session: %d\n', length(alldata_fileNames))
@@ -51,19 +53,22 @@ for imouse = 1:length(miceNames)
     lo_all{imouse} = lo;
     nSamples_all{imouse} = nSamples;
     
+    alldata_all{imouse} = alldata;
+    
 end
 
 
 %% plot percentage HR vs stim rate.
 
 plotPMF = 1;
-lineColor = [.6,.6,.6]; %'k';
-figure;
-hold on
+lineColor = [.6,.6,.6]; %'k'; %
+lineStyle = '-';
+figure; hold on
 
 if plotPMF
     for imouse = 1:length(miceNames)
         
+        %         figure('name', miceNames{imouse}); hold on
         HRchoicePerc = HRchoicePerc_all{imouse};
         vec_rates = vec_rates_all{imouse};
         up = up_all{imouse};
@@ -80,19 +85,23 @@ if plotPMF
         
         
         %%
-        %         hmodal = plot(xx,yy,'.','color', lineColor);
-        hmodal = plot(xx,yy,'-','color', lineColor);
-        h = errorbar(xx, yy, ee(:,1), ee(:,2), 'color', lineColor,'linestyle','none');
+        hmodal = plot(xx,yy, 'linestyle', lineStyle,'color', lineColor);         %         hmodal = plot(xx,yy,'.','color', lineColor);
+        h = errorbar(xx, yy, ee(:,1), ee(:,2), 'color', lineColor,'linestyle','none');                %         disp(imouse),pause
         
-        %         disp(imouse),pause
-    end
+    end    
+    xlabel('Stimulus rate (Hz)')
+    ylabel('Fraction high-rate choice')
+    hline(.5, 'k:')
+    vline(alldata(1).categoryBoundaryHz, 'k:')
+    ylim([0,1])
+    set(gca,'tickdir', 'out')
 end
 
 
 
 %% Fit a GLM to the psychometric function
 
-sigmoid = 'invgauss'; % 'logistic';  % can be 'invgauss' or 'logistic', invgauss uses probit
+sigmoid = 'logistic';  %'invgauss'; % can be 'invgauss' or 'logistic', invgauss uses probit
 rates_step = 1;
 
 xs_all =  cell(1,length(miceNames));
@@ -110,7 +119,7 @@ for imouse = 1:length(miceNames)
     %%
     rates = vec_rates(~isnan(HRchoicePerc)) + wd/2;
     pmf = HRchoicePerc(~isnan(HRchoicePerc));
-    ns = nSamples(~isnan(HRchoicePerc));        
+    ns = nSamples(~isnan(HRchoicePerc));
     
     % Sigmoid
     if length(rates) > 2
@@ -143,15 +152,15 @@ for imouse = 1:length(miceNames)
                 
             otherwise
                 error('sigmoid parameter must be ''invgauss'' or ''logistic''');
-        end        
+        end
         
         %%
-%         plot(xs, yfit, 'color', col(imodality,:), 'LineWidth', 1);
+        %         plot(xs, yfit, 'color', col(imodality,:), 'LineWidth', 1);
         
         %     bestParams = fitSigConstrained(rates, pmf, ns);
         %     sigRates = rates(1)-0.5 : 0.1 : rates(end)+0.5;
         %     plot(sigRates, logistic(sigRates, bestParams), 'color', colors(imouse,:));
-       
+        
         %%
         xs_all{imouse} = xs;
         yfit_all{imouse} = yfit;
@@ -161,7 +170,7 @@ end
 
 
 
-%% Set a matrix for PMF and rates of all mice 
+%% Set a matrix for PMF and rates of all mice
 
 vr = unique(round(cell2mat(vec_rates_all),2)); %max(cellfun(@length, vec_rates_all));
 hrp = nan(length(vr), length(miceNames));
@@ -177,13 +186,17 @@ end
 
 hrp0 = hrp;
 
+
 %% Set to nan if <50% of mice contribute to an x value
+
 % hrp_fit = hrp0;
-th = .2; .5; 
+th = .2; .5;
 hrp(mean(~isnan(hrp),2) <= th,:) = nan;
 % hrp(mean(~isnan(hrp_fit),2) <= th,:) = nan;
 
+
 %% Remove bad mice
+
 % hrp_fit = hrp0;
 if rmvMice_5_8
     mouse2rmv = [5,8]; % index of mouse to remove
@@ -192,6 +205,7 @@ end
 
 
 %% Plot raw PMF of all mice
+
 figure; hold on;
 plot(vr+wd/2 , hrp , 'color' , [.6,.6,.6])
 plot(vr+wd/2 , nanmean(hrp,2) , 'k' , 'linewidth' , 2)
@@ -219,12 +233,15 @@ hrp0 = hrp_fit;
 
 
 %% Set to nan if <50% of mice contribute to an x value
+
 % hrp_fit = hrp0;
-th = .2; .5; 
+th = .2; .5;
 hrp_fit(mean(~isnan(hrp_fit),2) <= th,:) = nan;
 % hrp(mean(~isnan(hrp_fit),2) <= th,:) = nan;
 
+
 %% Remove bad mice
+
 % hrp_fit = hrp0;
 if rmvMice_5_8
     mouse2rmv = [5,8]; % index of mouse to remove
@@ -240,7 +257,7 @@ ye = nanstd(hrp_fit,[],2); ye(ni) = [];
 x = vr_fit; x(ni) = [];
 
 figure; hold on
-% plot original mean pmf 
+% plot original mean pmf
 plot(vr+wd/2 , nanmean(hrp,2), 'k.', 'markersize', 6) % 'color', [.6,.6,.6], 'linewidth' , 2)
 
 % Plot fitted PMF
@@ -258,6 +275,7 @@ xlim([min(x)-1, max(x)+1])
 
 
 %% Plot fitted PMF of each mouse, and ave mice
+
 figure; hold on;
 
 plot(vr_fit , hrp_fit , 'color' , [.6,.6,.6])
@@ -277,19 +295,87 @@ set(h1,'linewidth',2)
 
 %% Look at each mouse's pmf and its glm fit.
 
-figure; hold on
+% figure; hold on
 for imouse = 1:length(miceNames)
+    
+    figure; hold on
+    
     HRchoicePerc = HRchoicePerc_all{imouse};
     vec_rates = vec_rates_all{imouse};
     
     xx = vec_rates(~isnan(HRchoicePerc)) + wd/2;
     yy = HRchoicePerc(~isnan(HRchoicePerc));
-
+    
     plot(xx,yy, 'color',[.6,.6,.6])
-%     plot(xs_all{imouse}, yfit_all{imouse},'color','k')
-     
-%     pause
+    plot(xs_all{imouse}, yfit_all{imouse},'color','k')
+    
+    %     pause
 end
 
+
+
+
+%% Each mouse: plot percentage HR vs stim rate and the fit
+
+savefigs = 1;
+
+plotPMF = 1;
+lineColor = 'k'; % [.6,.6,.6]; %
+lineStyle = 'none'; %'-';
+plotFit = 0;
+% figure; hold on
+
+if plotPMF
+    for imouse = 1:length(miceNames)
+        
+        fh = figure('name', miceNames{imouse}); hold on
+        
+        HRchoicePerc = HRchoicePerc_all{imouse};
+        vec_rates = vec_rates_all{imouse};
+        up = up_all{imouse};
+        lo = lo_all{imouse};
+        
+        %%
+        wd = mode(diff(vec_rates));
+        
+        ee = [(HRchoicePerc-lo)', (up-HRchoicePerc)'];
+        ee = ee(~isnan(HRchoicePerc),:);
+        
+        xx = vec_rates(~isnan(HRchoicePerc)) + wd/2;
+        yy = HRchoicePerc(~isnan(HRchoicePerc));
+        
+        
+        %%
+        hmodal = plot(xx,yy, 'linestyle', lineStyle,'color', lineColor);         %         hmodal = plot(xx,yy,'.','color', lineColor);
+        h = errorbar(xx, yy, ee(:,1), ee(:,2), 'color', lineColor,'linestyle','none', 'marker', '.');                %         disp(imouse),pause
+        
+        %%
+        if plotFit 
+            plot(xs_all{imouse}, yfit_all{imouse},'color','k')
+        end
+        
+        %%
+        xlabel('Stimulus rate (Hz)')
+        ylabel('Fraction high-rate choice')
+        hline(.5, 'k:')
+        vline(alldata(1).categoryBoundaryHz, 'k:')
+        ylim([0,1])
+        set(gca,'tickdir', 'out')
+        
+        
+        %%
+        if savefigs
+            if imaging
+                dir = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/Behavior/all_imagingDays';
+            else
+                dir = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/Behavior/only_learnedDays';
+            end
+            
+            savefig(fh, fullfile(dir, ['PMF_', miceNames{imouse}, '.fig']))
+            print(fh, '-dpdf', fullfile(dir, ['PMF_', miceNames{imouse}]))
+        end
+        
+    end
+end
 
 

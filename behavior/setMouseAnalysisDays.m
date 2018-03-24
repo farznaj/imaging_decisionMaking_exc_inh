@@ -31,47 +31,46 @@ switch mouse
         days2exclude = {};
         
     case 'fni16'
-%         if imaging
-%             day = {'29-Oct-2015'};
-%             dayLast = {'17-Aug-2015'};
-%             days2exclude = {'14-Sep-2015', '15-Oct-2015'};        
-%         else
+        if imaging
+            day = {'29-Oct-2015'};
+            dayLast = {'17-Aug-2015'};
+            days2exclude = {'14-Sep-2015', '15-Oct-2015'};        
+        else
             day = {'29-Oct-2015'};
             dayLast = {'30-Sep-2015'};
             days2exclude = {'15-Oct-2015'};        
-%         end
+        end
     case 'fni17'
-%         if imaging
-%             day = {'02-Nov-2015'};
-%             dayLast = {'14-Aug-2015'}; % {'02-Sep-2015'};
-%             days2exclude = {'29-Sep-2015'};        
-%         else
+        if imaging
+            day = {'02-Nov-2015'};
+            dayLast = {'14-Aug-2015'}; % {'02-Sep-2015'};
+            days2exclude = {'29-Sep-2015'};        
+        else
             day = {'02-Nov-2015'};
             dayLast = {'14-Sep-2015'}; % {'02-Sep-2015'};
             days2exclude = {'29-Sep-2015'};                    
-%         end
+        end
     case 'fni18'
-%         if imaging
-%             day = {'17-Dec-2015'};
-%             dayLast = {'30-Nov-2015'}; % {'07-Oct-2015'};
-%             days2exclude = {'09-Nov-2015' , '11-Nov-2015' , '12-Nov-2015' , '13-Nov-2015' };
-%             % days in scope rig, mouse has been doing something but w intervention and not great: Nov 16, 17, 18, 19, 20, 23, 24, 25
-%         else
+        if imaging
+            day = {'17-Dec-2015'};
+            dayLast = {'09-Dec-2015'}; 
+            days2exclude = {}; 
+        else
             day = {'17-Dec-2015'};
             dayLast = {'30-Nov-2015'}; % {'07-Oct-2015'};
             days2exclude = {'09-Nov-2015' , '11-Nov-2015' , '12-Nov-2015' , '13-Nov-2015' };
             % days in scope rig, mouse has been doing something but w intervention and not great: Nov 16, 17, 18, 19, 20, 23, 24, 25            
-%         end
+        end
     case 'fni19'
-%         if imaging
-%             day = {'01-Nov-2015'};
-%             dayLast = {'30-Sep-2015'}; % {'02-Sep-2015'};
-%             days2exclude = {'14-Oct-2015', '21-Oct-2015' };
-%         else
+        if imaging
+            day = {'01-Nov-2015'};
+            dayLast = {'03-Sep-2015'}; 
+            days2exclude = {'14-Oct-2015', '21-Oct-2015' };
+        else
             day = {'01-Nov-2015'};
             dayLast = {'30-Sep-2015'}; % {'02-Sep-2015'};
             days2exclude = {'14-Oct-2015', '21-Oct-2015' };            
-%         end        
+        end        
     case 'hni01'
         day = {'21-Sep-2015'};
         dayLast = {'13-Aug-2015'};

@@ -67,6 +67,13 @@ traces_aligned_cat = cat(1, ...
     traces_aligned_fut_1stSideTry, NaN(1, nu, numTrials), ...
     traces_aligned_fut_reward);
 
+%%%% Plot heatmap (ns x times (trial averaged), after sorting neurons based on when in the trial they fire the max
+a = nanmean(traces_aligned_cat, 3)';
+[aa, ii] = max(a, [], 2);
+[s2,si2] = sort(ii);
+figure; imagesc(a(si2,:)); vline(eltot); colorbar;
+
+
 fprintf('size of traces_aligned_cat: %d  %d  %d\n', size(traces_aligned_cat))
 
 

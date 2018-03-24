@@ -9,6 +9,21 @@ cols = {'b','r'}; % exc,inh, real data
 colss = [0,.8,.8; .8,.5,.8]; % exc,inh colors for shuffled data
 nowStr = nowStr_allMice{imfni18}; % use nowStr of mouse fni18 (in case its day 4 was removed, you want that to be indicated in the figure name of summary of all mice).
 
+dirn00 = fullfile(dirn0, 'allMice');
+if strcmp(outcome2ana, '')
+    dirn00 = fullfile(dirn00, 'allOutcome');
+elseif strcmp(outcome2ana, 'corr')
+    dirn00 = fullfile(dirn00, 'corr');
+elseif strcmp(outcome2ana, 'incorr')
+    dirn00 = fullfile(dirn00, 'incorr');
+end
+if doshfl
+    dirn00 = fullfile(dirn00, 'shuffled_actual_ROC');
+end
+if ~exist(dirn00, 'dir')
+    mkdir(dirn00)
+end
+
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -33,14 +48,15 @@ if ~isempty(yy)
 end
 legend([h1,h2], {'Excitatory', 'Inhibitory'}, 'position', [0.1347    0.8177    0.1414    0.0901]);
 xlabel('Time since choice onset (ms)')
-ylabel(namc)
+ylab = simpleTokenize(namc, '_'); ylab = ylab{1}; %namc;   
+ylabel(ylab)
 % title('mean+se mice (Ns aved per day;days aved per mouse)')
 xlim([time_al(1)-50, time_al(end)+50])
 
 % figs_adj_poster_ax(fh)
 
 if savefigs
-    fdn = fullfile(dirn0, strcat(namc,'_','ROC_curr_chAl_excInh_timeCourse_aveMice_aveDays_aveNs_', dm0, nowStr));
+    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_timeCourse_aveSeMice_aveDays_aveNs_', dm0, nowStr));
     savefig(fh, fdn)
     print(fh, '-dpdf', fdn)
 end
@@ -64,25 +80,27 @@ if ~isempty(yy)
 end
 legend([h1,h2], {'Excitatory', 'Inhibitory'}, 'position', [0.1347    0.8177    0.1414    0.0901]);
 xlabel('Time since choice onset (ms)')
-ylabel(namc)
+ylab = simpleTokenize(namc, '_'); ylab = ylab{1}; %namc;   
+ylabel(ylab)
 % title('mean+se pooled days (Ns aved per day)')
 
 % figs_adj_poster_ax(fh)
 
 if savefigs
-    fdn = fullfile(dirn0, strcat(namc,'_','ROC_curr_chAl_excInh_timeCourse_avePooledDaysAllMice_aveNs_', dm0, nowStr));
+    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_timeCourse_aveSePooledDaysAllMice_aveNs_', dm0, nowStr));
     savefig(fh, fdn)
     print(fh, '-dpdf', fdn)
 end
         
 
 %%
-%%%%%%%%%%%%%%%%%%%%%%% Dists of individual neurons %%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%% Distributions of individual neurons %%%%%%%%%%%%%%%%%%%%%%%
 
 %% Compare exc/inh ROC dist for each frame, all days pooled
 
+numBins = 25;
 documsum = 0;
-xlab = namc;
+xlab = simpleTokenize(namc, '_'); xlab = xlab{1}; %namc;        
 ylab = 'Fraction neurons,days,mice';
 leg = {'exc','inh'};
 % cols = {'b','r'};
@@ -96,12 +114,21 @@ for ifr = 1:length(time_al)
     
     y1 = exc_allNsDaysMicePooled(ifr,:);
     y2 = inh_allNsDaysMicePooled(ifr,:);
-    plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, ha(ifr), yy, documsum)
+    bins = plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, ha(ifr), yy, documsum, numBins);
         
     if doshfl % sfhl
-        y1 = exc_allNsDaysMicePooled_shfl(ifr,:);
-        y2 = inh_allNsDaysMicePooled_shfl(ifr,:);   
-        plotHist_sp(y1,y2,xlab,ylab,leg, colss, tit, fign, ha(ifr), yy, documsum)
+        % average of shfl samples
+%         y1 = exc_allNsDaysMicePooled_shfl(ifr,:);
+%         y2 = inh_allNsDaysMicePooled_shfl(ifr,:);   
+%         plotHist_sp(y1,y2,xlab,ylab,leg, colss, tit, fign, ha(ifr), yy, documsum, numBins, bins)
+        
+        % individual shlf sampls
+        y1s = exc_allNsDaysMicePooled_shfl0(fr,:,:);
+        y2s = inh_allNsDaysMicePooled_shfl0(fr,:,:);
+        % pool all samples
+        y1s = y1s(:);
+        y2s = y2s(:);
+        plotHist_sp(y1s,y2s,xlab,ylab,leg, colss, tit, fign, ha(ifr), yy, documsum, numBins, bins)
     end
 
     if ifr==1
@@ -112,7 +139,7 @@ for ifr = 1:length(time_al)
 end
 
 if savefigs        
-    fdn = fullfile(dirn0, strcat(namc,'_','ROC_curr_chAl_excInh_dist_eachFr_NsDaysMicePooled_', dm0, nowStr));
+    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_dist_eachFr_NsDaysMicePooled_', dm0, nowStr));
     savefig(fign, fdn)    
     print(fign, '-dpdf', fdn)
 end   
@@ -128,21 +155,35 @@ fr = e+time2an;
 
 nBins = 50;
 doSmooth = 1;
+xlab = simpleTokenize(namc, '_'); xlab = xlab{1}; %namc;        
+ylab = 'Fraction neurons,days,mice';
 
 fign = figure; % f = nan(1,1); f(1) = axes();
 
 y1 = exc_allNsDaysMicePooled(fr,:);
 y2 = inh_allNsDaysMicePooled(fr,:);
-% plotHist(y1,y2,xlab,ylab,leg, cols, yy,fign);
 plotHist(y1,y2,xlab,ylab,leg, cols, yy, fign, nBins, doSmooth)%, lineStyles, sp, bins); 
 if doshfl % shfl
-    y1s = exc_allNsDaysMicePooled_shfl(fr,:);
-    y2s = inh_allNsDaysMicePooled_shfl(fr,:);
-    plotHist(y1s,y2s,xlab,ylab,leg, colss, yy,fign);
+    % average of shfl samples .... I don't think this is informative...
+    % this is showing the dist of mean of shfls but the one below shows the
+    % dist of all shfl samps... and we are comparing it with the dist of
+    % all data vals!
+%     y1s = exc_allNsDaysMicePooled_shfl(fr,:);
+%     y2s = inh_allNsDaysMicePooled_shfl(fr,:);
+%     plotHist(y1s,y2s,xlab,ylab,leg, colss, yy,fign, nBins, doSmooth);
+    
+    % individual shlf sampls
+    y1s = exc_allNsDaysMicePooled_shfl0(fr,:,:);
+    y2s = inh_allNsDaysMicePooled_shfl0(fr,:,:);
+    % pool all samples
+    y1s = y1s(:);
+    y2s = y2s(:);
+    plotHist(y1s,y2s,xlab,ylab,leg, colss, yy,fign, nBins, doSmooth);
 end
 
+
 if savefigs        
-    fdn = fullfile(dirn0, strcat(namc,'_','ROC_curr_chAl_excInh_dist_time-1_NsDaysMicePooled_', dm0, nowStr));
+    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_dist_time-1_NsDaysMicePooled_', dm0, nowStr));
     savefig(fign, fdn)    
     print(fign, '-dpdf', fdn)
 end 
@@ -209,7 +250,8 @@ if doshfl % shfl
 end
 xlim([.5, length(mice)+.5])
 xlabel('Mice')
-ylabel(namc)
+ylab = simpleTokenize(namc, '_'); ylab = ylab{1}; %namc;   
+ylabel(ylab)
 set(gca,'tickdir','out')
 set(gca,'xtick',1:length(mice))
 yl = get(gca,'ylim');
@@ -272,7 +314,8 @@ if doshfl  % shfl
 end
 xlim([.5, length(mice)+.5])
 xlabel('Mice')
-ylabel(namc)
+ylab = simpleTokenize(namc, '_'); ylab = ylab{1}; %namc;   
+ylabel(ylab)
 set(gca,'tickdir','out')
 set(gca,'xtick',1:length(mice))
 yl = get(gca,'ylim');
@@ -284,9 +327,95 @@ title('avePooledNs')
 
 % save figure
 if savefigs        
-    fdn = fullfile(dirn0, strcat(namc,'_','ROC_curr_chAl_excInh_aveSe_time-1_eachMouse_', dm0, nowStr));
+    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_aveSe_time-1_eachMouse_', dm0, nowStr));
     savefig(fign, fdn)    
     print(fign, '-dpdf', fdn)
 end 
+
+
+
+
+%% Plot fractions of significantly choice-tuned neurons, compare between exc and inh
+
+fign = figure;
+
+% all preferences (ipsi and contra)
+x = 1:length(mice);
+y = [exc_fractSigTuned; inh_fractSigTuned]';
+subplot(221)
+b = bar(x, y);
+b(1).FaceColor = cols{1};
+b(2).FaceColor = cols{2};
+xlabel('Mice')
+ylabel('Fraction choice-tuned') % significant
+legend('exc', 'inh')
+title('All neurons')
+set(gca, 'tickdir', 'out', 'box', 'off')
+
+
+% ipsi-preferring neurons
+y = [exc_fractSigTuned_ipsi; inh_fractSigTuned_ipsi]';
+subplot(222)
+b = bar(x, y);
+b(1).FaceColor = cols{1};
+b(2).FaceColor = cols{2};
+xlabel('Mice')
+ylabel('Fraction choice-tuned') % significant
+title('Ipsi-preferring Ns')
+set(gca, 'tickdir', 'out', 'box', 'off')
+
+
+% contra-preferring neurons
+y = [exc_fractSigTuned_contra; inh_fractSigTuned_contra]';
+subplot(224)
+b = bar(x, y);
+b(1).FaceColor = cols{1};
+b(2).FaceColor = cols{2};
+xlabel('Mice')
+ylabel('Fraction choice-tuned') % significant
+title('Contra-preferring Ns')
+set(gca, 'tickdir', 'out', 'box', 'off')
+
+
+% ipsi and contra
+y = [exc_fractSigTuned_ipsi; exc_fractSigTuned_contra; inh_fractSigTuned_ipsi; inh_fractSigTuned_contra]';
+subplot(223); hold on
+b = bar(x, y);
+b(1).FaceColor = 'b'; % ipsi
+b(2).FaceColor = rgb('lightblue'); % contra
+b(3).FaceColor = 'r'; % ipsi
+b(4).FaceColor = rgb('lightsalmon'); % contra
+
+xlabel('Mice')
+ylabel('Fraction choice-tuned') % significant
+xlim([0, length(mice)+1])
+legend('exc-ipsi', 'exc-contra', 'inh-ipsi', 'inh-contra')
+set(gca, 'tickdir', 'out', 'box', 'off')
+
+
+% save figure
+if savefigs        
+    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_fractSigTuned_time-1_', dm0, nowStr));
+    savefig(fign, fdn)    
+    print(fign, '-dpdf', fdn)
+end 
+
+
+
+%% Plot hist of probabilities of data ROC coming from the same distribution as shuffled (assuming shuffled is a normal distribution with mu and sigma equal to mean and std of shuffled ROC values for each neuron).
+
+xlab = 'Prob(data from shfl dist)';
+ylab = 'Fraction neurons,days';
+nBins = 100;
+alpha = .05;
+
+for im = 1:length(mice)
+    y1 = exc_prob_dataROC_from_shflDist_eachMouseDaysPooled{im};
+    y2 = inh_prob_dataROC_from_shflDist_eachMouseDaysPooled{im};   
+   
+    fh = figure('name', mice{im});
+    [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, alpha, fh, nBins); %, doSmooth, lineStyles, sp, bins);
+end
+
 
 

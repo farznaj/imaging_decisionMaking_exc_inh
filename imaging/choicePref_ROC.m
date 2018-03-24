@@ -114,7 +114,7 @@ for in = 1:size(traces_al_sm, 2)
     
     
 end
-fprintf('Size of choicePref_all (fr x units): %d  %d\n', size(choicePref_all))
+fprintf('%d  %d: Size of choicePref_all (fr x units)\n', size(choicePref_all))
 choicePref_all0 = choicePref_all;
 
 % choicePref_all(:, ~good_inhibit) % excitatory neurons.
@@ -191,12 +191,12 @@ if doshfl~=0
         end
 
         choicePref_all_shfl(:,:,samps) = choicePref_all; % frames x neurons x samps
-    end    
+    end
+    fprintf('%d %d %d: Size of choicePref_all_shfl (fr x units x samps)\n', size(choicePref_all_shfl))    
+    
 else
     choicePref_all_shfl = [];
 end
-
-fprintf('Size of choicePref_all_shfl (fr x units x samps): %d %d %d\n', size(choicePref_all_shfl))
 
 
 
@@ -278,12 +278,13 @@ if 0 %doshfl~=0
         end
 
         choicePref_all_chance(:,:,samps) = choicePref_all; % frames x neurons x samps
-    end    
+    end
+    fprintf('%d %d %d: Size of choicePref_all_chance (fr x units x samps)\n', size(choicePref_all_chance))
+
 else
     choicePref_all_chance = [];
 end
 
-fprintf('Size of choicePref_all_chance (fr x units x samps): %d %d %d\n', size(choicePref_all_chance))
 
 
 

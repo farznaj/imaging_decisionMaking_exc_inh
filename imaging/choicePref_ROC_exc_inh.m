@@ -1,21 +1,28 @@
-outcome2ana = ''; %'corr'; 'incorr'; '';
+%% Main script to do ROC analysis on individual neurons to decode choice.
+% After this script, run choicePref_ROC_exc_inh_plots_setVars.m
 
-downSampSpikes = 0; %1; % downsample spike traces (non-overalapping moving average of 3 frames).
+
+%% Set vars below:
+
+outcome2ana = 'corr'; % 'corr'; 'incorr'; '';
 saveVars = 1; % if 1, vars will be saved.
+doshfl = 1; % 1: shuffle trial labels; (you set the following 0 in the roc function: also do the chance version (ieset half of them to 0, other half to 1); 0: dont do either. If 1, in addition to doing roc on actual traces, we shuffle trial labels to get roc values for shuffled case as well.)
 
-setFRsOnly = 1; % only set FRs (not ROC valus)
+chAl = 1; 
+initAl = 0;
+
+setFRsOnly = 0; % only set FRs (not ROC vars)
+downSampSpikes = 1; % downsample spike traces (non-overalapping moving average of 3 frames).
 normX = 1; % after downsampling set max peak to 1. Makes sense to do, since traces before downsampling are normalized to max
 
-chAl = 0; 
-initAl = 1;
 
+%%
 
 mice = {'fni16','fni17','fni18','fni19'};
 thStimStrength = 0; % 2; % what stim strength you want to use for computing choice pref.
 useEqualNumTrs = 0; % if true, equal number of trials for HR and LR will be used to compute ROC.
 trialHistAnalysis = 0;
 makeplots = 0;
-doshfl = 0; % 1: shuffle trial labels; also do the chance version (ieset half of them to 0, other half to 1); 0: dont do either. If 1, in addition to doing roc on actual traces, we shuffle trial labels to get roc values for shuffled case as well.
 
 if downSampSpikes    
     frameLength = 1000/30.9; % sec.
@@ -44,7 +51,8 @@ if normX, nmd = '_norm2max'; else nmd = ''; end
 for im = 1:length(mice)
     
     mouse = mice{im};
-
+    fprintf('==============================  Mouse %s ==============================\n\n', mouse)
+    
     %%% Set days for each mouse
 
     if strcmp(mouse, 'fni16')
@@ -53,7 +61,6 @@ for im = 1:length(mice)
         days = {'150814_1', '150817_1', '150824_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'};
     elseif strcmp(mouse, 'fni18')
         days = {'151209_1', '151210_1', '151211_1', '151214_1-2', '151215_1-2', '151216_1', '151217_1-2'}; % alldays
-
     elseif strcmp(mouse, 'fni19')    
         days = {'150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'};
     end    
@@ -61,7 +68,7 @@ for im = 1:length(mice)
     % fni17:         % ep_ms = [800, 1100]; % window to compute ROC distributions ... for fni17 you used [800 1100] to compute svm which does not include choice... this is not the case for fni16.         %     days = {'151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'};
     
     
-    %% load alldata to set hr choice side 
+    %% load alldata (of first day) to set the side that corresponds to HR stimulus.
 
     dn = simpleTokenize(days{1}, '_');
     imagingFolder = dn{1};
@@ -78,7 +85,7 @@ for im = 1:length(mice)
     alldata_fileNames = alldata_fileNames(isf);
     % load the one corresponding to mdffilenumber.
     [all_data, ~] = loadBehavData(alldata_fileNames(mdfFileNumber)); % , defaultHelpedTrs, saveHelpedTrs); % it removes the last trial too.
-    fprintf('Total number of behavioral trials: %d\n', length(all_data))
+%     fprintf('Total number of behavioral trials: %d\n', length(all_data))
 
     hrChoiceSide = all_data(1).highRateChoicePort;
 
@@ -108,13 +115,12 @@ for im = 1:length(mice)
     % iday = 1;
     for iday = 1:length(days)
 
-        disp('__________________________________________________________________')
         dn = simpleTokenize(days{iday}, '_');
 
         imagingFolder = dn{1};
         mdfFileNumber = str2double(simpleTokenize(dn{2}, '-'));
 
-        fprintf('Analyzing %s, day %d/%d (%s, sessions %s)\n', mouse, iday, length(days), imagingFolder, dn{2})
+        fprintf('\n_________________  %s, day %d/%d (%s, sessions %s)  _________________\n', mouse, iday, length(days), imagingFolder, dn{2})
 
         signalCh = 2; % because you get A from channel 2, I think this should be always 2.
         pnev2load = [];
@@ -166,8 +172,7 @@ for im = 1:length(mice)
                 eventI = initToneAl.eventI;                 
                 
                 %%%%%%%% NOTE 1:
-                % choiceVec is nan for trs2rmv and trs that mouse didn't
-                % make a choice.
+                % choiceVec is nan for trs2rmv and trials that mouse didn't make a choice.
                 % outcomes is nan only for trs2rmv.
                 % so here we use outcomes... instead of choiceVec
                 % I dont think we care about choiceVec value when studying traces aligned on initTone... at least when setFrsOnly is 1, we should not care about this!
@@ -284,43 +289,41 @@ for im = 1:length(mice)
 
         if trialHistAnalysis==0
             if strcmp(hrChoiceSide, 'L') % HR is left
-                outcomeL = choiceVec0==1; %(outcomes==1) & (allResp_HR_LR==1); % correct HR side --> left
-                outcomeR = choiceVec0==0; %(outcomes==1) & (allResp_HR_LR==0); 
+                choseLeft = (choiceVec0==1); %(outcomes==1) & (allResp_HR_LR==1); % correct HR side --> left
+                choseRight = (choiceVec0==0); %(outcomes==1) & (allResp_HR_LR==0); 
 
             else % LR is left
-                outcomeL = choiceVec0==0; %(outcomes==1) & (allResp_HR_LR==0);
-                outcomeR = choiceVec0==1; %(outcomes==1) & (allResp_HR_LR==1); % correct HR side --> right                
+                choseLeft = (choiceVec0==0); %(outcomes==1) & (allResp_HR_LR==0);
+                choseRight = (choiceVec0==1); %(outcomes==1) & (allResp_HR_LR==1); % correct HR side --> right                
             end
 
             
             if strcmp(outcome2ana, 'corr') || strcmp(outcome2ana, 'incorr') 
                 % if a trial's stimrate is cb, it will be set to 0 (in both ipsiTrs and contraTrs).
-                % I am actually not 100% convinced we need to do this, but
-                % I guess it is better to make sure what we call corr,
-                % incorr, does not include cb trials.
-                ipsiTrs = outcomeL'  &  abs(stimrate-cb) > thStimStrength;
-                contraTrs = outcomeR'  &  abs(stimrate-cb) > thStimStrength;
+                % I am actually not quite convinced we need to do this, but I guess it is better to make sure what we call corr or incorr does not include cb trials.
+                ipsiTrs = choseLeft'  &  abs(stimrate-cb) > thStimStrength;
+                contraTrs = choseRight'  &  abs(stimrate-cb) > thStimStrength;
             else
-                ipsiTrs = outcomeL';
-                contraTrs = outcomeR';
+                ipsiTrs = choseLeft';
+                contraTrs = choseRight';
             end
             
         else
-            outcomeL = trialHistory.choiceVec0(:,3)==1;
-            outcomeR = trialHistory.choiceVec0(:,3)==0;
+            choseLeft = trialHistory.choiceVec0(:,3)==1;
+            choseRight = trialHistory.choiceVec0(:,3)==0;
 
-            ipsiTrs = outcomeL'; % &  abs(stimrate-cb) > thStimStrength);
-            contraTrs = outcomeR'; % &  abs(stimrate-cb) > thStimStrength);
+            ipsiTrs = choseLeft'; % &  abs(stimrate-cb) > thStimStrength);
+            contraTrs = choseRight'; % &  abs(stimrate-cb) > thStimStrength);
         end
 
-        fprintf('Num corrL and corrR (stim diff > %d): %d,  %d\n', [thStimStrength, sum(ipsiTrs) sum(contraTrs)])
+        fprintf('%d, %d: Number of left & right (stim diff > %d)\n', [sum(ipsiTrs), sum(contraTrs), thStimStrength])
 
 
         %% Now remove trsExcluded from ipsiTrs and contraTrs so their size match the traces size (X_svm)
 
         ipsiTrs = ipsiTrs(~trsExcluded);
         contraTrs = contraTrs(~trsExcluded);
-        fprintf('After removing trsExcluded: Num corrL and corrR (stim diff > %d): %d,  %d\n', [thStimStrength, sum(ipsiTrs) sum(contraTrs)])
+        fprintf('%d, %d: Number of left and right after removing trsExcluded (stim diff > %d)\n', [sum(ipsiTrs), sum(contraTrs), thStimStrength])
         
         %{ 
         % below is true only if chAl=1; otherwise eg initAl=1, ipsi and
@@ -333,7 +336,7 @@ for im = 1:length(mice)
             end
         end        
         %}
-        corr_ipsi_contra(iday,:) = [sum(ipsiTrs) sum(contraTrs)];
+        corr_ipsi_contra(iday,:) = [sum(ipsiTrs) sum(contraTrs)]; % var name is not proper bc we may run the script with outcome2ana = 'incorr'... better name is "numTrs_ipsi_contra"
         ipsiTrs_allDays{iday} = ipsiTrs;
         contraTrs_allDays{iday} = contraTrs;
             
@@ -357,9 +360,9 @@ for im = 1:length(mice)
             for nt = 0:1 % neuron type (0:exc ; 1:inh)    
 
                 if nt==0
-                    disp('Analyzing excitatory neurons.')
+                    disp('Analyzing excitatory neurons...')
                 elseif nt==1
-                    disp('Analyzing inhibitory neurons.')
+                    disp('Analyzing inhibitory neurons...')
                 end        
 
                 %%% Set the neuron traces
@@ -368,6 +371,7 @@ for im = 1:length(mice)
 
                 %%  %%%%%%%%%%%%%%% Compute choicePref for each frame % for both actual and shuffled trial labels.
                 % choicePref_all: frames x units. choicePref at each frame for each neuron
+                
                 % here we comute ChoicePref, below we compute auc from choicePref.
                 % compute choice preference (2*(auc-0.5)) for each neuron at each frame.
 
@@ -375,7 +379,8 @@ for im = 1:length(mice)
                 % so auc>.5 (choicePref>0) happens when ipsi resp<contra, and auc<.5 (choicePref<0) happens when ipsi>contra.
 
                 doChoicePref = 1; % if 1 we are interested in choicePref values; otherwise we want the AUC values. % otherwise we go with values of auc.                        
-                [choicePref_all, choicePref_all_shfl, choicePref_all_chance] = choicePref_ROC(X_svm_now, ipsiTrs, contraTrs, makeplots, eventI_ds, useEqualNumTrs, doChoicePref, doshfl); % frs x neurons
+                [choicePref_all, choicePref_all_shfl, choicePref_all_chance] = choicePref_ROC...
+                    (X_svm_now, ipsiTrs, contraTrs, makeplots, eventI_ds, useEqualNumTrs, doChoicePref, doshfl); % frs x neurons
 
 
                 %%
@@ -442,7 +447,8 @@ no
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-choicePref_ROC_exc_inh_plotsEachMouse_setVars.m
+choicePref_ROC_exc_inh_plots_setVars.m
+% choicePref_ROC_exc_inh_plotsEachMouse_setVars.m
 
 
 

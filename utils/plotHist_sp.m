@@ -1,4 +1,4 @@
-function plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, sp,yy, documsum)
+function bins = plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, sp,yy, documsum, numBins, bins)
 
     if ~exist('tit','var')
         tit = [];
@@ -12,9 +12,15 @@ function plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, sp,yy, documsum)
         cols = mat2cell(cols,[1,1]);
     end
     
-    r1 = round(min([y1(:);y2(:)]),1); 
-    r2 = round(max([y1(:);y2(:)])+.05,1);
-    bins = r1 : (r2-r1)/10 : r2;
+    if ~exist('numBins', 'var')
+        numBins = 10;
+    end
+    
+    if ~exist('bins','var')
+        r1 = round(min([y1(:);y2(:)]),1); 
+        r2 = round(max([y1(:);y2(:)])+.05,1);
+        bins = r1 : (r2-r1)/numBins : r2;
+    end
 
     [nexc, e] = histcounts(y1(:), bins);
     [ninh, e] = histcounts(y2(:), bins);

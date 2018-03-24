@@ -29,15 +29,15 @@ function [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth
         nBins = 10;
     end
 
-    if ~exist('doSmooth','var')
+    if ~exist('doSmooth','var') || isempty(doSmooth)
         doSmooth = 0;
     end
     
-    if ~exist('lineStyles', 'var')
+    if ~exist('lineStyles', 'var') || isempty(lineStyles)
         lineStyles = {'-','-'};
     end
     
-    if ~exist('sp', 'var')
+    if ~exist('sp', 'var') || isempty(sp)
         sp = [211, 212];
     end
     
@@ -89,11 +89,11 @@ function [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth
     subplot(sp(1)), hold on
     h1 = plot(x, ye, 'color', cols{1}, 'linestyle', lineStyles{1});
     h2 = plot(x, yi, 'color', cols{2}, 'linestyle', lineStyles{2});
-    xlabel(xlab); ylabel(ylab)  %     xlim([r1,r2])
-    legend([h1,h2], leg)
+    xlabel(xlab); ylabel(ylab)  %     xlim([r1,r2])    
     if ~isempty(yy)
-        plot([yy yy],[0 max([ye;yi])], 'k:')
+        plot([yy yy],[0 max([ye(:);yi(:)])], 'k:')
     end
+    legend([h1,h2], leg)
     a = gca;
     [h,p] = ttest2(y1(:), y2(:));
 %     title(sprintf('p(ttest2) = %.3f', round(p,3)))
@@ -102,11 +102,11 @@ function [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth
     subplot(sp(2)), hold on
     h1 = plot(x, ye_cs, 'color', cols{1}, 'linestyle', lineStyles{1});
     h2 = plot(x, yi_cs, 'color', cols{2}, 'linestyle', lineStyles{2});
-    xlabel(xlab); ylabel('Cumulative sum')    
-    legend([h1,h2], leg)
+    xlabel(xlab); ylabel('Cumulative sum')        
     if ~isempty(yy)
         plot([yy yy],[0 1], 'k:')
     end
+    legend([h1,h2], leg)
     a = [a, gca];
     % show p value
     title(sprintf('p(ttest2) = %.3f', round(p,3)))

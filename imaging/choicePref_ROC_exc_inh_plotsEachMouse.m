@@ -1,22 +1,190 @@
 
 dirn0 = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/ROC';
 
-%%
+savefigs = eachMouse_do_savefigs(2);
+cols = {'b','r'}; % exc,inh, real data
+colss = [0,.8,.8; .8,.5,.8]; % exc,inh colors for shuffled data
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Plots of each mouse
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-savefigs = eachMouse_do_savefigs(2);
-cols = {'b','r'}; % exc,inh, real data
-colss = [0,.8,.8; .8,.5,.8]; % exc,inh colors for shuffled data
+%% Scatter plot of AUC_corr vs AUC_incorr for individual neurons; use jet colormap for days (early to late days go from blue to red)
+% For this plot you need to download ROC vars of correct trials as well as ROC vars of incorrect trials.
+% This allows us to see if neurons represent choice or stim... if for both
+% corr and incorr trials, AUC is below 0.5 (contra-choice specific) or above
+% 0.5 (ipsi-choice specific), then the neuron represnts choice; But if for corr AUC is below 0.5 and for incorr it is above 0.5, then the neuron represents stimulus. 
 
+if exist('ipsi_contra_corr', 'var') && exist('ipsi_contra_incorr', 'var')
+    thROC = .51; % .505; % .5 % threshold to compute number of choice vs stim representing neurons of each side
+
+    nPreMin_corr = find(time_al_corr < 0, 1, 'last');
+    nPreMin_incorr = find(time_al_incorr < 0, 1, 'last');
+    cc_corr_incorr_exc = nan(1, length(mice));
+    cc_corr_incorr_inh = nan(1, length(mice));
+
+    choiceCoded_contraSpecific = nan(1, length(mice));
+    choiceCoded_ipsiSpecific = nan(1, length(mice));
+    stimCoded_HRSpecific = nan(1, length(mice));
+    stimCoded_LRSpecific = nan(1, length(mice));
+    choiceCoded = nan(1, length(mice));
+    stimCoded = nan(1, length(mice));
+
+    for im = 1:length(mice)
+
+        mnTrNum_corr = min(ipsi_contra_corr{im},[],2); % min number of trials of the 2 class
+        mnTrNum_incorr = min(ipsi_contra_incorr{im},[],2);
+        ndays = length(choicePref_exc_al_allMice_corr{im});
+        cmp = jet(ndays);   
+        exc_corr_incorr_avNs = nan(2, ndays);
+        exc_corr_incorr_sdNs = nan(2, ndays);
+        inh_corr_incorr_avNs = nan(2, ndays);
+        inh_corr_incorr_sdNs = nan(2, ndays);
+        goodD = (mnTrNum_corr > thMinTrs) & (mnTrNum_incorr > thMinTrs);
+
+        fh = figure('name', mice{im}, 'position', [106   453   562   520]); %15   456   320   520]); 
+
+        for iday = 1:ndays
+            if goodD(iday)
+
+                %%% exc %%% 
+                x = choicePref_exc_al_allMice_incorr{im}{iday}(nPreMin_incorr,:); % AUC of exc neurons at time bin -1 computed on incorrect trials
+                y = choicePref_exc_al_allMice_corr{im}{iday}(nPreMin_corr,:);
+                % mean and sd across neurons
+                exc_corr_incorr_avNs(:,iday) = [mean(y); mean(x)]; 
+                exc_corr_incorr_sdNs(:,iday) = [std(y); std(x)];
+                % plot
+                subplot(221); hold on;
+                plot(x, y, '.', 'color', cmp(iday,:), 'markersize', 5)            
+
+                %%% inh %%%        
+                x = choicePref_inh_al_allMice_incorr{im}{iday}(nPreMin_incorr,:);
+                y = choicePref_inh_al_allMice_corr{im}{iday}(nPreMin_corr,:);            
+                % mean and sd across neurons
+                inh_corr_incorr_avNs(:,iday) = [mean(y); mean(x)]; 
+                inh_corr_incorr_sdNs(:,iday) = [std(y); std(x)];
+                % plot
+                subplot(223); hold on;
+                plot(x, y, '.', 'color', cmp(iday,:), 'markersize', 5)        
+            end
+        end
+
+        % pool all neurons of all days 
+        exc_incorr_daysPooled_eachMouse = cell2mat(choicePref_exc_al_allMice_incorr{im}(goodD)); 
+        exc_incorr_daysPooled_eachMouse = exc_incorr_daysPooled_eachMouse(nPreMin_incorr,:); % take AUC of all neurons of all days at time bin -1
+        exc_corr_daysPooled_eachMouse = cell2mat(choicePref_exc_al_allMice_corr{im}(goodD)); 
+        exc_corr_daysPooled_eachMouse = exc_corr_daysPooled_eachMouse(nPreMin_incorr,:);
+        inh_incorr_daysPooled_eachMouse = cell2mat(choicePref_inh_al_allMice_incorr{im}(goodD)); 
+        inh_incorr_daysPooled_eachMouse = inh_incorr_daysPooled_eachMouse(nPreMin_incorr,:);
+        inh_corr_daysPooled_eachMouse = cell2mat(choicePref_inh_al_allMice_corr{im}(goodD)); 
+        inh_corr_daysPooled_eachMouse = inh_corr_daysPooled_eachMouse(nPreMin_incorr,:);
+        % compute corrcoeff between corr and incorr AUCs (all neurons)
+        cc_corr_incorr_exc(im) = corr2(exc_incorr_daysPooled_eachMouse, exc_corr_daysPooled_eachMouse);
+        cc_corr_incorr_inh(im) = corr2(inh_incorr_daysPooled_eachMouse, inh_corr_daysPooled_eachMouse);
+        % compute number of choice vs stim representing neurons of each side
+    %     thROC = .51; % .505; % .5
+        choiceCoded_contraSpecific(im) = sum((exc_incorr_daysPooled_eachMouse < thROC) & (exc_corr_daysPooled_eachMouse < thROC));
+        choiceCoded_ipsiSpecific(im) = sum((exc_incorr_daysPooled_eachMouse > thROC) & (exc_corr_daysPooled_eachMouse > thROC));
+        stimCoded_HRSpecific(im) = sum((exc_incorr_daysPooled_eachMouse < thROC) & (exc_corr_daysPooled_eachMouse > thROC));
+        stimCoded_LRSpecific(im) = sum((exc_incorr_daysPooled_eachMouse > thROC) & (exc_corr_daysPooled_eachMouse < thROC));
+        choiceCoded(im) = choiceCoded_ipsiSpecific(im) + choiceCoded_contraSpecific(im);
+        stimCoded(im) = stimCoded_HRSpecific(im) + stimCoded_LRSpecific(im);
+
+        %%%%
+        figure(fh)
+        subplot(221)
+        title(sprintf('Excitatory (R=%.2f)', cc_corr_incorr_exc(im)))
+        hline(.5, 'k:'); vline(.5, 'k:')
+        xlabel('AUC (incorr)'); ylabel('AUC (corr)')
+        xlim([0,1]); ylim([0,1])
+
+        subplot(223)
+        title(sprintf('Inhibitory (R=%.2f)', cc_corr_incorr_inh(im)))
+        hline(.5, 'k:'); vline(.5, 'k:')
+        xlabel('AUC (incorr)'); ylabel('AUC (corr)')    
+        xlim([0,1]); ylim([0,1])
+
+
+        %%%%%%%%%%%%%%%% Plot AUC averaged across neurons for each day %%%%%%%%%%%%%%%%
+        % set corrcoefs (across days)
+        cc_exc = corr(exc_corr_incorr_avNs', 'rows', 'pairwise'); cc_exc = cc_exc(2);
+        cc_inh = corr(inh_corr_incorr_avNs', 'rows', 'pairwise'); cc_inh = cc_inh(2);       
+    %     figure('name', mice{im}, 'position', [15   456   320   520]); set(groot,'defaultAxesColorOrder',cmp)    
+
+        %%% exc %%%        
+        subplot(222); hold on;
+        x = exc_corr_incorr_avNs(2,:);
+        y = exc_corr_incorr_avNs(1,:);    
+        scatter(x, y, 15, cmp,'filled')
+        title(sprintf('Excitatory (R=%.2f)', cc_exc))
+        hline(.5, 'k:'); vline(.5, 'k:')
+        xlabel('AUC (incorr)'); ylabel('AUC (corr)')
+    %     plot(x, y, '.', 'markersize', 5)    
+    %     xe = exc_corr_incorr_sdNs(2,:);
+    %     ye = exc_corr_incorr_sdNs(1,:); 
+    %     errorbarxy(x, y, xe, ye, xe, ye);
+    %     xlim([0,1]); ylim([0,1])    
+
+        %%% inh %%%        
+        subplot(224); hold on;
+        x = inh_corr_incorr_avNs(2,:);
+        y = inh_corr_incorr_avNs(1,:);    
+        scatter(x, y, 15, cmp,'filled')
+        title(sprintf('Inhibitory (R=%.2f)', cc_inh))
+        hline(.5, 'k:'); vline(.5, 'k:')
+        xlabel('AUC (incorr)'); ylabel('AUC (corr)')    
+    %     plot(x, y, '.', 'markersize', 5)
+    %     xe = inh_corr_incorr_sdNs(2,:);
+    %     ye = inh_corr_incorr_sdNs(1,:);    
+    %     errorbarxy(x, y, xe, ye, xe, ye);
+    %     xlim([0,1]); ylim([0,1])
+
+
+        %%%%%%%%%%%%%%%%%% save figure %%%%%%%%%%%%%%%%%% 
+        if savefigs        
+            mouse = mice{im};    
+            dirnFig = fullfile(dirn0, mouse);
+            lab = simpleTokenize(namc, '_'); lab = lab{1};
+            nowStr = nowStr_allMice{im};
+            savefig(fh, fullfile(dirnFig, [lab,'_corrVSincorr_','ROC_curr_chAl_excInh_time-1_allN_aveN_', nowStr,'.fig']))
+            print(fh, '-dpdf', fullfile(dirnFig, [lab,'_corrVSincorr_','ROC_curr_chAl_excInh_time-1_allN_aveN_', nowStr]))
+        end  
+
+    end
+
+    choiceCoded ./ stimCoded
+    choiceCoded_contraSpecific ./ choiceCoded_ipsiSpecific
+    stimCoded_HRSpecific ./ stimCoded_LRSpecific
+end
+
+
+
+%%
 % im = 1;
 for im = 1:length(mice)
 
     mouse = mice{im};    
     dirnFig = fullfile(dirn0, mouse);
+    
+    if strcmp(outcome2ana, '')
+        dirnFig = fullfile(dirnFig, 'allOutcome');
+    elseif strcmp(outcome2ana, 'corr')
+        dirnFig = fullfile(dirnFig, 'corr');
+    elseif strcmp(outcome2ana, 'incorr')
+        dirnFig = fullfile(dirnFig, 'incorr');
+    end
+    
+    if doshfl
+        dirnFig = fullfile(dirnFig, 'shuffled_actual_ROC');
+    end
+    
+    if ~exist(dirnFig, 'dir')
+        mkdir(dirnFig)
+    end
+    
     [~,~,dirn] = setImagingAnalysisNames(mouse, 'analysis', []); 
     cd(dirn)
     
@@ -27,6 +195,8 @@ for im = 1:length(mice)
     if doshfl
         choicePref_exc_aligned_shfl = choicePref_exc_aligned_allMice_shfl{im}; % days; each day: frs x ns
         choicePref_inh_aligned_shfl = choicePref_inh_aligned_allMice_shfl{im};
+        choicePref_exc_aligned_shfl0 = choicePref_exc_aligned_allMice_shfl0{im}; % days; each day: frs x ns x samps
+        choicePref_inh_aligned_shfl0 = choicePref_inh_aligned_allMice_shfl0{im};
     end
     time_aligned = time_aligned_allMice{im};
     nowStr = nowStr_allMice{im};
@@ -58,6 +228,13 @@ for im = 1:length(mice)
         aveinh_shfl = cell2mat(aveinh_shfl);
         seinh_shfl = cellfun(@(x)std(x,[],2)/sqrt(size(x,2)), choicePref_inh_aligned_shfl, 'uniformoutput',0);
         seinh_shfl = cell2mat(seinh_shfl); % frs x days x samps        
+        
+        % individual shfl samples
+        aveexc_shfl0 = cellfun(@(x)squeeze(mean(x,2)), choicePref_exc_aligned_shfl0, 'uniformoutput',0); % average across neurons
+        aveexc_shfl0 = cell2mat(aveexc_shfl0); % frs x (days x samples) 
+        aveinh_shfl0 = cellfun(@(x)squeeze(mean(x,2)), choicePref_inh_aligned_shfl0, 'uniformoutput',0); % average across neurons
+        aveinh_shfl0 = cell2mat(aveinh_shfl0); % frs x (days x samples) 
+        
     end
 
     % run ttest across days for each frame
@@ -74,9 +251,12 @@ for im = 1:length(mice)
     inhall = cell2mat(choicePref_inh_aligned); % nFrs x n_inh_all
     size(excall), size(inhall)
     if doshfl % shfl
-        excall_shfl = cell2mat(choicePref_exc_aligned_shfl); % nFrs x n_exc_all x samps
-        inhall_shfl = cell2mat(choicePref_inh_aligned_shfl); % nFrs x n_inh_all x samps        
+        excall_shfl = cell2mat(choicePref_exc_aligned_shfl); % nFrs x n_exc_all
+        inhall_shfl = cell2mat(choicePref_inh_aligned_shfl); % nFrs x n_inh_all
         size(excall_shfl), size(inhall_shfl)
+        excall_shfl0 = cell2mat(choicePref_exc_aligned_shfl0); % nFrs x n_exc_all x nSamps
+        inhall_shfl0 = cell2mat(choicePref_inh_aligned_shfl0); % nFrs x n_inh_all x nSamps
+        size(excall_shfl0), size(inhall_shfl0)        
     end
     % ttest: is exc (single neuron ROC pooled across days) ROC
     % different from inh ROC? Do it for each time bin seperately.
@@ -86,7 +266,8 @@ for im = 1:length(mice)
 %     h = ttest2(excall_shfl', inhall_shfl')
 
 
-    %%
+    %% PLOTS
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -111,7 +292,8 @@ for im = 1:length(mice)
     end
     legend([h1,h2], {'Excitatory', 'Inhibitory'}, 'position', [0.1347    0.8177    0.1414    0.0901]);
     xlabel('Time since choice onset (ms)')
-    ylabel(namc)
+    ylab = simpleTokenize(namc, '_'); ylab = ylab{1}; %namc;        
+    ylabel(ylab)
     title('mean+se days (Ns aved per day)')
 
 
@@ -136,7 +318,7 @@ for im = 1:length(mice)
     else
         xlabel('Time since stim onset (ms)')
     end
-    ylabel(namc)
+    ylabel(ylab)
     title('mean+se all neurons of all days')
     
     % save figure
@@ -146,23 +328,30 @@ for im = 1:length(mice)
     end  
 
 
-    %% Dist of neuron-averaged ROC, pooled across all days and frames, compare exc and inh
+    %% Dist of neuron-averaged ROC, pooled across all frames and days, compare exc and inh
 
     ylab = 'Fraction days*frames';
-    xlab = namc;        
+    xlab = simpleTokenize(namc, '_'); xlab = xlab{1}; %namc;        
     leg = {'exc','inh'};
-%     cols = {'b','r'};
+    nBins = 50;
+    doSmooth = 1;
 
     fh = figure;
     % data
     y1 = aveexc(:);
     y2 = aveinh(:);
-    fh = plotHist(y1,y2,xlab,ylab,leg, cols, yy,fh);
+    [fh, bins] = plotHist(y1,y2,xlab,ylab,leg, cols, yy,fh, nBins, doSmooth);
 %     fh = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth, lineStyles, sp, bins); 
     if doshfl % shfl
-        y1 = aveexc_shfl(:);
-        y2 = aveinh_shfl(:);        
-        fh = plotHist(y1,y2,xlab,ylab,leg, colss, yy,fh);
+        % sample-averaged shfls
+%         y1 = aveexc_shfl(:);
+%         y2 = aveinh_shfl(:);        
+%         fh = plotHist(y1,y2,xlab,ylab,leg, colss, yy,fh, nBins, [],[],[], bins);
+        
+        % individual shfl samples
+        y1 = aveexc_shfl0(:);
+        y2 = aveinh_shfl0(:);        
+        fh = plotHist(y1,y2,xlab,ylab,leg, colss, yy,fh, nBins, [],[],[], bins);
     end
 
     if savefigs
@@ -180,9 +369,9 @@ for im = 1:length(mice)
     %}
 
 
-    %% Dist of AUC all neurons of all days and all time bins pooled.
+    %% Dist of AUC, all neurons of all days and all time bins pooled.
 
-    xlab = namc;
+    xlab = simpleTokenize(namc, '_'); xlab = xlab{1}; %namc;        
     ylab = 'Fraction neurons*days*frames';
     leg = {'exc','inh'};
 %     cols = {'b','r'};
@@ -191,11 +380,16 @@ for im = 1:length(mice)
     % data
     y1 = excall(:);
     y2 = inhall(:);
-    fh = plotHist(y1,y2,xlab,ylab,leg, cols, yy,fh);
+    [fh, bins] = plotHist(y1,y2,xlab,ylab,leg, cols, yy,fh, nBins);
     if doshfl % shfl
-        y1 = excall_shfl(:);
-        y2 = inhall_shfl(:);
-        fh = plotHist(y1,y2,xlab,ylab,leg, colss, yy,fh);
+        % dist of mean of shfl
+%         y1 = excall_shfl(:);
+%         y2 = inhall_shfl(:);
+%         fh = plotHist(y1,y2,xlab,ylab,leg, colss, yy,fh, nBins, [], [], [], bins);
+        % dist of individual shfl samples
+        y1 = excall_shfl0(:);
+        y2 = inhall_shfl0(:);
+        fh = plotHist(y1,y2,xlab,ylab,leg, colss, yy,fh, nBins, [], [], [], bins);        
     end
 
     if savefigs        
@@ -206,10 +400,12 @@ for im = 1:length(mice)
 
     %% Same as above but done for each frame separately: Compare exc/inh ROC dist for each frame, all neurons of all days pooled
 
-    xlab = namc;
+    numBins = 50;
+    documsum = 0;
+    xlab = simpleTokenize(namc, '_'); xlab = xlab{1}; %namc;        
     ylab = 'Fraction neurons*days';
     leg = {'exc','inh'};
-%     cols = {'b','r'};
+%     cols = {'b','r'};    
 
     fign = figure('position', [680   197   696   779]);
     c = 4;        
@@ -219,11 +415,17 @@ for im = 1:length(mice)
         % data
         y1 = excall(ifr,:);
         y2 = inhall(ifr,:);        
-        plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, ha(ifr), yy)
+        bins = plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, ha(ifr), yy, documsum, numBins);
+       
         if doshfl % shfl
-            y1 = excall_shfl(ifr,:);
-            y2 = inhall_shfl(ifr,:);        
-            plotHist_sp(y1,y2,xlab,ylab,leg, colss, tit, fign, ha(ifr), yy)
+            % dist of mean of shfl
+%             y1 = excall_shfl(ifr,:);
+%             y2 = inhall_shfl(ifr,:);        
+%             plotHist_sp(y1,y2,xlab,ylab,leg, colss, tit, fign, ha(ifr), yy, documsum, numBins, bins);
+            % dist of all shfl samples
+            y1 = excall_shfl0(ifr,:,:); y1 = y1(:);
+            y2 = inhall_shfl0(ifr,:,:); y2 = y2(:);
+            plotHist_sp(y1,y2,xlab,ylab,leg, colss, tit, fign, ha(ifr), yy, documsum, numBins, bins);            
         end
         
         if ifr==1
@@ -285,13 +487,14 @@ for im = 1:length(mice)
     end
 %     subplot(ceil(size(aveexc,2)/10), 10, 1)
     xlabel(ha(1), 'Time')
-    ylabel(ha(1), namc)
+    ylab = simpleTokenize(namc, '_'); ylab = ylab{1}; %namc;    
+    ylabel(ha(1), ylab)
     legend(ha(1), [h1,h2], 'exc','inh')
 
 
     if savefigs
-        savefig(fh, fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_eachDay_', nowStr,'.fig']))
-        print(fh, '-dpdf', fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveNeurs_eachDay_', nowStr]))
+        savefig(fh, fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveSeNeurs_eachDay_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_timeCourse_aveSeNeurs_eachDay_', nowStr]))
     end
 
 
@@ -313,7 +516,7 @@ for im = 1:length(mice)
     title('exc')
     legend(days, 'Position', [0.6434 -0.7195 0.3153 1.3991]);
     xlabel('time')
-    ylabel(namc)
+    ylabel(ylab)
 
     subplot(223)
     plot(time_aligned, aveinh);     hold on
@@ -340,7 +543,7 @@ for im = 1:length(mice)
         title('exc\_shfl')
     %     legend(days, 'Position', [0.6434 -0.7195 0.3153 1.3991]);
         xlabel('time')
-        ylabel(namc)
+        ylabel(ylab)
 
         subplot(224)
         plot(time_aligned, aveinh_shfl);     hold on
@@ -389,13 +592,15 @@ for im = 1:length(mice)
     end
 %     subplot(ceil((size(aveexc,1)+1)/4), 4, 2)
     xlabel(ha(2), 'days')
-    ylabel(ha(2), namc)
+    ylab = simpleTokenize(namc, '_'); ylab = ylab{1}; %namc;   
+    ylabel(ha(2), ylab)
     legend(ha(2), [h1,h2], 'exc','inh')
     title(ha(2), sprintf('time rel2 choice = %d ms',round(time_aligned(1))))
+    ylabel(ha(5), ylab)
 
     if savefigs
-        savefig(fh, fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveNeurs_eachFrame_', nowStr,'.fig']))
-        print(fh, '-dpdf', fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveNeurs_eachFrame_', nowStr]))
+        savefig(fh, fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveSeNeurs_eachFrame_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInh_trainingDays_aveSeNeurs_eachFrame_', nowStr]))
     end
     
 end

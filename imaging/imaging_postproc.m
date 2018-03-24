@@ -10,7 +10,7 @@
 
 clear; close all
 mouse = 'fni17';
-imagingFolder = '150813';
+imagingFolder = '151015';
 mdfFileNumber = [1];      % or tif major
 
 setFrdrops = 1; % set to 1 write after cnmf, so if needed you reran cnmf
