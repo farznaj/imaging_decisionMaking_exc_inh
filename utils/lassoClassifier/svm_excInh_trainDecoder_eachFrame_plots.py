@@ -15,12 +15,16 @@ Created on Sun Mar 12 15:12:29 2017
 
 mousename = 'fni17'
 
-addNs_roc = 1 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
+loadYtest = 1 # to load the svm files that include testTrInds_allSamps, etc vars (ie in addition to percClassError, they include the Y_hat for each trial)
+thStimStrength = 3 # 2; # threshold of stim strength for defining hard, medium and easy trials.
+
+addNs_roc = 0 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
 do_excInhHalf = 0 # 0: Load vars for inh,exc,allExc, 1: Load exc,inh SVM vars for excInhHalf (ie when the population consists of half exc and half inh) and allExc2inhSize (ie when populatin consists of allExc but same size as 2*inh size)
 shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
-savefigs = 1
+savefigs = 0
 
 doAllN = 1 # matters only when do_excInhHalf =0; plot allN, instead of allExc
+
 corrTrained = 1
 doIncorr = 0
 
@@ -49,7 +53,7 @@ ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or 
 trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
 superimpose = 1 # the averaged aligned traces of testing and shuffled will be plotted on the same figure
-
+    
 chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
 stAl = ch_st_goAl[1]
 goToneAl = ch_st_goAl[2]
@@ -59,11 +63,15 @@ if do_excInhHalf:
     labInh = 'InhExcHalf'
 else:
     labInh = 'inh'
+
+if loadYtest:
+    doAllN=0
         
 if doAllN==1:
     labAll = 'allN'
 else:
     labAll = 'allExc'
+       
 
 #if loadInhAllexcEqexc==1:
 dnow = '/excInh_trainDecoder_eachFrame/'+mousename+'/'
@@ -82,7 +90,7 @@ if doAllN==1:
 
 execfile("defFuns.py")
 #execfile("svm_plots_setVars_n.py")  
-days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
+days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays, loadYtest)
 # remove some days if needed:
 #days = np.delete(days, [14])
 
@@ -112,7 +120,27 @@ perClassErrorTest_chance_exc_all = []
 numInh = np.full((len(days)), np.nan)
 numAllexc = np.full((len(days)), np.nan)
 corr_hr_lr = np.full((len(days),2), np.nan) # number of hr, lr correct trials for each day
-
+perClassErrorTest_data_easy_inh_all = []
+perClassErrorTest_data_hard_inh_all = []
+perClassErrorTest_data_medium_inh_all = []
+perClassErrorTest_data_easy_allExc_all = []
+perClassErrorTest_data_hard_allExc_all = []
+perClassErrorTest_data_medium_allExc_all = []
+perClassErrorTest_data_easy_exc_all = []
+perClassErrorTest_data_hard_exc_all = []
+perClassErrorTest_data_medium_exc_all = []
+perClassErrorTest_shfl_easy_inh_all = []
+perClassErrorTest_shfl_hard_inh_all = []
+perClassErrorTest_shfl_medium_inh_all = []
+perClassErrorTest_shfl_easy_allExc_all = []
+perClassErrorTest_shfl_hard_allExc_all = []
+perClassErrorTest_shfl_medium_allExc_all = []
+perClassErrorTest_shfl_easy_exc_all = []
+perClassErrorTest_shfl_hard_exc_all = []
+perClassErrorTest_shfl_medium_exc_all = []
+num_ehm_inh_all = []
+num_ehm_allExc_all = []
+num_ehm_exc_all = []
 
 #%% Loop over days    
 
@@ -170,14 +198,156 @@ for iday in range(len(days)):
         perClassErrorTest_data_exc = 0; perClassErrorTest_shfl_exc = 0; perClassErrorTest_chance_exc = 0; 
 
     else:
-        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron)
+        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=loadYtest)
     
     ##%% Get number of inh and exc        
     if loadWeights==1:
         numInh[iday] = w_data_inh.shape[1]
         numAllexc[iday] = w_data_allExc.shape[1]
         
+
+
+    #%% 
+    
+    if loadYtest:
+
+        thMinEMH = 0 #1 #3 ... makes sense to make sure each day is contributing to all easy,med,hard, but if I make this non zero, fni16,18,19 will have almost no days!
+        ###########%% Set stimrate for testing trials of each sample         
         
+        Data = scio.loadmat(postName, variable_names=['stimrate', 'cb'])
+        stimrate = np.array(Data.pop('stimrate')).flatten().astype('float')
+        cb = np.array(Data.pop('cb')).flatten().astype('float')        
+        
+        # inh
+        data = scio.loadmat(svmName_excInh[0], variable_names=['trsExcluded', 'trsnow_allSamps'])
+        trsExcluded = np.array(data.pop('trsExcluded')).flatten().astype('bool') 
+        trsnow_allSamps_inh = np.array(data.pop('trsnow_allSamps')).astype('int') # index of trials after picking random hr (or lr) in order to make sure both classes have the same number in the final Y (on which svm was run)
+        
+        # allExc
+        data = scio.loadmat(svmName_excInh[1], variable_names=['trsnow_allSamps'])
+        trsnow_allSamps_allExc = np.array(data.pop('trsnow_allSamps')).astype('int') 
+        
+        # exc
+        data = scio.loadmat(svmName_excInh[2], variable_names=['trsnow_allSamps'])
+        trsnow_allSamps_exc = np.array(data.pop('trsnow_allSamps')).astype('int') 
+
+        
+        stimrate = stimrate[~trsExcluded] # length= length of Y0 (ie before making hr and lr the same number in Y)
+        len_test = Ytest_allSamps_inh.shape[1] # numSamples x numTestTrs
+        numSamps = testTrInds_allSamps_inh.shape[0]
+        nFrs = Ytest_hat_allSampsFrs_inh.shape[1]
+        numShufflesExc = trsnow_allSamps_exc.shape[0]
+        
+#        stimrate_testTrs_allSamps = np.full((numSamps, len_test), np.nan)                
+        perClassEr_easy_inh = np.full((numSamps, nFrs), np.nan)                
+        perClassEr_hard_inh = np.full((numSamps, nFrs), np.nan)
+        perClassEr_medium_inh = np.full((numSamps, nFrs), np.nan)
+        perClassEr_easy_allExc = np.full((numSamps, nFrs), np.nan)
+        perClassEr_hard_allExc = np.full((numSamps, nFrs), np.nan)
+        perClassEr_medium_allExc = np.full((numSamps, nFrs), np.nan)
+        perClassEr_easy_exc = np.full((numShufflesExc, numSamps, nFrs), np.nan)
+        perClassEr_hard_exc = np.full((numShufflesExc, numSamps, nFrs), np.nan)
+        perClassEr_medium_exc = np.full((numShufflesExc, numSamps, nFrs), np.nan)
+        perClassEr_easy_shfl_inh = np.full((numSamps, nFrs), np.nan)                
+        perClassEr_hard_shfl_inh = np.full((numSamps, nFrs), np.nan)
+        perClassEr_medium_shfl_inh = np.full((numSamps, nFrs), np.nan)
+        perClassEr_easy_shfl_allExc = np.full((numSamps, nFrs), np.nan)
+        perClassEr_hard_shfl_allExc = np.full((numSamps, nFrs), np.nan)
+        perClassEr_medium_shfl_allExc = np.full((numSamps, nFrs), np.nan)
+        perClassEr_easy_shfl_exc = np.full((numShufflesExc, numSamps, nFrs), np.nan)
+        perClassEr_hard_shfl_exc = np.full((numShufflesExc, numSamps, nFrs), np.nan)
+        perClassEr_medium_shfl_exc = np.full((numShufflesExc, numSamps, nFrs), np.nan)        
+        
+        num_ehm_inh = np.full((numSamps, 3), np.nan) # number of easy, hard and medium testing trials for the inhibitory-population decoder
+        num_ehm_allExc = np.full((numSamps, 3), np.nan)
+        num_ehm_exc = np.full((numShufflesExc, numSamps, 3), np.nan)
+        
+        for isamp in range(numSamps):            
+            
+            ###########%% set stimrate for testing trials            
+            # inh
+            trsnow = trsnow_allSamps_inh[isamp]
+            testTrInds = testTrInds_allSamps_inh[isamp]                
+            testTrInds_outOfY0 = trsnow[testTrInds] # index of testing trials out of Y0 (not Y!) (that will be used in svm below)
+            stimrateTestTrs = stimrate[testTrInds_outOfY0] # stimrate of testing trials    
+            # set easy, medium, hard trials
+            s = stimrateTestTrs-cb # how far is the stimulus rate from the category boundary?        
+            str2ana_easy_inh = (abs(s) >= (max(abs(s)) - thStimStrength))        
+            str2ana_hard_inh = (abs(s) <= thStimStrength)        
+            str2ana_medium_inh = ((abs(s) > thStimStrength) & (abs(s) < (max(abs(s)) - thStimStrength)))
+            num_ehm_inh[isamp,:] = [sum(str2ana_easy_inh), sum(str2ana_hard_inh), sum(str2ana_medium_inh)]
+    
+            # allExc
+            trsnow = trsnow_allSamps_allExc[isamp]
+            testTrInds = testTrInds_allSamps_allExc[isamp]                
+            testTrInds_outOfY0 = trsnow[testTrInds] # index of testing trials out of Y0 (not Y!) (that will be used in svm below)
+            stimrateTestTrs = stimrate[testTrInds_outOfY0] # stimrate of testing trials    
+            # set easy, medium, hard trials
+            s = stimrateTestTrs-cb # how far is the stimulus rate from the category boundary?        
+            str2ana_easy_allExc = (abs(s) >= (max(abs(s)) - thStimStrength))        
+            str2ana_hard_allExc = (abs(s) <= thStimStrength)        
+            str2ana_medium_allExc = ((abs(s) > thStimStrength) & (abs(s) < (max(abs(s)) - thStimStrength)))
+            num_ehm_allExc[isamp,:] = [sum(str2ana_easy_allExc), sum(str2ana_hard_allExc), sum(str2ana_medium_allExc)]
+
+            # exc
+            str2ana_easy_exc = []
+            str2ana_hard_exc = []
+            str2ana_medium_exc = []
+            for ii in range(numShufflesExc): # loop through exc subsamples   
+                trsnow = trsnow_allSamps_exc[ii,isamp] # numShufflesExc x numSamples x numTrs
+                testTrInds = testTrInds_allSamps_exc[ii,isamp]                
+                testTrInds_outOfY0 = trsnow[testTrInds] # index of testing trials out of Y0 (not Y!) (that will be used in svm below)
+                stimrateTestTrs = stimrate[testTrInds_outOfY0] # stimrate of testing trials    
+                # set easy, medium, hard trials
+                s = stimrateTestTrs-cb # how far is the stimulus rate from the category boundary?        
+                str2ana_easy_exc.append(abs(s) >= (max(abs(s)) - thStimStrength))        
+                str2ana_hard_exc.append(abs(s) <= thStimStrength)        
+                str2ana_medium_exc.append((abs(s) > thStimStrength) & (abs(s) < (max(abs(s)) - thStimStrength)))
+            num_ehm_exc[:,isamp,:] = np.array([np.sum(str2ana_easy_exc, axis=1), np.sum(str2ana_hard_exc, axis=1), np.sum(str2ana_medium_exc, axis=1)]).T
+
+
+
+            ###########%% set fraction of classification error for each trial strength 
+            Ytest_inh = Ytest_allSamps_inh[isamp] 
+            Ytest_allExc = Ytest_allSamps_allExc[isamp]             
+            
+            for ifr in range(nFrs): # each frame has a Ytest_hat                
+                # inh
+                if np.all(num_ehm_inh[isamp,:]>thMinEMH): # len(Ytest_inh) > thMinEMH:
+                    Ytest_hat = Ytest_hat_allSampsFrs_inh[isamp,ifr]
+                    perClassEr_easy_inh[isamp,ifr] = perClassError(Ytest_inh[str2ana_easy_inh], Ytest_hat[str2ana_easy_inh])
+                    perClassEr_hard_inh[isamp,ifr] = perClassError(Ytest_inh[str2ana_hard_inh], Ytest_hat[str2ana_hard_inh])
+                    perClassEr_medium_inh[isamp,ifr] = perClassError(Ytest_inh[str2ana_medium_inh], Ytest_hat[str2ana_medium_inh])                
+                    Ytest_hat = Ytest_hat[rng.permutation(len_test)] # shuffle Ytest_hat
+                    perClassEr_easy_shfl_inh[isamp,ifr] = perClassError(Ytest_inh[str2ana_easy_inh], Ytest_hat[str2ana_easy_inh])
+                    perClassEr_hard_shfl_inh[isamp,ifr] = perClassError(Ytest_inh[str2ana_hard_inh], Ytest_hat[str2ana_hard_inh])
+                    perClassEr_medium_shfl_inh[isamp,ifr] = perClassError(Ytest_inh[str2ana_medium_inh], Ytest_hat[str2ana_medium_inh])                                
+                # allExc
+                if np.all(num_ehm_allExc[isamp,:]>thMinEMH): # len(Ytest_allExc) > thMinEMH:
+                    Ytest_hat = Ytest_hat_allSampsFrs_allExc[isamp,ifr]
+                    perClassEr_easy_allExc[isamp,ifr] = perClassError(Ytest_allExc[str2ana_easy_allExc], Ytest_hat[str2ana_easy_allExc])
+                    perClassEr_hard_allExc[isamp,ifr] = perClassError(Ytest_allExc[str2ana_hard_allExc], Ytest_hat[str2ana_hard_allExc])
+                    perClassEr_medium_allExc[isamp,ifr] = perClassError(Ytest_allExc[str2ana_medium_allExc], Ytest_hat[str2ana_medium_allExc])    
+                    Ytest_hat = Ytest_hat[rng.permutation(len_test)] # shuffle Ytest_hat
+                    perClassEr_easy_shfl_allExc[isamp,ifr] = perClassError(Ytest_inh[str2ana_easy_allExc], Ytest_hat[str2ana_easy_allExc])
+                    perClassEr_hard_shfl_allExc[isamp,ifr] = perClassError(Ytest_inh[str2ana_hard_allExc], Ytest_hat[str2ana_hard_allExc])
+                    perClassEr_medium_shfl_allExc[isamp,ifr] = perClassError(Ytest_inh[str2ana_medium_allExc], Ytest_hat[str2ana_medium_allExc])                                
+                
+                # exc
+                for ii in range(numShufflesExc):
+                    Ytest_exc = Ytest_allSamps_exc[ii,isamp] # numShufflesExc x numSamples x numTestTrs 
+                    Ytest_hat = Ytest_hat_allSampsFrs_exc[ii,isamp,ifr]
+                    if np.all(num_ehm_exc[ii,isamp,:]>thMinEMH): # len(Ytest_exc) > thMinEMH:
+                        perClassEr_easy_exc[ii,isamp,ifr] = perClassError(Ytest_exc[str2ana_easy_exc[ii]], Ytest_hat[str2ana_easy_exc[ii]])
+                        perClassEr_hard_exc[ii,isamp,ifr] = perClassError(Ytest_exc[str2ana_hard_exc[ii]], Ytest_hat[str2ana_hard_exc[ii]])
+                        perClassEr_medium_exc[ii,isamp,ifr] = perClassError(Ytest_exc[str2ana_medium_exc[ii]], Ytest_hat[str2ana_medium_exc[ii]])
+                        Ytest_hat = Ytest_hat[rng.permutation(len_test)] # shuffle Ytest_hat
+                        perClassEr_easy_shfl_exc[ii,isamp,ifr] = perClassError(Ytest_exc[str2ana_easy_exc[ii]], Ytest_hat[str2ana_easy_exc[ii]])
+                        perClassEr_hard_shfl_exc[ii,isamp,ifr] = perClassError(Ytest_exc[str2ana_hard_exc[ii]], Ytest_hat[str2ana_hard_exc[ii]])
+                        perClassEr_medium_shfl_exc[ii,isamp,ifr] = perClassError(Ytest_exc[str2ana_medium_exc[ii]], Ytest_hat[str2ana_medium_exc[ii]])
+                    
+                
+    
     #%% Once done with all frames, save vars for all days
     
     perClassErrorTest_data_inh_all.append(perClassErrorTest_data_inh) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
@@ -190,7 +360,29 @@ for iday in range(len(days)):
         perClassErrorTest_data_exc_all.append(perClassErrorTest_data_exc) # each day: numShufflesExc x numSamples x numFrames   # if addNs_roc: # numShufflesExc x number of neurons in the decoder x numSamples x nFrs 
         perClassErrorTest_shfl_exc_all.append(perClassErrorTest_shfl_exc)
         perClassErrorTest_chance_exc_all.append(perClassErrorTest_chance_exc)
-
+    if loadYtest:
+        perClassErrorTest_data_easy_inh_all.append(perClassEr_easy_inh)
+        perClassErrorTest_data_hard_inh_all.append(perClassEr_hard_inh)
+        perClassErrorTest_data_medium_inh_all.append(perClassEr_medium_inh)
+        perClassErrorTest_data_easy_allExc_all.append(perClassEr_easy_allExc)
+        perClassErrorTest_data_hard_allExc_all.append(perClassEr_hard_allExc)
+        perClassErrorTest_data_medium_allExc_all.append(perClassEr_medium_allExc)
+        perClassErrorTest_data_easy_exc_all.append(perClassEr_easy_exc)
+        perClassErrorTest_data_hard_exc_all.append(perClassEr_hard_exc)
+        perClassErrorTest_data_medium_exc_all.append(perClassEr_medium_exc)
+        perClassErrorTest_shfl_easy_inh_all.append(perClassEr_easy_shfl_inh)
+        perClassErrorTest_shfl_hard_inh_all.append(perClassEr_hard_shfl_inh)
+        perClassErrorTest_shfl_medium_inh_all.append(perClassEr_medium_shfl_inh)
+        perClassErrorTest_shfl_easy_allExc_all.append(perClassEr_easy_shfl_allExc)
+        perClassErrorTest_shfl_hard_allExc_all.append(perClassEr_hard_shfl_allExc)
+        perClassErrorTest_shfl_medium_allExc_all.append(perClassEr_medium_shfl_allExc)
+        perClassErrorTest_shfl_easy_exc_all.append(perClassEr_easy_shfl_exc)
+        perClassErrorTest_shfl_hard_exc_all.append(perClassEr_hard_shfl_exc)
+        perClassErrorTest_shfl_medium_exc_all.append(perClassEr_medium_shfl_exc)
+        num_ehm_inh_all.append(num_ehm_inh)
+        num_ehm_allExc_all.append(num_ehm_allExc)
+        num_ehm_exc_all.append(num_ehm_exc)
+        
     # Delete vars before starting the next day    
     del perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc
     if loadWeights==1:
@@ -226,8 +418,79 @@ elif do_excInhHalf:
 else:
     numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_exc, sd_test_data_exc, av_test_shfl_exc, sd_test_shfl_exc, av_test_chance_exc, sd_test_chance_exc, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc \
         = av_se_CA_trsamps(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, perClassErrorTest_data_exc_all, perClassErrorTest_shfl_exc_all, perClassErrorTest_chance_exc_all, perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all)
+ 
+    if loadYtest:
+        # data ... easy, hard, medium
+        _,_,av_test_data_inh_easy, sd_test_data_inh_easy, av_test_data_inh_hard, sd_test_data_inh_hard, av_test_data_inh_medium, sd_test_data_inh_medium, \
+        av_test_data_exc_easy, sd_test_data_exc_easy, av_test_data_exc_hard, sd_test_data_exc_hard, av_test_data_exc_medium, sd_test_data_exc_medium, \
+        av_test_data_allExc_easy, sd_test_data_allExc_easy, av_test_data_allExc_hard, sd_test_data_allExc_hard, av_test_data_allExc_medium, sd_test_data_allExc_medium \
+        = av_se_CA_trsamps(numD, perClassErrorTest_data_easy_inh_all, perClassErrorTest_data_hard_inh_all, perClassErrorTest_data_medium_inh_all, \
+                           perClassErrorTest_data_easy_exc_all, perClassErrorTest_data_hard_exc_all, perClassErrorTest_data_medium_exc_all, \
+                           perClassErrorTest_data_easy_allExc_all, perClassErrorTest_data_hard_allExc_all, perClassErrorTest_data_medium_allExc_all)
+        # shfl ... easy, hard, medium
+        _,_,av_test_shfl_inh_easy, sd_test_shfl_inh_easy, av_test_shfl_inh_hard, sd_test_shfl_inh_hard, av_test_shfl_inh_medium, sd_test_shfl_inh_medium, \
+        av_test_shfl_exc_easy, sd_test_shfl_exc_easy, av_test_shfl_exc_hard, sd_test_shfl_exc_hard, av_test_shfl_exc_medium, sd_test_shfl_exc_medium, \
+        av_test_shfl_allExc_easy, sd_test_shfl_allExc_easy, av_test_shfl_allExc_hard, sd_test_shfl_allExc_hard, av_test_shfl_allExc_medium, sd_test_shfl_allExc_medium \
+        = av_se_CA_trsamps(numD, perClassErrorTest_shfl_easy_inh_all, perClassErrorTest_shfl_hard_inh_all, perClassErrorTest_shfl_medium_inh_all, perClassErrorTest_shfl_easy_exc_all, perClassErrorTest_shfl_hard_exc_all, perClassErrorTest_shfl_medium_exc_all, perClassErrorTest_shfl_easy_allExc_all, perClassErrorTest_shfl_hard_allExc_all, perClassErrorTest_shfl_medium_allExc_all)
 
 
+        ######################################## Exclude days that have too few non-nan samples! ######################################## 
+        # number of non-nan days ... 
+#        easy_nValidDays_inh = [~np.isnan(av_test_data_inh_easy[iday][0]) for iday in range(len(days))]
+#        hard_nValidDays_inh = [~np.isnan(av_test_data_inh_hard[iday][0]) for iday in range(len(days))]
+        
+        thMinSamps = 10        
+        
+        ####### inh        
+        easy_nValidSamps_inh = np.array([sum(~np.isnan(perClassErrorTest_data_easy_inh_all[iday][:,0])) for iday in range(len(days))])
+        hard_nValidSamps_inh = np.array([sum(~np.isnan(perClassErrorTest_data_hard_inh_all[iday][:,0])) for iday in range(len(days))])
+        medium_nValidSamps_inh = np.array([sum(~np.isnan(perClassErrorTest_data_medium_inh_all[iday][:,0])) for iday in range(len(days))])       
+        # set to nan        
+        for iday in range(len(days)):
+            if easy_nValidSamps_inh[iday] < thMinSamps:
+                av_test_data_inh_easy[iday] = np.full((len(av_test_data_inh_easy[iday])),np.nan)
+                sd_test_data_inh_easy[iday] = np.full((len(av_test_data_inh_easy[iday])),np.nan)
+            if hard_nValidSamps_inh[iday] < thMinSamps:
+                av_test_data_inh_hard[iday] = np.full((len(av_test_data_inh_hard[iday])),np.nan)
+                sd_test_data_inh_hard[iday] = np.full((len(av_test_data_inh_hard[iday])),np.nan)        
+            if medium_nValidSamps_inh[iday] < thMinSamps:
+                av_test_data_inh_medium[iday] = np.full((len(av_test_data_inh_medium[iday])),np.nan)
+                sd_test_data_inh_medium[iday] = np.full((len(av_test_data_inh_medium[iday])),np.nan)
+
+        ####### exc ... here if average across excSamps and trSumSamps is < 10/50 we exclude the day
+        easy_nValidSamps_exc = np.array([np.mean(~np.isnan(perClassErrorTest_data_easy_exc_all[iday][:,:,0]), axis=(0,1)) for iday in range(len(days))])
+        hard_nValidSamps_exc = np.array([np.mean(~np.isnan(perClassErrorTest_data_hard_exc_all[iday][:,0]), axis=(0,1)) for iday in range(len(days))])
+        medium_nValidSamps_exc = np.array([np.mean(~np.isnan(perClassErrorTest_data_medium_exc_all[iday][:,0]), axis=(0,1)) for iday in range(len(days))])       
+        # set to nan        
+        for iday in range(len(days)):
+            if easy_nValidSamps_exc[iday] < thMinSamps/float(numSamples):
+                av_test_data_exc_easy[iday] = np.full((len(av_test_data_exc_easy[iday])),np.nan)
+                sd_test_data_exc_easy[iday] = np.full((len(av_test_data_exc_easy[iday])),np.nan)
+            if hard_nValidSamps_exc[iday] < thMinSamps/float(numSamples):
+                av_test_data_exc_hard[iday] = np.full((len(av_test_data_exc_hard[iday])),np.nan)
+                sd_test_data_exc_hard[iday] = np.full((len(av_test_data_exc_hard[iday])),np.nan)        
+            if medium_nValidSamps_exc[iday] < thMinSamps/float(numSamples):
+                av_test_data_exc_medium[iday] = np.full((len(av_test_data_exc_medium[iday])),np.nan)
+                sd_test_data_exc_medium[iday] = np.full((len(av_test_data_exc_medium[iday])),np.nan)                
+
+        ####### allExc
+        easy_nValidSamps_allExc = np.array([sum(~np.isnan(perClassErrorTest_data_easy_allExc_all[iday][:,0])) for iday in range(len(days))])
+        hard_nValidSamps_allExc = np.array([sum(~np.isnan(perClassErrorTest_data_hard_allExc_all[iday][:,0])) for iday in range(len(days))])
+        medium_nValidSamps_allExc = np.array([sum(~np.isnan(perClassErrorTest_data_medium_allExc_all[iday][:,0])) for iday in range(len(days))])       
+        # set to nan        
+        for iday in range(len(days)):
+            if easy_nValidSamps_allExc[iday] < thMinSamps:
+                av_test_data_allExc_easy[iday] = np.full((len(av_test_data_allExc_easy[iday])),np.nan)
+                sd_test_data_allExc_easy[iday] = np.full((len(av_test_data_allExc_easy[iday])),np.nan)
+            if hard_nValidSamps_allExc[iday] < thMinSamps:
+                av_test_data_allExc_hard[iday] = np.full((len(av_test_data_allExc_hard[iday])),np.nan)
+                sd_test_data_allExc_hard[iday] = np.full((len(av_test_data_allExc_hard[iday])),np.nan)        
+            if medium_nValidSamps_allExc[iday] < thMinSamps:
+                av_test_data_allExc_medium[iday] = np.full((len(av_test_data_allExc_medium[iday])),np.nan)
+                sd_test_data_allExc_medium[iday] = np.full((len(av_test_data_allExc_medium[iday])),np.nan)
+                
+                
+                
 #%% Keep vars for chAl and stAl
 
 if chAl==1:
@@ -239,8 +502,7 @@ if chAl==1:
     av_test_shfl_inh_ch = av_test_shfl_inh + 0
     sd_test_shfl_inh_ch = sd_test_shfl_inh + 0
     av_test_chance_inh_ch = av_test_chance_inh + 0
-    sd_test_chance_inh_ch = sd_test_chance_inh + 0
-    
+    sd_test_chance_inh_ch = sd_test_chance_inh + 0    
     av_test_data_allExc_ch = av_test_data_allExc + 0
     sd_test_data_allExc_ch = sd_test_data_allExc + 0
     av_test_shfl_allExc_ch = av_test_shfl_allExc + 0
@@ -695,18 +957,37 @@ if addNs_roc==0:
     
     av_test_data_inh_aligned = alTrace(av_test_data_inh, eventI_ds_allDays, nPreMin, nPostMin)
     av_test_shfl_inh_aligned = alTrace(av_test_shfl_inh, eventI_ds_allDays, nPreMin, nPostMin)
-    av_test_chance_inh_aligned = alTrace(av_test_chance_inh, eventI_ds_allDays, nPreMin, nPostMin)
-    
+    av_test_chance_inh_aligned = alTrace(av_test_chance_inh, eventI_ds_allDays, nPreMin, nPostMin)    
     if do_excInhHalf==0:
         av_test_data_exc_aligned = alTrace(av_test_data_exc, eventI_ds_allDays, nPreMin, nPostMin)
         av_test_shfl_exc_aligned = alTrace(av_test_shfl_exc, eventI_ds_allDays, nPreMin, nPostMin)
-        av_test_chance_exc_aligned = alTrace(av_test_chance_exc, eventI_ds_allDays, nPreMin, nPostMin)
-    
+        av_test_chance_exc_aligned = alTrace(av_test_chance_exc, eventI_ds_allDays, nPreMin, nPostMin)    
     av_test_data_allExc_aligned = alTrace(av_test_data_allExc, eventI_ds_allDays, nPreMin, nPostMin)
     av_test_shfl_allExc_aligned = alTrace(av_test_shfl_allExc, eventI_ds_allDays, nPreMin, nPostMin)
     av_test_chance_allExc_aligned = alTrace(av_test_chance_allExc, eventI_ds_allDays, nPreMin, nPostMin)
-    
-    
+    if loadYtest:
+        av_test_data_inh_easy_aligned = alTrace(av_test_data_inh_easy, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_data_inh_hard_aligned = alTrace(av_test_data_inh_hard, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_data_inh_medium_aligned = alTrace(av_test_data_inh_medium, eventI_ds_allDays, nPreMin, nPostMin)            
+        av_test_shfl_inh_easy_aligned = alTrace(av_test_shfl_inh_easy, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_shfl_inh_hard_aligned = alTrace(av_test_shfl_inh_hard, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_shfl_inh_medium_aligned = alTrace(av_test_shfl_inh_medium, eventI_ds_allDays, nPreMin, nPostMin)
+
+        av_test_data_exc_easy_aligned = alTrace(av_test_data_exc_easy, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_data_exc_hard_aligned = alTrace(av_test_data_exc_hard, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_data_exc_medium_aligned = alTrace(av_test_data_exc_medium, eventI_ds_allDays, nPreMin, nPostMin)            
+        av_test_shfl_exc_easy_aligned = alTrace(av_test_shfl_exc_easy, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_shfl_exc_hard_aligned = alTrace(av_test_shfl_exc_hard, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_shfl_exc_medium_aligned = alTrace(av_test_shfl_exc_medium, eventI_ds_allDays, nPreMin, nPostMin)
+        
+        av_test_data_allExc_easy_aligned = alTrace(av_test_data_allExc_easy, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_data_allExc_hard_aligned = alTrace(av_test_data_allExc_hard, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_data_allExc_medium_aligned = alTrace(av_test_data_allExc_medium, eventI_ds_allDays, nPreMin, nPostMin)            
+        av_test_shfl_allExc_easy_aligned = alTrace(av_test_shfl_allExc_easy, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_shfl_allExc_hard_aligned = alTrace(av_test_shfl_allExc_hard, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_shfl_allExc_medium_aligned = alTrace(av_test_shfl_allExc_medium, eventI_ds_allDays, nPreMin, nPostMin)
+
+        
     ##%% Average and standard DEVIATION across days (each day includes the average class accuracy across samples.)
     
     av_av_test_data_inh_aligned = np.nanmean(av_test_data_inh_aligned, axis=1)
@@ -714,24 +995,61 @@ if addNs_roc==0:
     av_av_test_shfl_inh_aligned = np.nanmean(av_test_shfl_inh_aligned, axis=1)
     sd_av_test_shfl_inh_aligned = np.nanstd(av_test_shfl_inh_aligned, axis=1)
     av_av_test_chance_inh_aligned = np.nanmean(av_test_chance_inh_aligned, axis=1)
-    sd_av_test_chance_inh_aligned = np.nanstd(av_test_chance_inh_aligned, axis=1)
-    
+    sd_av_test_chance_inh_aligned = np.nanstd(av_test_chance_inh_aligned, axis=1)    
     if do_excInhHalf==0:
         av_av_test_data_exc_aligned = np.nanmean(av_test_data_exc_aligned, axis=1)
         sd_av_test_data_exc_aligned = np.nanstd(av_test_data_exc_aligned, axis=1)    
         av_av_test_shfl_exc_aligned = np.nanmean(av_test_shfl_exc_aligned, axis=1)
         sd_av_test_shfl_exc_aligned = np.nanstd(av_test_shfl_exc_aligned, axis=1)    
         av_av_test_chance_exc_aligned = np.nanmean(av_test_chance_exc_aligned, axis=1)
-        sd_av_test_chance_exc_aligned = np.nanstd(av_test_chance_exc_aligned, axis=1)
-    
+        sd_av_test_chance_exc_aligned = np.nanstd(av_test_chance_exc_aligned, axis=1)    
     av_av_test_data_allExc_aligned = np.nanmean(av_test_data_allExc_aligned, axis=1)
     sd_av_test_data_allExc_aligned = np.nanstd(av_test_data_allExc_aligned, axis=1)
     av_av_test_shfl_allExc_aligned = np.nanmean(av_test_shfl_allExc_aligned, axis=1)
     sd_av_test_shfl_allExc_aligned = np.nanstd(av_test_shfl_allExc_aligned, axis=1)
     av_av_test_chance_allExc_aligned = np.nanmean(av_test_chance_allExc_aligned, axis=1)
     sd_av_test_chance_allExc_aligned = np.nanstd(av_test_chance_allExc_aligned, axis=1)
-    
-    
+    if loadYtest: # compute standard error across days!
+        av_av_test_data_inh_easy_aligned = np.nanmean(av_test_data_inh_easy_aligned, axis=1)
+        sd_av_test_data_inh_easy_aligned = np.nanstd(av_test_data_inh_easy_aligned, axis=1) / np.sqrt(sum(easy_nValidSamps_inh >= thMinSamps))
+        av_av_test_data_inh_hard_aligned = np.nanmean(av_test_data_inh_hard_aligned, axis=1)
+        sd_av_test_data_inh_hard_aligned = np.nanstd(av_test_data_inh_hard_aligned, axis=1) / np.sqrt(sum(hard_nValidSamps_inh >= thMinSamps))
+        av_av_test_data_inh_medium_aligned = np.nanmean(av_test_data_inh_medium_aligned, axis=1)
+        sd_av_test_data_inh_medium_aligned = np.nanstd(av_test_data_inh_medium_aligned, axis=1) / np.sqrt(sum(medium_nValidSamps_inh >= thMinSamps))   
+        av_av_test_data_exc_easy_aligned = np.nanmean(av_test_data_exc_easy_aligned, axis=1)
+        sd_av_test_data_exc_easy_aligned = np.nanstd(av_test_data_exc_easy_aligned, axis=1) / np.sqrt(sum(easy_nValidSamps_exc >= thMinSamps/float(numSamples)))
+        av_av_test_data_exc_hard_aligned = np.nanmean(av_test_data_exc_hard_aligned, axis=1)
+        sd_av_test_data_exc_hard_aligned = np.nanstd(av_test_data_exc_hard_aligned, axis=1) / np.sqrt(sum(hard_nValidSamps_exc >= thMinSamps/float(numSamples)))
+        av_av_test_data_exc_medium_aligned = np.nanmean(av_test_data_exc_medium_aligned, axis=1)
+        sd_av_test_data_exc_medium_aligned = np.nanstd(av_test_data_exc_medium_aligned, axis=1) / np.sqrt(sum(medium_nValidSamps_exc >= thMinSamps/float(numSamples)))       
+        av_av_test_data_allExc_easy_aligned = np.nanmean(av_test_data_allExc_easy_aligned, axis=1)
+        sd_av_test_data_allExc_easy_aligned = np.nanstd(av_test_data_allExc_easy_aligned, axis=1) / np.sqrt(sum(easy_nValidSamps_allExc >= thMinSamps))
+        av_av_test_data_allExc_hard_aligned = np.nanmean(av_test_data_allExc_hard_aligned, axis=1)
+        sd_av_test_data_allExc_hard_aligned = np.nanstd(av_test_data_allExc_hard_aligned, axis=1) / np.sqrt(sum(hard_nValidSamps_allExc >= thMinSamps))
+        av_av_test_data_allExc_medium_aligned = np.nanmean(av_test_data_allExc_medium_aligned, axis=1)
+        sd_av_test_data_allExc_medium_aligned = np.nanstd(av_test_data_allExc_medium_aligned, axis=1) / np.sqrt(sum(medium_nValidSamps_allExc >= thMinSamps))        
+        # shfl
+        av_av_test_shfl_inh_easy_aligned = np.nanmean(av_test_shfl_inh_easy_aligned, axis=1)
+        sd_av_test_shfl_inh_easy_aligned = np.nanstd(av_test_shfl_inh_easy_aligned, axis=1) / np.sqrt(sum(easy_nValidSamps_inh >= thMinSamps))
+        av_av_test_shfl_inh_hard_aligned = np.nanmean(av_test_shfl_inh_hard_aligned, axis=1)
+        sd_av_test_shfl_inh_hard_aligned = np.nanstd(av_test_shfl_inh_hard_aligned, axis=1) / np.sqrt(sum(hard_nValidSamps_inh >= thMinSamps))
+        av_av_test_shfl_inh_medium_aligned = np.nanmean(av_test_shfl_inh_medium_aligned, axis=1)
+        sd_av_test_shfl_inh_medium_aligned = np.nanstd(av_test_shfl_inh_medium_aligned, axis=1) / np.sqrt(sum(medium_nValidSamps_inh >= thMinSamps))   
+        av_av_test_shfl_exc_easy_aligned = np.nanmean(av_test_shfl_exc_easy_aligned, axis=1)
+        sd_av_test_shfl_exc_easy_aligned = np.nanstd(av_test_shfl_exc_easy_aligned, axis=1) / np.sqrt(sum(easy_nValidSamps_exc >= thMinSamps/float(numSamples)))
+        av_av_test_shfl_exc_hard_aligned = np.nanmean(av_test_shfl_exc_hard_aligned, axis=1)
+        sd_av_test_shfl_exc_hard_aligned = np.nanstd(av_test_shfl_exc_hard_aligned, axis=1) / np.sqrt(sum(hard_nValidSamps_exc >= thMinSamps/float(numSamples)))
+        av_av_test_shfl_exc_medium_aligned = np.nanmean(av_test_shfl_exc_medium_aligned, axis=1)
+        sd_av_test_shfl_exc_medium_aligned = np.nanstd(av_test_shfl_exc_medium_aligned, axis=1) / np.sqrt(sum(medium_nValidSamps_exc >= thMinSamps/float(numSamples)))       
+        av_av_test_shfl_allExc_easy_aligned = np.nanmean(av_test_shfl_allExc_easy_aligned, axis=1)
+        sd_av_test_shfl_allExc_easy_aligned = np.nanstd(av_test_shfl_allExc_easy_aligned, axis=1) / np.sqrt(sum(easy_nValidSamps_allExc >= thMinSamps))
+        av_av_test_shfl_allExc_hard_aligned = np.nanmean(av_test_shfl_allExc_hard_aligned, axis=1)
+        sd_av_test_shfl_allExc_hard_aligned = np.nanstd(av_test_shfl_allExc_hard_aligned, axis=1) / np.sqrt(sum(hard_nValidSamps_allExc >= thMinSamps))
+        av_av_test_shfl_allExc_medium_aligned = np.nanmean(av_test_shfl_allExc_medium_aligned, axis=1)
+        sd_av_test_shfl_allExc_medium_aligned = np.nanstd(av_test_shfl_allExc_medium_aligned, axis=1) / np.sqrt(sum(medium_nValidSamps_allExc >= thMinSamps))                
+        
+        
+        
     #_,pcorrtrace0 = stats.ttest_1samp(av_l2_test_d_aligned.transpose(), 50) # p value of class accuracy being different from 50
     
     if do_excInhHalf==0:
@@ -1074,9 +1392,9 @@ if addNs_roc==0:
     ##%% Save the figure    
     if savefigs:
         if chAl==1:
-            dd = 'chAl_aveDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = 'chAl_aveSdDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
         else:
-            dd = 'stAl_aveDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = 'stAl_aveSdDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
     
         if superimpose==1:        
             dd = dd+'_sup'
@@ -1095,6 +1413,144 @@ if addNs_roc==0:
     
     
     
+
+
+    #%% easy, hard, medium: Average class accuracy for testing trials of different stimulus strength: easy, hard, medium
+    
+    ######################%% Plot the average of aligned traces across all days (exc, inh, allExc superimposed)
+    # only days with enough svm trained trials are used.
+            
+    if loadYtest:            
+               
+        plt.figure(figsize=(8,5))
+        
+        #### testing data
+        plt.subplot(221) #### exc 
+        # easy    
+        plt.fill_between(time_aligned, av_av_test_data_exc_easy_aligned - sd_av_test_data_exc_easy_aligned, av_av_test_data_exc_easy_aligned + sd_av_test_data_exc_easy_aligned, alpha=0.5, edgecolor='b', facecolor='b')
+        plt.plot(time_aligned, av_av_test_data_exc_easy_aligned, 'b', label='easy')
+        # hard
+        plt.fill_between(time_aligned, av_av_test_data_exc_hard_aligned - sd_av_test_data_exc_hard_aligned, av_av_test_data_exc_hard_aligned + sd_av_test_data_exc_hard_aligned, alpha=0.5, edgecolor='b', facecolor='b')
+        plt.plot(time_aligned, av_av_test_data_exc_hard_aligned, 'b', label='hard', linestyle='-.')
+        # medium
+        plt.fill_between(time_aligned, av_av_test_data_exc_medium_aligned - sd_av_test_data_exc_medium_aligned, av_av_test_data_exc_medium_aligned + sd_av_test_data_exc_medium_aligned, alpha=0.5, edgecolor='b', facecolor='b')
+        plt.plot(time_aligned, av_av_test_data_exc_medium_aligned, 'b', label='medium', linestyle=':')
+        if chAl==1:
+            plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
+        else:
+            plt.xlabel('Time relative to stim onset (ms)', fontsize=11)
+        plt.ylabel('Class accuracy (%)', fontsize=11)
+        makeNicePlots(plt.gca(),1,1)
+        plt.title('exc')
+        plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)         
+        
+            
+        plt.subplot(223) #### inh
+        # easy    
+        plt.fill_between(time_aligned, av_av_test_data_inh_easy_aligned - sd_av_test_data_inh_easy_aligned, av_av_test_data_inh_easy_aligned + sd_av_test_data_inh_easy_aligned, alpha=0.5, edgecolor=Cols[0], facecolor=Cols[0])
+        plt.plot(time_aligned, av_av_test_data_inh_easy_aligned, color=Cols[0], label=labInh)
+        # hard
+        plt.fill_between(time_aligned, av_av_test_data_inh_hard_aligned - sd_av_test_data_inh_hard_aligned, av_av_test_data_inh_hard_aligned + sd_av_test_data_inh_hard_aligned, alpha=0.5, edgecolor=Cols[0], facecolor=Cols[0])
+        plt.plot(time_aligned, av_av_test_data_inh_hard_aligned, color=Cols[0], label=labInh, linestyle='-.')
+        # medium
+        plt.fill_between(time_aligned, av_av_test_data_inh_medium_aligned - sd_av_test_data_inh_medium_aligned, av_av_test_data_inh_medium_aligned + sd_av_test_data_inh_medium_aligned, alpha=0.5, edgecolor=Cols[0], facecolor=Cols[0])
+        plt.plot(time_aligned, av_av_test_data_inh_medium_aligned, color=Cols[0], label=labInh, linestyle=':')
+        if chAl==1:
+            plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
+        else:
+            plt.xlabel('Time relative to stim onset (ms)', fontsize=11)
+        plt.ylabel('Class accuracy (%)', fontsize=11)
+        makeNicePlots(plt.gca(),1,1)
+        plt.title('inh')
+        
+        
+        plt.subplot(222) #### allExc 
+        # easy    
+        plt.fill_between(time_aligned, av_av_test_data_allExc_easy_aligned - sd_av_test_data_allExc_easy_aligned, av_av_test_data_allExc_easy_aligned + sd_av_test_data_allExc_easy_aligned, alpha=0.5, edgecolor=Cols[1], facecolor=Cols[1])
+        plt.plot(time_aligned, av_av_test_data_allExc_easy_aligned, color=Cols[1], label=labAll)
+        # hard
+        plt.fill_between(time_aligned, av_av_test_data_allExc_hard_aligned - sd_av_test_data_allExc_hard_aligned, av_av_test_data_allExc_hard_aligned + sd_av_test_data_allExc_hard_aligned, alpha=0.5, edgecolor=Cols[1], facecolor=Cols[1])
+        plt.plot(time_aligned, av_av_test_data_allExc_hard_aligned, color=Cols[1], label=labAll, linestyle='-.')
+        # medium
+        plt.fill_between(time_aligned, av_av_test_data_allExc_medium_aligned - sd_av_test_data_allExc_medium_aligned, av_av_test_data_allExc_medium_aligned + sd_av_test_data_allExc_medium_aligned, alpha=0.5, edgecolor=Cols[1], facecolor=Cols[1])
+        plt.plot(time_aligned, av_av_test_data_allExc_medium_aligned, color=Cols[1], label=labAll, linestyle=':')       
+        if chAl==1:
+            plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
+        else:
+            plt.xlabel('Time relative to stim onset (ms)', fontsize=11)
+        plt.ylabel('Class accuracy (%)', fontsize=11)
+        makeNicePlots(plt.gca(),1,1)
+        plt.title('allExc')
+        # Plot a dot for significant time points
+#        ymin, ymax = ax.get_ylim()
+#        pp = pcorrtrace+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax
+#        plt.plot(time_aligned, pp, color=Cols[1])
+        
+        
+        
+        #### shfl
+        plt.subplot(221) #### exc 
+        # easy    
+#        plt.fill_between(time_aligned, av_av_test_shfl_exc_easy_aligned - sd_av_test_shfl_exc_easy_aligned, av_av_test_shfl_exc_easy_aligned + sd_av_test_shfl_exc_easy_aligned, alpha=0.5, edgecolor='b', facecolor='b')
+        plt.plot(time_aligned, av_av_test_shfl_exc_easy_aligned, 'b', label='exc')
+        # hard
+#        plt.fill_between(time_aligned, av_av_test_shfl_exc_hard_aligned - sd_av_test_shfl_exc_hard_aligned, av_av_test_shfl_exc_hard_aligned + sd_av_test_shfl_exc_hard_aligned, alpha=0.5, edgecolor='b', facecolor='b')
+        plt.plot(time_aligned, av_av_test_shfl_exc_hard_aligned, 'b', label='exc', linestyle='-.')
+        # medium
+#        plt.fill_between(time_aligned, av_av_test_shfl_exc_medium_aligned - sd_av_test_shfl_exc_medium_aligned, av_av_test_shfl_exc_medium_aligned + sd_av_test_shfl_exc_medium_aligned, alpha=0.5, edgecolor='b', facecolor='b')
+        plt.plot(time_aligned, av_av_test_shfl_exc_medium_aligned, 'b', label='exc', linestyle=':')
+        
+            
+        plt.subplot(223) #### inh
+        # easy    
+#        plt.fill_between(time_aligned, av_av_test_shfl_inh_easy_aligned - sd_av_test_shfl_inh_easy_aligned, av_av_test_shfl_inh_easy_aligned + sd_av_test_shfl_inh_easy_aligned, alpha=0.5, edgecolor=Cols[0], facecolor=Cols[0])
+        plt.plot(time_aligned, av_av_test_shfl_inh_easy_aligned, color=Cols[0], label=labInh)
+        # hard
+#        plt.fill_between(time_aligned, av_av_test_shfl_inh_hard_aligned - sd_av_test_shfl_inh_hard_aligned, av_av_test_shfl_inh_hard_aligned + sd_av_test_shfl_inh_hard_aligned, alpha=0.5, edgecolor=Cols[0], facecolor=Cols[0])
+        plt.plot(time_aligned, av_av_test_shfl_inh_hard_aligned, color=Cols[0], label=labInh, linestyle='-.')
+        # medium
+#        plt.fill_between(time_aligned, av_av_test_shfl_inh_medium_aligned - sd_av_test_shfl_inh_medium_aligned, av_av_test_shfl_inh_medium_aligned + sd_av_test_shfl_inh_medium_aligned, alpha=0.5, edgecolor=Cols[0], facecolor=Cols[0])
+        plt.plot(time_aligned, av_av_test_shfl_inh_medium_aligned, color=Cols[0], label=labInh, linestyle=':')
+        
+        
+        plt.subplot(222) #### allExc 
+        # easy    
+#        plt.fill_between(time_aligned, av_av_test_shfl_allExc_easy_aligned - sd_av_test_shfl_allExc_easy_aligned, av_av_test_shfl_allExc_easy_aligned + sd_av_test_shfl_allExc_easy_aligned, alpha=0.5, edgecolor=Cols[1], facecolor=Cols[1])
+        plt.plot(time_aligned, av_av_test_shfl_allExc_easy_aligned, color=Cols[1], label=labAll)
+        # hard
+#        plt.fill_between(time_aligned, av_av_test_shfl_allExc_hard_aligned - sd_av_test_shfl_allExc_hard_aligned, av_av_test_shfl_allExc_hard_aligned + sd_av_test_shfl_allExc_hard_aligned, alpha=0.5, edgecolor=Cols[1], facecolor=Cols[1])
+        plt.plot(time_aligned, av_av_test_shfl_allExc_hard_aligned, color=Cols[1], label=labAll, linestyle='-.')
+        # medium
+#        plt.fill_between(time_aligned, av_av_test_shfl_allExc_medium_aligned - sd_av_test_shfl_allExc_medium_aligned, av_av_test_shfl_allExc_medium_aligned + sd_av_test_shfl_allExc_medium_aligned, alpha=0.5, edgecolor=Cols[1], facecolor=Cols[1])
+        plt.plot(time_aligned, av_av_test_shfl_allExc_medium_aligned, color=Cols[1], label=labAll, linestyle=':')       
+        
+        
+        
+        plt.subplots_adjust(wspace=1.4, hspace=.8)  
+        #xmin, xmax = ax.get_xlim()
+        #plt.xlim([-1400,500])
+        
+        ##%% Save the figure    
+        if savefigs:
+            if chAl==1:
+                dd = 'chAl_aveSeDays_easyHardMedTrs_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            else:
+                dd = 'stAl_aveSeDays_easyHardMedTrs_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+        
+                
+            d = os.path.join(svmdir+dnow)
+            if not os.path.exists(d):
+                print 'creating folder'
+                os.makedirs(d)
+                    
+            fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
+         
+            plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+        #    fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+'svg')
+        #    plt.savefig(fign, dpi=300, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+        
+        
+        
     
     
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

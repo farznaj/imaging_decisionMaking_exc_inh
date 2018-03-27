@@ -71,9 +71,9 @@ else: # wont be used, only not to get error when running setSVMname
 
 #%%
 # LOOKING FOR A DAY: #days.index('151009_1')   # name of this function should change to set_days!
-def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis=0, iTiFlg=1, allDays=1, noZmotionDays=0, noZmotionDays_strict=0, noExtraStimDays=0):
+def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis=0, iTiFlg=1, allDays=1, noZmotionDays=0, noZmotionDays_strict=0, noExtraStimDays=0, loadYtest=0):
      
-    #%% Define days that you want to analyze
+    ##%% Define days that you want to analyze
     '''
     if mousename == 'fni18': #set one of the following to 1:
         allDays = 1# all 7 days will be used (last 3 days have z motion!)
@@ -92,7 +92,7 @@ def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis=0,
         noExtraStimDays = np.nan
     '''
 
-    #%%        
+    ##%%        
     if mousename=='fni16':
         # 0817,0818: don't have excInh files
         # 0817,0818,0819: don't have eachFrame, stAl. Also their FOV more superficial that the rest of the days
@@ -118,7 +118,11 @@ def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis=0,
         # '150814_2, '150820_1', '150821_1', '150825_1': dont have enough trials. ('150821_1' and '150825_1' only have the eachFrame, stAl svm file)    
         # '150814_1', '150817_1', '150818_1': cant be run for eachFrame, stAl
         # days = ['151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2']     # Done on 6Jan2017: reverse the order, so it is from early days to last days
-        if ch_st_goAl[0]==1 and 'corrTrained' in locals() and corrTrained==1: # chAl, svm_eachFrame trained only on corr trials: exclude '150818_1', '150819_1-2' (too few HR trials)
+        if 'loadYtest' in locals() and loadYtest==1 and ch_st_goAl[0]==1 and 'corrTrained' in locals() and corrTrained==1: # chAl, svm_eachFrame trained only on corr trials: exclude '150818_1', '150819_1-2' (too few HR trials)
+            # '150817_1' and '150824_1' only have 6 trials (when using equal hr and lr)... 
+            days = ['150814_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
+            
+        elif ch_st_goAl[0]==1 and 'corrTrained' in locals() and corrTrained==1: # chAl, svm_eachFrame trained only on corr trials: exclude '150818_1', '150819_1-2' (too few HR trials)
             days = ['150814_1', '150817_1', '150824_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
     #        days = ['151015_1']   # eg class accur
     #        days = ['151101_1']   # eg svm proj
@@ -2324,7 +2328,7 @@ def loadSVM_allN(svmName, doPlots, doIncorr, loadWeights, shflTrLabs=0):
          
 #%% Load exc,inh SVM vars
         
-def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, doPlots, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0):
+def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, doPlots, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0):
     # loadWeights: 
     # 0: don't load weights, only load class accur
     # 1 : load weights and class cccur
@@ -2374,7 +2378,10 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
                 Datai = scio.loadmat(svmName, variable_names=['w_data_inh','b_data_inh'])
             else:
                 Datai = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_inh', 'perClassErrorTest_shfl_inh', 'perClassErrorTest_chance_inh'])
-        
+            if loadYtest:
+                Datai2 = scio.loadmat(svmName, variable_names=['testTrInds_allSamps_inh', 'Ytest_allSamps_inh', 'Ytest_hat_allSampsFrs_inh'])
+                
+                
         ######### allN or allExc
         elif doInhAllexcEqexc[1] == 1: 
             if doAllN: # plot allN, instead of allExc
@@ -2387,6 +2394,9 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
                     Dataae = scio.loadmat(svmName, variable_names=['w_data_allExc', 'b_data_allExc'])
                 else:
                     Dataae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_allExc', 'perClassErrorTest_shfl_allExc', 'perClassErrorTest_chance_allExc'])
+            if loadYtest:
+                Dataae2 = scio.loadmat(svmName, variable_names=['testTrInds_allSamps_allExc', 'Ytest_allSamps_allExc', 'Ytest_hat_allSampsFrs_allExc'])
+
         
         ######### eqExc
         elif doInhAllexcEqexc[2] == 1: 
@@ -2396,6 +2406,8 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
                 Datae = scio.loadmat(svmName, variable_names=['w_data_exc', 'b_data_exc'])                                                 
             else:
                 Datae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_exc', 'perClassErrorTest_shfl_exc', 'perClassErrorTest_chance_exc'])
+            if loadYtest:
+                Datae2 = scio.loadmat(svmName, variable_names=['testTrInds_allSamps_exc', 'Ytest_allSamps_exc', 'Ytest_hat_allSampsFrs_exc'])
 
         
     ###%%             
@@ -2434,6 +2446,32 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
         b_data_exc = []
     
     
+    #######
+    if loadYtest:
+        testTrInds_allSamps_inh = Datai2.pop('testTrInds_allSamps_inh').astype(int)
+        Ytest_allSamps_inh = Datai2.pop('Ytest_allSamps_inh')
+        Ytest_hat_allSampsFrs_inh = Datai2.pop('Ytest_hat_allSampsFrs_inh')
+
+        testTrInds_allSamps_allExc = Dataae2.pop('testTrInds_allSamps_allExc').astype(int)
+        Ytest_allSamps_allExc = Dataae2.pop('Ytest_allSamps_allExc')
+        Ytest_hat_allSampsFrs_allExc = Dataae2.pop('Ytest_hat_allSampsFrs_allExc')
+        
+        testTrInds_allSamps_exc = Datae2.pop('testTrInds_allSamps_exc').astype(int)
+        Ytest_allSamps_exc = Datae2.pop('Ytest_allSamps_exc')
+        Ytest_hat_allSampsFrs_exc = Datae2.pop('Ytest_hat_allSampsFrs_exc')
+    else:
+
+        testTrInds_allSamps_inh = []
+        Ytest_allSamps_inh = []
+        Ytest_hat_allSampsFrs_inh = []
+        testTrInds_allSamps_allExc = []
+        Ytest_allSamps_allExc = []
+        Ytest_hat_allSampsFrs_allExc = []        
+        testTrInds_allSamps_exc = []
+        Ytest_allSamps_exc = []
+        Ytest_hat_allSampsFrs_exc = []
+        
+        
     #### sanity check
     '''
     if (len(time_trace) == perClassErrorTest_data_inh.shape[-1] == perClassErrorTest_data_exc.shape[-1] == perClassErrorTest_data_allExc.shape[-1])==False:
@@ -2471,8 +2509,7 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
         perClassErrorTest_shfl_exc = []
         perClassErrorTest_chance_exc = []
     
-    return perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN
-    
+    return perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc
     
 
 

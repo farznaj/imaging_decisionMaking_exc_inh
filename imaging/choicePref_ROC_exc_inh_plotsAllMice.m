@@ -4,6 +4,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+dirn0 = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/ROC';
+
 savefigs = sumMice_do_savefigs(2);
 cols = {'b','r'}; % exc,inh, real data
 colss = [0,.8,.8; .8,.5,.8]; % exc,inh colors for shuffled data
@@ -123,8 +125,8 @@ for ifr = 1:length(time_al)
 %         plotHist_sp(y1,y2,xlab,ylab,leg, colss, tit, fign, ha(ifr), yy, documsum, numBins, bins)
         
         % individual shlf sampls
-        y1s = exc_allNsDaysMicePooled_shfl0(fr,:,:);
-        y2s = inh_allNsDaysMicePooled_shfl0(fr,:,:);
+        y1s = exc_allNsDaysMicePooled_shfl0(ifr,:,:);
+        y2s = inh_allNsDaysMicePooled_shfl0(ifr,:,:);
         % pool all samples
         y1s = y1s(:);
         y2s = y2s(:);
