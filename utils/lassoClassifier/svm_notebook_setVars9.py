@@ -23,7 +23,8 @@ mainSVM_notebook_setVars(mousename, imagingFolder, mdfFileNumber, trialHistAnaly
 
 doInhAllexcEqexc = [0,1,0]
 #    1st element: analyze inhibitory neurons (train SVM for numSamples for each value of C)
-#    2nd element: analyze all excitatory neurons (train SVM for numSamples for each value of C)   
+#    2nd element: if 1: analyze all excitatory neurons (train SVM for numSamples for each value of C)   
+                # if 2: analyze all neurons (exc, inh, unsure) ... this is like code svm_eachFrame.py   
 #    3rd element: if 1: analyze excitatory neurons, equal number to inhibitory neurons (train SVM for numSamples for each value of C, repeat this numShufflesExc times (each time subselecting n exc neurons))
                 # if 2: take half exc, half inh, and run svm
                 # if 3: take lenInh*2 of only exc and run svm.    
@@ -39,7 +40,7 @@ Created on Fri Oct 28 12:48:43 2016
 def svm_notebook_setVars9(mousename, imagingFolder, mdfFileNumber, chAl, doInhAllexcEqexc, numSamples=50, numShufflesExc=50, trialHistAnalysis=0, iTiFlg=2):
 
     cbestKnown = 1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
-    shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
+    shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # if 1 shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
     
     shflTrLabs = 0 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
     outcome2ana = 'corr' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        

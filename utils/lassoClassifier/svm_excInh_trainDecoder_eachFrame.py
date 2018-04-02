@@ -11,17 +11,12 @@ Decode choice using:
  all trials (corr, incorr)
  soft normalization (including all neurons)
 
-
-
 Created on Fri Feb 10 20:20:08 2017
 @author: farznaj
 """
-
 ##%%
 ####### NOTE ########
 #print 'Decide which one to load: inhibitRois_pix or inhibitRois!!'
-
-
 
 import sys
 import os
@@ -56,8 +51,8 @@ if 'ipykernel' in sys.modules:
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni17' #''fni19' #'fni16' #fni16' #
-    imagingFolder = '151014' #'151102' #'151019' #'151006' #'151023' #'151023' #'151001' 
+    mousename = 'fni16' #''fni19' #'fni16' #fni16' #
+    imagingFolder = '150901' #'151102' #'151019' #'151006' #'151023' #'151023' #'151001' 
     mdfFileNumber = [1] #[1,2]
 
     cbestKnown = 1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
@@ -65,9 +60,10 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
 
     shflTrLabs = 0 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
     outcome2ana = 'corr' #'all' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
-    doInhAllexcEqexc = [1,0,0]  # [1,0,1,1] # 
+    doInhAllexcEqexc = [0,2,0]  # [1,0,1,1] # 
     #    1st element: analyze inhibitory neurons (train SVM for numSamples for each value of C)
-    #    2nd element: analyze all excitatory neurons (train SVM for numSamples for each value of C)   
+    #    2nd element: if 1: analyze all excitatory neurons (train SVM for numSamples for each value of C)   
+                    # if 2: analyze all neurons (exc, inh, unsure) ... this is like code svm_eachFrame.py   
     #    3rd element: if 1: analyze excitatory neurons, equal number to inhibitory neurons (train SVM for numSamples for each value of C, repeat this numShufflesExc times (each time subselecting n exc neurons))
                     # if 2: take half exc, half inh, and run svm
                     # if 3: take lenInh*2 of only exc and run svm. 
@@ -128,6 +124,8 @@ if doInhAllexcEqexc[0]==1:
     ntName = 'inh'
 elif doInhAllexcEqexc[1]==1:
     ntName = 'allExc'
+elif doInhAllexcEqexc[1]==2:
+    ntName = 'allN'
 elif doInhAllexcEqexc[2]==1:
     ntName = 'eqExc'     
 elif doInhAllexcEqexc[2]==2:
@@ -188,6 +186,8 @@ if doInhAllexcEqexc[0] == 1:
     ntype = 'inh'
 elif doInhAllexcEqexc[1] == 1:
     ntype = 'allExc'
+elif doInhAllexcEqexc[1] == 2:
+    ntype = 'allN'    
 elif doInhAllexcEqexc[2] == 1:
     ntype = 'eqExc'   
 elif doInhAllexcEqexc[2] == 2:
@@ -427,9 +427,9 @@ print(moreName)
 
 
 
-#%% svm is already run, so now load bestc, and run it on trial-label shuffles (eg when shflTrLabs=1)
+#%% Define functions to set svm file names that are already saved   (svm is already run, so now load bestc, and run it on trial-label shuffles (eg when shflTrLabs=1))
 
-if cbestKnown: # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.
+if np.logical_and(cbestKnown, doInhAllexcEqexc[1]!=2): # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.
     
     corrTrained = 1
     ##################%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName    
@@ -498,7 +498,10 @@ if cbestKnown: # svm is already run on the actual data, so now load bestc, and r
         return svmName
     
 
-    #####################################################################################%%    
+#%% SVM is already run, set its file name and load bestc
+
+if np.logical_and(cbestKnown, doInhAllexcEqexc[1]!=2): # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.
+
     svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]
     
     if doInhAllexcEqexc[0]==1:
@@ -524,6 +527,129 @@ else:
     cbest_now = np.nan
     
     
+
+
+#%% Same as the function above but set svm file name that is for allN (set in code svm_eachFrame.py)
+    
+if np.logical_and(cbestKnown, doInhAllexcEqexc[1]==2): # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
+    # allN
+    corrTrained = 1
+    ###%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
+    
+    def setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins=3, corrTrained=0, shflTrsEachNeuron=0):
+        import glob
+        import os
+        
+        if chAl==1:
+            al = 'chAl'
+        else:
+            al = 'stAl'
+    
+        if corrTrained==1: 
+            o2a = '_corr'
+        else:
+            o2a = '' 
+    
+        if shflTrsEachNeuron:
+        	shflname = '_shflTrsPerN'
+        else:
+        	shflname = ''        
+        
+        if trialHistAnalysis:
+            svmn = 'svmPrevChoice_eachFrame_%s%s%s_ds%d_*' %(al,o2a,shflname,regressBins)
+        else:
+            svmn = 'svmCurrChoice_eachFrame_%s%s%s_ds%d_*' %(al,o2a,shflname,regressBins)
+        
+        svmn = svmn + os.path.basename(pnevFileName) #pnevFileName[-32:]    
+        svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
+        svmName = sorted(svmName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
+        
+    #    if len(svmName)>0:
+    #        svmName = svmName[0] # get the latest file
+    #    else:
+    #        svmName = ''
+    #    
+        return svmName
+        
+
+
+    #####################################################################################%%    
+  
+    ####%% function to find best c from testing class error ran on values of cvect
+    
+    def findBestC(perClassErrorTest, cvect, regType, smallestC=1):
+        
+        import numpy as np
+
+        numSamples = perClassErrorTest.shape[0] 
+        numFrs = perClassErrorTest.shape[2]
+        
+        ###%% Compute average of class errors across numSamples
+        
+        cbestFrs = np.full((numFrs), np.nan)
+           
+        for ifr in range(numFrs):
+            
+            meanPerClassErrorTest = np.mean(perClassErrorTest[:,:,ifr], axis = 0);
+            semPerClassErrorTest = np.std(perClassErrorTest[:,:,ifr], axis = 0)/np.sqrt(numSamples);
+            
+           
+            ###%% Identify best c       
+            
+            # Use all range of c... it may end up a value at which all weights are 0.
+            ix = np.argmin(meanPerClassErrorTest)
+            if smallestC==1:
+                cbest = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix])];
+                cbest = cbest[0]; # best regularization term based on minError+SE criteria
+                cbestAll = cbest
+            else:
+                cbestAll = cvect[ix]
+            print 'best c = %.10f' %cbestAll
+            
+            #### Make sure at bestc at least one weight is non-zero (ie pick bestc from only those values of c that give non-0 average weights.)
+            if regType == 'l1': # in l2, we don't really have 0 weights!
+                sys.exit('Needs work! below wAllC has to be for 1 frame') 
+                
+                a = abs(wAllC)>eps # non-zero weights
+                b = np.mean(a, axis=(0,2,3)) # Fraction of non-zero weights (averaged across shuffles)
+                c1stnon0 = np.argwhere(b)[0].squeeze() # first element of c with at least 1 non-0 w in 1 shuffle
+                cvectnow = cvect[c1stnon0:]
+                
+                meanPerClassErrorTestnow = np.mean(perClassErrorTest[:,c1stnon0:,ifr], axis = 0);
+                semPerClassErrorTestnow = np.std(perClassErrorTest[:,c1stnon0:,ifr], axis = 0)/np.sqrt(numSamples);
+                ix = np.argmin(meanPerClassErrorTestnow)
+                if smallestC==1:
+                    cbest = cvectnow[meanPerClassErrorTestnow <= (meanPerClassErrorTestnow[ix]+semPerClassErrorTestnow[ix])];
+                    cbest = cbest[0]; # best regularization term based on minError+SE criteria    
+                else:
+                    cbest = cvectnow[ix]
+        
+                print 'best c (at least 1 non-0 weight) = ', cbest            
+            else:
+                cbest = cbestAll            
+            
+            
+            cbestFrs[ifr] = cbest
+    #        indBestC = np.in1d(cvect, cbest)      
+        return cbestFrs
+    
+   
+         
+#%% allN : SVM is already run, set its file name and load bestc
+
+if np.logical_and(cbestKnown, doInhAllexcEqexc[1]==2): # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
+            
+    svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, shflTrsEachNeuron)[0]
+
+    Data = scio.loadmat(svmName, variable_names=['perClassErrorTest', 'cvect'])  
+    perClassErrorTest = Data.pop('perClassErrorTest') # numSamples x len(cvect) x nFrames
+    cvect = Data.pop('cvect').squeeze()
+    cbest_allExc = findBestC(perClassErrorTest, cvect, regType, smallestC=0) # nFrames     	
+    nfrs_cbest = cbest_allExc.shape[0]
+
+else:
+    cbest_allExc = np.nan
+       
  
  
 ###########################################################################################################################################
@@ -1746,9 +1872,13 @@ if addNs_roc==0:   # run svm on all neurons (ie not adding neurons one by one!)
             Ytest_hat_allSampsFrs_inh[:,ifr] = Ytest_hat_allSampsFrs_inh0[:,indBestC,ifr,:].squeeze()
             
     
-    ######################## allExc (n = num all exc neurons) ########################
-    elif doInhAllexcEqexc[1] == 1: 
-        XallExc = X_svm[:, inhRois==0,:]
+    ######################## allExc (n = num all exc neurons) or allN (all exc, inh, unsure neurons) ########################
+    elif np.logical_or(doInhAllexcEqexc[1] == 1 , doInhAllexcEqexc[1] == 2): 
+        if doInhAllexcEqexc[1] == 1: # allExc
+            XallExc = X_svm[:, inhRois==0,:]
+        elif doInhAllexcEqexc[1] == 2: # allN
+            XallExc = X_svm
+            
         perClassErrorTrain_allExc, perClassErrorTest_allExc, wAllC_allExc, bAllC_allExc, cbestAll_allExc, cbest_allExc, cvect, perClassErrorTestShfl_allExc, perClassErrorTestChance_allExc, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc0, trsnow_allSamps = setbesc_frs(XallExc,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_allExc,fr2an=np.nan, shflTrLabs=shflTrLabs) # outputs have size the number of shuffles in setbestc (shuffles per c value)
         
         # Take the values at bestc that you computed above (for all samples)
@@ -1756,7 +1886,7 @@ if addNs_roc==0:   # run svm on all neurons (ie not adding neurons one by one!)
         perClassErrorTest_data_allExc = np.full((numSamples, nFrs), np.nan)
         perClassErrorTest_shfl_allExc = np.full((numSamples, nFrs), np.nan)
         perClassErrorTest_chance_allExc = np.full((numSamples, nFrs), np.nan)
-        w_data_allExc = np.full((numSamples, len(excI), nFrs), np.nan)
+        w_data_allExc = np.full((numSamples, XallExc.shape[1], nFrs), np.nan)
         b_data_allExc = np.full((numSamples, nFrs), np.nan)
         Ytest_hat_allSampsFrs_allExc = np.full((numSamples, nFrs, Ytest_hat_allSampsFrs_allExc0.shape[-1]), np.nan).squeeze() # squeeze helps if len_test=1 
         for ifr in range(nFrs):    
@@ -2239,7 +2369,7 @@ if saveResults:
                                    'Ytest_hat_allSampsFrs_inh':Ytest_hat_allSampsFrs_inh,
                                    'trsnow_allSamps':trsnow_allSamps})
                                    
-        elif doInhAllexcEqexc[1] == 1: # allExc
+        elif np.logical_or(doInhAllexcEqexc[1] == 1, doInhAllexcEqexc[1] == 2): # allExc or allN
             scio.savemat(svmName, {'thAct':thAct, 'numShufflesExc':numShufflesExc, 'numSamples':numSamples, 'softNorm':softNorm, 'meanX_fr':meanX_fr, 'stdX_fr':stdX_fr,
                                    'winLen':winLen, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'regType':regType, 'cvect':cvect, 'eventI_ds':eventI_ds, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
                                    'cbest_allExc':cbest_allExc, 'w_data_allExc':w_data_allExc, 'b_data_allExc':b_data_allExc, 'hr_shfl_all':hr_shfl_all, 'lr_shfl_all':lr_shfl_all,

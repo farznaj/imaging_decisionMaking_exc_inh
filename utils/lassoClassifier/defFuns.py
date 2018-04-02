@@ -1660,6 +1660,8 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
         ntype = 'inh'
     elif doInhAllexcEqexc[1] == 1:
         ntype = 'allExc'
+    elif doInhAllexcEqexc[1] == 2:
+        ntype = 'allN'        
     elif doInhAllexcEqexc[2] == 1:
         ntype = 'eqExc' 
     elif doInhAllexcEqexc[2]==2:
@@ -2362,7 +2364,11 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
         doInhAllexcEqexc = np.full((3), False, dtype=bool)
         doInhAllexcEqexc[idi] = True 
         if idi==1 and doAllN: # plot allN, instead of allExc
-            svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, shflTrsEachNeuron, shflTrLabs)[0] # for chAl: the latest file is with soft norm; earlier file is 
+            # old:
+#            svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, shflTrsEachNeuron, shflTrLabs)[0] # for chAl: the latest file is with soft norm; earlier file is 
+            # new svm_excInh_trainDecoder_eachFrame.py computes allN too... 
+            doInhAllexcEqexc = [0,2,0]
+            svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron, shflTrLabs)[0]
             svmName_allN = svmName
         else:        
             svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron, shflTrLabs)[0]
@@ -2373,29 +2379,29 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
         ######### inh
         if doInhAllexcEqexc[0] == 1: 
             if loadWeights==1:
-                Datai = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_inh', 'perClassErrorTest_shfl_inh', 'perClassErrorTest_chance_inh', 'w_data_inh', 'b_data_inh'])
+                Datai = scio.loadmat(svmName, variable_names=['trsExcluded', 'perClassErrorTest_data_inh', 'perClassErrorTest_shfl_inh', 'perClassErrorTest_chance_inh', 'w_data_inh', 'b_data_inh'])
             elif loadWeights==2:                
                 Datai = scio.loadmat(svmName, variable_names=['w_data_inh','b_data_inh'])
             else:
                 Datai = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_inh', 'perClassErrorTest_shfl_inh', 'perClassErrorTest_chance_inh'])
             if loadYtest:
-                Datai2 = scio.loadmat(svmName, variable_names=['testTrInds_allSamps_inh', 'Ytest_allSamps_inh', 'Ytest_hat_allSampsFrs_inh'])
+                Datai2 = scio.loadmat(svmName, variable_names=['trsnow_allSamps','testTrInds_allSamps_inh', 'Ytest_allSamps_inh', 'Ytest_hat_allSampsFrs_inh'])
                 
                 
         ######### allN or allExc
-        elif doInhAllexcEqexc[1] == 1: 
-            if doAllN: # plot allN, instead of allExc
-                _, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, _, w_data_allExc, b_data_allExc = loadSVM_allN(svmName, doPlots, doIncorr, 1, shflTrLabs)   
-                
-            else: # plot allExc
-                if loadWeights==1:
-                    Dataae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_allExc', 'perClassErrorTest_shfl_allExc', 'perClassErrorTest_chance_allExc', 'w_data_allExc', 'b_data_allExc'])
-                elif loadWeights==2:                
-                    Dataae = scio.loadmat(svmName, variable_names=['w_data_allExc', 'b_data_allExc'])
-                else:
-                    Dataae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_allExc', 'perClassErrorTest_shfl_allExc', 'perClassErrorTest_chance_allExc'])
+        elif np.logical_or(doInhAllexcEqexc[1] == 1, doInhAllexcEqexc[1] == 2): 
+#            if doAllN: # plot allN, instead of allExc
+#                _, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, _, w_data_allExc, b_data_allExc = loadSVM_allN(svmName, doPlots, doIncorr, 1, shflTrLabs)   
+#                
+#            else: # plot allExc
+            if loadWeights==1:
+                Dataae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_allExc', 'perClassErrorTest_shfl_allExc', 'perClassErrorTest_chance_allExc', 'w_data_allExc', 'b_data_allExc'])
+            elif loadWeights==2:                
+                Dataae = scio.loadmat(svmName, variable_names=['w_data_allExc', 'b_data_allExc'])
+            else:
+                Dataae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_allExc', 'perClassErrorTest_shfl_allExc', 'perClassErrorTest_chance_allExc'])
             if loadYtest:
-                Dataae2 = scio.loadmat(svmName, variable_names=['testTrInds_allSamps_allExc', 'Ytest_allSamps_allExc', 'Ytest_hat_allSampsFrs_allExc'])
+                Dataae2 = scio.loadmat(svmName, variable_names=['trsnow_allSamps','testTrInds_allSamps_allExc', 'Ytest_allSamps_allExc', 'Ytest_hat_allSampsFrs_allExc'])
 
         
         ######### eqExc
@@ -2407,33 +2413,39 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
             else:
                 Datae = scio.loadmat(svmName, variable_names=['perClassErrorTest_data_exc', 'perClassErrorTest_shfl_exc', 'perClassErrorTest_chance_exc'])
             if loadYtest:
-                Datae2 = scio.loadmat(svmName, variable_names=['testTrInds_allSamps_exc', 'Ytest_allSamps_exc', 'Ytest_hat_allSampsFrs_exc'])
+                Datae2 = scio.loadmat(svmName, variable_names=['trsnow_allSamps','testTrInds_allSamps_exc', 'Ytest_allSamps_exc', 'Ytest_hat_allSampsFrs_exc'])
 
         
-    ###%%             
+    ###%%        
+    #### inh     
     if loadWeights!=2:   # 2: only download weights, no CA                                     
         perClassErrorTest_data_inh = Datai.pop('perClassErrorTest_data_inh')
         perClassErrorTest_shfl_inh = Datai.pop('perClassErrorTest_shfl_inh')
         perClassErrorTest_chance_inh = Datai.pop('perClassErrorTest_chance_inh') 
+        trsExcluded = Datai.pop('trsExcluded')
     if loadWeights>=1:
         w_data_inh = Datai.pop('w_data_inh') 
         b_data_inh = Datai.pop('b_data_inh')         
     else:
         w_data_inh = []
         b_data_inh = []
-        
-    if doAllN==0:
-        if loadWeights!=2:
-            perClassErrorTest_data_allExc = Dataae.pop('perClassErrorTest_data_allExc')
-            perClassErrorTest_shfl_allExc = Dataae.pop('perClassErrorTest_shfl_allExc')
-            perClassErrorTest_chance_allExc = Dataae.pop('perClassErrorTest_chance_allExc')   
-        if loadWeights>=1:
-            w_data_allExc = Dataae.pop('w_data_allExc') 
-            b_data_allExc = Dataae.pop('b_data_allExc') 
-        else:
-            w_data_allExc = []
-            b_data_allExc = []
     
+    
+    #### allExc or allN    
+#    if doAllN==0:
+    if loadWeights!=2:
+        perClassErrorTest_data_allExc = Dataae.pop('perClassErrorTest_data_allExc')
+        perClassErrorTest_shfl_allExc = Dataae.pop('perClassErrorTest_shfl_allExc')
+        perClassErrorTest_chance_allExc = Dataae.pop('perClassErrorTest_chance_allExc')   
+    if loadWeights>=1:
+        w_data_allExc = Dataae.pop('w_data_allExc') 
+        b_data_allExc = Dataae.pop('b_data_allExc') 
+    else:
+        w_data_allExc = []
+        b_data_allExc = []
+    
+    
+    #### exc
     if loadWeights!=2:
         perClassErrorTest_data_exc = Datae.pop('perClassErrorTest_data_exc')    
         perClassErrorTest_shfl_exc = Datae.pop('perClassErrorTest_shfl_exc')
@@ -2451,14 +2463,17 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
         testTrInds_allSamps_inh = Datai2.pop('testTrInds_allSamps_inh').astype(int)
         Ytest_allSamps_inh = Datai2.pop('Ytest_allSamps_inh')
         Ytest_hat_allSampsFrs_inh = Datai2.pop('Ytest_hat_allSampsFrs_inh')
+        trsnow_allSamps_inh = np.array(Datai2.pop('trsnow_allSamps')).astype('int') # index of trials after picking random hr (or lr) in order to make sure both classes have the same number in the final Y (on which svm was run)
 
         testTrInds_allSamps_allExc = Dataae2.pop('testTrInds_allSamps_allExc').astype(int)
         Ytest_allSamps_allExc = Dataae2.pop('Ytest_allSamps_allExc')
         Ytest_hat_allSampsFrs_allExc = Dataae2.pop('Ytest_hat_allSampsFrs_allExc')
+        trsnow_allSamps_allExc = np.array(Dataae2.pop('trsnow_allSamps')).astype('int') 
         
         testTrInds_allSamps_exc = Datae2.pop('testTrInds_allSamps_exc').astype(int)
         Ytest_allSamps_exc = Datae2.pop('Ytest_allSamps_exc')
         Ytest_hat_allSampsFrs_exc = Datae2.pop('Ytest_hat_allSampsFrs_exc')
+        trsnow_allSamps_exc = np.array(Datae2.pop('trsnow_allSamps')).astype('int')
     else:
 
         testTrInds_allSamps_inh = []
@@ -2470,7 +2485,9 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
         testTrInds_allSamps_exc = []
         Ytest_allSamps_exc = []
         Ytest_hat_allSampsFrs_exc = []
-        
+        trsnow_allSamps_inh = []
+        trsnow_allSamps_allExc = []
+        trsnow_allSamps_exc = []
         
     #### sanity check
     '''
@@ -2509,7 +2526,11 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
         perClassErrorTest_shfl_exc = []
         perClassErrorTest_chance_exc = []
     
-    return perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc
+    return perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, \
+    w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, trsExcluded, \
+    testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, trsnow_allSamps_inh, \
+    testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, trsnow_allSamps_allExc, \
+    testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc, trsnow_allSamps_exc
     
 
 

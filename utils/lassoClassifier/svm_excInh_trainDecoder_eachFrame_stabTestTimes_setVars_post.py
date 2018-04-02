@@ -14,7 +14,7 @@ mice = 'fni16', 'fni17', 'fni18', 'fni19'
 
 saveDir_allMice = '/home/farznaj/Shares/Churchland_hpc_home/space_managed_data/fni_allMice'
 
-savefigs = 0
+#savefigs = 0
 corrTrained = 1
 ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 useEqualTrNums = 1

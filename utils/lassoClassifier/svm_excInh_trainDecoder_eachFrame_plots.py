@@ -13,7 +13,7 @@ Created on Sun Mar 12 15:12:29 2017
 
 #%% Change the following vars:
 
-mousename = 'fni19'
+mousename = 'fni16'
 
 shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
 addNs_roc = 1 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
@@ -201,7 +201,8 @@ for iday in range(len(days)):
         perClassErrorTest_data_exc = 0; perClassErrorTest_shfl_exc = 0; perClassErrorTest_chance_exc = 0; 
 
     else:
-        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=loadYtest)
+#        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=loadYtest)
+        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, trsExcluded, testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, trsnow_allSamps_inh, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, trsnow_allSamps_allExc, testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc, trsnow_allSamps_exc = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=loadYtest)
     
     ##%% Get number of inh and exc        
     if loadWeights==1:
@@ -220,19 +221,18 @@ for iday in range(len(days)):
         Data = scio.loadmat(postName, variable_names=['stimrate', 'cb'])
         stimrate = np.array(Data.pop('stimrate')).flatten().astype('float')
         cb = np.array(Data.pop('cb')).flatten().astype('float')        
-        
+        '''
         # inh
         data = scio.loadmat(svmName_excInh[0], variable_names=['trsExcluded', 'trsnow_allSamps'])
         trsExcluded = np.array(data.pop('trsExcluded')).flatten().astype('bool') 
-        trsnow_allSamps_inh = np.array(data.pop('trsnow_allSamps')).astype('int') # index of trials after picking random hr (or lr) in order to make sure both classes have the same number in the final Y (on which svm was run)
-        
+        trsnow_allSamps_inh = np.array(data.pop('trsnow_allSamps')).astype('int') # index of trials after picking random hr (or lr) in order to make sure both classes have the same number in the final Y (on which svm was run)        
         # allExc
         data = scio.loadmat(svmName_excInh[1], variable_names=['trsnow_allSamps'])
-        trsnow_allSamps_allExc = np.array(data.pop('trsnow_allSamps')).astype('int') 
-        
+        trsnow_allSamps_allExc = np.array(data.pop('trsnow_allSamps')).astype('int')         
         # exc
         data = scio.loadmat(svmName_excInh[2], variable_names=['trsnow_allSamps'])
         trsnow_allSamps_exc = np.array(data.pop('trsnow_allSamps')).astype('int') 
+        '''
 
         
         stimrate = stimrate[~trsExcluded] # length= length of Y0 (ie before making hr and lr the same number in Y)
@@ -265,7 +265,7 @@ for iday in range(len(days)):
         num_ehm_allExc = np.full((numSamps, 3), np.nan)
         num_ehm_exc = np.full((numShufflesExc, numSamps, 3), np.nan)
         
-        for isamp in range(numSamps):            
+        for isamp in range(numSamps): # isamp = 0
             
             ###########%% set stimrate for testing trials            
             # inh
