@@ -51,8 +51,8 @@ if 'ipykernel' in sys.modules:
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni16' #''fni19' #'fni16' #fni16' #
-    imagingFolder = '150901' #'151102' #'151019' #'151006' #'151023' #'151023' #'151001' 
+    mousename = 'fni19' #''fni19' #'fni16' #fni16' #
+    imagingFolder = '151101' #'151102' #'151019' #'151006' #'151023' #'151023' #'151001' 
     mdfFileNumber = [1] #[1,2]
 
     cbestKnown = 1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
@@ -60,7 +60,7 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
 
     shflTrLabs = 0 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
     outcome2ana = 'corr' #'all' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
-    doInhAllexcEqexc = [0,2,0]  # [1,0,1,1] # 
+    doInhAllexcEqexc = [0,0,1]  # [1,0,1,1] # 
     #    1st element: analyze inhibitory neurons (train SVM for numSamples for each value of C)
     #    2nd element: if 1: analyze all excitatory neurons (train SVM for numSamples for each value of C)   
                     # if 2: analyze all neurons (exc, inh, unsure) ... this is like code svm_eachFrame.py   
@@ -503,6 +503,7 @@ if np.logical_and(cbestKnown, doInhAllexcEqexc[1]!=2): # svm is already run on t
 if np.logical_and(cbestKnown, doInhAllexcEqexc[1]!=2): # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.
 
     svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]
+    print 'loading cbest and excNsEachSamp from file ', svmName
     
     if doInhAllexcEqexc[0]==1:
         data = scio.loadmat(svmName, variable_names='cbest_inh')
@@ -640,7 +641,8 @@ if np.logical_and(cbestKnown, doInhAllexcEqexc[1]==2): # svm is already run on t
 if np.logical_and(cbestKnown, doInhAllexcEqexc[1]==2): # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
             
     svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, shflTrsEachNeuron)[0]
-
+    print 'loading cbest_allExc from file ', svmName
+    
     Data = scio.loadmat(svmName, variable_names=['perClassErrorTest', 'cvect'])  
     perClassErrorTest = Data.pop('perClassErrorTest') # numSamples x len(cvect) x nFrames
     cvect = Data.pop('cvect').squeeze()
@@ -1401,6 +1403,9 @@ plt.colorbar()
 
 #%% Plot
 
+#hr_trs = (Y_svm==1)
+#lr_trs = (Y_svm==0)
+
 if doPlots:
     plt.figure
     plt.subplot(2,2,1)
@@ -1425,8 +1430,7 @@ if doPlots:
 # choice-aligned: classes: choices
 # Plot stim-aligned averages after centering and normalization
 ##%% Again define hr and lr trials.
-hr_trs = (Y_svm==1)
-lr_trs = (Y_svm==0)
+
 if doPlots:
 #    # Divide data into high-rate (modeled as 1) and low-rate (modeled as 0) trials
 #    hr_trs = (Y_svm==1)
@@ -1552,7 +1556,8 @@ def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNum
     Y0 = Y + 0
     
     
-    ##############
+    ########################################################################################################################################################################
+    ########################################################################################################################################################################
     nFrs = np.shape(X)[0]
     wAllC = np.ones((numSamples, nCvals, X.shape[1], nFrs))+np.nan;
     bAllC = np.ones((numSamples, nCvals, nFrs))+np.nan;
@@ -1568,8 +1573,9 @@ def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNum
     Ytest_hat_allSampsFrs = np.full((numSamples, nCvals, nFrs, len_test), np.nan)        
 #    testTrInds_outOfY0_allSamps = np.full((numSamples, len_test), np.nan)
     trsnow_allSamps = np.full((numSamples, numTrials), np.nan)              
+#    eqy = np.full((X0.shape[0], numSamples), np.nan)
     
-    ########################################## Train SVM numSamples times to get numSamples cross-validated datasets.
+    ########################################## Train SVM numSamples times to get numSamples cross-validated datasets.    
     for s in range(numSamples):        
         print 'Iteration %d' %(s)
         
@@ -1671,7 +1677,43 @@ def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNum
                 perClassErrorTest_chance[s,i,ifr] = perClassError(Y_chance, Ytest_hat)
                 Ytest_hat_allSampsFrs[s,i,ifr,:] = Ytest_hat
                 
-    
+                
+                
+                ########## sanity check ##########
+                """
+                trsnow = trsnow_allSamps[s].astype(int)
+                testTrInds = testTrInds_allSamps[s].astype(int)
+                testTrInds_outOfY0 = trsnow[testTrInds]
+                xx = X0[ifr][:,testTrInds_outOfY0]        
+                yy = Y0[testTrInds_outOfY0]
+                
+                ww = wAllC[s,i,:,ifr]
+#                normw = sci.linalg.norm(ww)   # numSamps x numFrames
+#                ww = ww / normw                 
+                
+                bb = bAllC[s,i,ifr] 
+                
+                # Project population activity of each frame onto the decoder of frame ifr
+                yhat = np.dot(ww, xx) + bb # testingFrs x testing trials                
+                th = 0
+                yhat[yhat<th] = 0 # testingFrs x testing trials
+                yhat[yhat>th] = 1
+                                
+                d = yhat - yy  # testing Frs x nTesting Trials # difference between actual and predicted y
+                c = np.mean(abs(d), axis=-1) * 100
+
+                eqy[ifr, s] = np.equal(c, perClassErrorTest[s,i,ifr])                
+                
+                if eqy[ifr, s]==0:
+                    print np.mean(np.equal(xx.T, summary.XTest))
+                    print np.mean(np.equal(yy, summary.YTest))
+                    print np.mean(np.equal(yhat, Ytest_hat))
+                    print ifr, s
+                    print c, perClassErrorTest[s,i,ifr]
+                    sys.exit('Error!') 
+                """
+
+
 
     ######################### Find bestc for each frame, and plot the c path 
     if bestcProvided: 

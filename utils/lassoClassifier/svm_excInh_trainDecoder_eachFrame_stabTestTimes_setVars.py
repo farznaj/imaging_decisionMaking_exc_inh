@@ -20,7 +20,7 @@ saveResults = 1
 
 doTestingTrs = 1 # if 1 compute classifier performance only on testing trials; otherwise on all trials
     
-normWeights = 1 # if 1, weights will be normalized to unity length.
+normWeights = 0 #1 # if 1, weights will be normalized to unity length. ### NOTE: you figured if you do np.dot(x,w) using normalized w, it will not match the output of svm (perClassError)
 zscoreX = 1 # z-score X (just how SVM was performed) before computing FRs
 doAllN = 1 # plot allN, instead of allExc
 
@@ -115,29 +115,28 @@ def testDecode_testingTrs(y, x, w, b, testTrInds_outOfY0, th=0):
     classErr = np.full((nFrs, nSamps, nFrs), np.nan)  # trainedFrs x nSamps x testingFrs
     
     for isamp in range(nSamps):
-        for ifr in range(nFrs): # this is the trainedFr # get the decoder of this frame
-            
+        # Get x and y for each sample        
+        xx = x[:,:,testTrInds_outOfY0[isamp]] # frames x neurons x testingTrials
+
+        if np.ndim(y) == 1: # normal case (not shuffled)
+            yy = y[testTrInds_outOfY0[isamp]]                
+        else: # shuffled y: samps x trials
+            yy = y[isamp, testTrInds_outOfY0[isamp]] # for each sample a different shuffled order of trial labels is used to compute fractError        
+
+        # Loop over frames: test the decoder of frame ifr (trainedFr) on all other time points (testingFrs)            
+        for ifr in range(nFrs): # this is the trainedFr bc we are getting the decoder (w and b) from this frame            
             ww = w[isamp,:,ifr] # nNeurons
-            bb = b[isamp,ifr] 
-            xx = x[:,:,testTrInds_outOfY0[isamp]] # frames x neurons x testingTrials
+            bb = b[isamp,ifr]             
             
-            # test the decoder of frame ifr (trainedFr) on all other time points (testingFrs)
-            # projecting neural activity of each frame onto the decoder of frame ifr
-            yhat = np.dot(ww, xx) + bb # testingFrs x nTestingTrials
+            # Project population activity of each frame onto the decoder of frame ifr
+            yhat = np.dot(ww, xx) + bb # testingFrs x testing trials
             # predict trial labels                     
-            yhat[yhat<th] = 0
+            yhat[yhat<th] = 0 # testingFrs x testing trials
             yhat[yhat>th] = 1  
             
-            # Now compute difference between actual and predicted y
-            if np.ndim(y) == 1: # normal case (not shuffled)
-                yy = y[testTrInds_outOfY0[isamp]]                
-            else: # shuffled y: samps x trials
-                yy = y[isamp, testTrInds_outOfY0[isamp]] # for each sample a different shuffled order of trial labels is used to compute fractError
-            d = yhat - yy  # testing Frs x nTesting Trials
-            
+            d = yhat - yy  # testing Frs x nTesting Trials # difference between actual and predicted y           
             # average across trials to get classification error 
             classErr[ifr,isamp,:] = np.mean(abs(d), axis=-1) * 100 # testingFrs     
-    #        classErr[:,:,ifr] = np.mean(abs(yhat - Y_svm), axis=-1) * 100 # nSamps x testingFrs x trainedFrs (how well decoder ifr does in predicting choice on each frame of frs)
 
     return classErr  # trainedFrs x nSamps x testingFrs
 
@@ -148,7 +147,8 @@ def testDecode_testingTrs(y, x, w, b, testTrInds_outOfY0, th=0):
 # im = 0
 for im in range(len(mice)):
         
-    #%%            
+    #%%
+    print '====================================================================================\n====================================================================================\n====================================================================================\n'     
     mousename = mice[im] # mousename = 'fni16' #'fni17'
     if mousename == 'fni18': #set one of the following to 1:
         allDays = 1# all 7 days will be used (last 3 days have z motion!)
@@ -219,6 +219,17 @@ for im in range(len(mice)):
         = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=loadYtest)
 
 
+
+
+        #%% Set X_svm and Y_svm ... to project onto the decoders loaded above.
+        
+        ###########################################################################################################################################
+        ###########################################################################################################################################
+        ###########################################################################################################################################
+        ###########################################################################################################################################
+        ###########################################################################################################################################
+        ###########################################################################################################################################
+        ###########################################################################################################################################
         ###########################################################################################################################################
 
         #%% Load matlab variables: event-aligned traces, inhibitRois, outcomes,  choice, etc
@@ -370,7 +381,7 @@ for im in range(len(mice)):
             X_svm, time_trace, eventI_ds = downsampXsvmTime(X_svm_o, time_trace_o, eventI, regressBins, lastTimeBinMissed)
             
             
-        #%% After downsampling normalize X_svm so each neuron's max is at 1 (you do this in matlab for S traces before downsampling... so it makes sense to again normalize the traces After downsampling so max peak is at 1)                
+        #%% Perhaps (not done in svm_excInh_trainDecoder_eachFrame.py) : After downsampling normalize X_svm so each neuron's max is at 1 (you do this in matlab for S traces before downsampling... so it makes sense to again normalize the traces After downsampling so max peak is at 1)                
         
         if normX:
             m = np.max(X_svm,axis=(0,2))   # find the max of each neurons across all trials and frames # max(X_svm.flatten())            
@@ -418,11 +429,8 @@ for im in range(len(mice)):
         #    print 'Fraction: inhibit = %.2f, excit = %.2f, unsure = %.2f' %(fractInh, fractExc, fractUn)
         
             
-        #%%    
-    #    numDataPoints = X_svm.shape[2] 
-    #    print '# data points = %d' %numDataPoints
-        # numTrials = (~trsExcluded).sum()
-        # numNeurons = (~NsExcluded).sum()
+        #%% Print some varas
+
         numTrials, numNeurons = X_svm.shape[2], X_svm.shape[1]
         print '%d trials; %d neurons' %(numTrials, numNeurons)
         # print ' The data has %d frames recorded from %d neurons at %d trials' %Xt.shape            
@@ -469,6 +477,15 @@ for im in range(len(mice)):
             
             
             X_svm = X_svm_N
+
+        ###########################################################################################################################################
+        ###########################################################################################################################################
+        ###########################################################################################################################################
+        ###########################################################################################################################################
+        ###########################################################################################################################################
+        ###########################################################################################################################################
+        ###########################################################################################################################################
+        ###########################################################################################################################################
         
         
         #%% Set X_svm for inh and allExc neurons
@@ -507,7 +524,11 @@ for im in range(len(mice)):
             
             normw = sci.linalg.norm(w_data_allExc, axis=1);   # numSamps x numFrames
             w_data_allN_normed = np.transpose(np.transpose(w_data_allExc,(1,0,2))/normw, (1,0,2)) # numSamples x numNeurons x numFrames; normalize weights so weights (of each frame) have length 1
-    
+        else:
+            w_data_inh_normed = w_data_inh
+            w_data_exc_normed = w_data_exc
+            w_data_allN_normed = w_data_allExc
+
 
         ##%% Take average across samples (this is like getting a single decoder across all trial subselects... so I guess bagging)... (not ave of abs... the idea is that ave of shuffles represents the neurons weights for the decoder given the entire dataset (all trial subselects)... if a w switches signs across samples then it means this neuron is not very consistently contributing to the choice... so i think we should average its w and not its abs(w))
         '''
@@ -538,6 +559,7 @@ for im in range(len(mice)):
         
         nSamps = len(trsnow_allSamps_inh)           
         
+        
         ########### All neurons ###########        
         x = X_svm # frames x neurons x trials
         w = w_data_allN_normed # samps x neurons x frames
@@ -560,14 +582,14 @@ for im in range(len(mice)):
             classErr_inh = testDecode_testingTrs(Y_svm, x, w, b, testTrInds_outOfY0, th=0)  # trainedFrs x nSamps x testingFrs
         else:                    
             classErr_inh = testDecode(Y_svm, x, w, b) # trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
-
+        
 
         ########### exc neurons ###########        
         classErr_exc = []
         for iexc in range(numShufflesExc):
-            x = XexcEq[iexc,:,:,:]
-            w = w_data_exc_normed[iexc,:,:,:]
-            b = b_data_exc[iexc,:,:]
+            x = XexcEq[iexc]
+            w = w_data_exc_normed[iexc]
+            b = b_data_exc[iexc]
             
             if doTestingTrs:
                 testTrInds_outOfY0 = np.array([trsnow_allSamps_exc[iexc,isamp][testTrInds_allSamps_exc[iexc,isamp]] for isamp in range(nSamps)]) # samps x numTestingTrs          
@@ -576,8 +598,26 @@ for im in range(len(mice)):
             else:    
                 classErr_exc0 = testDecode(Y_svm, x, w, b)
                 classErr_exc.append(classErr_exc0) # nExcSamps x trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
-
         
+        
+        #%% ############%% Sanity checks: make sure classErr when testing and training frames are the same is the same as the loaded variable perClassErrors        
+        
+        # NOTE: with normWeights=0, below becomes mostly correct, but still it fails for some cases ... and I don't know why. But it doesn't change the results
+        # of stabTestTimes because we are doing the same for all frames ... also now with the cross validation CAs near the diagonal are not higher than the diagonal.
+        # so the main purpose of doing cross validation is achieved!
+        
+        eqy_allN = np.full(X_svm.shape[0], np.nan)
+        eqy_inh = np.full(X_svm.shape[0], np.nan)
+        eqy_exc = np.full((X_svm.shape[0],numShufflesExc), np.nan)
+        for ifr in range(X_svm.shape[0]):                    
+            eqy_allN[ifr] = np.mean(np.equal(perClassErrorTest_data_allExc[:,ifr], classErr_allN[ifr,:,ifr]))
+            eqy_inh[ifr] = np.mean(np.equal(perClassErrorTest_data_inh[:,ifr], classErr_inh[ifr,:,ifr]))
+            for iexc in range(numShufflesExc):
+                eqy_exc[ifr,iexc] = np.mean(np.equal(perClassErrorTest_data_exc[iexc,:,ifr], classErr_exc[iexc][ifr,:,ifr]))                
+        
+        if ~((np.mean(eqy_allN)==1) + (np.mean(eqy_inh)==1) + (np.mean(eqy_exc)==1)):
+            sys.exit('Error: classErr when testing and training frames are the same is NOT the same as the loaded variable perClassErrors!!!')
+
         '''
         classErrAveSamps = np.mean(classErr_allN, axis=1) # average across samples
         # classErrAveSamps[testFr, trainedFr]
@@ -599,7 +639,7 @@ for im in range(len(mice)):
         for isamp in range(nSamps):
             Y_shfl[isamp,:] = Y_svm[rng.permutation(len(Y_svm))]  # for each sample a different shuffled order of trial labels is used to compute fractError
          
-
+        
         ########### All neurons
         x = X_svm
         w = w_data_allN_normed
@@ -622,7 +662,7 @@ for im in range(len(mice)):
             classErr_inh_shfl = testDecode_testingTrs(Y_shfl, x, w, b, testTrInds_outOfY0, th=0)  # trainedFrs x nSamps x testingFrs
         else:
             classErr_inh_shfl = testDecode(Y_shfl, x, w, b) # trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
-
+        
 
         ########### exc neurons
         classErr_exc_shfl = []
@@ -633,22 +673,23 @@ for im in range(len(mice)):
             
             if doTestingTrs:
                 testTrInds_outOfY0 = np.array([trsnow_allSamps_exc[iexc,isamp][testTrInds_allSamps_exc[iexc,isamp]] for isamp in range(nSamps)]) # samps x numTestingTrs          
-                classErr_exc_shfl = testDecode_testingTrs(Y_shfl, x, w, b, testTrInds_outOfY0, th=0)  # trainedFrs x nSamps x testingFrs
+                classErr_exc_shfl0 = testDecode_testingTrs(Y_shfl, x, w, b, testTrInds_outOfY0, th=0)  # trainedFrs x nSamps x testingFrs
+                classErr_exc_shfl.append(classErr_exc_shfl0) # nExcSamps x trainedFrs x nSamps x testingFrs
             else:
-                classErr_exc_shfl.append(testDecode(Y_shfl, x, w, b)) # nExcSamps x trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
-
+                classErr_exc_shfl0 = testDecode(Y_shfl, x, w, b) # nExcSamps x trainedFrs x nSamps x testingFrs (how well decoder ifr does in predicting choice on each frame of frs)
+                classErr_exc_shfl.append(classErr_exc_shfl0)
 
 
 
         ############################################################%%    
         #%% Keep vars of all days
-    
+        
         classErr_allN_allDays.append(classErr_allN)
         classErr_inh_allDays.append(classErr_inh)        
         classErr_exc_allDays.append(classErr_exc)  
 
         classErr_allN_shfl_allDays.append(classErr_allN_shfl)
-        classErr_inh_shfl_allDays.append(classErr_inh_shfl)        
+        classErr_inh_shfl_allDays.append(classErr_inh_shfl)            
         classErr_exc_shfl_allDays.append(classErr_exc_shfl)  
         
         eventI_ds_allDays[iday] = eventI_ds.astype(int)
@@ -664,6 +705,8 @@ for im in range(len(mice)):
     #%% Save SVM results
     
     if saveResults:
+        print 'Saving results ....'
+        
         fname = os.path.join(os.path.dirname(os.path.dirname(imfilename)), 'analysis')    
         if not os.path.exists(fname):
             print 'creating folder'
@@ -674,7 +717,12 @@ for im in range(len(mice)):
         else:
             nts = ''
         
-        finame = os.path.join(fname, ('svm_testEachDecoderOnAllTimes_%s%s.mat' %(nts, nowStr)))
+        if normWeights:
+            nw = 'wNormed_'
+        else:
+            nw = 'wNotNormed_'
+        
+        finame = os.path.join(fname, ('svm_testEachDecoderOnAllTimes_%s%s%s.mat' %(nts, nw, nowStr)))
         
         
         scio.savemat(finame, {'lastTimeBinMissed_allDays':lastTimeBinMissed_allDays,

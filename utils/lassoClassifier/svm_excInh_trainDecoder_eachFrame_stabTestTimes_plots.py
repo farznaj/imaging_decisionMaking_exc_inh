@@ -16,6 +16,11 @@ mice = 'fni16', 'fni17', 'fni18', 'fni19'
 saveDir_allMice = '/home/farznaj/Shares/Churchland_hpc_home/space_managed_data/fni_allMice'
 
 savefigs = 0
+set_save_p_samps = 0 # set it to 0 if p vals are already saved for the stab mat file under study # set and save p value across samples per day (takes time to be done !!)
+
+doTestingTrs = 1 # if 1 compute classifier performance only on testing trials; otherwise on all trials
+normWeights = 0 #1 # if 1, weights will be normalized to unity length. ### NOTE: you figured if you do np.dot(x,w) using normalized w, it will not match the output of svm (perClassError)
+
 corrTrained = 1
 ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 useEqualTrNums = 1
@@ -49,12 +54,21 @@ if doAllN==1:
         print 'bestc = c that gives min cv error'    
     
 dir0 = '/stability_decoderTestedAllTimes/'
-set_save_p_samps = 0 # set and save p value across samples per day (takes time to be done !!)
 
 from datetime import datetime
 nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 
+if doTestingTrs:
+    nts = 'testingTrs_'
+else:
+    nts = ''
 
+if normWeights:
+    nw = 'wNormed_'
+else:
+    nw = 'wNotNormed_'
+    
+    
 #%% Set days (all days and good days) for each mouse
 
 days_allMice, numDaysAll, daysGood_allMice, dayinds_allMice, mn_corr_allMice = svm_setDays_allMice(mice, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, regressBins, useEqualTrNums, shflTrsEachNeuron, thTrained)
@@ -72,7 +86,7 @@ def plotAngInhExcAllN(topi0, tope0, topa0, cblab, namf, do4, doCA=0, doAv=0):
         ax.plot(time_aligned_allMice[im], stab_inhm, color='r')
         ax.plot(time_aligned_allMice[im], stab_excm, color='b')
         ax.plot(time_aligned_allMice[im], stab_allNm, color='k')          
-        plt.colorbar(ax=ax)    
+#        plt.colorbar(ax=ax)    
         ax.set_xlim(s1[im].get_xlim())
         ax.set_xlabel('Testing t (ms)')
         ax.set_ylabel(yls) # Duration(ms) w decoders close to optimal decoder at time t      
@@ -80,10 +94,13 @@ def plotAngInhExcAllN(topi0, tope0, topa0, cblab, namf, do4, doCA=0, doAv=0):
     #    makeNicePlots(s4[im], 1, 1)      
 
     def plotstabsp_sd(stab_inhm, stab_excm, stab_allNm, yls, ax, stab_inh_sdm, stab_exc_sdm, stab_allN_sdm):
-        ax.fill_between(time_aligned_allMice[im], stab_inhm-stab_inh_sdm, stab_inhm+stab_inh_sdm, color='r', alpha=.7)
-        ax.fill_between(time_aligned_allMice[im], stab_excm-stab_exc_sdm, stab_excm+stab_exc_sdm, color='b', alpha=.7)
-        ax.fill_between(time_aligned_allMice[im], stab_allNm-stab_allN_sdm, stab_allNm+stab_allN_sdm, color='k', alpha=.7)
-        plt.colorbar(ax=ax)    
+        ax.fill_between(time_aligned_allMice[im], stab_inhm-stab_inh_sdm, stab_inhm+stab_inh_sdm, color='r', alpha=.5)
+        ax.fill_between(time_aligned_allMice[im], stab_excm-stab_exc_sdm, stab_excm+stab_exc_sdm, color='b', alpha=.5)
+        ax.fill_between(time_aligned_allMice[im], stab_allNm-stab_allN_sdm, stab_allNm+stab_allN_sdm, color='k', alpha=.5)
+        ax.plot(time_aligned_allMice[im], stab_inhm, color='r')
+        ax.plot(time_aligned_allMice[im], stab_excm, color='b')
+        ax.plot(time_aligned_allMice[im], stab_allNm, color='k')
+#        plt.colorbar(ax=ax)    
         ax.set_xlim(s1[im].get_xlim())
         ax.set_xlabel('Testing t (ms)')
         ax.set_ylabel(yls)        
@@ -93,7 +110,7 @@ def plotAngInhExcAllN(topi0, tope0, topa0, cblab, namf, do4, doCA=0, doAv=0):
 #    colsi = 'mediumblue', 'blue', 'cyan'
 #    colse = 'red', 'tomato', 'lightsalmon'
 
-    s1 = []; s2 = []; s3 = []; s4 = []
+    s1 = []; s2 = []; s3 = []; s4 = []; s5 = []; s6 = []
     
     for im in range(len(mice)):    
         
@@ -101,6 +118,9 @@ def plotAngInhExcAllN(topi0, tope0, topa0, cblab, namf, do4, doCA=0, doAv=0):
             topi = np.nanmean(topi0[im], axis=0) 
             tope = np.nanmean(tope0[im], axis=0) 
             top = np.nanmean(topa0[im], axis=0) 
+            # se
+            topisd = np.nanstd(topi0[im], axis=0) / np.sqrt(numDaysGood[im])
+            topesd = np.nanstd(tope0[im], axis=0) / np.sqrt(numDaysGood[im])
             topsd = np.nanstd(topa0[im], axis=0) / np.sqrt(numDaysGood[im])
         else: # inputs are already averaged across days
             topi = topi0[im]
@@ -116,10 +136,10 @@ def plotAngInhExcAllN(topi0, tope0, topa0, cblab, namf, do4, doCA=0, doAv=0):
         nPreMin = nPreMin_allMice[im]
     
        
-        plt.figure(figsize=(7,6));           
+        plt.figure(figsize=(10,10)); # 7,6
         
         ################# inh
-        plt.subplot(221);     
+        plt.subplot(334);     
         lab = 'inh' 
     #    cblab = '' # 'Class accuracy (%)'    
         yl = 'Decoder training t (ms)'
@@ -128,30 +148,44 @@ def plotAngInhExcAllN(topi0, tope0, topa0, cblab, namf, do4, doCA=0, doAv=0):
         plotAng(topi, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab, xl, yl)    
         xlim = plt.gca().get_xlim()
         ylim = plt.gca().get_ylim()
-        plt.plot([time_aligned[-1],time_aligned[0]], [time_aligned[-1],time_aligned[0]]) # mark the diagonal
+#        plt.plot([time_aligned[-1],time_aligned[0]], [time_aligned[-1],time_aligned[0]]) # mark the diagonal
         plt.xlim(xlim)        
         plt.ylim(ylim)        
         s1.append(plt.gca());
 #        print plt.gca().get_position()
 #        sz = plt.gcf().get_size_inches()*fig.dpi
+        if doCA==1: # Mark a few time points (their CA will be plotted in subplot 224)
+            fr2ana = [nPreMin-1, nPreMin-7, nPreMin+5]
+            time2ana = np.round(regressBins*frameLength*np.array([-1,-7,5]))
+            cnt = -1
+            for fr2an in fr2ana:               
+                cnt = cnt+1
+                ##### If below you plot decoder trained at fr2an, see how it does on all other times
+                plt.axhline(time_aligned[fr2an],np.min(time_aligned),np.max(time_aligned), color=cols[cnt])        
     
 
         ############### exc
-        plt.subplot(223);    
+        plt.subplot(337);    
         lab = 'exc' 
     #    cblab = 'Class accuracy (%)'    
 #        yl = 'Decoder trained at t (ms)'
 #        xl = 'Decoder tested at t (ms)'  
         
         plotAng(tope, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab, xl, yl)    
-        plt.plot([time_aligned[-1],time_aligned[0]], [time_aligned[-1],time_aligned[0]]) # mark the diagonal
+#        plt.plot([time_aligned[-1],time_aligned[0]], [time_aligned[-1],time_aligned[0]]) # mark the diagonal
         plt.xlim(xlim)        
         plt.ylim(ylim)
         s3.append(plt.gca());
-        
+        if doCA==1: # Mark a few time points (their CA will be plotted in subplot 224)
+            fr2ana = [nPreMin-1, nPreMin-7, nPreMin+5]
+            cnt = -1
+            for fr2an in fr2ana:               
+                cnt = cnt+1
+                ##### If below you plot decoder trained at fr2an, see how it does on all other times
+                plt.axhline(time_aligned[fr2an],np.min(time_aligned),np.max(time_aligned), color=cols[cnt])        
         
         ################# allN
-        plt.subplot(222);     
+        plt.subplot(331);     
         lab = 'allN'    
 #        cmin = np.nanmin(top)
 #        cmax = np.nanmax(top)
@@ -159,11 +193,10 @@ def plotAngInhExcAllN(topi0, tope0, topa0, cblab, namf, do4, doCA=0, doAv=0):
 #        yl = '' #'Decoder trained at t (ms)'
 #        xl = 'Decoder tested at t (ms)'          
         plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap, cblab, xl, yl)    
-        plt.plot([time_aligned[-1],time_aligned[0]], [time_aligned[-1],time_aligned[0]]) # mark the diagonal
+#        plt.plot([time_aligned[-1],time_aligned[0]], [time_aligned[-1],time_aligned[0]]) # mark the diagonal
         plt.xlim(xlim)        
         plt.ylim(ylim)
-        s2.append(plt.gca());
-        
+        s2.append(plt.gca());        
         if doCA==1: # Mark a few time points (their CA will be plotted in subplot 224)
             fr2ana = [nPreMin-1, nPreMin-7, nPreMin+5]
             cnt = -1
@@ -178,11 +211,15 @@ def plotAngInhExcAllN(topi0, tope0, topa0, cblab, namf, do4, doCA=0, doAv=0):
                 
             
             
-        #################### allN: show example traces for a few time points
+        #################### show example traces for a few time points
         if do4: 
-            plt.subplot(224);
+            ax4 = plt.subplot(332);
             s4.append(plt.gca());
             if doCA==1:
+                pos1 = ax4.get_position() # get the original position 
+                pos2 = [pos1.x0, pos1.y0 + 0.1,  pos1.width / 1.7, pos1.height / 1.7] 
+                ax4.set_position(pos2) # set a new position
+                ##### allN #####
 #                top = classAcc_allN_allDays_alig_avSamps_avDays_allMice[im] # nTrainedFrs x nTestingFrs   # plot the actual class accuracies instead of the drop in CA
 #                topsd = classAcc_allN_allDays_alig_avSamps_sdDays_allMice[im] / np.sqrt(numDaysGood[im])
                 cnt = -1    
@@ -191,6 +228,7 @@ def plotAngInhExcAllN(topi0, tope0, topa0, cblab, namf, do4, doCA=0, doAv=0):
                     cnt = cnt+1                   
                     ##### Decoder trained at fr2an, see how it does on all other times
                     plt.fill_between(time_aligned, top[fr2an] - topsd[fr2an], top[fr2an] + topsd[fr2an], color=cols[cnt], alpha=.7)              #        plt.errorbar(time_aligned, top[fr2an], topsd[fr2an], color=cols[cnt])#, linestyle=linstyl[cnt])
+                    plt.plot(time_aligned, top[fr2an] , color=cols[cnt])
                     plt.xlabel('Decoder testing t (ms)')                    
                     ##### Decoders tested at fr2an, see how well decoders trained at different times do
 #                    plt.fill_between(time_aligned, top[:,fr2an] - topsd[:,fr2an], top[:,fr2an] + topsd[:,fr2an], color=cols[cnt], alpha=.5)
@@ -201,26 +239,92 @@ def plotAngInhExcAllN(topi0, tope0, topa0, cblab, namf, do4, doCA=0, doAv=0):
                     plt.vlines(time_aligned[fr2an],np.min(top),np.max(top), color=cols[cnt])#, linestyle=linstyl[cnt])
                 plt.ylabel(cblab)
                 plt.xlim(xlim)
-                plt.colorbar()                
-#                print plt.gca().get_position()                         
+                plt.title('allN')
+#                plt.colorbar()                
+                makeNicePlots(plt.gca(), 1, 1)                  
+
+                
+                ##### inh #####
+                ax5 = plt.subplot(335);
+                s5.append(plt.gca());
+                pos1 = ax5.get_position() # get the original position 
+                pos2 = [pos1.x0, pos1.y0 + 0.1,  pos1.width / 1.7, pos1.height / 1.7] 
+                ax5.set_position(pos2) # set a new position                
+                cnt = -1    
+                # plot class accuracy tested at all times (x axis) when decoder was trained at time fr2an
+                for fr2an in fr2ana:       
+                    cnt = cnt+1                   
+                    ##### Decoder trained at fr2an, see how it does on all other times
+                    plt.fill_between(time_aligned, topi[fr2an] - topisd[fr2an], topi[fr2an] + topisd[fr2an], color=cols[cnt], alpha=.7)              #        plt.errorbar(time_aligned, top[fr2an], topsd[fr2an], color=cols[cnt])#, linestyle=linstyl[cnt])
+                    plt.plot(time_aligned, topi[fr2an] , color=cols[cnt])
+                    plt.xlabel('Decoder testing t (ms)')                    
+                    plt.vlines(time_aligned[fr2an],np.min(topi),np.max(topi), color=cols[cnt])#, linestyle=linstyl[cnt])
+                plt.ylabel(cblab)
+                plt.xlim(xlim)
+                plt.title('inh')
+#                plt.colorbar()                
+                makeNicePlots(plt.gca(), 1, 1)  
+
+
+                ##### exc #####
+                ax6 = plt.subplot(338);
+                s6.append(plt.gca());    
+                pos1 = ax6.get_position() # get the original position 
+                pos2 = [pos1.x0, pos1.y0 + 0.1,  pos1.width / 1.7, pos1.height / 1.7] 
+                ax6.set_position(pos2) # set a new position                            
+                cnt = -1    
+                # plot class accuracy tested at all times (x axis) when decoder was trained at time fr2an
+                for fr2an in fr2ana:       
+                    cnt = cnt+1                   
+                    ##### Decoder trained at fr2an, see how it does on all other times
+                    plt.fill_between(time_aligned, tope[fr2an] - topesd[fr2an], tope[fr2an] + topesd[fr2an], color=cols[cnt], alpha=.7)              #        plt.errorbar(time_aligned, top[fr2an], topsd[fr2an], color=cols[cnt])#, linestyle=linstyl[cnt])
+                    plt.plot(time_aligned, tope[fr2an] , color=cols[cnt])
+                    plt.xlabel('Decoder testing t (ms)')                    
+                    plt.vlines(time_aligned[fr2an],np.min(tope),np.max(tope), color=cols[cnt])#, linestyle=linstyl[cnt])
+                plt.ylabel(cblab)
+                plt.xlim(xlim)
+                plt.title('exc')
+#                plt.colorbar()                                    
+                makeNicePlots(plt.gca(), 1, 1)                  
+
+                
+                ######## Now inh,exc,allN superimposed ########
+                spn = 333, 336, 339
+                for ispn in [1,0,2]:
+                    plt.subplot(spn[ispn]);
+                    fr2an = fr2ana[ispn] ##### Decoder trained at fr2an, see how it does on all other times
+                    # allN 
+                    plt.fill_between(time_aligned, top[fr2an] - topsd[fr2an], top[fr2an] + topsd[fr2an], color='k', alpha=.5)              #        plt.errorbar(time_aligned, top[fr2an], topsd[fr2an], color=cols[cnt])#, linestyle=linstyl[cnt])
+                    plt.plot(time_aligned, top[fr2an] , color='k', label='allN')
+                    # inh 
+                    plt.fill_between(time_aligned, topi[fr2an] - topisd[fr2an], topi[fr2an] + topisd[fr2an], color='r', alpha=.5)              #        plt.errorbar(time_aligned, top[fr2an], topsd[fr2an], color=cols[cnt])#, linestyle=linstyl[cnt])
+                    plt.plot(time_aligned, topi[fr2an] , color='r', label='inh')
+                    # exc 
+                    plt.fill_between(time_aligned, tope[fr2an] - topesd[fr2an], tope[fr2an] + topesd[fr2an], color='b', alpha=.5)              #        plt.errorbar(time_aligned, top[fr2an], topsd[fr2an], color=cols[cnt])#, linestyle=linstyl[cnt])
+                    plt.plot(time_aligned, tope[fr2an] , color='b', label='exc')                
+                    plt.xlabel('Decoder testing t (ms)')                    
+                    plt.vlines(time_aligned[fr2an],np.min(top[fr2an]),np.max(top[fr2an]), color=cols[1])#, linestyle=linstyl[cnt])
+                    plt.ylabel(cblab)
+                    plt.xlim(xlim)
+                    plt.title('Training t %d ms' %(time2ana[ispn]))
+    #                plt.colorbar()                                    
+                    makeNicePlots(plt.gca(), 1, 1)         
+                    plt.legend(loc=0, frameon=False) #loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
+                
             else: # plot stab measures                    
                 if doCA==0:                
                     plotstabsp(stab_inh[im], stab_exc[im], stab_allN[im], yls, plt.gca())
+                    # mark time 0 in the above plots
+#                    s1[im].axhline(0,0,len(time_aligned))
+#                    s2[im].axhline(0,0,len(time_aligned))
+#                    s3[im].axhline(0,0,len(time_aligned))  
+                    
                 elif doCA==-1: # computed across samps for each day... so we have sd
-                    plotstabsp_sd(stab_inh[im], stab_exc[im], stab_allN[im], yls, plt.gca(), stab_inh_sd[im], stab_exc_sd[im], stab_allN_sd[im])
-                # mark time 0 in the above plots
-                s1[im].axhline(0,0,len(time_aligned))
-                s2[im].axhline(0,0,len(time_aligned))
-                s3[im].axhline(0,0,len(time_aligned))    
-#                plt.plot(time_aligned, stab_inh[im], color='r')
-#                plt.plot(time_aligned, stab_exc[im], color='b')
-#                plt.plot(time_aligned, stab_allN[im], color='k')          
-#                plt.colorbar()
-#                plt.xlabel('Testing t (ms)')
-#                plt.ylabel('Stability duration (ms)') # Duration(ms) w decoders close to optimal decoder at time t
-            makeNicePlots(plt.gca(), 1, 1)        
+                    plotstabsp_sd(stab_inh[im], stab_exc[im], stab_allN[im], yls, plt.gca(), stab_inh_se[im], stab_exc_se[im], stab_allN_se[im])
+                
+                makeNicePlots(plt.gca(), 1, 1)        
         
-        plt.subplots_adjust(hspace=.2, wspace=.8)
+        plt.subplots_adjust(hspace=.4, wspace=.6)
     
 
         ############%% Save figure for each mouse
@@ -246,15 +350,80 @@ def plotAngInhExcAllN(topi0, tope0, topa0, cblab, namf, do4, doCA=0, doAv=0):
     return s1,s2,s3,s4
 
 
+#%% Define function to plot error bars of stability duration showing summary of all mice
+
+def plotErrBarStabDur(doSe=0):
+    
+    # average stabDur across all frames
+    stab_inh_avFrs = [np.nanmean(stab_inh[im]) for im in range(len(mice))]
+    stab_exc_avFrs = [np.nanmean(stab_exc[im]) for im in range(len(mice))]
+    stab_allN_avFrs = [np.nanmean(stab_allN[im]) for im in range(len(mice))]
+    # stabDur at time -1
+    stab_inhM1 = [stab_inh[im][nPreMin_allMice[im]-1] for im in range(len(mice))]
+    stab_excM1 = [stab_exc[im][nPreMin_allMice[im]-1] for im in range(len(mice))]
+    stab_allNM1 = [stab_allN[im][nPreMin_allMice[im]-1] for im in range(len(mice))]
+    
+    gp = .1
+    plt.figure(figsize=(5,3))
+    
+    plt.subplot(121) # average across frames
+    plt.errorbar(range(len(mice)), stab_inh_avFrs, marker='o',color='r', fmt='.')
+    plt.errorbar(np.arange(len(mice))+gp, stab_exc_avFrs, marker='o',color='b', fmt='.')
+    plt.errorbar(np.arange(len(mice))+gp*2, stab_allN_avFrs, marker='o',color='k', fmt='.')
+    plt.ylabel('%s\naverage times' %(yls))
+    plt.xticks(range(len(mice)), mice)
+    plt.xlim([-.5, len(mice)-.5])    
+    makeNicePlots(plt.gca())
+    
+    plt.subplot(122) # time -1
+    plt.errorbar(range(len(mice)), stab_inhM1, marker='o',color='r', fmt='.')
+    plt.errorbar(np.arange(len(mice))+gp, stab_excM1, marker='o',color='b', fmt='.')
+    plt.errorbar(np.arange(len(mice))+gp*2, stab_allNM1, marker='o',color='k', fmt='.')
+    if doSe: # se across days; this is for the case 'classAccurWin1sdMax_samps' 
+        stab_inh_seM1 = [stab_inh_se[im][nPreMin_allMice[im]-1] for im in range(len(mice))]
+        stab_exc_seM1 = [stab_exc_se[im][nPreMin_allMice[im]-1] for im in range(len(mice))]
+        stab_allN_seM1 = [stab_allN_se[im][nPreMin_allMice[im]-1] for im in range(len(mice))]
+            
+        plt.errorbar(range(len(mice)), stab_inhM1, stab_inh_seM1, marker='o',color='r', fmt='.')
+        plt.errorbar(np.arange(len(mice))+gp, stab_excM1, stab_exc_seM1, marker='o',color='b', fmt='.')
+        plt.errorbar(np.arange(len(mice))+gp*2, stab_allNM1, stab_allN_seM1, marker='o',color='k', fmt='.')
+    
+    plt.ylabel('time -1')
+    plt.xticks(range(len(mice)), mice)
+    plt.xlim([-.5, len(mice)-.5])    
+    makeNicePlots(plt.gca())
+    
+    plt.subplots_adjust(wspace=.5)
+    
+    if savefigs:
+        if chAl:
+            cha = 'chAl_'
+        else:
+            cha = 'stAl_'
+        
+        fnam = 'testTrainDiffTimes_sum_' + namf + '_' + labAll + '_' + '_'.join(mice) + '_' + nowStr
+        d = os.path.join(svmdir+dir0) #,mousename)       
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)            
+            
+        fign = os.path.join(d, suffn[0:5]+cha+fnam+'.'+fmt[0])    
+        
+        plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+
+
 
 #%% Load matlab vars
 
 ################################################################################
 ################################################################################
     
-#%% Load class accur vars (averages of samples)
+##%% Load class accur vars (averages of samples)
 
-cnam = glob.glob(os.path.join(saveDir_allMice, 'stability_decoderTestedAllTimes_' + '_'.join(mice) + '_*'))[0]
+cnam = glob.glob(os.path.join(saveDir_allMice, 'stability_decoderTestedAllTimes_' + nts + nw + '_'.join(mice) + '_*'))
+cnam = sorted(cnam, key=os.path.getmtime) # sort pnevFileNames by date (descending)
+cnam = cnam[::-1][0] # so the latest file is the 1st one.
+print cnam
 
 data = scio.loadmat(cnam, variable_names=['eventI_ds_allDays_allMice',
                     'classAcc_allN_allDays_alig_avSamps_allMice',
@@ -289,22 +458,18 @@ classAcc_allN_shfl_allDays_alig_sdSamps_allMice = data.pop('classAcc_allN_shfl_a
 classAcc_inh_shfl_allDays_alig_sdSamps_allMice = data.pop('classAcc_inh_shfl_allDays_alig_sdSamps_allMice').flatten()
 classAcc_exc_shfl_allDays_alig_sdSamps_allMice = data.pop('classAcc_exc_shfl_allDays_alig_sdSamps_allMice').flatten()
 
-                    
-#%% Load mat file: p value across samples per day (takes time to be done !!)
-# the measure is OK except we dont know what to do with exc bc it has exc samps... ... there is no easy way to set a threshold for p value that works for both inh and exc... given that exc is averaged across exc samps!
-# you can perhaps do some sort of bootstrap!
-
-pnam = glob.glob(os.path.join(saveDir_allMice, 'stability_decoderTestedAllTimes_pval_' + '_'.join(mice) + '_*'))[0] #glob.glob(os.path.join(svmdir+dir0, '*pval_*_svm_testEachDecoderOnAllTimes*'))[0]
-data = scio.loadmat(pnam)
-
-p_inh_samps_allMice = data.pop('p_inh_samps_allMice').flatten() # nMice; each mouse: days x frs x frs
-p_exc_samps_allMice = data.pop('p_exc_samps_allMice').flatten() # nMice; each mouse: days x frs x frs x excSamps
-p_allN_samps_allMice = data.pop('p_allN_samps_allMice').flatten() # nMice; each mouse: days x frs x frs
+      
+classAcc_allN_allDays_alig_avSamps_allMice0 = classAcc_allN_allDays_alig_avSamps_allMice
+classAcc_inh_allDays_alig_avSamps_allMice0 = classAcc_inh_allDays_alig_avSamps_allMice
+classAcc_exc_allDays_alig_avSamps_allMice0 = classAcc_exc_allDays_alig_avSamps_allMice
 
 
-#%% 
+#%% Set some vars
+
 numExcSamps = np.shape(classAcc_exc_allDays_alig_avSamps_allMice[0])[-1]
 numSamps = 50 # this is the usual value, get it from classAcc_allN_allDays_alig_allMice[im].shape[-1]
+
+nowStr_allMice = [cnam[-17:-4]] * len(mice)
 
 
 #%% Set time_aligned for all mice
@@ -320,6 +485,190 @@ for im in range(len(mice)):
 
 
 lenTraces_AllMice = np.array([len(time_aligned_allMice[im]) for im in range(len(mice))])
+
+
+              
+#%% Set or load p values: across samples per day: is data different froms shfl (done for each pair of testing and training frames.)
+# (takes time to be done !!)
+# the measure is OK except we dont know what to do with exc bc it has exc samps... ... there is no easy way to set a threshold for p value that works for both inh and exc... given that exc is averaged across exc samps!
+# you can perhaps do some sort of bootstrap!
+
+tail = 'right' # do right-tail ttest: data > shfl
+
+if tail=='right':
+    nta = 'rTail_'
+else:
+    nta = ''
+    
+
+if set_save_p_samps == 0 :
+    # data vs shfl for each time pair
+    pnam = glob.glob(os.path.join(saveDir_allMice, 'pval_' + nta + 'stability_decoderTestedAllTimes_' + nts + nw + '_'.join(mice) + '_*'))[0] #glob.glob(os.path.join(svmdir+dir0, '*pval_*_svm_testEachDecoderOnAllTimes*'))[0]
+    print pnam
+    
+    data = scio.loadmat(pnam)    
+    p_inh_samps_allMice = data.pop('p_inh_samps_allMice').flatten() # nMice; each mouse: days x frs x frs
+    p_exc_samps_allMice = data.pop('p_exc_samps_allMice').flatten() # nMice; each mouse: days x frs x frs x excSamps
+    p_allN_samps_allMice = data.pop('p_allN_samps_allMice').flatten() # nMice; each mouse: days x frs x frs
+
+    ### each time pair vs diagonal
+    pnam = glob.glob(os.path.join(saveDir_allMice, 'pval_' + nta + 'stability_decoderTestedAllTimes_' + nts + nw + '_'.join(mice) + '_*'))[0] #glob.glob(os.path.join(svmdir+dir0, '*pval_*_svm_testEachDecoderOnAllTimes*'))[0]
+    print pnam
+    
+    data = scio.loadmat(pnam)    
+    p_inh_diag_samps_allMice = data.pop('p_inh_diag_samps_allMice').flatten() # nMice; each mouse: days x frs x frs
+    p_exc_diag_samps_allMice = data.pop('p_exc_diag_samps_allMice').flatten() # nMice; each mouse: days x frs x frs x excSamps
+    p_allN_diag_samps_allMice = data.pop('p_allN_diag_samps_allMice').flatten() # nMice; each mouse: days x frs x frs
+    
+else:
+    
+    data = scio.loadmat(cnam, variable_names=['classAcc_inh_allDays_alig_allMice', 'classAcc_allN_allDays_alig_allMice', 'classAcc_exc_allDays_alig_allMice',
+                                              'classAcc_inh_shfl_allDays_alig_allMice', 'classAcc_allN_shfl_allDays_alig_allMice', 'classAcc_exc_shfl_allDays_alig_allMice'])    
+    
+    classAcc_inh_allDays_alig_allMice = data.pop('classAcc_inh_allDays_alig_allMice').flatten() 
+    classAcc_allN_allDays_alig_allMice = data.pop('classAcc_allN_allDays_alig_allMice').flatten() 
+    classAcc_exc_allDays_alig_allMice = data.pop('classAcc_exc_allDays_alig_allMice').flatten() 
+    classAcc_inh_shfl_allDays_alig_allMice = data.pop('classAcc_inh_shfl_allDays_alig_allMice').flatten() 
+    classAcc_allN_shfl_allDays_alig_allMice = data.pop('classAcc_allN_shfl_allDays_alig_allMice').flatten() 
+    classAcc_exc_shfl_allDays_alig_allMice = data.pop('classAcc_exc_shfl_allDays_alig_allMice').flatten()     
+
+
+    ###########################################################################
+    ##%% ttest (each day, across samples) between data and shuffled for each time pair
+    p_inh_samps_allMice = []
+    p_exc_samps_allMice = []
+    p_allN_samps_allMice = []
+    
+    for im in range(len(mice)):
+        print 'mouse ', im
+        nfrs = len(time_aligned_allMice[im])    
+    
+        p_inh_samps_allDays = []
+        p_exc_samps_allDays = []
+        p_allN_samps_allDays = []
+            
+        for iday in range(numDaysGood[im]):
+            print 'day ', iday
+            p_inh = np.full((nfrs,nfrs), np.nan)
+            p_exc = np.full((nfrs,nfrs,numExcSamps), np.nan)
+            p_allN = np.full((nfrs,nfrs), np.nan)
+            
+            for ifr1 in range(nfrs):
+                for ifr2 in range(nfrs):
+                    
+                    # inh
+                    a = classAcc_inh_allDays_alig_allMice[im][iday,ifr1,ifr2,:]
+                    b = classAcc_inh_shfl_allDays_alig_allMice[im][iday,ifr1,ifr2,:]
+                    p_inh[ifr1,ifr2] = ttest2(np.array(a)[~np.isnan(a)], np.array(b)[~np.isnan(b)], tail=tail)
+            
+                    # allN
+                    a = classAcc_allN_allDays_alig_allMice[im][iday,ifr1,ifr2,:]
+                    b = classAcc_allN_shfl_allDays_alig_allMice[im][iday,ifr1,ifr2,:]
+                    p_allN[ifr1,ifr2] = ttest2(np.array(a)[~np.isnan(a)], np.array(b)[~np.isnan(b)], tail=tail)
+                    
+                    # exc ... compute p value across (trial) samps for each excSamp
+                    for iexc in range(numExcSamps):
+    #                    print iexc
+                        a = classAcc_exc_allDays_alig_allMice[im][iday,ifr1,ifr2,iexc,:]
+                        b = classAcc_exc_shfl_allDays_alig_allMice[im][iday,ifr1,ifr2,iexc,:]
+                        p_exc[ifr1,ifr2,iexc] = ttest2(np.array(a)[~np.isnan(a)], np.array(b)[~np.isnan(b)], tail=tail)
+        
+            # keep vars of all days
+            p_inh_samps_allDays.append(p_inh)
+            p_exc_samps_allDays.append(p_exc)
+            p_allN_samps_allDays.append(p_allN)
+        
+        # keep vars of all mice
+        p_inh_samps_allMice.append(p_inh_samps_allDays)
+        p_exc_samps_allMice.append(p_exc_samps_allDays)
+        p_allN_samps_allMice.append(p_allN_samps_allDays)
+                
+    
+    #from datetime import datetime
+    #nowStr = datetime.now().strftime('%y%m%d-%H%M%S')            
+    pnam = os.path.join(saveDir_allMice, 'pval_' + nta + os.path.basename(cnam))
+    scio.savemat(pnam, {'p_inh_samps_allMice':p_inh_samps_allMice, 'p_exc_samps_allMice':p_exc_samps_allMice, 'p_allN_samps_allMice':p_allN_samps_allMice})
+
+
+
+    ###########################################################################
+    ## Do ttest between max CA(trained and tested at ts) and CA(tested at ts but trained at tr)
+        # do this for each day, across samps
+    
+    alph = .05 # only if CA(ts,ts) is above chance we run ttest, otherwise we set p value to nan.
+    
+    p_inh_diag_samps_allMice = []
+    p_allN_diag_samps_allMice = []
+    p_exc_diag_samps_allMice = []
+    p_exc_diag_samps2_allMice = []
+    
+    for im in range(len(mice)):
+        
+        nfrs = len(time_aligned_allMice[im])    
+        
+        p_inh_samps_allDays = []
+        p_allN_samps_allDays = []
+        p_exc_samps_allDays = []
+        p_exc_samps2_allDays = []
+            
+        for iday in range(numDaysGood[im]):
+            p_inh = np.full((nfrs,nfrs), np.nan)
+            p_exc = np.full((nfrs,nfrs,numExcSamps), np.nan)
+            p_allN = np.full((nfrs,nfrs), np.nan)
+                
+            for ts in range(nfrs): # testing time point
+        
+                # run p value against the CA(trained and tested at ts)
+                bi = classAcc_inh_allDays_alig_allMice[im][iday,ts,ts] # tested and trained on the same time point            
+                b = classAcc_allN_allDays_alig_allMice[im][iday,ts,ts]       
+                be = np.full((numSamps, numExcSamps), np.nan)
+                for iexc in range(numExcSamps):
+                    be[:,iexc] = classAcc_exc_allDays_alig_allMice[im][iday,ts,ts,iexc]               
+                    
+                for tr in range(nfrs): # training time point
+                    ##### inh #####
+                    if p_inh_samps_allMice[im][iday][ts,ts] <= alph: # only if CA at ts,ts is significantly diff from shuffle, we evaluate whether it generalizes to other times as well.
+                        
+                        a = classAcc_inh_allDays_alig_allMice[im][iday,tr,ts]           
+                        p_inh[tr,ts] = sci.stats.ttest_ind(np.array(a)[~np.isnan(a)], np.array(bi)[~np.isnan(bi)])[1]
+            #            p_inh[tr,ts] = ttest2(a,bi,tail='left') # a < b
+                                   
+                    ##### allN #####
+                    if p_allN_samps_allMice[im][iday][ts,ts] <= alph: # only if CA at ts,ts is significantly diff from shuffle, we evaluate whether it generalizes to other times as well.
+                        a = classAcc_allN_allDays_alig_allMice[im][iday,tr,ts]            
+                        p_allN[tr,ts] = sci.stats.ttest_ind(np.array(a)[~np.isnan(a)], np.array(b)[~np.isnan(b)])[1]
+            #            p_allN[tr,ts] = ttest2(a,b,tail='left') # a < b
+    
+    
+                    ##### exc #####
+                    for iexc in range(numExcSamps):
+                        if p_exc_samps_allMice[im][iday][ts,ts,iexc] <= alph: # only if CA at ts,ts is significantly diff from shuffle, we evaluate whether it generalizes to other times as well.   
+                            a = classAcc_exc_allDays_alig_allMice[im][iday,tr,ts, iexc]
+                            p_exc[tr,ts,iexc] = sci.stats.ttest_ind(np.array(a)[~np.isnan(a)], np.array(be[:,iexc])[~np.isnan(be[:,iexc])])[1]
+                #            p_exc[tr,ts] = ttest2(a,be,tail='left') # a < b
+                    p_exc_avSamps = np.nanmean(p_exc,axis=-1)
+                    
+            # keep vars of all days
+            p_inh_samps_allDays.append(p_inh)
+            p_allN_samps_allDays.append(p_allN)
+            p_exc_samps_allDays.append(p_exc)
+            p_exc_samps2_allDays.append(p_exc_avSamps)        
+        
+        # keep vars of all mice
+        p_inh_diag_samps_allMice.append(p_inh_samps_allDays)
+        p_allN_diag_samps_allMice.append(p_allN_samps_allDays)
+        p_exc_diag_samps_allMice.append(p_exc_samps_allDays)    
+        p_exc_diag_samps2_allMice.append(p_exc_samps2_allDays)
+    
+    p_inh_diag_samps_allMice = np.array(p_inh_diag_samps_allMice)
+    p_allN_diag_samps_allMice = np.array(p_allN_diag_samps_allMice)
+    p_exc_diag_samps_allMice = np.array(p_exc_diag_samps_allMice)
+    p_exc_diag_samps2_allMice = np.array(p_exc_diag_samps2_allMice)
+    
+    
+    pnam = os.path.join(saveDir_allMice, 'pval_vsDiag_' + nta + os.path.basename(cnam))
+    scio.savemat(pnam, {'p_inh_diag_samps_allMice':p_inh_diag_samps_allMice, 'p_exc_diag_samps_allMice':p_exc_diag_samps_allMice, 'p_allN_diag_samps_allMice':p_allN_diag_samps_allMice})
+
 
 
 #%% Set averages of CA
@@ -349,7 +698,7 @@ classAcc_exc_shfl_allDays_alig_avSamps_avDays_allMice = np.array([np.mean(classA
 
 ######%% SD across days for each mouse
 
-#AVERAGE only the last 10 days! in case naive vs trained makes a difference!
+# AVERAGE only the last 10 days! in case naive vs trained makes a difference!
 #[np.max([-10,-len(days_allMice[im])]):]
     
 classAcc_allN_allDays_alig_avSamps_sdDays_allMice = np.array([np.std(classAcc_allN_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
@@ -381,8 +730,23 @@ def CAfractChangeWhenTrainedAtOtherTimes(top, p_samps): # drop measured as fract
             topd[:,ifr] = top[:,ifr] / top[ifr,ifr]  # this is easier to understand ... show fraction of max performance!                  
     return topd
 
+"""
+def CAfractChangeWhenTrainedAtOtherTimes(top, p_samps): # drop measured as fraction of max CA; in CA when trained at a different time than the testing time
+    topcopy = top+0
+    topd = np.full((len(top),len(top)), np.nan)
+    for ifr in range(len(top)):
+        if p_samps[ifr,ifr] <= alph: # do not include time points whose max performance (at ts) is chance, it doesnt make sense to see how good decoders trained at other time points can decode choice at ts.
+            for ifr0 in range(len(top)):
+                if p_samps[ifr0,ifr] > alph:
+#                    print topcopy[ifr0,ifr] 
+                    topcopy[ifr0,ifr] = 50
+#                    print topcopy[ifr0,ifr]                     
+                topd[ifr0,ifr] = topcopy[ifr0,ifr] / topcopy[ifr,ifr]  # this is easier to understand ... show fraction of max performance!                  
+    return topd
+"""
 
-######### change    
+################## CA - max CA ##################   
+#### data
 classAcc_changeFromMax_allN_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_allN_allDays_alig_avSamps_allMice)
 classAcc_changeFromMax_inh_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_inh_allDays_alig_avSamps_allMice)
 classAcc_changeFromMax_exc_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_exc_allDays_alig_avSamps_allMice)
@@ -392,35 +756,94 @@ for im in range(len(mice)):
         classAcc_changeFromMax_allN_allDays_alig_avSamps_allMice[im][iday] = CAchangeWhenTrainedAtOtherTimes(classAcc_allN_allDays_alig_avSamps_allMice[im][iday], p_allN_samps_allMice[im][iday])
         classAcc_changeFromMax_inh_allDays_alig_avSamps_allMice[im][iday] = CAchangeWhenTrainedAtOtherTimes(classAcc_inh_allDays_alig_avSamps_allMice[im][iday], p_inh_samps_allMice[im][iday])
         for iexc in range(numExcSamps):
-            classAcc_changeFromMax_exc_allDays_alig_avSamps_allMice[im][iday,:,:,iexc] = CAchangeWhenTrainedAtOtherTimes(classAcc_exc_allDays_alig_avSamps_allMice[im][iday][:,:,iexc], p_exc_samps_allMice[im][iday,:,:,iexc])
+            classAcc_changeFromMax_exc_allDays_alig_avSamps_allMice[im][iday,:,:,iexc] = CAchangeWhenTrainedAtOtherTimes\
+            (classAcc_exc_allDays_alig_avSamps_allMice[im][iday][:,:,iexc], p_exc_samps_allMice[im][iday][:,:,iexc])
 
 # exc: average across exc samps for each day
 classAcc_changeFromMax_exc_allDays_alig_avSamps2_allMice = np.array([np.nanmean(classAcc_changeFromMax_exc_allDays_alig_avSamps_allMice[im],axis=-1) for im in range(len(mice))])
-
-
-
-######### fract max 
-classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_allN_allDays_alig_avSamps_allMice)
-classAcc_fractChangeFromMax_inh_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_inh_allDays_alig_avSamps_allMice)
-classAcc_fractChangeFromMax_exc_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_exc_allDays_alig_avSamps_allMice)
+    
+"""
+#### shfl
+classAcc_changeFromMax_allN_shfl_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_allN_shfl_allDays_alig_avSamps_allMice)
+classAcc_changeFromMax_inh_shfl_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_inh_shfl_allDays_alig_avSamps_allMice)
+classAcc_changeFromMax_exc_shfl_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_exc_shfl_allDays_alig_avSamps_allMice)
 # outputs are: days x frs x frs  
 for im in range(len(mice)):
     for iday in range(numDaysGood[im]):
-        classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_allMice[im][iday] = CAfractChangeWhenTrainedAtOtherTimes(classAcc_allN_allDays_alig_avSamps_allMice[im][iday], p_allN_samps_allMice[im][iday])
-        classAcc_fractChangeFromMax_inh_allDays_alig_avSamps_allMice[im][iday] = CAfractChangeWhenTrainedAtOtherTimes(classAcc_inh_allDays_alig_avSamps_allMice[im][iday], p_inh_samps_allMice[im][iday])
+        classAcc_changeFromMax_allN_shfl_allDays_alig_avSamps_allMice[im][iday] = CAchangeWhenTrainedAtOtherTimes(classAcc_allN_shfl_allDays_alig_avSamps_allMice[im][iday], p_allN_samps_allMice[im][iday])
+        classAcc_changeFromMax_inh_shfl_allDays_alig_avSamps_allMice[im][iday] = CAchangeWhenTrainedAtOtherTimes(classAcc_inh_shfl_allDays_alig_avSamps_allMice[im][iday], p_inh_samps_allMice[im][iday])
         for iexc in range(numExcSamps):
-            classAcc_fractChangeFromMax_exc_allDays_alig_avSamps_allMice[im][iday,:,:,iexc] = CAfractChangeWhenTrainedAtOtherTimes(classAcc_exc_allDays_alig_avSamps_allMice[im][iday][:,:,iexc], p_exc_samps_allMice[im][iday,:,:,iexc])
+            classAcc_changeFromMax_exc_shfl_allDays_alig_avSamps_allMice[im][iday,:,:,iexc] = CAchangeWhenTrainedAtOtherTimes\
+            (classAcc_exc_shfl_allDays_alig_avSamps_allMice[im][iday][:,:,iexc], p_exc_samps_allMice[im][iday][:,:,iexc])
+
+# exc: average across exc samps for each day
+classAcc_changeFromMax_exc_shfl_allDays_alig_avSamps2_allMice = np.array([np.nanmean(classAcc_changeFromMax_exc_shfl_allDays_alig_avSamps_allMice[im],axis=-1) for im in range(len(mice))])
+"""
+
+
+################## fract max ##################
+#### data
+classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_allN_allDays_alig_avSamps_allMice0)
+classAcc_fractChangeFromMax_inh_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_inh_allDays_alig_avSamps_allMice0)
+classAcc_fractChangeFromMax_exc_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_exc_allDays_alig_avSamps_allMice0)
+# outputs are: days x frs x frs  
+for im in range(len(mice)):
+    for iday in range(numDaysGood[im]):
+        classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_allMice[im][iday] = CAfractChangeWhenTrainedAtOtherTimes(classAcc_allN_allDays_alig_avSamps_allMice0[im][iday], p_allN_samps_allMice[im][iday])
+        classAcc_fractChangeFromMax_inh_allDays_alig_avSamps_allMice[im][iday] = CAfractChangeWhenTrainedAtOtherTimes(classAcc_inh_allDays_alig_avSamps_allMice0[im][iday], p_inh_samps_allMice[im][iday])
+        for iexc in range(numExcSamps):
+            classAcc_fractChangeFromMax_exc_allDays_alig_avSamps_allMice[im][iday,:,:,iexc] = CAfractChangeWhenTrainedAtOtherTimes\
+            (classAcc_exc_allDays_alig_avSamps_allMice0[im][iday][:,:,iexc], p_exc_samps_allMice[im][iday][:,:,iexc])
 
 # exc: average across exc samps for each day
 classAcc_fractChangeFromMax_exc_allDays_alig_avSamps2_allMice = np.array([np.nanmean(classAcc_fractChangeFromMax_exc_allDays_alig_avSamps_allMice[im],axis=-1) for im in range(len(mice))])
 
+"""
+#### shfl
+classAcc_fractChangeFromMax_allN_shfl_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_allN_shfl_allDays_alig_avSamps_allMice)
+classAcc_fractChangeFromMax_inh_shfl_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_inh_shfl_allDays_alig_avSamps_allMice)
+classAcc_fractChangeFromMax_exc_shfl_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_exc_shfl_allDays_alig_avSamps_allMice)
+# outputs are: days x frs x frs  
+for im in range(len(mice)):
+    for iday in range(numDaysGood[im]):
+        classAcc_fractChangeFromMax_allN_shfl_allDays_alig_avSamps_allMice[im][iday] = CAfractChangeWhenTrainedAtOtherTimes(classAcc_allN_shfl_allDays_alig_avSamps_allMice[im][iday], p_allN_samps_allMice[im][iday])
+        classAcc_fractChangeFromMax_inh_shfl_allDays_alig_avSamps_allMice[im][iday] = CAfractChangeWhenTrainedAtOtherTimes(classAcc_inh_shfl_allDays_alig_avSamps_allMice[im][iday], p_inh_samps_allMice[im][iday])
+        for iexc in range(numExcSamps):
+            classAcc_fractChangeFromMax_exc_shfl_allDays_alig_avSamps_allMice[im][iday,:,:,iexc] = CAfractChangeWhenTrainedAtOtherTimes\
+            (classAcc_exc_shfl_allDays_alig_avSamps_allMice[im][iday][:,:,iexc], p_exc_samps_allMice[im][iday][:,:,iexc])
+
+# exc: average across exc samps for each day
+classAcc_fractChangeFromMax_exc_shfl_allDays_alig_avSamps2_allMice = np.array([np.nanmean(classAcc_fractChangeFromMax_exc_shfl_allDays_alig_avSamps_allMice[im],axis=-1) for im in range(len(mice))])
+
+
+#### data - shfl
+classAcc_fractChangeFromMax_allN_dms_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_allN_allDays_alig_avSamps_allMice)
+classAcc_fractChangeFromMax_inh_dms_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_inh_allDays_alig_avSamps_allMice)
+classAcc_fractChangeFromMax_exc_dms_allDays_alig_avSamps_allMice = copy.deepcopy(classAcc_exc_allDays_alig_avSamps_allMice)
+# outputs are: days x frs x frs  
+for im in range(len(mice)):
+    for iday in range(numDaysGood[im]):
+        classAcc_fractChangeFromMax_allN_dms_allDays_alig_avSamps_allMice[im][iday] = CAfractChangeWhenTrainedAtOtherTimes\
+            (classAcc_allN_allDays_alig_avSamps_allMice[im][iday] - classAcc_allN_shfl_allDays_alig_avSamps_allMice[im][iday] , p_allN_samps_allMice[im][iday])
+        
+        classAcc_fractChangeFromMax_inh_dms_allDays_alig_avSamps_allMice[im][iday] = CAfractChangeWhenTrainedAtOtherTimes\
+            (classAcc_inh_allDays_alig_avSamps_allMice[im][iday] - classAcc_inh_shfl_allDays_alig_avSamps_allMice[im][iday] , p_inh_samps_allMice[im][iday])
+            
+        for iexc in range(numExcSamps):
+            classAcc_fractChangeFromMax_exc_dms_allDays_alig_avSamps_allMice[im][iday,:,:,iexc] = CAfractChangeWhenTrainedAtOtherTimes\
+            (classAcc_exc_allDays_alig_avSamps_allMice[im][iday][:,:,iexc] - classAcc_exc_shfl_allDays_alig_avSamps_allMice[im][iday][:,:,iexc], p_exc_samps_allMice[im][iday][:,:,iexc])
+
+# exc: average across exc samps for each day
+classAcc_fractChangeFromMax_exc_dms_allDays_alig_avSamps2_allMice = np.array([np.nanmean(classAcc_fractChangeFromMax_exc_dms_allDays_alig_avSamps_allMice[im],axis=-1) for im in range(len(mice))])
+"""
+
 
 #%% Average fract max CA across days for each mouse
 
-#AVERAGE only the last 10 days! in case naive vs trained makes a difference!
+# AVERAGE only the last 10 days! in case naive vs trained makes a difference!
 #[np.max([-10,-len(days_allMice[im])]):]
 
-# cahnge
+# change
 classAcc_changeFromMax_allN_allDays_alig_avSamps_avDays_allMice = np.array([np.nanmean(classAcc_changeFromMax_allN_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
 classAcc_changeFromMax_inh_allDays_alig_avSamps_avDays_allMice = np.array([np.nanmean(classAcc_changeFromMax_inh_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
 classAcc_changeFromMax_exc_allDays_alig_avSamps_avDays_allMice = np.array([np.nanmean(classAcc_changeFromMax_exc_allDays_alig_avSamps2_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
@@ -429,6 +852,7 @@ classAcc_changeFromMax_exc_allDays_alig_avSamps_avDays_allMice = np.array([np.na
 classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_avDays_allMice = np.array([np.nanmean(classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
 classAcc_fractChangeFromMax_inh_allDays_alig_avSamps_avDays_allMice = np.array([np.nanmean(classAcc_fractChangeFromMax_inh_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
 classAcc_fractChangeFromMax_exc_allDays_alig_avSamps_avDays_allMice = np.array([np.nanmean(classAcc_fractChangeFromMax_exc_allDays_alig_avSamps2_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
+
 
 
 #%% PLOTS of each mouse
@@ -441,6 +865,7 @@ classAcc_fractChangeFromMax_exc_allDays_alig_avSamps_avDays_allMice = np.array([
 #%% Plot day-averaged heatmaps of CA, CA-max(CA), CA/max(CA) when decoder is trained and tested at all time points (only plot data)
 
 cblab012 = 'Class accuracy (%)', 'Class accuracy - max (%)', 'Class accuracy / max' #'Fract change in max class accuracy' 
+#### Data
 figns = 'classAccur', 'classAccurMinusMax', 'classAccurFractMax'
 
 # plot class accuracies
@@ -457,10 +882,47 @@ plotAngInhExcAllN(classAcc_fractChangeFromMax_inh_allDays_alig_avSamps_allMice, 
 plotAngInhExcAllN(classAcc_changeFromMax_inh_allDays_alig_avSamps_allMice, classAcc_changeFromMax_exc_allDays_alig_avSamps2_allMice, classAcc_changeFromMax_allN_allDays_alig_avSamps_allMice, cblab012[1], figns[1], 1, 1, 1)
 
 
+"""
+#### Shfl
+figns = 'classAccur_shfl', 'classAccurMinusMax_shfl', 'classAccurFractMax_shfl'
+
+# plot class accuracies
+plotAngInhExcAllN(classAcc_inh_shfl_allDays_alig_avSamps_allMice, classAcc_exc_shfl_allDays_alig_avSamps2_allMice, classAcc_allN_shfl_allDays_alig_avSamps_allMice, cblab012[0], figns[0], 1, 1, 1)
+
+
+# plot class accur as a fraction of max class accuracy (trained on the same t as tested)
+# non-sig CAs (rel2 shfl) are set to nan, and not included in the plot.
+plotAngInhExcAllN(classAcc_fractChangeFromMax_inh_shfl_allDays_alig_avSamps_allMice, classAcc_fractChangeFromMax_exc_shfl_allDays_alig_avSamps2_allMice, classAcc_fractChangeFromMax_allN_shfl_allDays_alig_avSamps_allMice, cblab012[2], figns[2], 1, 1, 1)
+
+
+# plot change in class accuracies rel2 max (trained on the same t as tested)
+# non-sig CAs (rel2 shfl) are set to nan, and not included in the plot.
+plotAngInhExcAllN(classAcc_changeFromMax_inh_shfl_allDays_alig_avSamps_allMice, classAcc_changeFromMax_exc_shfl_allDays_alig_avSamps2_allMice, classAcc_changeFromMax_allN_shfl_allDays_alig_avSamps_allMice, cblab012[1], figns[1], 1, 1, 1)
+
+
+
+#### data - shfl
+figns = 'classAccurFractMax_dms'
+
+# plot class accur as a fraction of max class accuracy (trained on the same t as tested)
+# non-sig CAs (rel2 shfl) are set to nan, and not included in the plot.
+plotAngInhExcAllN(classAcc_fractChangeFromMax_inh_dms_allDays_alig_avSamps_allMice, classAcc_fractChangeFromMax_exc_dms_allDays_alig_avSamps2_allMice, classAcc_fractChangeFromMax_allN_dms_allDays_alig_avSamps_allMice, cblab012[2], figns[2], 1, 1, 1)
+
+
+
+#### data / shfl
+figns = 'classAccurFractMax_ddivs'
+# plot class accur as a fraction of max class accuracy (trained on the same t as tested)
+# non-sig CAs (rel2 shfl) are set to nan, and not included in the plot.
+plotAngInhExcAllN(classAcc_fractChangeFromMax_inh_allDays_alig_avSamps_allMice / classAcc_fractChangeFromMax_inh_shfl_allDays_alig_avSamps_allMice, \
+                  classAcc_fractChangeFromMax_exc_allDays_alig_avSamps2_allMice / classAcc_fractChangeFromMax_exc_shfl_allDays_alig_avSamps2_allMice, \
+                  classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_allMice / classAcc_fractChangeFromMax_allN_shfl_allDays_alig_avSamps_allMice, cblab012[2], figns[2], 1, 1, 1)
+"""
+
 
 #%%
 ###########################################
-########### P value, data vs shfl ###########
+########### P value, across days, data vs shfl for each time pair ###########
 ###########################################
 
 #%% Set p value (data vs shfl) for each pair of time points across days: across all days is CA of decoder trained at time t_i and tested at time t_j different from the trial-label shuffled case?
@@ -501,16 +963,6 @@ for im in range(len(mice)):
     p_allN_allMice.append(p_allN)
 
 
-
-################################################ 
-##%% Plots of p value: data vs shfl, across days
-
-plot_CA_diff_fractDiff = 0
-cblab = 'P (data vs shfl)'
-namf = 'p_data_shfl'
-plotAngInhExcAllN(p_inh_allMice, p_exc_allMice, p_allN_allMice, cblab, namf, 0)
-
-
 ################################################ 
 # Now set the significancy matrix ... CA at which time points is siginificantly different from shuffle.
 
@@ -520,6 +972,16 @@ p_inh_allMice_01 = [x <= alph for x in p_inh_allMice]
 p_exc_allMice_01 = [x <= alph for x in p_exc_allMice]
 p_allN_allMice_01 = [x <= alph for x in p_allN_allMice]
 
+
+#%% Plots of p value: data vs shfl, across days
+
+# pval
+plot_CA_diff_fractDiff = 0
+cblab = 'P (data vs shfl)'
+namf = 'p_data_shfl'
+plotAngInhExcAllN(p_inh_allMice, p_exc_allMice, p_allN_allMice, cblab, namf, 0)
+
+# sig or not
 cblab = 'Sig (data vs shfl)'
 namf = 'sig_p'+str(alph)[2:]+'_data_shfl'
 plotAngInhExcAllN(p_inh_allMice_01, p_exc_allMice_01, p_allN_allMice_01, cblab, namf, 0)
@@ -527,13 +989,17 @@ plotAngInhExcAllN(p_inh_allMice_01, p_exc_allMice_01, p_allN_allMice_01, cblab, 
 
 
 
+#%%
+######################################################
+########### Decoder generalizes to other times? ###########
+######################################################
+    
 
 #%%
 #################################################################  
-########### P value : CA(trained and tested at ts) vs ########### 
+########### P value (across days): CA(trained and tested at ts) vs ########### 
 ###########  CA(tested at ts but trained at tr) ###########
 #################################################################  
-
 
 #%% Do ttest between max CA(trained and tested at ts) and CA(tested at ts but trained at tr)
     # do this across days
@@ -600,34 +1066,196 @@ for im in range(len(mice)):
     p_allN_diag_allMice.append(p_allN)
     
 
-
-#%% Plot above computed p values (between max CA(trained and tested at ts) and CA(tested at ts but trained at tr))
-
-cblab = 'p (CA diagonal vs t)'
-namf = 'p_maxCA_otherTimes'
-plotAngInhExcAllN(p_inh_diag_allMice, p_exc_diag_allMice, p_allN_diag_allMice, cblab, namf, 0)
-
-
 ################################################ 
 # Now set the significancy matrix ... 
 ################################################
 alph = .05 # p value for significancy
 
+# if vars below are 0 it means CA(tested at ts but trained at tr) is NOT significantly different from max CA(trained and tested at ts) => stable
+# if vars below are 1 it means CA(tested at ts but trained at tr) IS significantly different from max CA(trained and tested at ts) => unstable
 p_inh_diag_allMice_01 = [x <= alph for x in p_inh_diag_allMice]
 p_exc_diag_allMice_01 = [x <= alph for x in p_exc_diag_allMice]
 p_allN_diag_allMice_01 = [x <= alph for x in p_allN_diag_allMice]
 
 
+#%% Plot above computed p values (between max CA(trained and tested at ts) and CA(tested at ts but trained at tr))
+
+#### Plot p vals
+cblab = 'p (CA diagonal vs t)'
+namf = 'p_maxCA_otherTimes'
+plotAngInhExcAllN(p_inh_diag_allMice, p_exc_diag_allMice, p_allN_diag_allMice, cblab, namf, 0)
+
+#### Plot significant or not
 cblab = 'sig (CA diagonal vs t)'
 namf = 'sig_maxCA_otherTimes'
 plotAngInhExcAllN(p_inh_diag_allMice_01, p_exc_diag_allMice_01, p_allN_diag_allMice_01, cblab, namf, 0)
 
 
+#%% Errorbar of the above analysis at time -1: sig_maxCA_otherTimes
+
+# For how long each decoder is stable (ie duration over which decoder can be trained to acheive CA that is NOT significantly different from maxCA
+stab_inh = regressBins*frameLength*np.array([np.sum(p_inh_diag_allMice_01[im]==0, axis=0) for im in range(len(mice))])
+stab_exc = regressBins*frameLength*np.array([np.sum(p_exc_diag_allMice_01[im]==0, axis=0) for im in range(len(mice))])
+stab_allN = regressBins*frameLength*np.array([np.sum(p_allN_diag_allMice_01[im]==0, axis=0) for im in range(len(mice))])
+yls = 'Trained decoder stab dur (ms)'
+namf = 'sig_maxCA_otherTimes'
+
+# set the sum computed above to nan if p value was nan (otherwise it will be 0)
+for im in range(len(mice)):
+    stab_inh[im][np.sum(~np.isnan(p_inh_diag_allMice[im]), axis=0)==0] = np.nan
+    stab_exc[im][np.sum(~np.isnan(p_exc_diag_allMice[im]), axis=0)==0] = np.nan
+    stab_allN[im][np.sum(~np.isnan(p_allN_diag_allMice[im]), axis=0)==0] = np.nan
+
+
+plotErrBarStabDur()
+
+
+
+#%%
+#################################################################  
+########### P value (across samps for each day): CA(trained and tested at ts) vs ########### 
+###########  CA(tested at ts but trained at tr) ###########
+#################################################################  
+
+# p vals are loaded above 
+
+#%%    
+################################################ 
+# Now set the significancy matrix ... 
+################################################
+alph = .05 # p value for significancy
+
+# if vars below are 0 it means (for each day) CA(tested at ts but trained at tr) is NOT significantly different from max CA(trained and tested at ts) => stable
+# if vars below are 1 it means (for each day) CA(tested at ts but trained at tr) IS significantly different from max CA(trained and tested at ts) => unstable
+p_inh_diag_samps_allMice_01 = []
+p_allN_diag_samps_allMice_01 = []
+p_exc_diag_samps_allMice_01 = []
+
+for im in range(len(mice)):
+    p_inh_diag_samps_allMice_01m = np.full(np.shape(p_inh_diag_samps_allMice[im]), np.nan)
+    p_allN_diag_samps_allMice_01m = np.full(np.shape(p_allN_diag_samps_allMice[im]), np.nan)
+    p_exc_diag_samps_allMice_01m = np.full(np.shape(p_exc_diag_samps_allMice[im]), np.nan)
+    
+    for iday in range(numDaysGood[im]):
+        p_inh_diag_samps_allMice_01m[iday] = [x <= alph for x in p_inh_diag_samps_allMice[im][iday]]
+        p_allN_diag_samps_allMice_01m[iday] = [x <= alph for x in p_allN_diag_samps_allMice[im][iday]]
+        p_exc_diag_samps_allMice_01m[iday] = [x <= alph for x in p_exc_diag_samps_allMice[im][iday]]
+        # set to nan those that are nan in p
+        p_inh_diag_samps_allMice_01m[iday][np.isnan(p_inh_diag_samps_allMice[im][iday])] = np.nan
+        p_allN_diag_samps_allMice_01m[iday][np.isnan(p_allN_diag_samps_allMice[im][iday])] = np.nan
+        p_exc_diag_samps_allMice_01m[iday][np.isnan(p_exc_diag_samps_allMice[im][iday])] = np.nan
+        
+    p_inh_diag_samps_allMice_01.append(p_inh_diag_samps_allMice_01m)
+    p_allN_diag_samps_allMice_01.append(p_allN_diag_samps_allMice_01m)
+    p_exc_diag_samps_allMice_01.append(p_exc_diag_samps_allMice_01m)
+
+
+#%% Average of above values across days [whether for each day CA(tr,ts) is within 1se of CA(ts,ts) across samps]
+
+p_inh_diag_samps_01_aveDays_allMice = [np.nanmean(p_inh_diag_samps_allMice_01[im],axis=0) for im in range(len(mice))]
+p_allN_diag_samps_01_aveDays_allMice = [np.nanmean(p_allN_diag_samps_allMice_01[im],axis=0) for im in range(len(mice))]
+# exc: average across days and exc samps
+p_exc_diag_samps_01_aveDays_allMice = [np.nanmean(p_exc_diag_samps_allMice_01[im],axis=(0,-1)) for im in range(len(mice))]
+#sameCA_exc_samps_aveDays_allMice = [np.nanmean(sameCA_exc_samps2_allMice[im],axis=0) for im in range(len(mice))]
+# use one random exc samp
+#r = rng.permutation(numExcSamps)[0]
+#sameCA_exc_samps_aveDays_allMice = [np.nanmean(np.array(sameCA_exc_samps_allMice[im])[:,:,:,r],axis=0) for im in range(len(mice))]
+
+'''
+for iday in range(numDaysGood[im]): 
+    plt.figure()
+    plt.imshow(classAcc_inh_allDays_alig_avSamps_allMice[im][iday]); plt.colorbar()
+    plt.imshow(sameCA_exc_samps2_allMice[im][iday])
+'''
+
+#%% For how long trained decoders have CA similar to max CA
+            # Compute for each day, at each time point, the duration of stability (ie to how many other time points the decoder generalizes)
+stab_p_inh_eachDay_allMice = []
+stab_p_exc_eachDay_allMice = []
+stab_p_allN_eachDay_allMice = []
+
+for im in range(len(mice)):
+    stab_inh_eachDay = np.full((numDaysGood[im], np.shape(p_inh_diag_samps_allMice[im])[1]), np.nan)    
+    stab_allN_eachDay = np.full((numDaysGood[im], np.shape(p_inh_diag_samps_allMice[im])[1]), np.nan)
+    stab_exc_eachDay = np.full((numDaysGood[im], np.shape(p_inh_diag_samps_allMice[im])[1], numExcSamps), np.nan)
+    
+    for iday in range(numDaysGood[im]):
+        # sum across training frames
+        stab_inh_eachDay[iday] = regressBins*frameLength * np.sum(p_inh_diag_samps_allMice_01[im][iday]==0, axis=0) # days x testingFrs        
+        stab_allN_eachDay[iday] = regressBins*frameLength * np.sum(p_allN_diag_samps_allMice_01[im][iday]==0, axis=0) # days x testingFrs        
+        stab_exc_eachDay[iday] = regressBins*frameLength * np.sum(p_exc_diag_samps_allMice_01[im][iday]==0, axis=0) # days x testingFrs x excSamps
+        # set to nan those that are nan in p
+        stab_inh_eachDay[iday][np.sum(~np.isnan(p_inh_diag_samps_allMice[im][iday]), axis=0)==0] = np.nan
+        stab_allN_eachDay[iday][np.sum(~np.isnan(p_allN_diag_samps_allMice[im][iday]), axis=0)==0] = np.nan
+        stab_exc_eachDay[iday][np.sum(~np.isnan(p_exc_diag_samps_allMice[im][iday]), axis=0)==0] = np.nan
+        
+    stab_p_inh_eachDay_allMice.append(stab_inh_eachDay)
+    stab_p_allN_eachDay_allMice.append(stab_allN_eachDay)
+    stab_p_exc_eachDay_allMice.append(stab_exc_eachDay)
+
+stab_p_inh_eachDay_allMice = np.array(stab_p_inh_eachDay_allMice)
+stab_p_allN_eachDay_allMice = np.array(stab_p_allN_eachDay_allMice)
+stab_p_exc_eachDay_allMice = np.array(stab_p_exc_eachDay_allMice) # days x testingFrs x excSamps
+
+# Average of fract days with stable decoders across time points (ie its CA when tested on a different time point is within 1 std)
+#stab_inh = np.array([np.nanmean(sameCA_inh_samps_aveDays_allMice[im], axis=1) for im in range(len(mice))])
+#stab_exc = np.array([np.nanmean(sameCA_exc_samps_aveDays_allMice[im], axis=1) for im in range(len(mice))])
+#stab_allN = np.array([np.nanmean(sameCA_allN_samps_aveDays_allMice[im], axis=1) for im in range(len(mice))])
 
     
+#%% Errorbar of the above analysis at time -1: stability duration, allmice, ave and se across days. (duration that a decoder can be trained to perform significantly not different from CA(ts,ts)) in time -1 for each day, and plot it across days!
+
+# On average across days, for how long each decoder generalizes.
+stab_inh = np.array([np.nanmean(stab_p_inh_eachDay_allMice[im],axis=0) for im in range(len(mice))])
+stab_allN = np.array([np.nanmean(stab_p_allN_eachDay_allMice[im],axis=0) for im in range(len(mice))])
+# exc: average across days and exc samps
+stab_exc = np.array([np.nanmean(stab_p_exc_eachDay_allMice[im],axis=(0,-1)) for im in range(len(mice))])
+# exc: average across exc samps
+stab_exc_aveExcSamps = np.array([np.nanmean(stab_p_exc_eachDay_allMice[im],axis=-1) for im in range(len(mice))])
+# use one random exc samp
+#r = rng.permutation(numExcSamps)[0]
+#stab_exc = np.array([np.nanmean(np.array(stab_exc_eachDay_allMice[im])[:,:,r],axis=0) for im in range(len(mice))])
+
+nValidDays_inh = np.full(len(mice), np.nan)
+nValidDays_allN = np.full(len(mice), np.nan)
+nValidDays_exc = np.full((numExcSamps,len(mice)), np.nan)
+for im in range(len(mice)):
+    a = stab_p_inh_eachDay_allMice[im][:, nPreMin_allMice[im]-1]   
+    nValidDays_inh[im] = sum(~np.isnan(a))
+    #
+    a = stab_p_allN_eachDay_allMice[im][:, nPreMin_allMice[im]-1]   
+    nValidDays_allN[im] = sum(~np.isnan(a))
+    #
+    a = stab_p_exc_eachDay_allMice[im][:, nPreMin_allMice[im]-1]   
+    nValidDays_exc[:,im] = sum(~np.isnan(a))
+# average across excSamps
+nValidDays_exc = np.round(np.mean(nValidDays_exc, axis=0))
+
+# Standard error across days
+# # # NOTE: below has issues but fine for the figure ... nValidDays_inh should be computed for each frame; above you only computed it for frame -1... but that's also what you plot below... so the plot is fine.
+stab_inh_se = np.array([np.nanstd(stab_p_inh_eachDay_allMice[im],axis=0)/np.sqrt(nValidDays_inh[im]) for im in range(len(mice))])
+stab_allN_se = np.array([np.nanstd(stab_p_allN_eachDay_allMice[im],axis=0)/np.sqrt(nValidDays_allN[im]) for im in range(len(mice))])
+#stab_exc_se = np.array([np.nanstd(stab_p_exc_eachDay_allMice[im],(axis=0,-1))/np.sqrt(nValidDays_exc[im]) for im in range(len(mice))])
+stab_exc_se = np.array([np.nanstd(stab_exc_aveExcSamps[im],axis=0)/np.sqrt(nValidDays_exc[im]) for im in range(len(mice))])
+
+namf = 'sig_maxCA_otherTimes_samps'
+plotErrBarStabDur(doSe=1)
+
+
+#%% Plot of the above analysis [whether for each day CA(tr,ts) is significantly different from CA(ts,ts) across samps]
+
+#### Plot significant or not
+cblab = 'Fract sig (CA diagonal vs t) across days'
+namf = 'sig_maxCA_otherTimes_samps'
+plotAngInhExcAllN(p_inh_diag_samps_01_aveDays_allMice, p_exc_diag_samps_01_aveDays_allMice, p_allN_diag_samps_01_aveDays_allMice, cblab, namf, 1, -1)
+    
+
+
+
 #%%
 ######################################################
-########### Decoder generalizes to other times? ###########
+########### Is CA(trained at tr, tested at ts) within 
+######1 std of CA(trained and tested at ts)?  ###########
 ######################################################
     
 #%% Is CA(trained at tr, tested at ts) within 1 std of CA(trained and tested at ts) 
@@ -687,6 +1315,11 @@ for im in range(len(mice)):
 cblab = 'CA(tr,ts) with 1sd of CA(ts,ts)' #'Diagonal decoder generalizes?',
 namf = 'classAccurWin1sdMax'
 
+s1,s2,s3,s4 = plotAngInhExcAllN(sameCA_inh_diag_allMice, sameCA_exc_diag_allMice, sameCA_allN_diag_allMice, cblab, namf, 1)
+
+
+#%% Errorbar of the above analysis at time -1: stability duration
+
 # For how long each decoder is stable (ie duration over which decoder can be trained to acheive CA within 1sd of max performance on the testing time
         # for the following you need to sum over axis=1... but not sure if it makes sense given that above you do the analysis for each column (ie comparing CA(:,ts) w CA(ts,ts))
         ######################## For how long each decoder is stable (ie its CA when tested on a different time point is within 1 std)
@@ -694,8 +1327,9 @@ stab_inh = regressBins*frameLength*np.array([np.sum(sameCA_inh_diag_allMice[im],
 stab_exc = regressBins*frameLength*np.array([np.sum(sameCA_exc_diag_allMice[im], axis=0) for im in range(len(mice))])
 stab_allN = regressBins*frameLength*np.array([np.sum(sameCA_allN_diag_allMice[im], axis=0) for im in range(len(mice))])
 yls = 'Trained decoder stab dur (ms)'
+namf = 'classAccurWin1sdMax'
 
-s1,s2,s3,s4 = plotAngInhExcAllN(sameCA_inh_diag_allMice, sameCA_exc_diag_allMice, sameCA_allN_diag_allMice, cblab, namf, 1)
+plotErrBarStabDur()
 
 
 """
@@ -717,7 +1351,7 @@ for im in range(len(mice)):
 
     
 
-# Get the lower triangle, ie after hte testing time point for how long trained decoders will perform well
+# Get the lower triangle, ie after the testing time point for how long trained decoders will perform well
 # not sure how useful... ofcourse at the lower right corner there is only 1 point so dur will be 100ms
 stab_inh = regressBins*frameLength*np.array([np.sum(np.tril(sameCA_inh_diag_allMice[im], k=0), axis=0) for im in range(len(mice))])
 stab_exc = regressBins*frameLength*np.array([np.sum(np.tril(sameCA_exc_diag_allMice[im], k=0), axis=0) for im in range(len(mice))])
@@ -735,11 +1369,9 @@ for im in range(len(mice)):
     
 """
 
-
-
 #%% Same as above but done for each day, across samps... ie is CA at other times points similar (ie within mean - 1 se across samps) of the diagonal CA. This is done for each day, then an average is formed across days
 
-fractStd = 1
+fractStd = 2 #1
 alph = .05 # if diagonal CA is sig (comapred to shfl), then see if it generalizes or not... othereise dont use that time point for analysis.
 
 sameCA_inh_samps_allMice = []
@@ -775,18 +1407,18 @@ for im in range(len(mice)):
                 
             for tr in range(nfrs): # training time point
                 # inh
-                if p_inh_samps_allMice[im][iday,ts,ts] <= alph: # only if CA at ifr1,ifr1 is significantly diff from shuffle, we evaluate whether it generalizes to other times as well.
+                if p_inh_samps_allMice[im][iday][ts,ts] <= alph: # only if CA at ifr1,ifr1 is significantly diff from shuffle, we evaluate whether it generalizes to other times as well.
                     a = classAcc_inh_allDays_alig_avSamps_allMice[im][iday,tr,ts]
                     sameCA_inh[tr,ts] = (a >= (maxcai[0]-maxcai[1])) 
                 
                 # allN
-                if p_allN_samps_allMice[im][iday,ts,ts] <= alph: # only if CA at ifr1,ifr1 is significantly diff from shuffle, we evaluate whether it generalizes to other times as well.
+                if p_allN_samps_allMice[im][iday][ts,ts] <= alph: # only if CA at ifr1,ifr1 is significantly diff from shuffle, we evaluate whether it generalizes to other times as well.
                     a = classAcc_allN_allDays_alig_avSamps_allMice[im][iday,tr,ts]
                     sameCA_allN[tr,ts] = (a >= (maxca[0]-maxca[1])) 
                 
-                # exc ... compute p value across (trial) samps for each excSamp
+                # exc ... 
                 for iexc in range(numExcSamps):
-                    if p_exc_samps_allMice[im][iday,ts,ts,iexc] <= alph: # only if CA at ifr1,ifr1 is significantly diff from shuffle, we evaluate whether it generalizes to other times as well.
+                    if p_exc_samps_allMice[im][iday][ts,ts,iexc] <= alph: # only if CA at ifr1,ifr1 is significantly diff from shuffle, we evaluate whether it generalizes to other times as well.
                         a = classAcc_exc_allDays_alig_avSamps_allMice[im][iday,tr,ts,iexc]                    
                         sameCA_exc[tr,ts,iexc] = (a >= (maxcaea[0,iexc]-maxcaea[1,iexc]))    
                 # exc: average across exc samps
@@ -821,19 +1453,19 @@ sameCA_exc_samps_aveDays_allMice = [np.nanmean(sameCA_exc_samps2_allMice[im],axi
 #r = rng.permutation(numExcSamps)[0]
 #sameCA_exc_samps_aveDays_allMice = [np.nanmean(np.array(sameCA_exc_samps_allMice[im])[:,:,:,r],axis=0) for im in range(len(mice))]
 
+'''
+for iday in range(numDaysGood[im]): 
+    plt.figure()
+    plt.imshow(classAcc_inh_allDays_alig_avSamps_allMice[im][iday]); plt.colorbar()
+    plt.imshow(sameCA_exc_samps2_allMice[im][iday])
+'''
 
-# Average of fract days with stable decoders across time points (ie its CA when tested on a different time point is within 1 std)
-#stab_inh = np.array([np.nanmean(sameCA_inh_samps_aveDays_allMice[im], axis=1) for im in range(len(mice))])
-#stab_exc = np.array([np.nanmean(sameCA_exc_samps_aveDays_allMice[im], axis=1) for im in range(len(mice))])
-#stab_allN = np.array([np.nanmean(sameCA_allN_samps_aveDays_allMice[im], axis=1) for im in range(len(mice))])
 
-
-
-# For how long trained decoders have CA similar to max CA
+#%% For how long trained decoders have CA similar to max CA
             # Compute for each day, at each time point, the duration of stability (ie to how many other time points the decoder generalizes)
 stab_inh_eachDay_allMice = []
-stab_exc_eachDay_allMice = []
 stab_allN_eachDay_allMice = []
+stab_exc_eachDay_allMice = []
 
 for im in range(len(mice)):
     stab_inh_eachDay = []
@@ -841,10 +1473,11 @@ for im in range(len(mice)):
     stab_allN_eachDay = []
     
     for iday in range(numDaysGood[im]):
-        stab_inh_eachDay.append(regressBins*frameLength * np.sum(sameCA_inh_samps_allMice[im][iday], axis=0)) # days x trainedFrs        
-        stab_allN_eachDay.append(regressBins*frameLength * np.sum(sameCA_allN_samps_allMice[im][iday], axis=0)) # days x trainedFrs        
-#        stab_exc_eachDay.append(np.sum(sameCA_exc_samps_allMice[im][iday], axis=0)) # days x trainedFrs x excSamps
-        stab_exc_eachDay.append(regressBins*frameLength * np.sum(sameCA_exc_samps2_allMice[im][iday], axis=0)) # days x trainedFrs
+        # sum across training frames
+        stab_inh_eachDay.append(regressBins*frameLength * np.sum(sameCA_inh_samps_allMice[im][iday], axis=0)) # days x testingFrs        
+        stab_allN_eachDay.append(regressBins*frameLength * np.sum(sameCA_allN_samps_allMice[im][iday], axis=0)) # days x testingFrs        
+#        stab_exc_eachDay.append(np.sum(sameCA_exc_samps_allMice[im][iday], axis=0)) # days x testingFrs x excSamps
+        stab_exc_eachDay.append(regressBins*frameLength * np.sum(sameCA_exc_samps2_allMice[im][iday], axis=0)) # days x testingFrs
         
     stab_inh_eachDay_allMice.append(np.array(stab_inh_eachDay))
     stab_allN_eachDay_allMice.append(np.array(stab_allN_eachDay))
@@ -854,14 +1487,26 @@ stab_inh_eachDay_allMice = np.array(stab_inh_eachDay_allMice)
 stab_allN_eachDay_allMice = np.array(stab_allN_eachDay_allMice)
 stab_exc_eachDay_allMice = np.array(stab_exc_eachDay_allMice)
 
-'''
-for iday in range(numDaysGood[im]): 
-    plt.figure()
-    plt.imshow(classAcc_inh_allDays_alig_avSamps_allMice[im][iday]); plt.colorbar()
-    plt.imshow(sameCA_exc_samps2_allMice[im][iday])
-'''
+# Average of fract days with stable decoders across time points (ie its CA when tested on a different time point is within 1 std)
+#stab_inh = np.array([np.nanmean(sameCA_inh_samps_aveDays_allMice[im], axis=1) for im in range(len(mice))])
+#stab_exc = np.array([np.nanmean(sameCA_exc_samps_aveDays_allMice[im], axis=1) for im in range(len(mice))])
+#stab_allN = np.array([np.nanmean(sameCA_allN_samps_aveDays_allMice[im], axis=1) for im in range(len(mice))])
 
-#%% Plot of the above analysis [whether for each day CA(tr,ts) is within 1se of CA(ts,ts) across samps]
+
+#%% Errorbar of the above analysis at time -1: stability duration, allmice, ave and se across days. (duration that a decoder can be trained to perform within 1se of CA(ts,ts)) in time -1 for each day, and plot it across days!
+
+nValidDays_inh = np.full(len(mice), np.nan)
+nValidDays_allN = np.full(len(mice), np.nan)
+nValidDays_exc = np.full(len(mice), np.nan)
+for im in range(len(mice)):
+    a = stab_inh_eachDay_allMice[im][:, nPreMin_allMice[im]-1]   
+    nValidDays_inh[im] = sum(~np.isnan(a))
+    #
+    a = stab_allN_eachDay_allMice[im][:, nPreMin_allMice[im]-1]   
+    nValidDays_allN[im] = sum(~np.isnan(a))
+    #
+    a = stab_exc_eachDay_allMice[im][:, nPreMin_allMice[im]-1]   
+    nValidDays_exc[im] = sum(~np.isnan(a))
 
 # On average across days, for how long each decoder generalizes.
 stab_inh = np.array([np.nanmean(stab_inh_eachDay_allMice[im],axis=0) for im in range(len(mice))])
@@ -874,72 +1519,106 @@ stab_exc = np.array([np.nanmean(stab_exc_eachDay_allMice[im],axis=0) for im in r
 #stab_exc = np.array([np.nanmean(np.array(stab_exc_eachDay_allMice[im])[:,:,r],axis=0) for im in range(len(mice))])
 
 # sd
-stab_inh_sd = np.array([np.nanstd(stab_inh_eachDay_allMice[im],axis=0)/np.sqrt(numDaysGood[im]) for im in range(len(mice))])
-stab_allN_sd = np.array([np.nanstd(stab_allN_eachDay_allMice[im],axis=0)/np.sqrt(numDaysGood[im]) for im in range(len(mice))])
-stab_exc_sd = np.array([np.nanstd(stab_exc_eachDay_allMice[im],axis=0)/np.sqrt(numDaysGood[im]) for im in range(len(mice))])
+stab_inh_se = np.array([np.nanstd(stab_inh_eachDay_allMice[im],axis=0)/np.sqrt(nValidDays_inh[im]) for im in range(len(mice))])
+stab_allN_se = np.array([np.nanstd(stab_allN_eachDay_allMice[im],axis=0)/np.sqrt(nValidDays_allN[im]) for im in range(len(mice))])
+stab_exc_se = np.array([np.nanstd(stab_exc_eachDay_allMice[im],axis=0)/np.sqrt(nValidDays_exc[im]) for im in range(len(mice))])
 
+
+namf = 'classAccurWin'+str(fractStd)+'sdMax_samps'
+plotErrBarStabDur(doSe=1)
+
+
+#%% Plot of the above analysis [whether for each day CA(tr,ts) is within 1se of CA(ts,ts) across samps]
 
 cblab = 'Fract days with high stability'
-namf = 'classAccurWin1sdMax_samps'
+namf = 'classAccurWin'+str(fractStd)+'sdMax_samps'
 plotAngInhExcAllN(sameCA_inh_samps_aveDays_allMice, sameCA_exc_samps_aveDays_allMice, sameCA_allN_samps_aveDays_allMice, cblab, namf, 1, -1)
 
 
 
 
-
-#%%
-####################################################################################
-####################################################################################
-
 #%% Plots of stability vs day
+####################################################################################
+####################################################################################
+####################################################################################
 
 #%% Look at the stability duration (duration that a decoder can be trained to perform within 1se of CA(ts,ts)) in time -1 for each day, and plot it across days!
 
 plt.figure()
 for im in range(len(mice)):
-    plt.subplot(2,2,im+1)
-    a = stab_inh_eachDay_allMice[im][:, nPreMin_allMice[im]-1]    
-    plt.plot(a)
+    a = stab_inh_eachDay_allMice[im][:, nPreMin_allMice[im]-1]   
+    
+    plt.subplot(2,2,im+1)     
+    plt.plot(a, marker='.')
     plt.xlabel('Days')
+    plt.xlim([-1, len(a)])
     if np.in1d(im,[0,1]):
         plt.ylabel(yls)
-    makeNicePlots(plt.gca())
-plt.subplots_adjust(hspace=0.5, wspace=.5)
+    plt.title(mice[im])
+    makeNicePlots(plt.gca(),0,1)
+    
+plt.subplots_adjust(hspace=0.7, wspace=.5)
 
+############%% Save figure for each mouse
+if savefigs:#% Save the figure   
 
+    namf = 'stabDur_classAccurWin1sdMax_samps_vs_days_'
+    
+    if chAl==1:
+        dd = 'chAl_' + namf + '_'.join(mice) + '_' + nowStr
+    else:
+        dd = 'stAl_' + namf + '_'.join(mice) + '_' + nowStr
+        
+    d = os.path.join(svmdir+dir0)
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)
+            
+    fign = os.path.join(svmdir+dir0, suffn[0:5]+dd+'.'+fmt[0])
+    
+    plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
 
-#%% Look at CA(tr,ts) / CA(ts,ts) (ie max_CA at ts)  across days.... try a bunch of points but eg the following makes sense: go with training at time -1, and testing at -6 
+    
+
+#%% Define function to look at CA(tr,ts) / CA(ts,ts) (ie max_CA at ts)  across days.... try a bunch of points but eg the following makes sense: go with training at time -1, and testing at -6 
 
 # trt and tst are relative to time right before the choice
-def trts(trt,tst):
-    tr_1_ts_3 = []
-    for im in range(len(mice)):
-        tr = max(0, nPreMin_allMice[im] + trt)
-        ts = min(lenTraces_AllMice[im]-1, nPreMin_allMice[im] + tst)
+def trts(trt,tsta):
     
-        fractMax = [classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_allMice[im][iday][tr, ts] for iday in range(numDaysGood[im])]
-        tr_1_ts_3.append(fractMax)
-    
-    tr_1_ts_3 = np.array(tr_1_ts_3)
-    
-    
-    #####
-    plt.figure()
-    for im in range(len(mice)):
-        plt.subplot(2,2,im+1)
-        plt.plot(tr_1_ts_3[im])
-        plt.xlabel('Days')
-        if np.in1d(im,[0,1]):
-            plt.ylabel('classAccurFractMax')
-        makeNicePlots(plt.gca())
-    plt.subplots_adjust(hspace=0.5, wspace=.5)
+    plt.figure(figsize=(10, 2.2*len(tsta)))
+    for i in range(len(tsta)):
+        
+        tst = tsta[i]
+        
+        tr_1_ts_3 = []
+        for im in range(len(mice)):
+            tr = max(0, nPreMin_allMice[im] + trt)
+            ts = min(lenTraces_AllMice[im]-1, nPreMin_allMice[im] + tst)
+        
+            fractMax = [classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_allMice[im][iday][tr, ts] for iday in range(numDaysGood[im])]
+            tr_1_ts_3.append(fractMax)
+        
+        tr_1_ts_3 = np.array(tr_1_ts_3)
+        
+        
+        #####        
+        for im in range(len(mice)):
+            plt.subplot(len(tsta), len(mice), len(mice)*i + im+1)
+            plt.plot(tr_1_ts_3[im], marker='.')
+            plt.xlabel('Days')
+            plt.title(mice[im])
+            plt.xlim([-1, len(tr_1_ts_3[im])])
+            if im==0: #np.in1d(im,[0,1]):
+                plt.ylabel('classAccurFractMax\ntrt %d, tst %d' %(trt, tst))
+            makeNicePlots(plt.gca(),0,1)
+        plt.subplots_adjust(hspace=1, wspace=.5)
 
 
     ############%% Save figure for each mouse
     if savefigs:#% Save the figure   
     
         namf = 'classAccurFractMax_vs_days_'
-        trsn = 'tr'+str(trt)+'ts'+str(tst)+'_'
+        trsn = 'tr'+str(trt)+'ts'+str(tsta)+'_'
 
         if chAl==1:
             dd = 'chAl_' + namf + trsn + '_'.join(mice) + '_' + nowStr
@@ -959,23 +1638,23 @@ def trts(trt,tst):
 #%% times are relative to choice
 
 trt = -7 # -5
-for tst in [-3, 0, 2, 6]:
-    trts(trt,tst)
+tsta = [-3, 0, 2, 6]    
+trts(trt,tsta)
 
 
 trt = -3
-for tst in [-1, 0, 2, 6]:
-    trts(trt,tst)
+tsta = [-1, 0, 2, 6]
+trts(trt,tsta)
 
 
 trt = 0
-for tst in [2, 6]:
-    trts(trt,tst)
+tsta  = [2, 6]
+trts(trt,tsta)
 
 
 trt = 3
-for tst in [6]:
-    trts(trt,tst)
+tsta = [6]
+trts(trt,tsta)
 
 # train ~600ms before choice, test 100ms before choice
 
@@ -1036,47 +1715,6 @@ plotAngsAll(nPreMin_final, time_aligned_final, classAcc_inh_alig_avSamps_avDays_
             classAcc_inh_shfl_alig_avSamps_avDays_avMice, [], classAcc_allN_shfl_alig_avSamps_avDays_avMice, classAcc_exc_shfl_alig_avSamps_avDays_avMice, pei, dir0, fnam, cblab012[0], CA=1)
 
 
-
-#%%
-############################ Same as above, now for fract max CA ############################
-
-##%% Align day-averaged CA traces 
-
-classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
-classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_inh_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
-classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_exc_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
-# shfl
-#classAcc_fractChangeFromMax_allN_shfl_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_allN_shfl_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
-#classAcc_fractChangeFromMax_inh_shfl_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_inh_shfl_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
-#classAcc_fractChangeFromMax_exc_shfl_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_exc_shfl_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
-
-
-#%% Average day-averaged traces across mice
-
-classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_avMice = np.nanmean(classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_allMice_al, axis=0) # frs x frs
-classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_avMice = np.nanmean(classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_allMice_al, axis=0) 
-classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_avMice = np.nanmean(classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_allMice_al, axis=0)                    
-# shfl
-#classAcc_fractChangeFromMax_allN_shfl_alig_avSamps_avDays_avMice = np.mean(classAcc_fractChangeFromMax_allN_shfl_alig_avSamps_avDays_allMice_al, axis=0) # frs x frs
-#classAcc_fractChangeFromMax_inh_shfl_alig_avSamps_avDays_avMice = np.mean(classAcc_fractChangeFromMax_inh_shfl_alig_avSamps_avDays_allMice_al, axis=0) 
-#classAcc_fractChangeFromMax_exc_shfl_alig_avSamps_avDays_avMice = np.mean(classAcc_fractChangeFromMax_exc_shfl_alig_avSamps_avDays_allMice_al, axis=0)                    
-
-
-#%% Plot heatmaps: mice-averaged of CAs (frs x frs) across mice (data, shfl, shfl-data)
-
-# ttest across mice (day-averaged traces)            
-#_,pei = stats.ttest_ind(classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_allMice_al - classAcc_fractChangeFromMax_inh_shfl_alig_avSamps_avDays_allMice_al , classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_allMice_al - classAcc_fractChangeFromMax_exc_shfl_alig_avSamps_avDays_allMice_al , axis=0) 
-_,pei = stats.ttest_ind(classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_allMice_al , classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_allMice_al, axis=0) 
-
-fnam = figns[2]+'_AveMice_AveDays_inhExc'+labAll+'_' + '_'.join(mice) + '_' + nowStr   # (np.array(mice)[mice2an_all])
-
-plotAngsAll(nPreMin_final, time_aligned_final, classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_avMice, [], classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_avMice, classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_avMice, 
-            0, [], 0, 0, pei, dir0, fnam, cblab012[1], CA=1)
-
-
-
-
-#################################################################################
 
 #%% Plot CA traces of a specific horizontal slice of the heatmap (decoder trained at time t, how does it perform when tested at all other times)
 
@@ -1145,6 +1783,121 @@ for im in range(len(mice)):
 '''
 
 
+
+
+#%%
+############################ Same as above, now for fract max CA ############################
+
+##%% Align day-averaged CA traces 
+
+classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_allN_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_inh_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_exc_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+# shfl
+#classAcc_fractChangeFromMax_allN_shfl_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_allN_shfl_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+#classAcc_fractChangeFromMax_inh_shfl_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_inh_shfl_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+#classAcc_fractChangeFromMax_exc_shfl_alig_avSamps_avDays_allMice_al = alTrace_frfr(classAcc_fractChangeFromMax_exc_shfl_allDays_alig_avSamps_avDays_allMice, nPreMin_allMice, nPreMin_final, nPostMin_final) # mice x frs x frs 
+
+
+#%% Average day-averaged traces across mice
+
+classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_avMice = np.nanmean(classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_allMice_al, axis=0) # frs x frs
+classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_avMice = np.nanmean(classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_allMice_al, axis=0) 
+classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_avMice = np.nanmean(classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_allMice_al, axis=0)                    
+# shfl
+#classAcc_fractChangeFromMax_allN_shfl_alig_avSamps_avDays_avMice = np.mean(classAcc_fractChangeFromMax_allN_shfl_alig_avSamps_avDays_allMice_al, axis=0) # frs x frs
+#classAcc_fractChangeFromMax_inh_shfl_alig_avSamps_avDays_avMice = np.mean(classAcc_fractChangeFromMax_inh_shfl_alig_avSamps_avDays_allMice_al, axis=0) 
+#classAcc_fractChangeFromMax_exc_shfl_alig_avSamps_avDays_avMice = np.mean(classAcc_fractChangeFromMax_exc_shfl_alig_avSamps_avDays_allMice_al, axis=0)                    
+
+# set se across mice
+classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_sdMice = np.std(classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_allMice_al, axis=0) / np.sqrt(len(mice)) # frs x frs
+classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_sdMice = np.std(classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_allMice_al, axis=0) / np.sqrt(len(mice))
+classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_sdMice = np.std(classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_allMice_al, axis=0) / np.sqrt(len(mice))
+
+
+#%% Plot heatmaps: mice-averaged of CAs (frs x frs) across mice (data, shfl, shfl-data)
+
+# ttest across mice (day-averaged traces)            
+#_,pei = stats.ttest_ind(classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_allMice_al - classAcc_fractChangeFromMax_inh_shfl_alig_avSamps_avDays_allMice_al , classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_allMice_al - classAcc_fractChangeFromMax_exc_shfl_alig_avSamps_avDays_allMice_al , axis=0) 
+_,pei = stats.ttest_ind(classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_allMice_al , classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_allMice_al, axis=0) 
+
+fnam = figns[2]+'_AveMice_AveDays_inhExc'+labAll+'_' + '_'.join(mice) + '_' + nowStr   # (np.array(mice)[mice2an_all])
+
+plotAngsAll(nPreMin_final, time_aligned_final, classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_avMice, [], classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_avMice, classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_avMice, 
+            0, [], 0, 0, pei, dir0, fnam, cblab012[1], CA=1)
+
+
+
+#%% #%% Plot CA traces of a specific horizontal slice of the heatmap (decoder trained at time t, how does it perform when tested at all other times) 
+# Now for fract max: Plot CA traces of a specific horizontal slice of the heatmap (decoder trained at time t, how does it perform when tested at all other times)
+
+fr2an = nPreMin_final-1
+
+plt.figure(figsize=(3*3,2))  
+
+plt.subplot(131)
+top = classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_avMice[fr2an]
+topsd = classAcc_fractChangeFromMax_allN_alig_avSamps_avDays_sdMice[fr2an]
+plt.fill_between(time_aligned_final, top - topsd, top + topsd, color='k', alpha=.5)
+plt.plot(time_aligned_final, top, color='k')
+plt.xlabel('Decoder testing t (ms)') 
+plt.ylabel(cblab012[0])
+plt.vlines(time_aligned_final[fr2an],np.min(top),np.max(top), color='k', linestyle=':') # mark the training time point
+makeNicePlots(plt.gca(), 1, 1)
+
+
+plt.subplot(132)
+top = classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_avMice[fr2an]
+topsd = classAcc_fractChangeFromMax_inh_alig_avSamps_avDays_sdMice[fr2an]
+plt.fill_between(time_aligned_final, top - topsd, top + topsd, color='r', alpha=.5)
+plt.plot(time_aligned_final, top, color='r')
+plt.xlabel('Decoder testing t (ms)') 
+plt.ylabel(cblab012[0])
+plt.vlines(time_aligned_final[fr2an],np.min(top),np.max(top), color='k', linestyle=':') # mark the training time point
+makeNicePlots(plt.gca(), 1)
+
+
+plt.subplot(133)
+top = classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_avMice[fr2an]
+topsd = classAcc_fractChangeFromMax_exc_alig_avSamps_avDays_sdMice[fr2an]
+plt.fill_between(time_aligned_final, top - topsd, top + topsd, color='b', alpha=.5)
+plt.plot(time_aligned_final, top, color='b')
+plt.xlabel('Decoder testing t (ms)') 
+plt.ylabel(cblab012[0])
+plt.vlines(time_aligned_final[fr2an],np.min(top),np.max(top), color='k', linestyle=':') # mark the training time point
+makeNicePlots(plt.gca(), 1)
+
+plt.subplots_adjust(wspace=.6)
+
+
+################## save the figure ##################
+if savefigs:
+    if chAl:
+        cha = 'chAl_'
+    else:
+        cha = 'stAl_'
+        
+    fnam = figns[2]+'_timeBin-1_AveMice_AveDays_inhExc'+labAll+'_' + '_'.join(mice) + '_' + nowStr
+    d = os.path.join(svmdir+dir0) #,mousename)       
+    if not os.path.exists(d):
+        print 'creating folder'
+        os.makedirs(d)            
+        
+    fign = os.path.join(d, suffn[0:5]+cha+fnam+'.'+fmt[0])    
+    plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
+
+    
+'''
+# show individual mice
+a = [classAcc_allN_alig_avSamps_avDays_allMice_al[im][fr2an] for im in range(len(mice))]
+for im in range(len(mice)):
+    top = a[im]
+    plt.plot(time_aligned_final, top, color='k')
+'''
+
+
+
+
 #%%    
 '''
 plt.figure(figsize=(numDaysGood[im]*2,2))
@@ -1160,71 +1913,7 @@ for iday in range(numDaysGood[im]):
 # you can perhaps do some sort of bootstrap!
 
 """
-if set_save_p_samps == 0 :
-    pnam = glob.glob(os.path.join(svmdir+dir0, '*pval_*_svm_testEachDecoderOnAllTimes*'))[0]
-    data = scio.loadmat(pnam)
-
-    p_inh_samps_allMice = data.pop('p_inh_samps_allMice').flatten() # nMice; each mouse: days x frs x frs
-    p_exc_samps_allMice = data.pop('p_exc_samps_allMice').flatten() # nMice; each mouse: days x frs x frs x excSamps
-    p_allN_samps_allMice = data.pop('p_allN_samps_allMice').flatten() # nMice; each mouse: days x frs x frs
-
-else:
-    p_inh_samps_allMice = []
-    p_exc_samps_allMice = []
-    p_allN_samps_allMice = []
-    
-    for im in range(len(mice)):
-        print 'mouse ', im
-        nfrs = len(time_aligned_allMice[im])    
-    
-        p_inh_samps_allDays = []
-        p_exc_samps_allDays = []
-        p_allN_samps_allDays = []
-            
-        for iday in range(numDaysGood[im]):
-            print 'day ', iday
-            p_inh = np.full((nfrs,nfrs), np.nan)
-            p_exc = np.full((nfrs,nfrs,numExcSamps), np.nan)
-            p_allN = np.full((nfrs,nfrs), np.nan)
-            
-            for ifr1 in range(nfrs):
-                for ifr2 in range(nfrs):
-                    
-                    # inh
-                    a = classAcc_inh_allDays_alig_allMice[im][iday,ifr1,ifr2,:]
-                    b = classAcc_inh_shfl_allDays_alig_allMice[im][iday,ifr1,ifr2,:]
-                    p_inh[ifr1,ifr2] = sci.stats.ttest_ind(np.array(a)[~np.isnan(a)], np.array(b)[~np.isnan(b)])[1]
-            
-                    # allN
-                    a = classAcc_allN_allDays_alig_allMice[im][iday,ifr1,ifr2,:]
-                    b = classAcc_allN_shfl_allDays_alig_allMice[im][iday,ifr1,ifr2,:]
-                    p_allN[ifr1,ifr2] = sci.stats.ttest_ind(np.array(a)[~np.isnan(a)], np.array(b)[~np.isnan(b)])[1]
-                    
-                    # exc ... compute p value across (trial) samps for each excSamp
-                    for iexc in range(numExcSamps):
-    #                    print iexc
-                        a = classAcc_exc_allDays_alig_allMice[im][iexc,iday,ifr1,ifr2,:]
-                        b = classAcc_exc_shfl_allDays_alig_allMice[im][iexc,iday,ifr1,ifr2,:]
-                        p_exc[ifr1,ifr2,iexc] = sci.stats.ttest_ind(np.array(a)[~np.isnan(a)], np.array(b)[~np.isnan(b)])[1]
-        
-            # keep vars of all days
-            p_inh_samps_allDays.append(p_inh)
-            p_exc_samps_allDays.append(p_exc)
-            p_allN_samps_allDays.append(p_allN)
-        
-        # keep vars of all mice
-        p_inh_samps_allMice.append(p_inh_samps_allDays)
-        p_exc_samps_allMice.append(p_exc_samps_allDays)
-        p_allN_samps_allMice.append(p_allN_samps_allDays)
-                
-    
-    #from datetime import datetime
-    #nowStr = datetime.now().strftime('%y%m%d-%H%M%S')            
-    pnam = os.path.join(svmdir+dir0, 'pval_' + '_'.join(mice) + '_' + os.path.basename(stabTestDecodeName))
-    scio.savemat(pnam, {'p_inh_samps_allMice':p_inh_samps_allMice, 'p_exc_samps_allMice':p_exc_samps_allMice, 'p_allN_samps_allMice':p_allN_samps_allMice})
-
-
-#%%
+##%%
 ### exc: median p value across excSamps
 p_exc_samps2_allMice = [np.nanmedian(p_exc_samps_allMice[im], axis=-1) for im in range(len(mice))] # nMice; each mouse: days x frs x frs
 # pick one random exc samp instead of above
