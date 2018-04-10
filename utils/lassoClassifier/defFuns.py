@@ -2915,7 +2915,7 @@ def setExtent_imshow(time_aligned, y=np.nan):
 
 #%% Plot heatmap, eg. showing angle between decoders of two time points, or showing class accuracy of a decoder trained on a time point, and tested on a different time point    
 
-def plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap='jet', cblab='', xl='', yl=''):
+def plotAng(top, time_aligned, nPreMin=0, lab='', cmin=0, cmax=0, cmap='jet', cblab='', xl='', yl=''):
 #    
 #    totLen = len(time_aligned) 
 #    step = 4
@@ -2923,7 +2923,11 @@ def plotAng(top, time_aligned, nPreMin, lab, cmin, cmax, cmap='jet', cblab='', x
 #               np.arange(np.argwhere(time_aligned>=0)[0], totLen, step))))).astype(int)
 #    #x = np.arange(0,totLen,step)
    
-    extent = setExtent_imshow(time_aligned)               
+    if cmin==0:
+        cmin = np.nanmin(top)
+        cmax = np.nanmax(top)
+        
+    extent = setExtent_imshow(time_aligned) #, y)               
     nFrs = len(time_aligned)
            
     plt.imshow(top, cmap, extent=extent) #, interpolation='nearest') #, extent=time_aligned)
@@ -2973,7 +2977,7 @@ def plotAngsAll(nPreMin, time_aligned, angInh_av, angExc_av, angAllExc_av, angEx
     
     if CA==1:
         cmap = 'jet'
-        cblab = 'Class accuracy (%)'        
+#        cblab = 'Class accuracy (%)'        
         xl = 'Testing t (ms)'
         yl = 'Decoder training t (ms)'
         cblabd = 'Class accuracy (data-shfl)'
@@ -2982,7 +2986,7 @@ def plotAngsAll(nPreMin, time_aligned, angInh_av, angExc_av, angAllExc_av, angEx
         cmax = np.ceil(np.max([np.nanmax(angInh_av), np.nanmax(angExc_excsh_av), np.nanmax(angAllExc_av)])*100)/100
     else:
         cmap = 'jet_r' # lower angles: more aligned: red
-        cblab = 'Angle between decoders'
+#        cblab = 'Angle between decoders'
         xl = 'Time since choice onset (ms)'
         yl = xl
         cblabd = 'Alignment rel. shuffle'
@@ -3137,7 +3141,7 @@ def plotAngsAll(nPreMin, time_aligned, angInh_av, angExc_av, angAllExc_av, angEx
 
 #%% Plot heatmaps of a meaure showing all days : day vs time(during trial)
 
-def plotStabScore(top, lab, cmins, cmaxs, cmap='jet', cblab='', ax=plt):
+def plotStabScore(top, lab, cmins, cmaxs, cmap='jet', cblab='', ax=plt, xl = 'Time since choice onset (ms)'):
 #    img = ax.imshow(top, cmap)
     extent = setExtent_imshow(time_aligned, np.arange(0, top.shape[0])[::-1]) # mark y axis every 5 days.
     img = ax.imshow(top, cmap, vmin=cmins, vmax=cmaxs, extent=extent)
