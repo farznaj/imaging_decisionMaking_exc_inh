@@ -11,7 +11,7 @@
 outcome2ana = ''; % 'corr'; 'incorr'; '';
 % alFR = 'initAl'; % the firing rate traces were aligned on what
 
-fni18_rmvDay4 = 1; % if 1, remove 4th day of fni18.
+fni18_rmvDay4 = 0; % if 1, remove 4th day of fni18.
 eachMouse_do_savefigs = [1,1]; % Whether to make plots and to save them for each mouse
 sumMice_do_savefigs = [1,1]; % Whether to make plots and to save them for the summary of mice
 doChoicePref = 0; %2; 

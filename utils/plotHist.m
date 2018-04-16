@@ -1,4 +1,6 @@
-function [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth, lineStyles, sp, bins) 
+function [fh,bins,ye,yi,x,h1,h2] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth, lineStyles, sp, bins) 
+    
+    % set fh to nan, if you only want bins, ye,yi
     
     % optional:
     % yy: draw a vertical line at yy
@@ -80,37 +82,41 @@ function [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth
     
     %% plots
     
-    if isempty(fh)
-        fh = figure;
+    if ~strcmp(class(fh), 'matlab.ui.Figure') & ~isempty(fh) % don't plot the figure
+        h1 = []; h2 = [];
+        
     else
-        figure(fh)
+        if isempty(fh)
+            fh = figure;
+        else
+            figure(fh)
+        end
+
+        subplot(sp(1)), hold on
+        h1 = plot(x, ye, 'color', cols{1}, 'linestyle', lineStyles{1});
+        h2 = plot(x, yi, 'color', cols{2}, 'linestyle', lineStyles{2});
+        xlabel(xlab); ylabel(ylab)  %     xlim([r1,r2])    
+        if ~isempty(yy)
+            plot([yy yy],[0 max([ye(:);yi(:)])], 'k:')
+        end
+        legend([h1,h2], leg)
+        a = gca;
+        [h,p] = ttest2(y1(:), y2(:));
+    %     title(sprintf('p(ttest2) = %.3f', round(p,3)))
+
+        %%%%%%%%%% cumsum %%%%%%%%%%
+        subplot(sp(2)), hold on
+        h1 = plot(x, ye_cs, 'color', cols{1}, 'linestyle', lineStyles{1});
+        h2 = plot(x, yi_cs, 'color', cols{2}, 'linestyle', lineStyles{2});
+        xlabel(xlab); ylabel('Cumulative sum')        
+        if ~isempty(yy)
+            plot([yy yy],[0 1], 'k:')
+        end
+        legend([h1,h2], leg)
+        a = [a, gca];
+        % show p value
+        title(sprintf('p(ttest2) = %.3f', round(p,3)))
+
+        linkaxes(a, 'x')    
     end
-    
-    subplot(sp(1)), hold on
-    h1 = plot(x, ye, 'color', cols{1}, 'linestyle', lineStyles{1});
-    h2 = plot(x, yi, 'color', cols{2}, 'linestyle', lineStyles{2});
-    xlabel(xlab); ylabel(ylab)  %     xlim([r1,r2])    
-    if ~isempty(yy)
-        plot([yy yy],[0 max([ye(:);yi(:)])], 'k:')
-    end
-    legend([h1,h2], leg)
-    a = gca;
-    [h,p] = ttest2(y1(:), y2(:));
-%     title(sprintf('p(ttest2) = %.3f', round(p,3)))
-    
-    %%%%%%%%%% cumsum %%%%%%%%%%
-    subplot(sp(2)), hold on
-    h1 = plot(x, ye_cs, 'color', cols{1}, 'linestyle', lineStyles{1});
-    h2 = plot(x, yi_cs, 'color', cols{2}, 'linestyle', lineStyles{2});
-    xlabel(xlab); ylabel('Cumulative sum')        
-    if ~isempty(yy)
-        plot([yy yy],[0 1], 'k:')
-    end
-    legend([h1,h2], leg)
-    a = [a, gca];
-    % show p value
-    title(sprintf('p(ttest2) = %.3f', round(p,3)))
-    
-    linkaxes(a, 'x')
-    
     

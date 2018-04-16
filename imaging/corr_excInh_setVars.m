@@ -1,14 +1,15 @@
-%  choicePref_ROC_exc_inh is already run, here we load its mat file to set
-%  vars for plotting ROC results.
+% First run corr_excInh_setVars to get FRs
+% Then run choicePref_ROC_exc_inh_plots_setVars to get ROCs (to set ipsi, contra tuned neurons) 
+% Then run corr_excInh_plots
 
 %% %%%%%% Load ROC vars and set vars required for plotting for each mouse %%%%%%
 
-downSampSpikes = 0; %1; % downsample spike traces (non-overalapping moving average of 3 frames).
+downSampSpikes = 1; %0; %1; % downsample spike traces (non-overalapping moving average of 3 frames).
 
-alFR = 'initAl'; % 'chAl'; % the firing rate traces were aligned on what
+alFR = 'chAl'; % 'initAl'; % the firing rate traces were aligned on what
 outcome2ana = ''; %'corr';
 
-fni18_rmvDay4 = 1; % if 1, remove 4th day of fni18.
+fni18_rmvDay4 = 0; % if 1, remove 4th day of fni18.
 doChoicePref = 0; %2; 
     % doChoicePref=0;  % use area under ROC curve % cares about ipsi bigger than contra or vice versa
     % doChoicePref=1;  % use choice pref = 2(AUC-.5) % cares about ipsi bigger than contra or vice versa
@@ -325,7 +326,7 @@ numDaysAll
 numDaysGood
 
 
-%% So the vars are not confused with ROC vars
+%% So the vars (not to get confused with ROC vars)
 
 nPreMin_allMice_fr = nPreMin_allMice;
 time_aligned_allMice_fr = time_aligned_allMice;
