@@ -317,7 +317,8 @@ def setImagingAnalysisNamesP(mousename, imagingFolder=[], mdfFileNumber=1, **opt
             dataPath = '/sonas-hs/churchland/nlsas/data/data/'
             altDataPath = '/sonas-hs/churchland/hpc/home/space_managed_data/'            
         else: # office linux
-            dataPath = '/home/farznaj/Shares/Churchland/data/'
+#            dataPath = '/home/farznaj/Shares/Churchland/data/'
+            dataPath = '/home/farznaj/Shares/Churchland_nlsas_data/data/'
             altDataPath = '/home/farznaj/Shares/Churchland_hpc_home/space_managed_data/' # the new space-managed server (wos, to which data
     elif platform.system()=='Darwin':
         dataPath = '/Volumes/My Stu_win/ChurchlandLab/'
@@ -3162,4 +3163,145 @@ def plotStabScore(top, lab, cmins, cmaxs, cmap='jet', cblab='', ax=plt, xl = 'Ti
     makeNicePlots(ax)
     return img
  
+
+
+#%% Compute the change in CA from the actual case to shflTrsEachNeuron case ... aveaged across those population sizes that are significantly different between actual and shflTrsEachN
+# for each day do ttest across samples for each of the population sizes to see if shflTrsEachN is differnt fromt eh eactual case (ie neuron numbers in the decoder)
     
+def changeCA_shflTrsEachN():    
+    
+    if mousename == 'fni18':
+        alph = .05
+        thN = 0 # at least have 3 population sizes that are sig diff btwn act and shflTrsEachN, in order to compute the change in CA after breaking noise corrs.
+    elif mousename == 'fni19':
+        alph = .001
+        thN = 6#3 # at least have 3 population sizes that are sig diff btwn act and shflTrsEachN, in order to compute the change in CA after breaking noise corrs.            
+    else:
+        alph = .001
+        thN = 3 # at least have 3 population sizes that are sig diff btwn act and shflTrsEachN, in order to compute the change in CA after breaking noise corrs.
+    
+    thE = 5 # when setting average across exc samps: only use days that have more than 5 valid exc samples
+    
+    dav_allExc = np.full((numD), np.nan)
+    dav_inh = np.full((numD), np.nan)
+    dav_exc = np.full((numD, numExcSamples), np.nan)
+    
+    for iday in range(numD):
+        if mn_corr[iday] >= thTrained:
+               
+            ### allExc
+            a = perClassErrorTest_data_allExc_all_shflTrsEachNn[iday]#[:,:,eventI_ds_allDays[iday]+fr2an] # nNeurons x nSamps
+            b = perClassErrorTest_data_allExc_alln[iday]#[:,:,eventI_ds_allDays[iday]+fr2an]
+            # ttest across samples for each population size
+            p = sci.stats.ttest_ind(a, b, axis=1)[1] # nNeurons
+            if sum(p<=alph)>=thN:
+                aav = av_test_data_allExc_shflTrsEachN[iday].flatten()
+                bav = av_test_data_allExc[iday].flatten()
+                d = (aav - bav)[p<=alph]
+                dav_allExc[iday] = np.nanmean(d)
+    
+    
+            ### inh
+            a = perClassErrorTest_data_inh_all_shflTrsEachNn[iday]#[:,:,eventI_ds_allDays[iday]+fr2an] # nNeurons x nSamps
+            b = perClassErrorTest_data_inh_alln[iday]#[:,:,eventI_ds_allDays[iday]+fr2an]
+            # ttest across samples for each population size
+            p = sci.stats.ttest_ind(a, b, axis=1)[1] # nNeurons
+            if sum(p<=alph)>=thN:
+                aav = av_test_data_inh_shflTrsEachN[iday].flatten()
+                bav = av_test_data_inh[iday].flatten()
+                d = (aav - bav)[p<=alph]
+                dav_inh[iday] = np.nanmean(d)
+    
+    
+            ### exc
+            a = np.transpose(perClassErrorTest_data_exc_all_shflTrsEachNn[iday], (1,0,2))#[:,:,:,eventI_ds_allDays[iday]+fr2an] # nExcSamps x nNeurons x nSamps
+            b = np.transpose(perClassErrorTest_data_exc_alln[iday], (1,0,2))#[:,:,:,eventI_ds_allDays[iday]+fr2an]
+            # ttest across samples for each population size
+            p = sci.stats.ttest_ind(a, b, axis=2)[1] # nExcSamps x nNeurons
+            for iexc in range(numExcSamples):
+                if sum(p[iexc]<=alph)>=thN:
+                    aav = av_test_data_exc_shflTrsEachN_excSamp[iday][iexc] # numShufflesExc x number of neurons in the decoder
+                    bav = av_test_data_exc_excSamp[iday][iexc]
+                    d = (aav - bav)[p[iexc]<=alph] # pooled neurons of all exc samps with sig difference between shflTrsEachN and the actual case
+                    dav_exc[iday, iexc] = np.nanmean(d)
+    
+    
+    # Average across exc samps: only use days that have more than 5 valid exc samples
+    dav_exc[np.sum(~np.isnan(dav_exc), axis=1)<thE] = np.full((dav_exc[np.sum(~np.isnan(dav_exc), axis=1)<5].shape), np.nan)
+    dav_exc_av = np.nanmean(dav_exc, axis=1)        
+    #    dav_exc_av = np.nanmean(dav_exc[np.sum(~np.isnan(dav_exc), axis=1)>=5], axis=1)
+    print np.nanmean(dav_allExc), np.nanmean(dav_inh), np.nanmean(dav_exc_av)    
+    print sci.stats.ttest_ind(dav_exc_av, dav_inh, nan_policy='omit')[1]        
+    
+    return dav_allExc, dav_inh, dav_exc_av, dav_exc
+    
+
+
+
+#%% Compute number of neurons to reach plateau for each day
+    
+def numNeurPlateau():
+    
+    platN_allExc = np.full((numD), np.nan)
+    platN_inh = np.full((numD), np.nan)
+    platN_exc = np.full((numD), np.nan)
+    platN_exc_excSamp = np.full((numD, numExcSamples), np.nan)
+    
+    for iday in range(numD):
+        if mn_corr[iday] >= thTrained:
+            
+            #### allExc
+            av = av_test_data_allExc[iday].flatten()          
+            avs = av_test_shfl_allExc[iday].flatten()
+#            plt.plot(av); plt.plot(avs)
+            tp = ttest2(av, avs, tail='right')
+            if tp <= alph: # only set plateau if CA is sig different from chance               
+#                p = np.nanpercentile(av, thpa)
+#                th = (av[av >= p]).mean()
+                th = av[min(len(av)-50, 50): len(av)].mean() # max(len(av)-0, len(av))  # th = av[len(av)-100: len(av)].mean()
+                platN_allExc[iday] = np.argwhere(np.diff(np.argwhere(av < th).flatten()) > nNsContHiCA)[0]
+    
+            #### inh
+            av = av_test_data_inh[iday].flatten()                    
+            avs = av_test_shfl_inh[iday].flatten()
+#            plt.plot(av); plt.plot(avs)
+            tp = ttest2(av, avs, tail='right')
+            if tp <= alph: # only set plateau if CA is sig different from chance
+#                p = np.percentile(av, thpi)
+#                th = (av[av >= p]).mean() 
+                th = av[len(av)-5: len(av)].mean() # th = av[min(len(av)-10, 30): max(len(av)-0, len(av))].mean()
+                a0 = np.argwhere(av < th).flatten()
+                a0 = np.unique(np.concatenate((a0, [len(av)]))) # add the last element
+                a = np.argwhere(np.diff(a0) > nNsContHiCA)
+                if len(a)==0:
+                    platN_inh[iday] = np.nan #a0[-1]
+                else:
+                    platN_inh[iday] = a[0]
+            
+            #### exc
+            for iexc in range(numExcSamples):
+                av = av_test_data_exc_excSamp[iday][iexc].flatten()        
+                avs = av_test_shfl_exc_excSamp[iday][iexc].flatten()
+#                plt.plot(av); plt.plot(avs)
+                tp = ttest2(av, avs, tail='right')
+                if tp <= alph: # only set plateau if CA is sig different from chance                    
+#                    p = np.percentile(av, thpe)
+#                    th = (av[av >= p]).mean()                    
+                    th = av[len(av)-5: len(av)].mean()
+                    a0 = np.argwhere(av < th).flatten()
+                    a0 = np.unique(np.concatenate((a0, [len(av)]))) # add the last element
+                    a = np.argwhere(np.diff(a0) > nNsContHiCA)
+                    if len(a)==0:
+                        platN_exc_excSamp[iday, iexc] = np.nan #a0[-1]
+                    else:
+                        platN_exc_excSamp[iday, iexc] = a[0]
+            # average across exc samps (if >5 valid exc samps)
+            if sum(~np.isnan(platN_exc_excSamp[iday])) >= 5: # how many valid samples
+                platN_exc[iday] = np.nanmean(platN_exc_excSamp[iday])
+                
+                
+    return platN_allExc, platN_inh, platN_exc, platN_exc_excSamp
+
+
+
+                

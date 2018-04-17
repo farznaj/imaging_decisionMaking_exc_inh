@@ -16,7 +16,7 @@ Created on Sun Mar 12 15:12:29 2017
     
 #%% Change the following vars:
 
-mousename = 'fni17'
+mousename = 'fni18'
 
 shflTrsEachNeuron = 0 # 1st set to 1, then to 0 to compare how decoder changes after removing noise corrs. # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
 addNs_roc = 1 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
@@ -41,7 +41,7 @@ noZmotionDays_strict = np.nan
 noExtraStimDays = np.nan
 
 if mousename == 'fni18': #set one of the following to 1:
-    allDays = 1# all 7 days will be used (last 3 days have z motion!)
+    allDays = 1 # all 7 days will be used (last 3 days have z motion!)
     noZmotionDays = 0 # 4 days that dont have z motion will be used.
     noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
 elif mousename == 'fni19':    
@@ -1924,37 +1924,48 @@ if addNs_roc:
         return CAav_alig_sameMaxN 
 
 
-    ###%% Average CAs across cv samps, do this separately for each exc samp
-    
+    ###%% Average CAs across cv samps, do this separately for each exc samp    
     if compWith_shflTrsEachN:
         av_test_data_exc_shflTrsEachN_excSamp = []
-        av_test_data_exc_excSamp = []
         for iday in range(numD):
             # numShufflesExc x number of neurons in the decoder x nFrs 
-            av_test_data_exc_shflTrsEachN_excSamp.append(np.mean(perClassErrorTest_data_exc_all_shflTrsEachN[iday][:,:,:,eventI_ds_allDays[iday]+fr2an], axis=2)) # numShufflesExc x number of neurons in the decoder
-            av_test_data_exc_excSamp.append(np.mean(perClassErrorTest_data_exc_all[iday][:,:,:,eventI_ds_allDays[iday]+fr2an], axis=2)) # numShufflesExc x number of neurons in the decoder
-    #        av_test_data_exc_shflTrsEachN_excSamp.append(np.mean(perClassErrorTest_data_exc_all_shflTrsEachN[iday], axis=2) - np.mean(perClassErrorTest_data_exc_all[iday], axis=2))  # numShufflesExc x number of neurons in the decoder
-
+            av_test_data_exc_shflTrsEachN_excSamp.append(100 - np.mean(perClassErrorTest_data_exc_all_shflTrsEachN[iday][:,:,:,eventI_ds_allDays[iday]+fr2an], axis=2)) # numShufflesExc x number of neurons in the decoder
+    
+    av_test_data_exc_excSamp = []
+    av_test_shfl_exc_excSamp = []
+    for iday in range(numD):
+        av_test_data_exc_excSamp.append(100 - np.mean(perClassErrorTest_data_exc_all[iday][:,:,:,eventI_ds_allDays[iday]+fr2an], axis=2)) # numShufflesExc x number of neurons in the decoder
+        av_test_shfl_exc_excSamp.append(100 - np.mean(perClassErrorTest_shfl_exc_all[iday][:,:,:,eventI_ds_allDays[iday]+fr2an], axis=2)) # numShufflesExc x number of neurons in the decoder            
+            
+            
     if compWith_shflTrsEachN:
+        # we have to do the following otherwise we can't save them as mat files
         # numDays; each day: # nNeurons x nSamps        
-        perClassErrorTest_data_allExc_all_shflTrsEachNn = np.array([perClassErrorTest_data_allExc_all_shflTrsEachN[iday][:,:,eventI_ds_allDays[iday]+fr2an] for iday in range(numD)])
-        perClassErrorTest_data_allExc_alln = np.array([perClassErrorTest_data_allExc_all[iday][:,:,eventI_ds_allDays[iday]+fr2an] for iday in range(numD)])
+        perClassErrorTest_data_allExc_all_shflTrsEachNn = np.array([perClassErrorTest_data_allExc_all_shflTrsEachN[iday][:,:,eventI_ds_allDays[iday]+fr2an] for iday in range(numD)])        
         # numDays; each day: # nNeurons x nSamps        
         perClassErrorTest_data_inh_all_shflTrsEachNn = np.array([perClassErrorTest_data_inh_all_shflTrsEachN[iday][:,:,eventI_ds_allDays[iday]+fr2an] for iday in range(numD)])
-        perClassErrorTest_data_inh_alln = np.array([perClassErrorTest_data_inh_all[iday][:,:,eventI_ds_allDays[iday]+fr2an] for iday in range(numD)])   
         # numDays; each day: # nNeurons x nExcSamps x nSamps
         perClassErrorTest_data_exc_all_shflTrsEachNn = np.array([np.transpose(perClassErrorTest_data_exc_all_shflTrsEachN[iday][:,:,:,eventI_ds_allDays[iday]+fr2an], (1,0,2)) for iday in range(numD)])
-        perClassErrorTest_data_exc_alln = np.array([np.transpose(perClassErrorTest_data_exc_all[iday][:,:,:,eventI_ds_allDays[iday]+fr2an], (1,0,2)) for iday in range(numD)])
-    
-        scio.savemat(fname+'/svm_classErr_shflTrsEachN_'+nowStr, {'mousename': mousename, 'numD':numD, 'mn_corr':mn_corr, 'thTrained':thTrained, 'fr2an':fr2an, 'eventI_ds_allDays':eventI_ds_allDays, 
-          'perClassErrorTest_data_allExc_all_shflTrsEachNn':perClassErrorTest_data_allExc_all_shflTrsEachNn, 'av_test_data_allExc_shflTrsEachN':av_test_data_allExc_shflTrsEachN,
-          'perClassErrorTest_data_allExc_alln':perClassErrorTest_data_allExc_alln, 'av_test_data_allExc':av_test_data_allExc,
-          'perClassErrorTest_data_inh_all_shflTrsEachNn':perClassErrorTest_data_inh_all_shflTrsEachNn, 'av_test_data_inh_shflTrsEachN':av_test_data_inh_shflTrsEachN,
-          'perClassErrorTest_data_inh_alln':perClassErrorTest_data_inh_alln, 'av_test_data_inh':av_test_data_inh,                          
-          'perClassErrorTest_data_exc_all_shflTrsEachNn':perClassErrorTest_data_exc_all_shflTrsEachNn, 'av_test_data_exc_shflTrsEachN':av_test_data_exc_shflTrsEachN,
-          'perClassErrorTest_data_exc_alln':perClassErrorTest_data_exc_alln, 'av_test_data_exc':av_test_data_exc})
 
-    
+    perClassErrorTest_data_allExc_alln = np.array([perClassErrorTest_data_allExc_all[iday][:,:,eventI_ds_allDays[iday]+fr2an] for iday in range(numD)])
+    perClassErrorTest_data_inh_alln = np.array([perClassErrorTest_data_inh_all[iday][:,:,eventI_ds_allDays[iday]+fr2an] for iday in range(numD)])   
+    perClassErrorTest_data_exc_alln = np.array([np.transpose(perClassErrorTest_data_exc_all[iday][:,:,:,eventI_ds_allDays[iday]+fr2an], (1,0,2)) for iday in range(numD)])
+    perClassErrorTest_shfl_exc_alln = np.array([np.transpose(perClassErrorTest_shfl_exc_all[iday][:,:,:,eventI_ds_allDays[iday]+fr2an], (1,0,2)) for iday in range(numD)])
+
+    """
+    scio.savemat(fname+'/svm_classErr_shflTrsEachN_'+nowStr, {'mousename': mousename, 'numD':numD, 'mn_corr':mn_corr, 'thTrained':thTrained, 'fr2an':fr2an, 'eventI_ds_allDays':eventI_ds_allDays,
+      'perClassErrorTest_data_allExc_all_shflTrsEachNn':perClassErrorTest_data_allExc_all_shflTrsEachNn, 'av_test_data_allExc_shflTrsEachN':av_test_data_allExc_shflTrsEachN,
+      'perClassErrorTest_data_inh_all_shflTrsEachNn':perClassErrorTest_data_inh_all_shflTrsEachNn, 'av_test_data_inh_shflTrsEachN':av_test_data_inh_shflTrsEachN,
+      'perClassErrorTest_data_exc_all_shflTrsEachNn':perClassErrorTest_data_exc_all_shflTrsEachNn, 'av_test_data_exc_shflTrsEachN':av_test_data_exc_shflTrsEachN,
+      'perClassErrorTest_data_allExc_alln':perClassErrorTest_data_allExc_alln, 'av_test_data_allExc':av_test_data_allExc, 'av_test_shfl_allExc':av_test_shfl_allExc,
+      'perClassErrorTest_data_inh_alln':perClassErrorTest_data_inh_alln, 'av_test_data_inh':av_test_data_inh, 'av_test_shfl_inh':av_test_shfl_inh,
+      'perClassErrorTest_data_exc_alln':perClassErrorTest_data_exc_alln, 'av_test_data_exc':av_test_data_exc, 'av_test_shfl_exc':av_test_shfl_exc,
+      'perClassErrorTest_shfl_exc_alln':perClassErrorTest_shfl_exc_alln})
+
+    scio.savemat(fname+'/svm_shflClassErr_'+nowStr, {'av_test_shfl_allExc':av_test_shfl_allExc, 'av_test_shfl_inh':av_test_shfl_inh, 'av_test_shfl_exc':av_test_shfl_exc, 
+      'perClassErrorTest_shfl_exc_alln':perClassErrorTest_shfl_exc_alln})
+    """
+            
     #%% Make the traces for all days the same length in order to set average and se across days and plot them!
     
     ########## Define mxNumNeur for the function sameMaxNs
@@ -2256,68 +2267,7 @@ if addNs_roc:
     # for each day do ttest across samples for each of the population sizes to see if shflTrsEachN is differnt fromt eh eactual case (ie neuron numbers in the decoder)
     
     if compWith_shflTrsEachN:
-        if mousename == 'fni18':
-            alph = .05
-            thN = 0 # at least have 3 population sizes that are sig diff btwn act and shflTrsEachN, in order to compute the change in CA after breaking noise corrs.
-        elif mousename == 'fni19':
-            alph = .001
-            thN = 6#3 # at least have 3 population sizes that are sig diff btwn act and shflTrsEachN, in order to compute the change in CA after breaking noise corrs.            
-        else:
-            alph = .001
-            thN = 3 # at least have 3 population sizes that are sig diff btwn act and shflTrsEachN, in order to compute the change in CA after breaking noise corrs.
-        
-        thE = 5 # when setting average across exc samps: only use days that have more than 5 valid exc samples
-        
-        dav_allExc = np.full((numD), np.nan)
-        dav_inh = np.full((numD), np.nan)
-        dav_exc = np.full((numD, numExcSamples), np.nan)
-        
-        for iday in range(numD):
-            if mn_corr[iday] >= thTrained:
-                   
-                ### allExc
-                a = perClassErrorTest_data_allExc_all_shflTrsEachNn[iday]#[:,:,eventI_ds_allDays[iday]+fr2an] # nNeurons x nSamps
-                b = perClassErrorTest_data_allExc_alln[iday]#[:,:,eventI_ds_allDays[iday]+fr2an]
-                # ttest across samples for each population size
-                p = sci.stats.ttest_ind(a, b, axis=1)[1] # nNeurons
-                if sum(p<=alph)>=thN:
-                    aav = av_test_data_allExc_shflTrsEachN[iday].flatten()
-                    bav = av_test_data_allExc[iday].flatten()
-                    d = (aav - bav)[p<=alph]
-                    dav_allExc[iday] = np.nanmean(d)
-    
-    
-                ### inh
-                a = perClassErrorTest_data_inh_all_shflTrsEachNn[iday]#[:,:,eventI_ds_allDays[iday]+fr2an] # nNeurons x nSamps
-                b = perClassErrorTest_data_inh_alln[iday]#[:,:,eventI_ds_allDays[iday]+fr2an]
-                # ttest across samples for each population size
-                p = sci.stats.ttest_ind(a, b, axis=1)[1] # nNeurons
-                if sum(p<=alph)>=thN:
-                    aav = av_test_data_inh_shflTrsEachN[iday].flatten()
-                    bav = av_test_data_inh[iday].flatten()
-                    d = (aav - bav)[p<=alph]
-                    dav_inh[iday] = np.nanmean(d)
-    
-    
-                ### exc
-                a = np.transpose(perClassErrorTest_data_exc_all_shflTrsEachNn[iday], (1,0,2))#[:,:,:,eventI_ds_allDays[iday]+fr2an] # nExcSamps x nNeurons x nSamps
-                b = np.transpose(perClassErrorTest_data_exc_alln[iday], (1,0,2))#[:,:,:,eventI_ds_allDays[iday]+fr2an]
-                # ttest across samples for each population size
-                p = sci.stats.ttest_ind(a, b, axis=2)[1] # nExcSamps x nNeurons
-                for iexc in range(numExcSamples):
-                    if sum(p[iexc]<=alph)>=thN:
-                        aav = av_test_data_exc_shflTrsEachN_excSamp[iday][iexc] # numShufflesExc x number of neurons in the decoder
-                        bav = av_test_data_exc_excSamp[iday][iexc]
-                        d = (aav - bav)[p[iexc]<=alph] # pooled neurons of all exc samps with sig difference between shflTrsEachN and the actual case
-                        dav_exc[iday, iexc] = np.nanmean(d)
-    
-        
-        # Average across exc samps: only use days that have more than 5 valid exc samples
-        dav_exc[np.sum(~np.isnan(dav_exc), axis=1)<thE] = np.full((dav_exc[np.sum(~np.isnan(dav_exc), axis=1)<5].shape), np.nan)
-        dav_exc_av = np.nanmean(dav_exc, axis=1)        
-    #    dav_exc_av = np.nanmean(dav_exc[np.sum(~np.isnan(dav_exc), axis=1)>=5], axis=1)
-        print np.nanmean(dav_allExc), np.nanmean(dav_inh), np.nanmean(dav_exc_av)    
-        print sci.stats.ttest_ind(dav_exc_av, dav_inh, nan_policy='omit')[1]        
+        dav_allExc, dav_inh, dav_exc_av, dav_exc = changeCA_shflTrsEachN()       
         
         
         
@@ -2327,7 +2277,8 @@ if addNs_roc:
     
     if compWith_shflTrsEachN:
         
-        perc_thb = [15,85] # percentiles of behavioral performance for determining low and high performance.
+        perc_thb = [20,80]
+#        perc_thb = [15,85] # percentiles of behavioral performance for determining low and high performance.
         
         plt.figure(figsize=(4.4, 4.5)) # plt.figure(figsize=(3,2))        
         gs = gridspec.GridSpec(2,4)#, width_ratios=[2, 1])  #    h1 = gs[0,0:2]
@@ -2432,48 +2383,33 @@ if addNs_roc:
             fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])         
             plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
             
-            
+    
+
+    #%%        
+    ###########################################################################
+    ###########################################################################
     
     #%% Compute number of neurons to reach plateau for each day
     
-    platN_allExc = np.full((numD), np.nan)
-    platN_inh = np.full((numD), np.nan)
-    platN_exc = np.full((numD), np.nan)
+    nNsContHiCA = 1 #3 # if there is a gap of >=3 continuous n Ns with high CA (CA > thp percentile of CA across all Ns), call the first number of N as the point of plateuou.
+    alph = .05 # only set plateau if CA is sig different from chance
     
-    for iday in range(numD):
-        if mn_corr[iday] >= thTrained:
-            
-            #### allExc
-            av = av_test_data_allExc[iday]        
-            p = np.percentile(av, [20])
-            th = (av[av >= p]).mean()        
-            platN_allExc[iday] = np.argwhere(np.diff(np.argwhere(av < th).flatten()) > 3)[0]
+    platN_allExc, platN_inh, platN_exc, platN_exc_excSamp = numNeurPlateau()
+       
+    
+    #%% Plot number of neurons to plateau vs. training day
+    
+    plt.figure(figsize=(3,2))    
+    plt.plot(platN_allExc, 'k.-', label='allExc')
+    plt.plot(platN_inh, 'r.-', label='inh')
+    plt.plot(platN_exc, 'b.-', label='exc')
+    makeNicePlots(plt.gca())
+    plt.ylabel('# neurons to plateau', fontsize=11)        
+    plt.xlabel('Training day', fontsize=11)        
+    plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1, frameon=False)  
 
-            #### inh
-            av = av_test_data_inh[iday]        
-            p = np.percentile(av, [20])
-            th = (av[av >= p]).mean() 
-            a0 = np.argwhere(av < th).flatten()
-            a = np.argwhere(np.diff(a0) > 3)
-            if len(a)==0:
-                platN_inh[iday] = a0[-1]
-            else:
-                platN_inh[iday] = a[0]
-            
-            #### exc
-            av = av_test_data_exc[iday]        
-            p = np.percentile(av, [20])
-            th = (av[av >= p]).mean()        
-            a0 = np.argwhere(av < th).flatten()
-            a = np.argwhere(np.diff(a0) > 3)
-            if len(a)==0:
-                platN_exc[iday] = a0[-1]
-            else:
-                platN_exc[iday] = a[0]
-
-    
-    
-    ######### Plot number of neurons to plateau
+        
+    #%% Plot ave and se (across days) : number of neurons to plateau
 
     aa = np.nanmean(platN_allExc)
     ai = np.nanmean(platN_inh)
@@ -2515,12 +2451,15 @@ if addNs_roc:
         plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
         
         
-            
-    #%%
-    ######################### Plots of each day #########################
-    ##%% Plot each day: how choice prediction varies by increasing the population size, compare exc vs inh
+
+    #%%        
+    ###########################################################################
+    ###########################################################################            
+    
+    #%% Plots of each day : Plot each day: how choice prediction varies by increasing the population size, compare exc vs inh
    
     plt.figure(figsize=(3, 3.5*numD))    
+    
     cnt = 0
     for iday in range(numD):    
         if mn_corr[iday] >= thTrained:
