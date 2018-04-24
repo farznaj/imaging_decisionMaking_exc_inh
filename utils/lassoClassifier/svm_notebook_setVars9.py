@@ -37,13 +37,13 @@ Created on Fri Oct 28 12:48:43 2016
 
 #allExc = 0 # use allexc and inh neurons for decoding (but not unsure neurons)                       
 #eqExcInh = 1 # use equal number of exc and inh neurons for decoding... numSamps of these populations will be made.
-def svm_notebook_setVars9(mousename, imagingFolder, mdfFileNumber, chAl, doInhAllexcEqexc, numSamples=50, numShufflesExc=50, trialHistAnalysis=0, iTiFlg=2):
+def svm_notebook_setVars9(mousename, imagingFolder, mdfFileNumber, chAl, doInhAllexcEqexc, outcome2ana='corr', numSamples=50, numShufflesExc=50, trialHistAnalysis=0, iTiFlg=2):
 
     cbestKnown = 1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
     shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # if 1 shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
     
     shflTrLabs = 0 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
-    outcome2ana = 'corr' # '', corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
+#    outcome2ana = 'corr' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
     
 #    chAl = 0 # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
     softNorm = 1 # if 1, no neurons will be excluded, bc we do soft normalization of FRs, so non-active neurons wont be problematic. if softNorm = 0, NsExcluded will be found
@@ -66,7 +66,7 @@ def svm_notebook_setVars9(mousename, imagingFolder, mdfFileNumber, chAl, doInhAl
     thAct = 5e-4 #5e-4; # 1e-5 # neurons whose average activity during ep is less than thAct will be called non-active and will be excluded.
 #    thTrsWithSpike = 1; # 3 % remove neurons that are active in <thSpTr trials.
     pnev2load = [] #[] [3] # which pnev file to load: indicates index of date-sorted files: use 0 for latest. Set [] to load the latest one.
-    neuronType = 2    	 
+#    neuronType = 2    	 
     setNsExcluded = 1
     saveHTML = 0; # whether to save the html file of notebook with all figures or not.
 

@@ -46,9 +46,43 @@ av_test_shfl_inh_allM = []
 av_test_shfl_exc_allM = []
 av_test_shfl_exc_excSamp_allM = []
 
+choicePref_exc_allM = []
+choicePref_inh_allM = []
+
 for im in range(len(mice)):
     mousename = mice[im]
     
+    dataPath = setImagingAnalysisNamesP(mousename, [], [])
+    
+#    dirn = os.path.join(dataPath+mousename,'imaging','analysis')
+    dirn = os.path.join(dataPath,'analysis')
+    
+    # outcome analyzed for the ROC:
+    al = 'chAl'
+    o2aROC = '_allOutcome'; #'_corr'; # '_incorr';
+    thStimSt = 0; namz = '';
+    namv = 'ROC_curr_%s%s_stimstr%d%s_%s_*.mat' %(al, o2aROC, thStimSt, namz, mousename)
+    a = glob.glob(os.path.join(dirn,namv)) #[0] 
+    dirROC = sorted(a, key=os.path.getmtime)[::-1][0] # sort so the latest file is the 1st one. # use the latest saved file
+    namtf = os.path.basename(dirROC)
+    print namtf
+    
+    ############ Load ROC vars
+    Data = scio.loadmat(dirROC, variable_names=['choicePref_all_alld_exc', 'choicePref_all_alld_inh'])  
+    choicePref_all_alld_exc = Data.pop('choicePref_all_alld_exc').flatten() # nDays; each day: frames x neurons
+    choicePref_all_alld_inh = Data.pop('choicePref_all_alld_inh').flatten()
+    
+    # Compute abs deviation of AUC from chance (.5); we want to compute |AUC-.5|, since choice pref = 2*(auc-.5), therefore |auc-.5| = 1/2 * |choice pref|
+    # % now ipsi is positive bc we do minus, in the original vars (load above) contra was positive
+    choicePref_exc = .5*abs(-choicePref_all_alld_exc)
+    choicePref_inh = .5*abs(-choicePref_all_alld_inh)
+    
+    ### keep vars of all mice
+    choicePref_exc_allM.append(choicePref_exc)
+    choicePref_inh_allM.append(choicePref_inh)
+    
+    
+    #%%
     imagingDir = setImagingAnalysisNamesP(mousename)
     fname = os.path.join(imagingDir, 'analysis')            
     finame = os.path.join(fname, 'svm_classErr_shflTrsEachN_*.mat')    

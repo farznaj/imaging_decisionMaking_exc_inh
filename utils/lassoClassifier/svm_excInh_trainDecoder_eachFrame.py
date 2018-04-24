@@ -59,8 +59,8 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations in neurons FRs across trials.
 
     shflTrLabs = 0 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
-    outcome2ana = 'corr' #'all' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
-    doInhAllexcEqexc = [0,0,1]  # [1,0,1,1] # 
+    outcome2ana = 'corr' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
+    doInhAllexcEqexc = [1,0,0,1] # [0,0,1,2]  # 
     #    1st element: analyze inhibitory neurons (train SVM for numSamples for each value of C)
     #    2nd element: if 1: analyze all excitatory neurons (train SVM for numSamples for each value of C)   
                     # if 2: analyze all neurons (exc, inh, unsure) ... this is like code svm_eachFrame.py   
@@ -69,7 +69,9 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
                     # if 3: take lenInh*2 of only exc and run svm. 
     # if there is a 4th element (eg [0,1,0,1]), the following analysis will be done (still we need to specify whether we want to analyze inh,allExc or eqEx; if eqExc, exc ns are first subsampled then they are sorted based on ROC; and then svm is run): 
         # Ns will be added 1 by 1 based on their ROC choice tuning
-    
+        # if 4th element is 1: sort from highest to lowest choice tuning
+        # if 4th element is 2: sort from lowest to highest choice tuning
+        
     doPlots = 0 # Whether to make plots or not.
     saveResults = 1 # save results in mat file.
 
@@ -142,30 +144,43 @@ if trialHistAnalysis==1:
         itiName = 'all'        
     
 print 'Analyzing %s' %(mousename+'_'+imagingFolder+'_'+str(mdfFileNumber)) 
+
 if shflTrLabs:
     cbestKnown = 1 # if shflTrLabs, cbest is already saved, so we make sure it is 1.
     print 'Shuffling trial labels'
-if cbestKnown:
-    print 'Optimum c is already saved'
+
 if shflTrsEachNeuron:
     print 'Breaking correlations by shuffling trials'    
+
 print 'Analyzing %s neurons' %(ntName)
+
 if len(doInhAllexcEqexc)==4:
     addNs_roc = 1 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
+    cbestKnown = 0
     print 'Adding neurons 1 by 1 for SVM analysis' 
 else:
     addNs_roc = 0
+
+if cbestKnown:
+    print 'Optimum c is already saved'
+else:
+    print 'Setting optimum c'
+
 if chAl==1:
     print 'Using choice-aligned traces'
 else:
     print 'Using stimulus-aligned traces'    
+
 if trialHistAnalysis==0:
     print 'Training %s outcome trials of strength %s' %(outcome2ana, strength2ana)
+
 print 'trialHistAnalysis = %i' %(trialHistAnalysis)
+
 if trialHistAnalysis==1:
     print 'Analyzing %s ITIs' %(itiName)
 elif 'ep_ms' in locals():
     print 'training window: [%d %d] ms' %(ep_ms[0], ep_ms[1])
+
 #print 'windowAvgFlg = %i' %(windowAvgFlg)
 print 'numSamples = %i' %(numSamples)
 
@@ -288,7 +303,7 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         postNProvided = 0
         
     ##%%
-#    import numpy as np
+    import numpy as np
     import platform
     import glob
     import os.path
@@ -303,7 +318,8 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
             dataPath = '/sonas-hs/churchland/nlsas/data/data/'
             altDataPath = '/sonas-hs/churchland/hpc/home/space_managed_data/'
         else: # office linux
-            dataPath = '/home/farznaj/Shares/Churchland/data/'
+#            dataPath = '/home/farznaj/Shares/Churchland/data/'
+            dataPath = '/home/farznaj/Shares/Churchland_nlsas_data/data/'
             altDataPath = '/home/farznaj/Shares/Churchland_hpc_home/space_managed_data/' # the new space-managed server (wos, to which data is migrated from grid)
     elif platform.system()=='Darwin':
         dataPath = '/Volumes/My Stu_win/ChurchlandLab'
@@ -311,14 +327,19 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
         dataPath = '/Users/gamalamin/git_local_repository/Farzaneh/data/'
 
     ##%%
-    tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
         
-    if not os.path.exists(tifFold):
-        if 'altDataPath' in locals():
-            tifFold = os.path.join(altDataPath+mousename, 'imaging', imagingFolder)
-            dataPath = altDataPath
-        else:
-            sys.exit('Data directory does not exist!')
+    if any([mousename in s for s in ['fni18','fni19']]): # fni18, fni19        
+        tifFold = os.path.join(altDataPath+mousename, 'imaging', imagingFolder)
+        dataPath = altDataPath
+    else:
+        tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
+    print tifFold
+#    if not os.path.exists(tifFold):
+#        if 'altDataPath' in locals():            
+#            tifFold = os.path.join(altDataPath+mousename, 'imaging', imagingFolder)
+#            dataPath = altDataPath
+#        else:
+#            sys.exit('Data directory does not exist!')
 
 
     r = '%03d-'*len(mdfFileNumber)
@@ -331,14 +352,18 @@ def setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, **options)
     ##%%
     if len(signalCh)>0:
         if postNProvided:
-            pnevFileName = 'post_'+date_major+'_ch'+str(signalCh)+'-Pnev*'
+            pnevFileName = 'post_'+date_major+'_ch'+str(int(np.array(signalCh)))+'-Pnev*'
         else:
-            pnevFileName = date_major+'_ch'+str(signalCh)+'-Pnev*'
-            
+            pnevFileName = date_major+'_ch'+str(int(np.array(signalCh)))+'-Pnev*'            
+        print pnevFileName
+        # set the directory
         pnevFileName = glob.glob(os.path.join(tifFold,pnevFileName))   
+        print pnevFileName
         # sort pnevFileNames by date (descending)
         pnevFileName = sorted(pnevFileName, key=os.path.getmtime)
+#        print pnevFileName
         pnevFileName = pnevFileName[::-1]
+#        print pnevFileName
         '''
         array = []
         for idx in range(0, len(pnevFileName)):
@@ -1131,7 +1156,7 @@ if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
     if cbestKnown: #shflTrLabs:
         if nfrs_cbest+1 == X_svm_d.shape[0]:  # by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
             lastTimeBinMissed = 1
-            print 'lastTimeBinMissed = 1! so have to set X_svm with lastTimeBinMissed to have its size match the previously saved variable bestc!'
+            print 'lastTimeBinMissed = 1! so have to set X_svm with lastTimeBinMissed to have its size matches the previously saved variable bestc!'
             # set frames after frame0 (including it)
             f = (np.arange(eventI , eventI + regressBins * np.floor((X_svm.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
             x = X_svm[f,:,:] # X_svmo including frames after frame0
@@ -1843,15 +1868,15 @@ excI = np.argwhere(inhRois==0).squeeze() # indeces of exc neurons (out of X_svm 
 ## Set Xexc for n exc (pick numShufflesEx sets of n exc neurons) and 2n exc (n=lenInh)
 if doInhAllexcEqexc[2]!=0 or addNs_roc==0:    
     if np.logical_or(doInhAllexcEqexc[2] == 1 , doInhAllexcEqexc[2] == 2): ###### n exc (pick numShufflesEx sets of n exc neurons)
-        if cbestKnown: # we already have saved exc neuron indeces for each exc samp, so we use those same samps
-            XexcEq = []
+        XexcEq = []       
+        excNsEachSamp_indsOutOfExcNs = [] # numShufflesExc x frs x units x trials        
+        if cbestKnown: # we already have saved exc neuron indeces for each exc samp, so we use those same samps            
             for ii in range(excNsEachSamp.shape[0]):  # select n random exc (n = number of inh)         
                 Xexc = X_svm[:, excNsEachSamp[ii],:]
                 XexcEq.append(Xexc)            
+                excNsEachSamp_indsOutOfExcNs.append(np.argwhere(np.in1d(excI, excNsEachSamp[ii])).squeeze()) # indeces of exc neurons (out of X_svm for exc neurons which includes only exc neurons) used to create XexcEq.
         else:
-            XexcEq = []       
             excNsEachSamp = [] # numShufflesExc x frs x units x trials
-            excNsEachSamp_indsOutOfExcNs = [] # numShufflesExc x frs x units x trials
             for ii in range(numShufflesExc):  # select n random exc (n = number of inh)         
                 en = rng.permutation(excI)[0:lenInh].squeeze() # n randomly selected exc neurons.    
                 Xexc = X_svm[:, en,:]
@@ -2143,8 +2168,10 @@ if addNs_roc:
     if doInhAllexcEqexc[0] == 1:    
         
         Xinh0 = X_svm[:, inhRois==1,:]
-        inh_roc_sort = np.argsort(choicePref_inh[frROC].squeeze())[::-1] # index of neurosn from high to low ROC values                
-    
+        inh_roc_sort = np.argsort(choicePref_inh[frROC].squeeze()) # index of neurosn from low to high ROC values
+        if doInhAllexcEqexc[3]==1:
+            inh_roc_sort = inh_roc_sort[::-1] # index of neurosn from high to low ROC values
+            
         # Loop over number of neurons in the population: from 1 to the entire population size        
         perClassErrorTrain_data_inh_numNs = []
         perClassErrorTest_data_inh_numNs = []
@@ -2156,7 +2183,7 @@ if addNs_roc:
 
         for numNs in np.arange(1,lenInh+1): 
             Xinh = Xinh0[:,inh_roc_sort[0:numNs],:] # neurons are added based on their tuning (abs ROC AUC): the highest tuning is added first            
-            cbest_inh = np.nan            
+            cbest_inh = np.nan  # set to nan, so in the function below we set cbest... unless you think you will run addNs_roc again... which I guess you wont!  
             # perClassErrorTrain_inh: samples x cvals x frames
             # wAllC_inh: samples x cvals x nNeurons x frames
             perClassErrorTrain_inh, perClassErrorTest_inh, wAllC_inh, bAllC_inh, cbestAll_inh, cbest_inh, cvect, perClassErrorTestShfl_inh, perClassErrorTestChance_inh,_,_,_,_ = setbesc_frs(Xinh,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_inh,frs,shflTrLabs=shflTrLabs) # outputs have size the number of shuffles in setbestc (shuffles per c value)
@@ -2170,10 +2197,10 @@ if addNs_roc:
             b_data_inh = np.full((numSamples, nFrs), np.nan)
             
             for ifr in frs: #: range(nFrs):   
-                if cbestKnown:
-                    indBestC = 0
-                else:
-                    indBestC = np.in1d(cvect, cbest_inh[ifr])
+#                if cbestKnown:
+#                    indBestC = 0
+#                else:
+                indBestC = np.in1d(cvect, cbest_inh[ifr])
                     
                 perClassErrorTrain_data_inh[:,ifr] = perClassErrorTrain_inh[:,indBestC,ifr].squeeze()
                 perClassErrorTest_data_inh[:,ifr] = perClassErrorTest_inh[:,indBestC,ifr].squeeze()
@@ -2205,7 +2232,9 @@ if addNs_roc:
     elif doInhAllexcEqexc[1] == 1: 
         
         XallExc0 = X_svm[:, inhRois==0,:]
-        exc_roc_sort = np.argsort(choicePref_exc[frROC].squeeze())[::-1] # index of neurosn from high to low ROC values                
+        exc_roc_sort = np.argsort(choicePref_exc[frROC].squeeze()) # index of neurosn from low to high ROC values
+        if doInhAllexcEqexc[3]==1:
+            exc_roc_sort = exc_roc_sort[::-1] # index of neurosn from high to low ROC values
     
         # Loop over number of neurons in the population: from 1 to the entire population size        
         perClassErrorTrain_data_allExc_numNs = []
@@ -2230,10 +2259,11 @@ if addNs_roc:
             w_data_allExc = np.full((numSamples, XallExc.shape[1], nFrs), np.nan)
             b_data_allExc = np.full((numSamples, nFrs), np.nan)
             for ifr in frs: #range(nFrs):    
-                if cbestKnown:
-                    indBestC = 0
-                else:        
-                    indBestC = np.in1d(cvect, cbest_allExc[ifr])
+#                if cbestKnown:
+#                    indBestC = 0
+#                else:        
+                indBestC = np.in1d(cvect, cbest_allExc[ifr])
+                
                 perClassErrorTrain_data_allExc[:,ifr] = perClassErrorTrain_allExc[:,indBestC,ifr].squeeze()
                 perClassErrorTest_data_allExc[:,ifr] = perClassErrorTest_allExc[:,indBestC,ifr].squeeze()
                 perClassErrorTest_shfl_allExc[:,ifr] = perClassErrorTestShfl_allExc[:,indBestC,ifr].squeeze()
@@ -2278,7 +2308,9 @@ if addNs_roc:
             Xnow = XexcEq[ii]
             # Set indeces (in Xnow) to sort it based on choice tuning from high to low
             cp = choicePref_exc[frROC, excNsEachSamp_indsOutOfExcNs[ii]] # choice preference of neurons that are in Xnow
-            exc_roc_sort = np.argsort(cp)[::-1] # index of neurons in XexcEq[ii] from high to low ROC values                
+            exc_roc_sort = np.argsort(cp) # index of neurons in XexcEq[ii] from low to high ROC values
+            if doInhAllexcEqexc[3]==1:
+                exc_roc_sort = exc_roc_sort[::-1] # index of neurons in XexcEq[ii] from high to low ROC values                
         
             # Loop over number of neurons in the population: from 1 to the entire population size        
             perClassErrorTrain_data_exc_numNs0 = []
@@ -2304,10 +2336,11 @@ if addNs_roc:
                 w_data_exc0 = np.full((numSamples, XExc.shape[1], nFrs), np.nan)
                 b_data_exc0 = np.full((numSamples, nFrs), np.nan)
                 for ifr in frs: # range(nFrs):    
-                    if cbestKnown:
-                        indBestC = 0
-                    else:
-                        indBestC = np.in1d(cvect, cbest_exc0[ifr])
+#                    if cbestKnown:
+#                        indBestC = 0
+#                    else:
+                    indBestC = np.in1d(cvect, cbest_exc0[ifr])
+                        
                     perClassErrorTrain_data_exc0[:,ifr] = perClassErrorTrain_exc[:,indBestC,ifr].squeeze()
                     perClassErrorTest_data_exc0[:,ifr] = perClassErrorTest_exc[:,indBestC,ifr].squeeze()
                     perClassErrorTest_shfl_exc0[:,ifr] = perClassErrorTestShfl_exc[:,indBestC,ifr].squeeze()
@@ -2368,19 +2401,24 @@ if addNs_roc:
 
 if addNs_roc:
     diffn = 'diffNumNsROC_'
+    if doInhAllexcEqexc[3]==1:
+        h2l = 'hi2loROC_'
+    else:
+        h2l = 'lo2hiROC_'
 else:
     diffn = ''
+    h2l = ''
 
 if trialHistAnalysis:
     if useEqualTrNums:
-        svmn = '%sexcInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_eqTrs_%s_' %(diffn, o2a, shflname, ntype, shflTrLabs_n, al,regressBins,nowStr)
+        svmn = '%s%sexcInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_eqTrs_%s_' %(diffn, h2l, o2a, shflname, ntype, shflTrLabs_n, al,regressBins,nowStr)
     else:
-        svmn = '%sexcInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_%s_' %(diffn, o2a, shflname, ntype, shflTrLabs_n, al,regressBins,nowStr)
+        svmn = '%s%sexcInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_%s_' %(diffn, h2l, o2a, shflname, ntype, shflTrLabs_n, al,regressBins,nowStr)
 else:
     if useEqualTrNums:
-        svmn = '%sexcInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_eqTrs_%s_' %(diffn, o2a, shflname, ntype, shflTrLabs_n, al,regressBins,nowStr)
+        svmn = '%s%sexcInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_eqTrs_%s_' %(diffn, h2l, o2a, shflname, ntype, shflTrLabs_n, al,regressBins,nowStr)
     else:
-        svmn = '%sexcInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_%s_' %(diffn, o2a, shflname, ntype, shflTrLabs_n, al,regressBins,nowStr)
+        svmn = '%s%sexcInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_%s_' %(diffn, h2l, o2a, shflname, ntype, shflTrLabs_n, al,regressBins,nowStr)
 print '\n', svmn[:-1]
 
 

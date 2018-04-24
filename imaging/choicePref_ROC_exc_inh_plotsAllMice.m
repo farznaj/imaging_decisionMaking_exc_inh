@@ -6,7 +6,7 @@
 
 dirn0 = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/ROC';
 
-savefigs = sumMice_do_savefigs(2);
+savefigs = sumMice_do_savefigs(2); % savefigs = 0;
 cols = {'b','r'}; % exc,inh, real data
 colss = [0,.8,.8; .8,.5,.8]; % exc,inh colors for shuffled data
 nowStr = nowStr_allMice{imfni18}; % use nowStr of mouse fni18 (in case its day 4 was removed, you want that to be indicated in the figure name of summary of all mice).
@@ -363,7 +363,7 @@ b(1).FaceColor = cols{1};
 b(2).FaceColor = cols{2};
 xlabel('Mice')
 ylabel('Fraction choice-tuned') % significant
-title('Ipsi-preferring Ns')
+title('Ns with AUC > 0.5')
 set(gca, 'tickdir', 'out', 'box', 'off')
 
 
@@ -375,7 +375,7 @@ b(1).FaceColor = cols{1};
 b(2).FaceColor = cols{2};
 xlabel('Mice')
 ylabel('Fraction choice-tuned') % significant
-title('Contra-preferring Ns')
+title('Ns with AUC < 0.5')
 set(gca, 'tickdir', 'out', 'box', 'off')
 
 
@@ -398,6 +398,41 @@ set(gca, 'tickdir', 'out', 'box', 'off')
 % save figure
 if savefigs        
     fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_fractSigTuned_time-1_', dm0, nowStr));
+    savefig(fign, fdn)    
+    print(fign, '-dpdf', fdn)
+end 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+fign = figure;
+
+% ipsi-preferring neurons
+y = [exc_fractSigIpsiTuned; exc_fractSigContraTuned]';
+subplot(222)
+b = bar(x, y);
+b(1).FaceColor = 'b';
+b(2).FaceColor = rgb('lightblue');
+xlabel('Mice')
+ylabel('Fraction choice-tuned') % significant
+legend({'Ipsi-preferring', 'Contra-preferring'}, 'position', [0.1655    0.7861    0.2786    0.0821])
+set(gca, 'tickdir', 'out', 'box', 'off')
+title('Excitatory')
+
+% contra-preferring neurons
+y = [inh_fractSigIpsiTuned; inh_fractSigContraTuned]';
+subplot(224)
+b = bar(x, y);
+b(1).FaceColor = 'r';
+b(2).FaceColor = rgb('lightsalmon');
+xlabel('Mice')
+ylabel('Fraction choice-tuned') % significant
+legend({'Ipsi-preferring', 'Contra-preferring'}, 'position', [0.1655    0.2861    0.2786    0.0821])
+set(gca, 'tickdir', 'out', 'box', 'off')
+title('Inhibitory')
+
+% save figure
+if savefigs        
+    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_fractIpsiContraSigTuned_time-1_', dm0, nowStr));
     savefig(fign, fdn)    
     print(fign, '-dpdf', fdn)
 end 

@@ -98,10 +98,10 @@ def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis=0,
         # 0817,0818,0819: don't have eachFrame, stAl. Also their FOV more superficial that the rest of the days
         if 'ch_st_goAl' in locals(): # eachFrame analysis
             if ch_st_goAl[0]==1: # chAl   
-                if 'corrTrained' in locals() and corrTrained==1: # svm_eachFrame trained only on corr trials: exclude '150824_1-2' (no LR trials)
-                    days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
-                else:
-                    days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
+#                if 'corrTrained' in locals() and corrTrained==1: # svm_eachFrame trained only on corr trials: exclude '150824_1-2' (no LR trials)
+                days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
+#                else:
+#                    days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
             
             elif ch_st_goAl[1]==1: # stAl           
                 days = ['150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
@@ -122,13 +122,13 @@ def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis=0,
             # '150817_1' and '150824_1' only have 6 trials (when using equal hr and lr)... 
             days = ['150814_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
             
-        elif ch_st_goAl[0]==1 and 'corrTrained' in locals() and corrTrained==1: # chAl, svm_eachFrame trained only on corr trials: exclude '150818_1', '150819_1-2' (too few HR trials)
+        elif ch_st_goAl[0]==1: # and 'corrTrained' in locals() and corrTrained==1: # chAl, svm_eachFrame trained only on corr trials: exclude '150818_1', '150819_1-2' (too few HR trials)
             days = ['150814_1', '150817_1', '150824_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
     #        days = ['151015_1']   # eg class accur
     #        days = ['151101_1']   # eg svm proj
             # 150910 : eg exc,inh FRs
-        else: # all days
-            days = ['150814_1', '150817_1', '150818_1', '150819_1-2', '150824_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
+#        else: # all days
+#            days = ['150814_1', '150817_1', '150818_1', '150819_1-2', '150824_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
     
     
     
@@ -147,10 +147,10 @@ def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis=0,
             if 'ch_st_goAl' in locals() and ch_st_goAl[1]==1:  # eachFrame, stimAL: '150904_1' doesnt have enough trials. taken out from below.       
                 days = ['150901_1', '150903_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
             else: # chAl
-                if 'corrTrained' in locals() and corrTrained==1: # svm_eachFrame trained only on corr trials: exclude '150901' (few HR trials)
-                    days = ['150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];                            
-                else:
-                    days = ['150901_1', '150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
+#                if 'corrTrained' in locals() and corrTrained==1: # svm_eachFrame trained only on corr trials: exclude '150901' (few HR trials)
+                days = ['150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];                            
+#                else:
+#                    days = ['150901_1', '150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
                             
         elif noExtraStimDays:
             days = ['151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1']
@@ -329,13 +329,16 @@ def setImagingAnalysisNamesP(mousename, imagingFolder=[], mdfFileNumber=1, **opt
     ##%%        
     if type(imagingFolder)==str:    
         tifFold = os.path.join(dataPath+mousename,'imaging',imagingFolder)
-    
-        if not os.path.exists(tifFold):
-            if 'altDataPath' in locals():
-                tifFold = os.path.join(altDataPath+mousename, 'imaging', imagingFolder)
-                dataPath = altDataPath
-            else:
-                sys.exit('Data directory does not exist!')
+
+        if any([mousename in s for s in ['fni18','fni19']]): # fni18, fni19
+            tifFold = os.path.join(altDataPath+mousename, 'imaging', imagingFolder)
+            dataPath = altDataPath    
+#        if not os.path.exists(tifFold):
+#            if 'altDataPath' in locals():
+#                tifFold = os.path.join(altDataPath+mousename, 'imaging', imagingFolder)
+#                dataPath = altDataPath
+#            else:
+#                sys.exit('Data directory does not exist!')
     
         
     #    print mdfFileNumber, type(mdfFileNumber)
@@ -381,10 +384,10 @@ def setImagingAnalysisNamesP(mousename, imagingFolder=[], mdfFileNumber=1, **opt
             pnevFileName = ''
         
         ##%%
-        if nOuts==2:
-            return imfilename, pnevFileName
-        else:
-            return imfilename, pnevFileName, dataPath
+#        if nOuts==2:
+#            return imfilename, pnevFileName
+#        else:
+        return imfilename, pnevFileName, dataPath
  
     else:
         
@@ -1622,8 +1625,13 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
 
     if len(doInhAllexcEqexc)>3:
         diffn = 'diffNumNsROC_'
+        if doInhAllexcEqexc[3]==1:
+            h2l = 'hi2loROC_'
+        else:
+            h2l = 'lo2hiROC_'
     else:
         diffn = ''
+        h2l = ''
     
     if chAl==1:
         al = 'chAl'
@@ -1676,14 +1684,14 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
         
     if trialHistAnalysis:
         if useEqualTrNums:
-            svmn = '%sexcInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_eqTrs_*' %(diffn,o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
+            svmn = '%s%sexcInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_eqTrs_*' %(diffn, h2l, o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
         else:
-            svmn = '%sexcInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_*' %(diffn,o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
+            svmn = '%s%sexcInh_SVMtrained_eachFrame_%s%s%s%s_prevChoice_%s_ds%d_*' %(diffn, h2l, o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
     else:
         if useEqualTrNums:
-            svmn = '%sexcInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_eqTrs_*' %(diffn,o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
+            svmn = '%s%sexcInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_eqTrs_*' %(diffn, h2l, o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
         else:
-            svmn = '%sexcInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_*' %(diffn,o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
+            svmn = '%s%sexcInh_SVMtrained_eachFrame_%s%s%s%s_currChoice_%s_ds%d_*' %(diffn, h2l, o2a, shflname, ntype, shflTrLabs_n, al,regressBins)
         
         
         
@@ -2635,7 +2643,7 @@ def loadSVM_excInh_excInhHalf(pnevFileName, trialHistAnalysis, chAl, regressBins
 
 #%% Load exc,inh SVM vars for the following analysis : add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
         
-def loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, loadWeights, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0):
+def loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, loadWeights, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, h2l=1):
     # loadWeights: 
     # 0: don't load weights, only load class accur
     # 1 : load weights and class cccur
@@ -2646,6 +2654,10 @@ def loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins,
         
         doInhAllexcEqexc = np.full((4), 0, dtype=int)
         doInhAllexcEqexc[idi] = 1
+        if h2l:
+            doInhAllexcEqexc[3] = 1 # high to low AUC
+        else:
+            doInhAllexcEqexc[3] = 2 # low to high AUC
 
         svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron, shflTrLabs)[0]
         svmName_excInh.append(svmName)

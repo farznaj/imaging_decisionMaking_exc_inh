@@ -8,7 +8,7 @@
 
 %% Load ROC vars and set vars required for plotting for each mouse %%%%%%
 
-outcome2ana = ''; % 'corr'; 'incorr'; '';
+outcome2ana = 'corr'; %''; % 'corr'; 'incorr'; '';
 % alFR = 'initAl'; % the firing rate traces were aligned on what
 
 fni18_rmvDay4 = 0; % if 1, remove 4th day of fni18.
@@ -684,7 +684,11 @@ exc_fractSigTuned_ipsi = nan(1, length(mice));
 exc_fractSigTuned_contra = nan(1, length(mice));
 inh_fractSigTuned_ipsi = nan(1, length(mice));
 inh_fractSigTuned_contra = nan(1, length(mice));
-    
+exc_fractSigIpsiTuned = nan(1, length(mice));
+exc_fractSigContraTuned = nan(1, length(mice));
+inh_fractSigIpsiTuned = nan(1, length(mice));
+inh_fractSigContraTuned = nan(1, length(mice));
+
 for im = 1:length(mice)
     %%% exc
     a = exc_allNsDaysPooled_eachMouse{im}(nPreMin,:); % take AUC at time -1
@@ -693,6 +697,12 @@ for im = 1:length(mice)
     exc_ipsiPref_prob_dataFromShflDist{im} = exc_prob_dataROC_from_shflDist_eachMouseDaysPooled{im}(a > .5); % get prob of significancy for ipsi-preferring neurons (ie neurons whose AUC is > .5 but are not necessarily significantly tuned!)
     exc_contraPref_prob_dataFromShflDist{im} = exc_prob_dataROC_from_shflDist_eachMouseDaysPooled{im}(a < .5); % get prob of significancy for contra-preferring neurons
 
+    % Out of sig choice-tuned neurons, what fraction are ipsi and what fraction are contra
+    aa = (exc_prob_dataROC_from_shflDist_eachMouseDaysPooled{im} <= alpha);
+    exc_fractSigIpsiTuned(im) = mean(a(aa==1)>.5);
+    exc_fractSigContraTuned(im) = mean(a(aa==1)<.5);
+    
+    
     %%% inh
     a = inh_allNsDaysPooled_eachMouse{im}(nPreMin,:); % take AUC at time -1
     a = a(~isnan(a)); % take only valid days
@@ -700,12 +710,18 @@ for im = 1:length(mice)
     inh_ipsiPref_prob_dataFromShflDist{im} = inh_prob_dataROC_from_shflDist_eachMouseDaysPooled{im}(a > .5); % get prob of significancy for ipsi-preferring neurons
     inh_contraPref_prob_dataFromShflDist{im} = inh_prob_dataROC_from_shflDist_eachMouseDaysPooled{im}(a < .5); % get prob of significancy for contra-preferring neurons
 
-    %%%% Set fractions of significant ipsi and contra tuned neurons 
-    exc_fractSigTuned_ipsi(im) = mean(exc_ipsiPref_prob_dataFromShflDist{im} <= alpha); % fraction of neurons that are significantly tuned (comparing AUC with shuffled AUCs)
-    exc_fractSigTuned_contra(im) = mean(exc_contraPref_prob_dataFromShflDist{im} <= alpha);    
-    inh_fractSigTuned_ipsi(im) = mean(inh_ipsiPref_prob_dataFromShflDist{im} <= alpha); % fraction of neurons that are significantly tuned (comparing AUC with shuffled AUCs)
+    % Out of sig choice-tuned neurons, what fraction are ipsi and what fraction are contra
+    aa = (inh_prob_dataROC_from_shflDist_eachMouseDaysPooled{im} <= alpha);
+    inh_fractSigIpsiTuned(im) = mean(a(aa==1)>.5);
+    inh_fractSigContraTuned(im) = mean(a(aa==1)<.5);    
+    
+    
+    %%%% 
+    exc_fractSigTuned_ipsi(im) = mean(exc_ipsiPref_prob_dataFromShflDist{im} <= alpha); % fraction of Ns with AUC > .5 that are significantly tuned (comparing AUC with shuffled AUCs)
+    exc_fractSigTuned_contra(im) = mean(exc_contraPref_prob_dataFromShflDist{im} <= alpha); % fraction of Ns with AUC < .5 that are significantly tuned (comparing AUC with shuffled AUCs)   
+    inh_fractSigTuned_ipsi(im) = mean(inh_ipsiPref_prob_dataFromShflDist{im} <= alpha); 
     inh_fractSigTuned_contra(im) = mean(inh_contraPref_prob_dataFromShflDist{im} <= alpha);        
-
+    
 end
 
 %%%% Plots are made in choicePref_ROC_exc_inh_plotsAllMice

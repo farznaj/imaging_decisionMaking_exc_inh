@@ -16,19 +16,20 @@ Created on Sun Mar 12 15:12:29 2017
     
 #%% Change the following vars:
 
-mousename = 'fni18'
+mousename = 'fni19'
 
 shflTrsEachNeuron = 0 # 1st set to 1, then to 0 to compare how decoder changes after removing noise corrs. # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
 addNs_roc = 1 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
+h2l = 0 # if 1, load svm file in which neurons were added from high to low AUC. If 0: low to high AUC.
 do_excInhHalf = 0 # 0: Load vars for inh,exc,allExc, 1: Load exc,inh SVM vars for excInhHalf (ie when the population consists of half exc and half inh) and allExc2inhSize (ie when populatin consists of allExc but same size as 2*inh size)
 loadYtest = 0 # get svm performance for different trial strength # to load the svm files that include testTrInds_allSamps, etc vars (ie in addition to percClassError, they include the Y_hat for each trial)
 
+corrTrained = 1 # 1 # svm was trained on what trial outcomes: if corr, set to 1; if all outcomes, set to 0)
 savefigs = 0
 doAllN = 1 # matters only when do_excInhHalf =0; plot allN, instead of allExc
 
-
-corrTrained = 1
 doIncorr = 0
+
 
 thTrained = 10  # number of trials of each class used for svm training, min acceptable value to include a day in analysis
 loadWeights = 0
@@ -74,7 +75,11 @@ if doAllN==1:
     labAll = 'allN'
 else:
     labAll = 'allExc'
-       
+
+if corrTrained==0:
+    corrn = 'allOutcome_'
+else:
+    corrn = ''
 
 #if loadInhAllexcEqexc==1:
 if addNs_roc:   
@@ -107,7 +112,7 @@ from datetime import datetime
 nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 
    
-#%% 
+#%% Initiate vars
 '''
 #####################################################################################################################################################   
 #####################################################################################################################################################
@@ -151,8 +156,8 @@ num_ehm_exc_all = []
 
 #%% Loop over days    
 
-# iday = 0  
-for iday in range(len(days)):  
+# iday = 19  
+for iday in range(len(days)): # np.arange(45, len(days)): # 
 
     #%%            
     print '___________________'
@@ -166,7 +171,7 @@ for iday in range(len(days)):
     
     # from setImagingAnalysisNamesP import *
     
-    imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
+    imfilename, pnevFileName, dataPath = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
     
     postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
     moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
@@ -179,7 +184,6 @@ for iday in range(len(days)):
     svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, [1,0,0], regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]   
     
     corr_hr, corr_lr = set_corr_hr_lr(postName, svmName)
-
     corr_hr_lr[iday,:] = [corr_hr, corr_lr]        
     
     
@@ -198,7 +202,7 @@ for iday in range(len(days)):
 #        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, w_data_inh, w_data_allExc, b_data_inh, b_data_allExc, svmName_excInh = loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, loadWeights, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0)
 #        perClassErrorTest_data_exc = 0; perClassErrorTest_shfl_exc = 0; perClassErrorTest_chance_exc = 0; 
         perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh = \
-        loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, loadWeights, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0)
+        loadSVM_excInh_addNs1by1(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, loadWeights, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, h2l=h2l)
         
     elif do_excInhHalf:
         # numShufflesExc x numSamples x numFrames
@@ -409,6 +413,8 @@ eventI_allDays = eventI_allDays.astype(int)
 eventI_ds_allDays = eventI_ds_allDays.astype(int)
 numD = len(perClassErrorTest_data_inh_all)
 
+print '_____________________ Done with all days _____________________'
+
 
 #%%    
 ######################################################################################################################################################    
@@ -601,11 +607,6 @@ print '%d days will be excluded: too few trials for svm training' %(sum(mn_corr 
 print np.array(days)[mn_corr < thTrained]
 numDaysGood = sum(mn_corr>=thTrained)
 
-mn_corr0 = mn_corr + 0 # will be used for the heatmaps of CA for all days; We need to exclude 151023 from fni16, this day had issues! ...  in the mat file of stabTestTrainTimes, its class accur is very high ... and in the mat file of excInh_trainDecoder_eachFrame it is very low ...ANYWAY I ended up removing it from the heatmap of CA for all days!!! but it is included in other analyses!!
-if mousename=='fni16':
-    mn_corr0[days.index('151023_1')] = thTrained - 1 # see it will be excluded from analysis!    
-days2an_heatmap = mn_corr0 >= thTrained     
-
 
 #%% Load behavioral performance vars (for plots of svm performance vs behavioral performance)
 
@@ -641,6 +642,16 @@ no
 ##################################################################################################
 ##################################################################################################
 ##################################################################################################
+
+
+#%% NOTE: Do you want to do this?
+
+mn_corr0 = mn_corr + 0 # will be used for the heatmaps of CA for all days; We need to exclude 151023 from fni16, this day had issues! ...  in the mat file of stabTestTrainTimes, its class accur is very high ... and in the mat file of excInh_trainDecoder_eachFrame it is very low ...ANYWAY I ended up removing it from the heatmap of CA for all days!!! but it is included in other analyses!!
+if mousename=='fni16': #np.logical_and(mousename=='fni16', corrTrained==1):
+    mn_corr0[days.index('151023_1')] = thTrained - 1 # see it will be excluded from analysis!    
+days2an_heatmap = mn_corr0 >= thTrained     
+
+
 
 #%% Go to line 1900 for addNs_roc plots. 
 
@@ -831,9 +842,9 @@ if addNs_roc==0:
         
         if savefigs:#% Save the figure
             if chAl==1:
-                dd = 'chAl_numNeurons_days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                dd = 'chAl_' + corrn + 'numNeurons_days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
             else:
-                dd = 'stAl_numNeurons_days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' +nowStr
+                dd = 'stAl_' + corrn + 'numNeurons_days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' +nowStr
                 
             d = os.path.join(svmdir+dnow)
             if not os.path.exists(d):
@@ -848,7 +859,7 @@ if addNs_roc==0:
     
     #%% Heatmaps of class accuracy showing all days
 
-    sepCB = 0 # if 1: plot inh and exc on a separate c axis scale than allN
+    sepCB = 1 # if 1: plot inh and exc on a separate c axis scale than allN
     alph = .001 # to find significancy (data vs shuffle)
     asp = 'auto' #2
     cmap ='jet'
@@ -952,9 +963,9 @@ if addNs_roc==0:
             d = os.path.join(svmdir+dnow) #,mousename)       
     #            daysnew = (np.array(days))[dayinds]
             if chAl==1:
-                dd = 'chAl_eachDay_heatmap_' + cbn + namp + labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                dd = 'chAl_' + corrn + 'eachDay_heatmap_' + cbn + namp + labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
             else:
-                dd = 'stAl_eachDay_heatmap_' + cbn + namp + labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
+                dd = 'stAl_' + corrn + 'eachDay_heatmap_' + cbn + namp + labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
             if not os.path.exists(d):
                 print 'creating folder'
                 os.makedirs(d)            
@@ -1044,9 +1055,9 @@ if addNs_roc==0:
         d = os.path.join(svmdir+dnow) #,mousename)       
     #            daysnew = (np.array(days))[dayinds]
         if chAl==1:
-            dd = 'chAl_classAccur_vs_days_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+            dd = 'chAl_' + corrn + 'classAccur_vs_days_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
         else:
-            dd = 'stAl_classAccur_vs_days_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+            dd = 'stAl_' + corrn + 'classAccur_vs_days_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
         if not os.path.exists(d):
             print 'creating folder'
             os.makedirs(d)            
@@ -1149,9 +1160,9 @@ if addNs_roc==0:
         d = os.path.join(svmdir+dnow) #,mousename)       
     #            daysnew = (np.array(days))[dayinds]
         if chAl==1:
-            dd = 'chAl_classAccur_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+            dd = 'chAl_' + corrn + 'classAccur_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
         else:
-            dd = 'stAl_classAccur_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+            dd = 'stAl_' + corrn + 'classAccur_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
         if not os.path.exists(d):
             print 'creating folder'
             os.makedirs(d)            
@@ -1224,11 +1235,12 @@ if addNs_roc==0:
     firstFrame_exc_avSamps = np.nanmean(firstFrame, axis=0)
 
             
-    # NOTE: do you want to do the following??
-    if mousename=='fni16':
-        firstFrame_allN[7] = np.nan # ('150903_1') ... it is one of the early days and it is significant all over the trial!!! (rerun svm for this day!)
-        firstFrame_exc[7] = np.nan
-        firstFrame_inh[7] = np.nan
+    #%% NOTE: do you want to do the following??
+    
+    if np.logical_and(mousename=='fni16', corrTrained==1):
+        firstFrame_allN[days.index('150903_1')] = np.nan # ('150903_1') ... it is one of the early days and it is significant all over the trial!!! (rerun svm for this day!)
+        firstFrame_exc[days.index('150903_1')] = np.nan
+        firstFrame_inh[days.index('150903_1')] = np.nan
     
         
     #%% Plot choice signal onset vs. day, also compare choice signal onset for days with low vs high behavioral performance #########%%       
@@ -1317,9 +1329,9 @@ if addNs_roc==0:
         d = os.path.join(svmdir+dnow) #,mousename)       
     #            daysnew = (np.array(days))[dayinds]
         if chAl==1:
-            dd = 'chAl_onsetChoice_vs_days_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+            dd = 'chAl_' + corrn + 'onsetChoice_vs_days_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
         else:
-            dd = 'stAl_onsetChoice_vs_days_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+            dd = 'stAl_' + corrn + 'onsetChoice_vs_days_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
         if not os.path.exists(d):
             print 'creating folder'
             os.makedirs(d)            
@@ -1407,9 +1419,9 @@ if addNs_roc==0:
         d = os.path.join(svmdir+dnow) #,mousename)       
     #            daysnew = (np.array(days))[dayinds]
         if chAl==1:
-            dd = 'chAl_onsetChoice_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+            dd = 'chAl_' + corrn + 'onsetChoice_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
         else:
-            dd = 'stAl_onsetChoice_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+            dd = 'stAl_' + corrn + 'onsetChoice_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
         if not os.path.exists(d):
             print 'creating folder'
             os.makedirs(d)            
@@ -1511,9 +1523,9 @@ if addNs_roc==0:
     ##%% Save the figure    
     if savefigs:
         if chAl==1:
-            dd = 'chAl_allDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = 'chAl_' + corrn + 'allDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
         else:
-            dd = 'stAl_allDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = 'stAl_' + corrn + 'allDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
             
         d = os.path.join(svmdir+dnow)
         if not os.path.exists(d):
@@ -1614,9 +1626,9 @@ if addNs_roc==0:
                     n0 = ''
                     
                 if chAl==1:
-                    dd = 'chAl_day' + days[iday][0:6] + n0 + '_' + nowStr
+                    dd = 'chAl_' + corrn + 'day' + days[iday][0:6] + n0 + '_' + nowStr
                 else:
-                    dd = 'stAl_day' + days[iday][0:6] + n0 + '_' + nowStr
+                    dd = 'stAl_' + corrn + 'day' + days[iday][0:6] + n0 + '_' + nowStr
             
                 if superimpose==1:        
                     dd = dd+'_sup'
@@ -1719,9 +1731,9 @@ if addNs_roc==0:
     ##%% Save the figure    
     if savefigs:
         if chAl==1:
-            dd = 'chAl_aveSdDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = 'chAl_' + corrn + 'aveSdDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
         else:
-            dd = 'stAl_aveSdDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = 'stAl_' + corrn + 'aveSdDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
     
         if superimpose==1:        
             dd = dd+'_sup'
@@ -1856,9 +1868,9 @@ if addNs_roc==0:
         ##%% Save the figure    
         if savefigs:
             if chAl==1:
-                dd = 'chAl_aveSeDays_easyHardMedTrs_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                dd = 'chAl_' + corrn + 'aveSeDays_easyHardMedTrs_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
             else:
-                dd = 'stAl_aveSeDays_easyHardMedTrs_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                dd = 'stAl_' + corrn + 'aveSeDays_easyHardMedTrs_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
         
                 
             d = os.path.join(svmdir+dnow)
@@ -1898,7 +1910,12 @@ if addNs_roc:
     labs = ['allExc','inh', 'exc']
     colors = ['k','r','b']
     colors_shflTrsEachN = 'darkgray', 'darksalmon', 'deepskyblue'        
+    if h2l==1: # high to low ROC
+        h2ln = 'hi2loROC_'
+    else: # low to high ROC
+        h2ln = 'lo2hiROC_'
 
+        
     if 'av_test_data_inh_shflTrsEachN' in locals():
         if np.array_equal(av_test_data_inh_shflTrsEachN , av_test_data_inh)==0:
             compWith_shflTrsEachN = 1 # codes are run for both values of shflTrsEachNeuron to compare CA traces before and after breaking noise correlations
@@ -2172,7 +2189,7 @@ if addNs_roc:
         
         
         ax1.set_xlim([-5, sum(nDaysPexc>=thD)+4])   #pExc
-        ax1.set_xlabel('Numbers of neurons in the decoder')
+        ax1.set_xlabel('Number of neurons in the decoder')
         ax1.set_ylabel('% Class accuracy')    
         ax1.legend(loc='center left', bbox_to_anchor=(.6, .2), frameon=False)         
         if nanEnd==0:
@@ -2199,9 +2216,9 @@ if addNs_roc:
             else:
                 nc = ''
             if chAl==1:
-                dd = 'chAl_'+nc+'avSeDays_'+nN+'addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                dd = 'chAl_' + corrn + nc+'avSeDays_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
             else:
-                dd = 'stAl_'+nc+'avSeDays_'+nN+'addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                dd = 'stAl_' + corrn + nc+'avSeDays_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                 
             d = os.path.join(svmdir+dnow)
             if not os.path.exists(d):
@@ -2248,9 +2265,9 @@ if addNs_roc:
                     nN = 'addNs_thDays%d_' %(thds)
 
                 if chAl==1:
-                    dd = 'chAl_diff_avSeDays_'+nN+'addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                    dd = 'chAl_' + corrn + 'diff_avSeDays_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                 else:
-                    dd = 'stAl_diff_avSeDays_'+nN+'addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                    dd = 'stAl_' + corrn + 'diff_avSeDays_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                     
                 d = os.path.join(svmdir+dnow)
                 if not os.path.exists(d):
@@ -2371,9 +2388,9 @@ if addNs_roc:
 
         if savefigs:
             if chAl==1:
-                dd = 'chAl_VSshflTrsEachN_avSeDays_CAchange_addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                dd = 'chAl_' + corrn + 'VSshflTrsEachN_avSeDays_CAchange_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
             else:
-                dd = 'stAl_VSshflTrsEachN_avSeDays_CAchange_addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                dd = 'stAl_' + corrn + 'VSshflTrsEachN_avSeDays_CAchange_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                 
             d = os.path.join(svmdir+dnow)
             if not os.path.exists(d):
@@ -2438,9 +2455,9 @@ if addNs_roc:
    
     if savefigs:
         if chAl==1:
-            dd = 'chAl_avSeDays_numNeurPlateau_addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = 'chAl_' + corrn + 'avSeDays_numNeurPlateau_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
         else:
-            dd = 'stAl_avSeDays_numNeurPlateau_addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = 'stAl_' + corrn + 'avSeDays_numNeurPlateau_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
             
         d = os.path.join(svmdir+dnow)
         if not os.path.exists(d):
@@ -2537,9 +2554,9 @@ if addNs_roc:
     ##%% Save the figure    
     if savefigs:               
         if chAl==1:
-            dd = 'chAl_eachDay_addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = 'chAl_' + corrn + 'eachDay_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
         else:
-            dd = 'stAl_eachDay_addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = 'stAl_' + corrn + 'eachDay_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
         
         d = os.path.join(svmdir+dnow)
         if not os.path.exists(d):
@@ -2570,7 +2587,7 @@ if addNs_roc:
     se = av_test_data_exc_maxNinDecode.std() / np.sqrt(numD)
     
     ######### Plot
-    plt.figure(figsize=(2,3))
+    plt.figure(figsize=(1,2))
     
     plt.errorbar(0, aa, sa, fmt='o', label='allExc', color='k')
     plt.errorbar(1, ai, si, fmt='o', label='inh', color='r')
@@ -2593,9 +2610,9 @@ if addNs_roc:
         else:
             nN = 'addNs_thDays%d_' %(thds)
         if chAl==1:
-            dd = 'chAl_avSeDays_time-1_allNs_'+nN+'addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = 'chAl_' + corrn + 'avSeDays_time-1_allNs_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
         else:
-            dd = 'stAl_avSeDays_time-1_allNs_'+nN+'addNsROC_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = 'stAl_' + corrn + 'avSeDays_time-1_allNs_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
             
         d = os.path.join(svmdir+dnow)
         if not os.path.exists(d):
