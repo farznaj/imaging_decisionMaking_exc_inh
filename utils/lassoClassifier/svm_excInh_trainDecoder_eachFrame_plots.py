@@ -18,8 +18,10 @@ Created on Sun Mar 12 15:12:29 2017
 
 mousename = 'fni19'
 
+decodeStimCateg = 1
+use_both_remCorr_testing = [1,0,0] # if decodeStimCate = 1, decide which one (testing, remCorr, or Both) you want to use for the rest of this code
 shflTrsEachNeuron = 0 # 1st set to 1, then to 0 to compare how decoder changes after removing noise corrs. # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
-addNs_roc = 1 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
+addNs_roc = 0 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
 h2l = 0 # if 1, load svm file in which neurons were added from high to low AUC. If 0: low to high AUC.
 do_excInhHalf = 0 # 0: Load vars for inh,exc,allExc, 1: Load exc,inh SVM vars for excInhHalf (ie when the population consists of half exc and half inh) and allExc2inhSize (ie when populatin consists of allExc but same size as 2*inh size)
 loadYtest = 0 # get svm performance for different trial strength # to load the svm files that include testTrInds_allSamps, etc vars (ie in addition to percClassError, they include the Y_hat for each trial)
@@ -76,10 +78,16 @@ if doAllN==1:
 else:
     labAll = 'allExc'
 
+if decodeStimCateg:
+    corrTrained=0
+    
 if corrTrained==0:
     corrn = 'allOutcome_'
 else:
     corrn = ''
+    
+if decodeStimCateg:
+    corrn = 'decodeStimCateg_' + corrn
 
 #if loadInhAllexcEqexc==1:
 if addNs_roc:   
@@ -101,7 +109,7 @@ if doAllN==1:
 
 execfile("defFuns.py")
 #execfile("svm_plots_setVars_n.py")  
-days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays, loadYtest)
+days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays, loadYtest, decodeStimCateg)
 # remove some days if needed:
 #days = np.delete(days, [14])
 
@@ -153,11 +161,30 @@ perClassErrorTest_shfl_medium_exc_all = []
 num_ehm_inh_all = []
 num_ehm_allExc_all = []
 num_ehm_exc_all = []
+perClassErrorTestBoth_inh_all = []
+perClassErrorTestBoth_shfl_inh_all = []
+perClassErrorTestBoth_chance_inh_all = []
+perClassErrorTestRemCorr_inh_all = []
+perClassErrorTestRemCorr_shfl_inh_all = []
+perClassErrorTestRemCorr_chance_inh_all = []
+perClassErrorTestBoth_allExc_all = []
+perClassErrorTestBoth_shfl_allExc_all = []
+perClassErrorTestBoth_chance_allExc_all = []
+perClassErrorTestRemCorr_allExc_all = []
+perClassErrorTestRemCorr_shfl_allExc_all = []
+perClassErrorTestRemCorr_chance_allExc_all = []
+perClassErrorTestBoth_exc_all = []
+perClassErrorTestBoth_shfl_exc_all = []
+perClassErrorTestBoth_chance_exc_all = []
+perClassErrorTestRemCorr_exc_all = []
+perClassErrorTestRemCorr_shfl_exc_all = []
+perClassErrorTestRemCorr_chance_exc_all = []      
+    
 
 #%% Loop over days    
 
 # iday = 19  
-for iday in range(len(days)): # np.arange(45, len(days)): # 
+for iday in range(len(days)): # np.arange(3, len(days)): # 
 
     #%%            
     print '___________________'
@@ -209,7 +236,55 @@ for iday in range(len(days)): # np.arange(45, len(days)): #
         perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, w_data_inh, w_data_allExc, b_data_inh, b_data_allExc, svmName_excInh = \
         loadSVM_excInh_excInhHalf(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, loadWeights, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0)
         perClassErrorTest_data_exc = 0; perClassErrorTest_shfl_exc = 0; perClassErrorTest_chance_exc = 0; 
+        
+    elif decodeStimCateg:
+        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, \
+        perClassErrorTestRemCorr_inh, perClassErrorTestRemCorr_shfl_inh, perClassErrorTestRemCorr_chance_inh, \
+        perClassErrorTestBoth_inh, perClassErrorTestBoth_shfl_inh, perClassErrorTestBoth_chance_inh, \
+        perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, \
+        perClassErrorTestRemCorr_allExc, perClassErrorTestRemCorr_shfl_allExc, perClassErrorTestRemCorr_chance_allExc, \
+        perClassErrorTestBoth_allExc, perClassErrorTestBoth_shfl_allExc, perClassErrorTestBoth_chance_allExc, \
+        perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, \
+        perClassErrorTestRemCorr_exc, perClassErrorTestRemCorr_shfl_exc, perClassErrorTestRemCorr_chance_exc, \
+        perClassErrorTestBoth_exc, perClassErrorTestBoth_shfl_exc, perClassErrorTestBoth_chance_exc, \
+        w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, trsExcluded, \
+        testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, trsnow_allSamps_inh, \
+        testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, trsnow_allSamps_allExc, \
+        testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc, trsnow_allSamps_exc, \
+        = loadSVM_excInh_decodeStimCateg(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=loadYtest)        
 
+        ###### average across nRandCorr samps:
+        perClassErrorTest_data_inh = np.mean(perClassErrorTest_data_inh, axis=1)
+        perClassErrorTest_shfl_inh = np.mean(perClassErrorTest_shfl_inh, axis=1)
+        perClassErrorTest_chance_inh = np.mean(perClassErrorTest_chance_inh, axis=1)
+        perClassErrorTestRemCorr_inh = np.mean(perClassErrorTestRemCorr_inh, axis=1)
+        perClassErrorTestRemCorr_shfl_inh = np.mean(perClassErrorTestRemCorr_shfl_inh, axis=1)
+        perClassErrorTestRemCorr_chance_inh = np.mean(perClassErrorTestRemCorr_chance_inh, axis=1)
+        perClassErrorTestBoth_inh = np.mean(perClassErrorTestBoth_inh, axis=1)
+        perClassErrorTestBoth_shfl_inh = np.mean(perClassErrorTestBoth_shfl_inh, axis=1)
+        perClassErrorTestBoth_chance_inh = np.mean(perClassErrorTestBoth_chance_inh, axis=1)
+
+        perClassErrorTest_data_allExc = np.mean(perClassErrorTest_data_allExc, axis=1)
+        perClassErrorTest_shfl_allExc = np.mean(perClassErrorTest_shfl_allExc, axis=1)
+        perClassErrorTest_chance_allExc = np.mean(perClassErrorTest_chance_allExc, axis=1)
+        perClassErrorTestRemCorr_allExc = np.mean(perClassErrorTestRemCorr_allExc, axis=1)
+        perClassErrorTestRemCorr_shfl_allExc = np.mean(perClassErrorTestRemCorr_shfl_allExc, axis=1)
+        perClassErrorTestRemCorr_chance_allExc = np.mean(perClassErrorTestRemCorr_chance_allExc, axis=1)
+        perClassErrorTestBoth_allExc = np.mean(perClassErrorTestBoth_allExc, axis=1)
+        perClassErrorTestBoth_shfl_allExc = np.mean(perClassErrorTestBoth_shfl_allExc, axis=1)
+        perClassErrorTestBoth_chance_allExc = np.mean(perClassErrorTestBoth_chance_allExc, axis=1)
+        
+        if len(perClassErrorTest_data_exc)>0:
+            perClassErrorTest_data_exc = np.mean(perClassErrorTest_data_exc, axis=1)
+            perClassErrorTest_shfl_exc = np.mean(perClassErrorTest_shfl_exc, axis=1)
+            perClassErrorTest_chance_exc = np.mean(perClassErrorTest_chance_exc, axis=1)
+            perClassErrorTestRemCorr_exc = np.mean(perClassErrorTestRemCorr_exc, axis=1)
+            perClassErrorTestRemCorr_shfl_exc = np.mean(perClassErrorTestRemCorr_shfl_exc, axis=1)
+            perClassErrorTestRemCorr_chance_exc = np.mean(perClassErrorTestRemCorr_chance_exc, axis=1)
+            perClassErrorTestBoth_exc = np.mean(perClassErrorTestBoth_exc, axis=1)
+            perClassErrorTestBoth_shfl_exc = np.mean(perClassErrorTestBoth_shfl_exc, axis=1)
+            perClassErrorTestBoth_chance_exc = np.mean(perClassErrorTestBoth_chance_exc, axis=1)
+        
     else:
 #        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=loadYtest)
         perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, trsExcluded, testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, trsnow_allSamps_inh, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, trsnow_allSamps_allExc, testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc, trsnow_allSamps_exc = \
@@ -225,161 +300,42 @@ for iday in range(len(days)): # np.arange(45, len(days)): #
     #%% Set classification error for easy, medium, and hard trials.
     
     if loadYtest:
-
-        thMinEMH = -1 #1 #3 ... makes sense to make sure each day is contributing to all easy,med,hard, but if I make this above -1, fni16,18,19 will have almost no days!
-        ###########%% Set stimrate for testing trials of each sample         
-        
-        Data = scio.loadmat(postName, variable_names=['stimrate', 'cb'])
-        stimrate = np.array(Data.pop('stimrate')).flatten().astype('float')
-        cb = np.array(Data.pop('cb')).flatten().astype('float')        
-        '''
-        # inh
-        data = scio.loadmat(svmName_excInh[0], variable_names=['trsExcluded', 'trsnow_allSamps'])
-        trsExcluded = np.array(data.pop('trsExcluded')).flatten().astype('bool') 
-        trsnow_allSamps_inh = np.array(data.pop('trsnow_allSamps')).astype('int') # index of trials after picking random hr (or lr) in order to make sure both classes have the same number in the final Y (on which svm was run)        
-        # allExc
-        data = scio.loadmat(svmName_excInh[1], variable_names=['trsnow_allSamps'])
-        trsnow_allSamps_allExc = np.array(data.pop('trsnow_allSamps')).astype('int')         
-        # exc
-        data = scio.loadmat(svmName_excInh[2], variable_names=['trsnow_allSamps'])
-        trsnow_allSamps_exc = np.array(data.pop('trsnow_allSamps')).astype('int') 
-        '''
-
-        
-        stimrate = stimrate[~trsExcluded] # length= length of Y0 (ie before making hr and lr the same number in Y)
-        len_test = Ytest_allSamps_inh.shape[1] # numSamples x numTestTrs
-        numSamps = testTrInds_allSamps_inh.shape[0]
-        nFrs = Ytest_hat_allSampsFrs_inh.shape[1]
-        numShufflesExc = trsnow_allSamps_exc.shape[0]
-        
-#        stimrate_testTrs_allSamps = np.full((numSamps, len_test), np.nan)                
-        perClassEr_easy_inh = np.full((numSamps, nFrs), np.nan)                
-        perClassEr_hard_inh = np.full((numSamps, nFrs), np.nan)
-        perClassEr_medium_inh = np.full((numSamps, nFrs), np.nan)
-        perClassEr_easy_allExc = np.full((numSamps, nFrs), np.nan)
-        perClassEr_hard_allExc = np.full((numSamps, nFrs), np.nan)
-        perClassEr_medium_allExc = np.full((numSamps, nFrs), np.nan)
-        perClassEr_easy_exc = np.full((numShufflesExc, numSamps, nFrs), np.nan)
-        perClassEr_hard_exc = np.full((numShufflesExc, numSamps, nFrs), np.nan)
-        perClassEr_medium_exc = np.full((numShufflesExc, numSamps, nFrs), np.nan)
-        perClassEr_easy_shfl_inh = np.full((numSamps, nFrs), np.nan)                
-        perClassEr_hard_shfl_inh = np.full((numSamps, nFrs), np.nan)
-        perClassEr_medium_shfl_inh = np.full((numSamps, nFrs), np.nan)
-        perClassEr_easy_shfl_allExc = np.full((numSamps, nFrs), np.nan)
-        perClassEr_hard_shfl_allExc = np.full((numSamps, nFrs), np.nan)
-        perClassEr_medium_shfl_allExc = np.full((numSamps, nFrs), np.nan)
-        perClassEr_easy_shfl_exc = np.full((numShufflesExc, numSamps, nFrs), np.nan)
-        perClassEr_hard_shfl_exc = np.full((numShufflesExc, numSamps, nFrs), np.nan)
-        perClassEr_medium_shfl_exc = np.full((numShufflesExc, numSamps, nFrs), np.nan)        
-        
-        num_ehm_inh = np.full((numSamps, 3), np.nan) # number of easy, hard and medium testing trials for the inhibitory-population decoder
-        num_ehm_allExc = np.full((numSamps, 3), np.nan)
-        num_ehm_exc = np.full((numShufflesExc, numSamps, 3), np.nan)
-        
-        for isamp in range(numSamps): # isamp = 0
-            
-            ###########%% set stimrate for testing trials            
-            # inh
-            trsnow = trsnow_allSamps_inh[isamp]
-            testTrInds = testTrInds_allSamps_inh[isamp]                
-            testTrInds_outOfY0 = trsnow[testTrInds] # index of testing trials out of Y0 (not Y!) (that will be used in svm below)
-            stimrateTestTrs = stimrate[testTrInds_outOfY0] # stimrate of testing trials    
-            # set easy, medium, hard trials
-            s = stimrateTestTrs-cb # how far is the stimulus rate from the category boundary?        
-            str2ana_easy_inh = (abs(s) >= (max(abs(s)) - thStimStrength))        
-            str2ana_hard_inh = (abs(s) <= thStimStrength)        
-            str2ana_medium_inh = ((abs(s) > thStimStrength) & (abs(s) < (max(abs(s)) - thStimStrength)))
-            num_ehm_inh[isamp,:] = [sum(str2ana_easy_inh), sum(str2ana_hard_inh), sum(str2ana_medium_inh)]
-    
-            # allExc
-            trsnow = trsnow_allSamps_allExc[isamp]
-            testTrInds = testTrInds_allSamps_allExc[isamp]                
-            testTrInds_outOfY0 = trsnow[testTrInds] # index of testing trials out of Y0 (not Y!) (that will be used in svm below)
-            stimrateTestTrs = stimrate[testTrInds_outOfY0] # stimrate of testing trials    
-            # set easy, medium, hard trials
-            s = stimrateTestTrs-cb # how far is the stimulus rate from the category boundary?        
-            str2ana_easy_allExc = (abs(s) >= (max(abs(s)) - thStimStrength))        
-            str2ana_hard_allExc = (abs(s) <= thStimStrength)        
-            str2ana_medium_allExc = ((abs(s) > thStimStrength) & (abs(s) < (max(abs(s)) - thStimStrength)))
-            num_ehm_allExc[isamp,:] = [sum(str2ana_easy_allExc), sum(str2ana_hard_allExc), sum(str2ana_medium_allExc)]
-
-            # exc
-            str2ana_easy_exc = []
-            str2ana_hard_exc = []
-            str2ana_medium_exc = []
-            for ii in range(numShufflesExc): # loop through exc subsamples   
-                trsnow = trsnow_allSamps_exc[ii,isamp] # numShufflesExc x numSamples x numTrs
-                testTrInds = testTrInds_allSamps_exc[ii,isamp]                
-                testTrInds_outOfY0 = trsnow[testTrInds] # index of testing trials out of Y0 (not Y!) (that will be used in svm below)
-                stimrateTestTrs = stimrate[testTrInds_outOfY0] # stimrate of testing trials    
-                # set easy, medium, hard trials
-                s = stimrateTestTrs-cb # how far is the stimulus rate from the category boundary?        
-                str2ana_easy_exc.append(abs(s) >= (max(abs(s)) - thStimStrength))        
-                str2ana_hard_exc.append(abs(s) <= thStimStrength)        
-                str2ana_medium_exc.append((abs(s) > thStimStrength) & (abs(s) < (max(abs(s)) - thStimStrength)))
-            num_ehm_exc[:,isamp,:] = np.array([np.sum(str2ana_easy_exc, axis=1), np.sum(str2ana_hard_exc, axis=1), np.sum(str2ana_medium_exc, axis=1)]).T
-
-
-
-            ###########%% set fraction of classification error for each trial strength 
-            Ytest_inh = Ytest_allSamps_inh[isamp] 
-            Ytest_allExc = Ytest_allSamps_allExc[isamp]             
-            
-            for ifr in range(nFrs): # each frame has a Ytest_hat                
-                # inh
-                if np.all(num_ehm_inh[isamp,:]>thMinEMH): # len(Ytest_inh) > thMinEMH:
-                    Ytest_hat = Ytest_hat_allSampsFrs_inh[isamp,ifr]
-                    if type(Ytest_hat)==np.float64:
-                        Ytest_hat = np.array([Ytest_hat])                        
-                    perClassEr_easy_inh[isamp,ifr] = perClassError(Ytest_inh[str2ana_easy_inh], Ytest_hat[str2ana_easy_inh])
-                    perClassEr_hard_inh[isamp,ifr] = perClassError(Ytest_inh[str2ana_hard_inh], Ytest_hat[str2ana_hard_inh])
-                    perClassEr_medium_inh[isamp,ifr] = perClassError(Ytest_inh[str2ana_medium_inh], Ytest_hat[str2ana_medium_inh])                
-                    Ytest_hat = Ytest_hat[rng.permutation(len_test)] # shuffle Ytest_hat
-                    perClassEr_easy_shfl_inh[isamp,ifr] = perClassError(Ytest_inh[str2ana_easy_inh], Ytest_hat[str2ana_easy_inh])
-                    perClassEr_hard_shfl_inh[isamp,ifr] = perClassError(Ytest_inh[str2ana_hard_inh], Ytest_hat[str2ana_hard_inh])
-                    perClassEr_medium_shfl_inh[isamp,ifr] = perClassError(Ytest_inh[str2ana_medium_inh], Ytest_hat[str2ana_medium_inh])                                
-                # allExc
-                if np.all(num_ehm_allExc[isamp,:]>thMinEMH): # len(Ytest_allExc) > thMinEMH:
-                    Ytest_hat = Ytest_hat_allSampsFrs_allExc[isamp,ifr]
-                    if type(Ytest_hat)==np.float64:
-                        Ytest_hat = np.array([Ytest_hat])
-                    perClassEr_easy_allExc[isamp,ifr] = perClassError(Ytest_allExc[str2ana_easy_allExc], Ytest_hat[str2ana_easy_allExc])
-                    perClassEr_hard_allExc[isamp,ifr] = perClassError(Ytest_allExc[str2ana_hard_allExc], Ytest_hat[str2ana_hard_allExc])
-                    perClassEr_medium_allExc[isamp,ifr] = perClassError(Ytest_allExc[str2ana_medium_allExc], Ytest_hat[str2ana_medium_allExc])    
-                    Ytest_hat = Ytest_hat[rng.permutation(len_test)] # shuffle Ytest_hat
-                    perClassEr_easy_shfl_allExc[isamp,ifr] = perClassError(Ytest_inh[str2ana_easy_allExc], Ytest_hat[str2ana_easy_allExc])
-                    perClassEr_hard_shfl_allExc[isamp,ifr] = perClassError(Ytest_inh[str2ana_hard_allExc], Ytest_hat[str2ana_hard_allExc])
-                    perClassEr_medium_shfl_allExc[isamp,ifr] = perClassError(Ytest_inh[str2ana_medium_allExc], Ytest_hat[str2ana_medium_allExc])                                
-                
-                # exc
-                for ii in range(numShufflesExc):
-                    Ytest_exc = Ytest_allSamps_exc[ii,isamp] # numShufflesExc x numSamples x numTestTrs 
-                    Ytest_hat = Ytest_hat_allSampsFrs_exc[ii,isamp,ifr]
-                    if type(Ytest_hat)==np.float64:
-                        Ytest_hat = np.array([Ytest_hat])
-                    if np.all(num_ehm_exc[ii,isamp,:]>thMinEMH): # len(Ytest_exc) > thMinEMH:
-                        perClassEr_easy_exc[ii,isamp,ifr] = perClassError(Ytest_exc[str2ana_easy_exc[ii]], Ytest_hat[str2ana_easy_exc[ii]])
-                        perClassEr_hard_exc[ii,isamp,ifr] = perClassError(Ytest_exc[str2ana_hard_exc[ii]], Ytest_hat[str2ana_hard_exc[ii]])
-                        perClassEr_medium_exc[ii,isamp,ifr] = perClassError(Ytest_exc[str2ana_medium_exc[ii]], Ytest_hat[str2ana_medium_exc[ii]])
-                        Ytest_hat = Ytest_hat[rng.permutation(len_test)] # shuffle Ytest_hat
-                        perClassEr_easy_shfl_exc[ii,isamp,ifr] = perClassError(Ytest_exc[str2ana_easy_exc[ii]], Ytest_hat[str2ana_easy_exc[ii]])
-                        perClassEr_hard_shfl_exc[ii,isamp,ifr] = perClassError(Ytest_exc[str2ana_hard_exc[ii]], Ytest_hat[str2ana_hard_exc[ii]])
-                        perClassEr_medium_shfl_exc[ii,isamp,ifr] = perClassError(Ytest_exc[str2ana_medium_exc[ii]], Ytest_hat[str2ana_medium_exc[ii]])
+        execfile("set_classErr_easyMedHard.py")
                     
-                
     
     #%% Once done with all frames, save vars for all days
     
     perClassErrorTest_data_inh_all.append(perClassErrorTest_data_inh) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
     perClassErrorTest_shfl_inh_all.append(perClassErrorTest_shfl_inh)
     perClassErrorTest_chance_inh_all.append(perClassErrorTest_chance_inh)
+    perClassErrorTestBoth_inh_all.append(perClassErrorTestBoth_inh) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
+    perClassErrorTestBoth_shfl_inh_all.append(perClassErrorTestBoth_shfl_inh)
+    perClassErrorTestBoth_chance_inh_all.append(perClassErrorTestBoth_chance_inh)
+    perClassErrorTestRemCorr_inh_all.append(perClassErrorTestRemCorr_inh) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
+    perClassErrorTestRemCorr_shfl_inh_all.append(perClassErrorTestRemCorr_shfl_inh)
+    perClassErrorTestRemCorr_chance_inh_all.append(perClassErrorTestRemCorr_chance_inh)   
+    
     perClassErrorTest_data_allExc_all.append(perClassErrorTest_data_allExc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs
     perClassErrorTest_shfl_allExc_all.append(perClassErrorTest_shfl_allExc)
     perClassErrorTest_chance_allExc_all.append(perClassErrorTest_chance_allExc) 
+    perClassErrorTestBoth_allExc_all.append(perClassErrorTestBoth_allExc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
+    perClassErrorTestBoth_shfl_allExc_all.append(perClassErrorTestBoth_shfl_allExc)
+    perClassErrorTestBoth_chance_allExc_all.append(perClassErrorTestBoth_chance_allExc)
+    perClassErrorTestRemCorr_allExc_all.append(perClassErrorTestRemCorr_allExc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
+    perClassErrorTestRemCorr_shfl_allExc_all.append(perClassErrorTestRemCorr_shfl_allExc)
+    perClassErrorTestRemCorr_chance_allExc_all.append(perClassErrorTestRemCorr_chance_allExc)   
+
     if do_excInhHalf==0: #np.logical_and(do_excInhHalf==0, addNs_roc==0):
         perClassErrorTest_data_exc_all.append(perClassErrorTest_data_exc) # each day: numShufflesExc x numSamples x numFrames   # if addNs_roc: # numShufflesExc x number of neurons in the decoder x numSamples x nFrs 
         perClassErrorTest_shfl_exc_all.append(perClassErrorTest_shfl_exc)
         perClassErrorTest_chance_exc_all.append(perClassErrorTest_chance_exc)
+        perClassErrorTestBoth_exc_all.append(perClassErrorTestBoth_exc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
+        perClassErrorTestBoth_shfl_exc_all.append(perClassErrorTestBoth_shfl_exc)
+        perClassErrorTestBoth_chance_exc_all.append(perClassErrorTestBoth_chance_exc)
+        perClassErrorTestRemCorr_exc_all.append(perClassErrorTestRemCorr_exc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
+        perClassErrorTestRemCorr_shfl_exc_all.append(perClassErrorTestRemCorr_shfl_exc)
+        perClassErrorTestRemCorr_chance_exc_all.append(perClassErrorTestRemCorr_chance_exc)   
+
     if loadYtest:
         perClassErrorTest_data_easy_inh_all.append(perClassEr_easy_inh)
         perClassErrorTest_data_hard_inh_all.append(perClassEr_hard_inh)
@@ -437,6 +393,60 @@ elif do_excInhHalf:
     numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc \
         = av_se_CA_trsamps_excInhHalf(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all)
 
+elif decodeStimCateg:
+    numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, \
+    av_test_remCorr_data_inh, sd_test_remCorr_data_inh, av_test_remCorr_shfl_inh, sd_test_remCorr_shfl_inh, av_test_remCorr_chance_inh, sd_test_remCorr_chance_inh, \
+    av_test_both_data_inh, sd_test_both_data_inh, av_test_both_shfl_inh, sd_test_both_shfl_inh, av_test_both_chance_inh, sd_test_both_chance_inh, \
+    av_test_data_exc, sd_test_data_exc, av_test_shfl_exc, sd_test_shfl_exc, av_test_chance_exc, sd_test_chance_exc, \
+    av_test_remCorr_data_exc, sd_test_remCorr_data_exc, av_test_remCorr_shfl_exc, sd_test_remCorr_shfl_exc, av_test_remCorr_chance_exc, sd_test_remCorr_chance_exc, \
+    av_test_both_data_exc, sd_test_both_data_exc, av_test_both_shfl_exc, sd_test_both_shfl_exc, av_test_both_chance_exc, sd_test_both_chance_exc, \
+    av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc, \
+    av_test_remCorr_data_allExc, sd_test_remCorr_data_allExc, av_test_remCorr_shfl_allExc, sd_test_remCorr_shfl_allExc, av_test_remCorr_chance_allExc, sd_test_remCorr_chance_allExc, \
+    av_test_both_data_allExc, sd_test_both_data_allExc, av_test_both_shfl_allExc, sd_test_both_shfl_allExc, av_test_both_chance_allExc, sd_test_both_chance_allExc, \
+        = av_se_CA_trsamps_decodeStimCateg(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, \
+        perClassErrorTestRemCorr_inh_all, perClassErrorTestRemCorr_shfl_inh_all, perClassErrorTestRemCorr_chance_inh_all, \
+        perClassErrorTestBoth_inh_all, perClassErrorTestBoth_shfl_inh_all, perClassErrorTestBoth_chance_inh_all, \
+        perClassErrorTest_data_exc_all, perClassErrorTest_shfl_exc_all, perClassErrorTest_chance_exc_all, \
+        perClassErrorTestRemCorr_exc_all, perClassErrorTestRemCorr_shfl_exc_all, perClassErrorTestRemCorr_chance_exc_all, \
+        perClassErrorTestBoth_exc_all, perClassErrorTestBoth_shfl_exc_all, perClassErrorTestBoth_chance_exc_all, \
+        perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all, \
+        perClassErrorTestRemCorr_allExc_all, perClassErrorTestRemCorr_shfl_allExc_all, perClassErrorTestRemCorr_chance_allExc_all, \
+        perClassErrorTestBoth_allExc_all, perClassErrorTestBoth_shfl_allExc_all, perClassErrorTestBoth_chance_allExc_all)
+
+    # for each day run ttest across samples between data and shfl, to see if classifier performance (in each frame) is significantly different from shuffled case or not.
+    ttest_pval_allExc = np.array([stats.ttest_ind(perClassErrorTest_data_allExc_all[iday], perClassErrorTest_shfl_allExc_all[iday], axis=0)[1] for iday in range(numD)])
+    ttest_pval_inh = np.array([stats.ttest_ind(perClassErrorTest_data_inh_all[iday], perClassErrorTest_shfl_inh_all[iday], axis=0)[1] for iday in range(numD)])    
+    ttest_pval_exc = [] # = np.full((perClassErrorTest_data_exc_all[iday].shape[-1], numExcSamples), np.nan)
+    for iexc in range(numExcSamples):
+        ttest_pval_exc_e = []
+        for iday in range(numD):
+            ttest_pval_exc_e.append(stats.ttest_ind(perClassErrorTest_data_exc_all[iday][iexc], perClassErrorTest_shfl_inh_all[iday][iexc], axis=0)[1])
+        ttest_pval_exc.append(ttest_pval_exc_e) 
+    ttest_pval_exc = np.array(ttest_pval_exc) # samps # days # frs
+
+    ttest_pval_allExc_remCorr = np.array([stats.ttest_ind(perClassErrorTestRemCorr_allExc_all[iday], perClassErrorTestRemCorr_shfl_allExc_all[iday], axis=0)[1] for iday in range(numD)])
+    ttest_pval_inh_remCorr = np.array([stats.ttest_ind(perClassErrorTestRemCorr_inh_all[iday], perClassErrorTestRemCorr_shfl_inh_all[iday], axis=0)[1] for iday in range(numD)])    
+    ttest_pval_exc_remCorr = [] # = np.full((perClassErrorTestRemCorr_data_exc_all[iday].shape[-1], numExcSamples), np.nan)
+    for iexc in range(numExcSamples):
+        ttest_pval_exc_e = []
+        for iday in range(numD):
+            ttest_pval_exc_e.append(stats.ttest_ind(perClassErrorTestRemCorr_exc_all[iday][iexc], perClassErrorTestRemCorr_shfl_inh_all[iday][iexc], axis=0)[1])
+        ttest_pval_exc_remCorr.append(ttest_pval_exc_e) 
+    ttest_pval_exc_remCorr = np.array(ttest_pval_exc_remCorr) # samps # days # frs
+
+    ttest_pval_allExc_both = np.array([stats.ttest_ind(perClassErrorTestBoth_allExc_all[iday], perClassErrorTestBoth_shfl_allExc_all[iday], axis=0)[1] for iday in range(numD)])
+    ttest_pval_inh_both = np.array([stats.ttest_ind(perClassErrorTestBoth_inh_all[iday], perClassErrorTestBoth_shfl_inh_all[iday], axis=0)[1] for iday in range(numD)])    
+    ttest_pval_exc_both = [] # = np.full((perClassErrorTestBoth_data_exc_all[iday].shape[-1], numExcSamples), np.nan)
+    for iexc in range(numExcSamples):
+        ttest_pval_exc_e = []
+        for iday in range(numD):
+            ttest_pval_exc_e.append(stats.ttest_ind(perClassErrorTestBoth_exc_all[iday][iexc], perClassErrorTestBoth_shfl_inh_all[iday][iexc], axis=0)[1])
+        ttest_pval_exc_both.append(ttest_pval_exc_e) 
+    ttest_pval_exc_both = np.array(ttest_pval_exc_both) # samps # days # frs
+  
+    
+    
+    
 else:
     numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_exc, sd_test_data_exc, av_test_shfl_exc, sd_test_shfl_exc, av_test_chance_exc, sd_test_chance_exc, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc \
         = av_se_CA_trsamps(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, perClassErrorTest_data_exc_all, perClassErrorTest_shfl_exc_all, perClassErrorTest_chance_exc_all, perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all)
@@ -558,7 +568,7 @@ if shflTrsEachNeuron: # if you want to compare data vs shflTrsEachNeuron, first 
     perClassErrorTest_data_inh_all_shflTrsEachN = perClassErrorTest_data_inh_all
     perClassErrorTest_data_allExc_all_shflTrsEachN = perClassErrorTest_data_allExc_all
     perClassErrorTest_data_exc_all_shflTrsEachN = perClassErrorTest_data_exc_all
-
+"""
 if chAl==1:    
     eventI_allDays_ch = eventI_allDays + 0    
     av_test_data_inh_ch =  av_test_data_inh + 0
@@ -580,6 +590,7 @@ if chAl==1:
         sd_test_shfl_exc_ch = sd_test_shfl_exc + 0
         av_test_chance_exc_ch = av_test_chance_exc + 0
         sd_test_chance_exc_ch = sd_test_chance_exc + 0
+"""
 '''
 else:        
     eventI_allDays_st = eventI_allDays + 0    
@@ -629,7 +640,6 @@ behCorrLR_all = Data.pop('behCorrLR_all').flatten()
 #    classAccurTMS_allExc = Data.pop('classAccurTMS_allExc')
    
 
-no
 ##################################################################################################
 ##################################################################################################
 ##################################################################################################
@@ -642,21 +652,23 @@ no
 ##################################################################################################
 ##################################################################################################
 ##################################################################################################
-
 
 #%% NOTE: Do you want to do this?
 
 mn_corr0 = mn_corr + 0 # will be used for the heatmaps of CA for all days; We need to exclude 151023 from fni16, this day had issues! ...  in the mat file of stabTestTrainTimes, its class accur is very high ... and in the mat file of excInh_trainDecoder_eachFrame it is very low ...ANYWAY I ended up removing it from the heatmap of CA for all days!!! but it is included in other analyses!!
-if mousename=='fni16': #np.logical_and(mousename=='fni16', corrTrained==1):
+if np.logical_and(mousename=='fni16', decodeStimCateg==0): #np.logical_and(mousename=='fni16', corrTrained==1):
     mn_corr0[days.index('151023_1')] = thTrained - 1 # see it will be excluded from analysis!    
 days2an_heatmap = mn_corr0 >= thTrained     
 
 
+#no
 
 #%% Go to line 1900 for addNs_roc plots. 
 
 if addNs_roc==0:    
 
+    alph = .001 # to find significancy (data vs shuffle)
+    
     ##################################################################################################
     ############## Align class accur traces of all days to make a final average trace ##############
     ################################################################################################## 
@@ -665,33 +677,7 @@ if addNs_roc==0:
     # By common eventI, we  mean the index on which all traces will be aligned.
     
     time_aligned, nPreMin, nPostMin = set_nprepost(av_test_data_inh, eventI_ds_allDays, mn_corr, thTrained, regressBins)
-    # I commented the codes below and instead used the one above.
-    
-    """        
-    nPost = (np.ones((numDays,1))+np.nan).flatten().astype('int')
-    for iday in range(numDays):
-        nPost[iday] = (len(av_test_data_inh_ch[iday]) - eventI_ds_allDays[iday] - 1)
-    
-    nPreMin = min(eventI_ds_allDays) # number of frames before the common eventI, also the index of common eventI. 
-    nPostMin = min(nPost)
-    print 'Number of frames before = %d, and after = %d the common eventI' %(nPreMin, nPostMin)
-    
-    
-    #% Set the time array for the across-day aligned traces
-    
-    '''
-    if corrTrained==0: # remember below has issues...
-        # old svm files were ran using the old downsampling method
-        a = -(np.asarray(frameLength*regressBins) * range(nPreMin+1)[::-1])
-        b = (np.asarray(frameLength*regressBins) * range(1, nPostMin+1))
-        time_aligned = np.concatenate((a,b))
-    else:
-    '''
-    totLen = nPreMin + nPostMin +1
-    time_aligned = set_time_al(totLen, min(eventI_allDays), lastTimeBinMissed)
-    
-    print time_aligned
-    """
+#    nPreMin = np.nanmin(eventI_ds_allDays[mn_corr >= thTrained]).astype('int')
     
     
     #%% Align traces of all days on the common eventI (use nan for days with few trianed svm trials)
@@ -705,7 +691,7 @@ if addNs_roc==0:
                 trace_aligned[:, iday] = trace[iday][eventI_ds_allDays[iday] - nPreMin  :  eventI_ds_allDays[iday] + nPostMin + 1]    
         return trace_aligned
         
-    
+    # Align traces
     av_test_data_inh_aligned = alTrace(av_test_data_inh, eventI_ds_allDays, nPreMin, nPostMin)
     av_test_shfl_inh_aligned = alTrace(av_test_shfl_inh, eventI_ds_allDays, nPreMin, nPostMin)
     av_test_chance_inh_aligned = alTrace(av_test_chance_inh, eventI_ds_allDays, nPreMin, nPostMin)    
@@ -716,8 +702,42 @@ if addNs_roc==0:
     av_test_data_allExc_aligned = alTrace(av_test_data_allExc, eventI_ds_allDays, nPreMin, nPostMin)
     av_test_shfl_allExc_aligned = alTrace(av_test_shfl_allExc, eventI_ds_allDays, nPreMin, nPostMin)
     av_test_chance_allExc_aligned = alTrace(av_test_chance_allExc, eventI_ds_allDays, nPreMin, nPostMin)
+    if decodeStimCateg:
+        av_test_remCorr_data_inh_aligned = alTrace(av_test_remCorr_data_inh, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_remCorr_shfl_inh_aligned = alTrace(av_test_remCorr_shfl_inh, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_remCorr_chance_inh_aligned = alTrace(av_test_remCorr_chance_inh, eventI_ds_allDays, nPreMin, nPostMin)    
+        av_test_both_data_inh_aligned = alTrace(av_test_both_data_inh, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_both_shfl_inh_aligned = alTrace(av_test_both_shfl_inh, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_both_chance_inh_aligned = alTrace(av_test_both_chance_inh, eventI_ds_allDays, nPreMin, nPostMin)    
+        if do_excInhHalf==0:
+            av_test_remCorr_data_exc_aligned = alTrace(av_test_remCorr_data_exc, eventI_ds_allDays, nPreMin, nPostMin)
+            av_test_remCorr_shfl_exc_aligned = alTrace(av_test_remCorr_shfl_exc, eventI_ds_allDays, nPreMin, nPostMin)
+            av_test_remCorr_chance_exc_aligned = alTrace(av_test_remCorr_chance_exc, eventI_ds_allDays, nPreMin, nPostMin)    
+            av_test_both_data_exc_aligned = alTrace(av_test_both_data_exc, eventI_ds_allDays, nPreMin, nPostMin)
+            av_test_both_shfl_exc_aligned = alTrace(av_test_both_shfl_exc, eventI_ds_allDays, nPreMin, nPostMin)
+            av_test_both_chance_exc_aligned = alTrace(av_test_both_chance_exc, eventI_ds_allDays, nPreMin, nPostMin)    
+        av_test_remCorr_data_allExc_aligned = alTrace(av_test_remCorr_data_allExc, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_remCorr_shfl_allExc_aligned = alTrace(av_test_remCorr_shfl_allExc, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_remCorr_chance_allExc_aligned = alTrace(av_test_remCorr_chance_allExc, eventI_ds_allDays, nPreMin, nPostMin)        
+        av_test_both_data_allExc_aligned = alTrace(av_test_both_data_allExc, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_both_shfl_allExc_aligned = alTrace(av_test_both_shfl_allExc, eventI_ds_allDays, nPreMin, nPostMin)
+        av_test_both_chance_allExc_aligned = alTrace(av_test_both_chance_allExc, eventI_ds_allDays, nPreMin, nPostMin)        
     
-    # align p values of all days
+        # keep a copy of testing data vars:
+        av_test_data_inh_aligned0 = av_test_data_inh_aligned
+        av_test_shfl_inh_aligned0 = av_test_shfl_inh_aligned
+        av_test_chance_inh_aligned0 = av_test_chance_inh_aligned
+        if do_excInhHalf==0:
+            av_test_data_exc_aligned0 = av_test_data_exc_aligned
+            av_test_shfl_exc_aligned0 = av_test_shfl_exc_aligned
+            av_test_chance_exc_aligned0 = av_test_chance_exc_aligned
+        av_test_data_allExc_aligned0 = av_test_data_allExc_aligned
+        av_test_shfl_allExc_aligned0 = av_test_shfl_allExc_aligned
+        av_test_chance_allExc_aligned0 = av_test_chance_allExc_aligned
+
+
+    
+    # Align p values of all days
     ttest_pval_inh_aligned = alTrace(ttest_pval_inh, eventI_ds_allDays, nPreMin, nPostMin)
     ttest_pval_allExc_aligned = alTrace(ttest_pval_allExc, eventI_ds_allDays, nPreMin, nPostMin)
     ttest_pval_exc_aligned = []
@@ -725,7 +745,27 @@ if addNs_roc==0:
         ttest_pval_exc_aligned.append(alTrace(ttest_pval_exc[iexc], eventI_ds_allDays, nPreMin, nPostMin))
     ttest_pval_exc_aligned = np.array(ttest_pval_exc_aligned) # excSamps x frs x days
     
-    
+    if decodeStimCateg:
+        ttest_pval_inh_aligned_remCorr = alTrace(ttest_pval_inh_remCorr, eventI_ds_allDays, nPreMin, nPostMin)
+        ttest_pval_allExc_aligned_remCorr = alTrace(ttest_pval_allExc_remCorr, eventI_ds_allDays, nPreMin, nPostMin)
+        ttest_pval_exc_aligned_remCorr = []
+        for iexc in range(numExcSamples):
+            ttest_pval_exc_aligned_remCorr.append(alTrace(ttest_pval_exc_remCorr[iexc], eventI_ds_allDays, nPreMin, nPostMin))
+        ttest_pval_exc_aligned_remCorr = np.array(ttest_pval_exc_aligned_remCorr) # excSamps x frs x days        
+ 
+        ttest_pval_inh_aligned_both = alTrace(ttest_pval_inh_both, eventI_ds_allDays, nPreMin, nPostMin)
+        ttest_pval_allExc_aligned_both = alTrace(ttest_pval_allExc_both, eventI_ds_allDays, nPreMin, nPostMin)
+        ttest_pval_exc_aligned_both = []
+        for iexc in range(numExcSamples):
+            ttest_pval_exc_aligned_both.append(alTrace(ttest_pval_exc_both[iexc], eventI_ds_allDays, nPreMin, nPostMin))
+        ttest_pval_exc_aligned_both = np.array(ttest_pval_exc_aligned_both) # excSamps x frs x days        
+        
+        # keep a copy of testing data vars:        
+        ttest_pval_inh_aligned0 = ttest_pval_inh_aligned
+        ttest_pval_allExc_aligned0 = ttest_pval_allExc_aligned
+        ttest_pval_exc_aligned0 = ttest_pval_exc_aligned
+        
+        
     if loadYtest:
         av_test_data_inh_easy_aligned = alTrace(av_test_data_inh_easy, eventI_ds_allDays, nPreMin, nPostMin)
         av_test_data_inh_hard_aligned = alTrace(av_test_data_inh_hard, eventI_ds_allDays, nPreMin, nPostMin)
@@ -748,28 +788,167 @@ if addNs_roc==0:
         av_test_shfl_allExc_hard_aligned = alTrace(av_test_shfl_allExc_hard, eventI_ds_allDays, nPreMin, nPostMin)
         av_test_shfl_allExc_medium_aligned = alTrace(av_test_shfl_allExc_medium, eventI_ds_allDays, nPreMin, nPostMin)
 
-        
-    ##%% Average and standard DEVIATION across days (each day includes the average class accuracy across samples.)
     
+    #%% In decodeStimCateg, decide which one (testing, remCorr, or Both) you want to use for the rest of this code
+
+    if decodeStimCateg:    
+        if use_both_remCorr_testing[0]==1: # use Both
+            av_test_data_inh_aligned = av_test_both_data_inh_aligned
+            av_test_shfl_inh_aligned = av_test_both_shfl_inh_aligned
+            av_test_chance_inh_aligned = av_test_both_chance_inh_aligned
+            if do_excInhHalf==0:
+                av_test_data_exc_aligned = av_test_both_data_exc_aligned
+                av_test_shfl_exc_aligned = av_test_both_shfl_exc_aligned
+                av_test_chance_exc_aligned = av_test_both_chance_exc_aligned
+            av_test_data_allExc_aligned = av_test_both_data_allExc_aligned
+            av_test_shfl_allExc_aligned = av_test_both_shfl_allExc_aligned
+            av_test_chance_allExc_aligned = av_test_both_chance_allExc_aligned        
+            # pval
+            ttest_pval_inh_aligned = ttest_pval_inh_aligned_both
+            ttest_pval_allExc_aligned = ttest_pval_allExc_aligned_both
+            ttest_pval_exc_aligned = ttest_pval_exc_aligned_both
+    
+            
+        elif use_both_remCorr_testing[1]==1: # use remCorr
+            av_test_data_inh_aligned = av_test_remCorr_data_inh_aligned
+            av_test_shfl_inh_aligned = av_test_remCorr_shfl_inh_aligned
+            av_test_chance_inh_aligned = av_test_remCorr_chance_inh_aligned
+            if do_excInhHalf==0:
+                av_test_data_exc_aligned = av_test_remCorr_data_exc_aligned
+                av_test_shfl_exc_aligned = av_test_remCorr_shfl_exc_aligned
+                av_test_chance_exc_aligned = av_test_remCorr_chance_exc_aligned
+            av_test_data_allExc_aligned = av_test_remCorr_data_allExc_aligned
+            av_test_shfl_allExc_aligned = av_test_remCorr_shfl_allExc_aligned
+            av_test_chance_allExc_aligned = av_test_remCorr_chance_allExc_aligned
+            # pval
+            ttest_pval_inh_aligned = ttest_pval_inh_aligned_remCorr
+            ttest_pval_allExc_aligned = ttest_pval_allExc_aligned_remCorr
+            ttest_pval_exc_aligned = ttest_pval_exc_aligned_remCorr
+                
+        elif use_both_remCorr_testing[2]==1: # use testing data (cv)
+            av_test_data_inh_aligned = av_test_data_inh_aligned0
+            av_test_shfl_inh_aligned = av_test_shfl_inh_aligned0
+            av_test_chance_inh_aligned = av_test_chance_inh_aligned0
+            if do_excInhHalf==0:
+                av_test_data_exc_aligned = av_test_data_exc_aligned0
+                av_test_shfl_exc_aligned = av_test_shfl_exc_aligned0
+                av_test_chance_exc_aligned = av_test_chance_exc_aligned0
+            av_test_data_allExc_aligned = av_test_data_allExc_aligned0
+            av_test_shfl_allExc_aligned = av_test_shfl_allExc_aligned0
+            av_test_chance_allExc_aligned = av_test_chance_allExc_aligned0
+            # pval
+            ttest_pval_inh_aligned = ttest_pval_inh_aligned0
+            ttest_pval_allExc_aligned = ttest_pval_allExc_aligned0
+            ttest_pval_exc_aligned = ttest_pval_exc_aligned0
+            
+            
+        
+    #%% Define function to find the onset of emergence of choice signal
+     
+    def sigOnset(top, th1):
+        solns_allD = []
+        for iday in range(len(top)):
+            values = top[iday]        
+            searchval = np.ones((th1))
+            
+            N = len(searchval)
+            possibles = np.where(values == searchval[0])[0]
+            
+            solns = []
+            for p in possibles:
+                check = values[p:p+N]
+                if np.all(check == searchval):
+                    solns.append(p)
+            if len(solns)==0:
+                solns = [np.nan]        
+            solns_allD.append(solns)
+    
+        # find the first time bin ... as the onset of emergece of choice signal.
+        firstFrame = np.array([solns_allD[iday][0] for iday in range(len(top))])
+        # compute onset timing of choice signal relative to animal's choice time
+        firstFrame = (firstFrame - nPreMin)*frameLength*regressBins
+        
+        return firstFrame
+    
+    
+    #%% For each day find the onset of emergence of choice signal. Then see how the onset of choice signal varies with training days. Also do a scatter plot of the onset time vs. behavioral performance.
+    
+    sigDur = 500 # ms # we need 500ms continuous significancy for CA of data vs shuffle, to count it as choice signal emergence.
+    
+    te = ttest_pval_exc_aligned[rng.permutation(numExcSamples)[0]].T  < alph  # a random exc samp    #    te = np.mean(ttest_pval_exc_aligned, axis=0).T[days2an_heatmap]  < alph  # ave exc samps       
+    topall = ttest_pval_allExc_aligned.T < alph , te , ttest_pval_inh_aligned.T < alph
+    
+    th1 = np.round(sigDur / (frameLength*regressBins))
+
+    # find all time bins that are followed by 500ms of sig CA.
+    for iplot in range(3): # iplot = 0    
+        top = topall[iplot]                    
+        firstFrame = sigOnset(top, th1)
+
+        if iplot==0:
+            firstFrame_allN = firstFrame        
+        if iplot==1:
+            firstFrame_exc = firstFrame
+        if iplot==2:
+            firstFrame_inh = firstFrame
+            
+    firstFrame_exc_randSamp = firstFrame_exc
+    
+    # find firstFrame for each exc samp, then take an average across the exc samps!
+    a = np.transpose((ttest_pval_exc_aligned<alph), (0,2,1)) # nExcSamps x days x frames
+    firstFrame = [] # nExcSamps x nDays
+    for isamp in range(numExcSamples):
+        firstFrame.append(sigOnset(a[isamp], th1))    
+    # average across excSamps
+    firstFrame_exc_avSamps = np.nanmean(firstFrame, axis=0)
+
+            
+
+    #%% Save vars
+    """
+    if corrTrained:
+        corrn0 = 'corr_'
+    else:
+        corrn0 = corrn
+        
+    scio.savemat(fname + '/svm_' + corrn0 + 'classAcc_nNsPlateau_' + nowStr, {'mousename': mousename, 'numD':numD, 'mn_corr':mn_corr, 'thTrained':thTrained, 'eventI_ds_allDays':eventI_ds_allDays,
+      'av_test_data_allExc_aligned':av_test_data_allExc_aligned,
+      'av_test_data_exc_aligned':av_test_data_exc_aligned,
+      'av_test_data_inh_aligned':av_test_data_inh_aligned,
+      'firstFrame_allN':firstFrame_allN,
+      'firstFrame_inh':firstFrame_inh,
+      'firstFrame_exc_randSamp':firstFrame_exc_randSamp,
+      'firstFrame_exc_avSamps':firstFrame_exc_avSamps})
+    """
+     
+            
+    #%% Average and standard DEVIATION across days (each day includes the average class accuracy across samples.)
+    
+    doSd = 0 # if 1, compute standarad deviation; if 0, compute standard erro
+    if doSd:
+        nsa = 1
+    else:
+        nsa = np.sqrt(numDaysGood)
+        
     av_av_test_data_inh_aligned = np.nanmean(av_test_data_inh_aligned, axis=1)
-    sd_av_test_data_inh_aligned = np.nanstd(av_test_data_inh_aligned, axis=1)
+    sd_av_test_data_inh_aligned = np.nanstd(av_test_data_inh_aligned, axis=1) / nsa
     av_av_test_shfl_inh_aligned = np.nanmean(av_test_shfl_inh_aligned, axis=1)
-    sd_av_test_shfl_inh_aligned = np.nanstd(av_test_shfl_inh_aligned, axis=1)
+    sd_av_test_shfl_inh_aligned = np.nanstd(av_test_shfl_inh_aligned, axis=1) / nsa
     av_av_test_chance_inh_aligned = np.nanmean(av_test_chance_inh_aligned, axis=1)
-    sd_av_test_chance_inh_aligned = np.nanstd(av_test_chance_inh_aligned, axis=1)    
+    sd_av_test_chance_inh_aligned = np.nanstd(av_test_chance_inh_aligned, axis=1) / nsa
     if do_excInhHalf==0:
         av_av_test_data_exc_aligned = np.nanmean(av_test_data_exc_aligned, axis=1)
-        sd_av_test_data_exc_aligned = np.nanstd(av_test_data_exc_aligned, axis=1)    
+        sd_av_test_data_exc_aligned = np.nanstd(av_test_data_exc_aligned, axis=1) / nsa    
         av_av_test_shfl_exc_aligned = np.nanmean(av_test_shfl_exc_aligned, axis=1)
-        sd_av_test_shfl_exc_aligned = np.nanstd(av_test_shfl_exc_aligned, axis=1)    
+        sd_av_test_shfl_exc_aligned = np.nanstd(av_test_shfl_exc_aligned, axis=1) / nsa    
         av_av_test_chance_exc_aligned = np.nanmean(av_test_chance_exc_aligned, axis=1)
-        sd_av_test_chance_exc_aligned = np.nanstd(av_test_chance_exc_aligned, axis=1)    
+        sd_av_test_chance_exc_aligned = np.nanstd(av_test_chance_exc_aligned, axis=1) / nsa    
     av_av_test_data_allExc_aligned = np.nanmean(av_test_data_allExc_aligned, axis=1)
-    sd_av_test_data_allExc_aligned = np.nanstd(av_test_data_allExc_aligned, axis=1)
+    sd_av_test_data_allExc_aligned = np.nanstd(av_test_data_allExc_aligned, axis=1) / nsa
     av_av_test_shfl_allExc_aligned = np.nanmean(av_test_shfl_allExc_aligned, axis=1)
-    sd_av_test_shfl_allExc_aligned = np.nanstd(av_test_shfl_allExc_aligned, axis=1)
+    sd_av_test_shfl_allExc_aligned = np.nanstd(av_test_shfl_allExc_aligned, axis=1) / nsa
     av_av_test_chance_allExc_aligned = np.nanmean(av_test_chance_allExc_aligned, axis=1)
-    sd_av_test_chance_allExc_aligned = np.nanstd(av_test_chance_allExc_aligned, axis=1)
+    sd_av_test_chance_allExc_aligned = np.nanstd(av_test_chance_allExc_aligned, axis=1) / nsa
     if loadYtest: # compute standard error across days
         av_av_test_data_inh_easy_aligned = np.nanmean(av_test_data_inh_easy_aligned, axis=1)
         sd_av_test_data_inh_easy_aligned = np.nanstd(av_test_data_inh_easy_aligned, axis=1) / np.sqrt(sum(nValidSamps_easy_inh >= thMinSamps))
@@ -816,7 +995,8 @@ if addNs_roc==0:
     else:
         _,pcorrtrace = stats.ttest_ind(av_test_data_allExc_aligned.transpose(), av_test_data_inh_aligned.transpose(), nan_policy= 'omit') # p value of class accuracy being different from 50            
             
-    
+
+
     #%%######################### PLOTS #########################
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##
@@ -859,46 +1039,50 @@ if addNs_roc==0:
     
     #%% Heatmaps of class accuracy showing all days
 
-    sepCB = 1 # if 1: plot inh and exc on a separate c axis scale than allN
-    alph = .001 # to find significancy (data vs shuffle)
+    sepCB = 1 # if 1: plot inh and exc on a separate c axis scale than allN    
     asp = 'auto' #2
     cmap ='jet'
     
     for iplot in range(3): # iplot = 0   
         
         if iplot==0: ### plot class accuracy for each day
-            topall = av_test_data_inh_aligned.T[days2an_heatmap], av_test_data_exc_aligned.T[days2an_heatmap], av_test_data_allExc_aligned.T[days2an_heatmap]
+#            topall = av_test_data_inh_aligned.T[days2an_heatmap], av_test_data_exc_aligned.T[days2an_heatmap], av_test_data_allExc_aligned.T[days2an_heatmap]
+            topall = av_test_data_inh_aligned.T[days2an_heatmap], av_test_data_allExc_aligned.T[days2an_heatmap]
             namp = 'classAccur_'
             cblab = 'Class accuracy (%)'
  
         if iplot==1: ### plot significancy of CA for each day (data vs shfl)
-            te = ttest_pval_exc_aligned[rng.permutation(numExcSamples)[0]].T[days2an_heatmap]  < alph  # a random exc samp
-        #    te = np.mean(ttest_pval_exc_aligned, axis=0).T[days2an_heatmap]  < alph  # ave exc samps       
-            topall = ttest_pval_inh_aligned.T[days2an_heatmap] < alph, te, ttest_pval_allExc_aligned.T[days2an_heatmap] < alph
+#            te = ttest_pval_exc_aligned[rng.permutation(numExcSamples)[0]].T[days2an_heatmap]  < alph  # a random exc samp
+#            te = np.mean(ttest_pval_exc_aligned, axis=0).T[days2an_heatmap]  < alph  # ave exc samps       
+#            topall = ttest_pval_inh_aligned.T[days2an_heatmap] < alph, te, ttest_pval_allExc_aligned.T[days2an_heatmap] < alph
+            topall = ttest_pval_inh_aligned.T[days2an_heatmap] < alph, ttest_pval_allExc_aligned.T[days2an_heatmap] < alph
             namp = 'sigDataShfl_'
             cblab = 'Sig class accuracy (data vs shfl)'
             
         if iplot==2: ### plot p val of CA for each day (data vs shfl)
-            te = ttest_pval_exc_aligned[rng.permutation(numExcSamples)[0]].T[days2an_heatmap]  # a random exc samp
-        #    te = np.mean(ttest_pval_exc_aligned, axis=0).T[days2an_heatmap]  # ave exc samps       
-            topall = ttest_pval_inh_aligned.T[days2an_heatmap], te, ttest_pval_allExc_aligned.T[days2an_heatmap]
+#            te = ttest_pval_exc_aligned[rng.permutation(numExcSamples)[0]].T[days2an_heatmap]  # a random exc samp
+#            te = np.mean(ttest_pval_exc_aligned, axis=0).T[days2an_heatmap]  # ave exc samps       
+#            topall = ttest_pval_inh_aligned.T[days2an_heatmap], te, ttest_pval_allExc_aligned.T[days2an_heatmap]
+            topall = ttest_pval_inh_aligned.T[days2an_heatmap], ttest_pval_allExc_aligned.T[days2an_heatmap]
             namp = 'pDataShfl_'
             cblab = 'P class accuracy (data vs shfl)'
 
         topi = topall[0]
         tope = topall[1]
-        topa = topall[2]
+#        topa = topall[2]
+        tope = topall[0]
+        topa = topall[1]
         
         
         fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(7,5))
         
         if sepCB: # plot inh and exc on a different c axis scale
             cminc = np.floor(np.min([np.nanmin(topi), np.nanmin(tope)]))
-            cmaxc = np.floor(np.max([np.nanmax(topi), np.nanmax(tope)]))
+            cmaxc = np.ceil(np.max([np.nanmax(topi), np.nanmax(tope)]))
             cbn = 'sepColorbar_'
         else:
             cminc = np.floor(np.min([np.nanmin(topi), np.nanmin(tope), np.nanmin(topa)]))
-            cmaxc = np.floor(np.max([np.nanmax(topi), np.nanmax(tope), np.nanmax(topa)]))            
+            cmaxc = np.ceil(np.max([np.nanmax(topi), np.nanmax(tope), np.nanmax(topa)]))            
             cbn = ''
         
         lab = 'inh'
@@ -929,7 +1113,7 @@ if addNs_roc==0:
         ### allN
         if sepCB:
             cminc = np.floor(np.min([np.nanmin(topi), np.nanmin(tope), np.nanmin(topa)]))
-            cmaxc = np.floor(np.max([np.nanmax(topi), np.nanmax(tope), np.nanmax(topa)]))
+            cmaxc = np.ceil(np.max([np.nanmax(topi), np.nanmax(tope), np.nanmax(topa)]))
         
         lab = labAll
         top = topa
@@ -975,9 +1159,12 @@ if addNs_roc==0:
 
 
 
+    #########################################################################################################
+    #%% ########################## Plots : svm performance vs behavioral performance ########################
+    #########################################################################################################
     
-    ############################################################################################################    
-    #%% ########################### Plots : svm performance vs behavioral performance #######################
+    perc_thb = [10,90] #[20,80] # perc_thb = [15,85] # percentiles of behavioral performance for determining low and high performance.
+    
     
     #%% Plot CA vs. day, also compare CA for days with low vs high behavioral performance   
     
@@ -986,7 +1173,7 @@ if addNs_roc==0:
     gs = gridspec.GridSpec(2, 4)#, width_ratios=[2, 1])  #    h1 = gs[0,0:2]
     h2 = gs[0,2:3]
 
-    #################################### Plot CA vs. day ####################################
+    #################################### Plot CA vs. day ###########################################################
     plt.subplot(221)
     plt.plot(av_test_data_allExc_aligned[nPreMin-1, days2an_heatmap], marker='.', color='k', label='allN')
     plt.plot(av_test_data_exc_aligned[nPreMin-1, days2an_heatmap], marker='.', color='b', label='exc')
@@ -996,7 +1183,7 @@ if addNs_roc==0:
     plt.legend(loc=0, frameon=False, bbox_to_anchor=(.5, .7))
     makeNicePlots(plt.gca())
     
-    #################################### Plot beh performance vs. day ####################################
+    #################################### Plot beh performance vs. day ##############################################
     plt.subplot(223)
     plt.plot(behCorr_all[days2an_heatmap])
     plt.plot(behCorrHR_all[days2an_heatmap], linestyle=':', label='HR trs')
@@ -1007,12 +1194,10 @@ if addNs_roc==0:
     makeNicePlots(plt.gca())
     
     
-    #################################### Compare CA for days with low vs high behavioral performance ####################################
+    #################################### Compare CA for days with low vs high behavioral performance ###############
     a = behCorr_all[days2an_heatmap]    
-#    mn = np.min(a)
-#    mx = np.max(a)    
-#    thb = mn+.1, mx-.1    
-    thb = np.percentile(a, [10,90])
+    thb = np.percentile(a, perc_thb)
+#    mn = np.min(a);     mx = np.max(a);     thb = mn+.1, mx-.1    
     
     loBehCorrDays = (a <= thb[0])    
     hiBehCorrDays = (a >= thb[1])
@@ -1025,7 +1210,7 @@ if addNs_roc==0:
     b = bb[loBehCorrDays]; bh = bb[hiBehCorrDays]
     c = cc[loBehCorrDays]; ch = cc[hiBehCorrDays]    
     
-    ################ errorbar: mean and st error: # compare CA for days with low vs high behavioral performance        
+    ####### errorbar: mean and st error: # compare CA for days with low vs high behavioral performance        
 #    plt.figure(figsize=(1.5,2.5)        
     plt.subplot(h2)
     plt.errorbar([0], [ah.mean()], [ah.std()/np.sqrt(len(ah))], marker='o', color='k', fmt='.', markeredgecolor='k', label='high beh')
@@ -1173,78 +1358,30 @@ if addNs_roc==0:
 
 
     
+    ##############################################################################################################
     #%% ###################################### Plots of choice signal onset ######################################
     ##############################################################################################################
 
-    #%% Define function to find the onset of emergence of choice signal
-     
-    def sigOnset(top, th1):
-        solns_allD = []
-        for iday in range(len(top)):
-            values = top[iday]        
-            searchval = np.ones((th1))
-            
-            N = len(searchval)
-            possibles = np.where(values == searchval[0])[0]
-            
-            solns = []
-            for p in possibles:
-                check = values[p:p+N]
-                if np.all(check == searchval):
-                    solns.append(p)
-            if len(solns)==0:
-                solns = [np.nan]        
-            solns_allD.append(solns)
+    #%% Only get good days
     
-        # find the first time bin ... as the onset of emergece of choice signal.
-        firstFrame = np.array([solns_allD[iday][0] for iday in range(len(top))])
-        # compute onset timing of choice signal relative to animal's choice time
-        firstFrame = (firstFrame - nPreMin)*frameLength*regressBins
+    firstFrame_allN = firstFrame_allN[days2an_heatmap] # ('150903_1') ... it is one of the early days and it is significant all over the trial!!! (rerun svm for this day!)        
+    firstFrame_inh = firstFrame_inh[days2an_heatmap]
+    firstFrame_exc_randSamp = firstFrame_exc_randSamp[days2an_heatmap]
+    firstFrame_exc_avSamps = firstFrame_exc_avSamps[days2an_heatmap]
         
-        return firstFrame
-    
-    
-    #%% For each day find the onset of emergence of choice signal. Then see how the onset of choice singla varies with training days. Also do a scatter plot of the onset time vs. behavioral performance.
-            
-    te = ttest_pval_exc_aligned[rng.permutation(numExcSamples)[0]].T[days2an_heatmap]  < alph  # a random exc samp    #    te = np.mean(ttest_pval_exc_aligned, axis=0).T[days2an_heatmap]  < alph  # ave exc samps       
-    topall = ttest_pval_allExc_aligned.T[days2an_heatmap] < alph , te , ttest_pval_inh_aligned.T[days2an_heatmap] < alph
         
-    sigDur = 500 # ms # we need 500ms continuous significancy for CA of data vs shuffle, to count it as choice signal emergence.
-    th1 = np.round(sigDur / (frameLength*regressBins))
-
-    # find all time bins that are followed by 500ms of sig CA.
-    for iplot in range(3): # iplot = 0    
-        top = topall[iplot]                    
-        firstFrame = sigOnset(top, th1)
-
-        if iplot==0:
-            firstFrame_allN = firstFrame        
-        if iplot==1:
-            firstFrame_exc = firstFrame
-        if iplot==2:
-            firstFrame_inh = firstFrame
-            
-    firstFrame_exc_randSamp = firstFrame_exc
-    
-    # find firstFrame for each exc samp, then take an average across the exc samps!
-    a = np.transpose((ttest_pval_exc_aligned<alph)[:,:,days2an_heatmap], (0,2,1)) # nExcSamps x days x frames
-    firstFrame = [] # nExcSamps x nDays
-    for isamp in range(numExcSamples):
-        firstFrame.append(sigOnset(a[isamp], th1))    
-    # average across excSamps
-    firstFrame_exc_avSamps = np.nanmean(firstFrame, axis=0)
-
-            
     #%% NOTE: do you want to do the following??
     
     if np.logical_and(mousename=='fni16', corrTrained==1):
-        firstFrame_allN[days.index('150903_1')] = np.nan # ('150903_1') ... it is one of the early days and it is significant all over the trial!!! (rerun svm for this day!)
-        firstFrame_exc[days.index('150903_1')] = np.nan
+        firstFrame_allN[days.index('150903_1')] = np.nan # ('150903_1') ... it is one of the early days and it is significant all over the trial!!! (rerun svm for this day!)        
         firstFrame_inh[days.index('150903_1')] = np.nan
-    
+        firstFrame_exc_randSamp[days.index('150903_1')] = np.nan
+        firstFrame_exc_avSamps[days.index('150903_1')] = np.nan
+        
         
     #%% Plot choice signal onset vs. day, also compare choice signal onset for days with low vs high behavioral performance #########%%       
 
+#    perc_thb = [10,90] #[20,80] # perc_thb = [15,85] # percentiles of behavioral performance for determining low and high performance.
     exc_av = 1 # if 1 use firstFrame_exc_avSamps # use firstFrame found for a random exc samp or found for each exc samp and then averaged!
     
     if exc_av:
@@ -1269,10 +1406,8 @@ if addNs_roc==0:
     #########%% Compare choice signal onset for days with low vs high behavioral performance #########%%      
     #### allN
     a = behCorr_all[days2an_heatmap][~np.isnan(firstFrame_allN)] 
-#    mn = np.min(a)
-#    mx = np.max(a)    
-#    thb = mn+.1, mx-.1    
-    thb = np.percentile(a, [10,90])
+    thb = np.percentile(a, perc_thb)
+#    mn = np.min(a);    mx = np.max(a);    thb = mn+.1, mx-.1        
     
     loBehCorrDays_allN = (a <= thb[0])     # bc different days are valid for allN, inh and exc, we have to find low and high beh performance days separately for each population.
     hiBehCorrDays_allN = (a >= thb[1])
@@ -1280,7 +1415,7 @@ if addNs_roc==0:
 
     #### inh
     a = behCorr_all[days2an_heatmap][~np.isnan(firstFrame_inh)]     
-    thb = np.percentile(a, [10,90])
+    thb = np.percentile(a, perc_thb)
     
     loBehCorrDays_inh = (a <= thb[0])    
     hiBehCorrDays_inh = (a >= thb[1])
@@ -1288,7 +1423,7 @@ if addNs_roc==0:
 
     #### exc
     a = behCorr_all[days2an_heatmap][~np.isnan(firstFrame_exc)] 
-    thb = np.percentile(a, [10,90])
+    thb = np.percentile(a, perc_thb)
     
     loBehCorrDays_exc = (a <= thb[0])    
     hiBehCorrDays_exc = (a >= thb[1])
@@ -1431,18 +1566,17 @@ if addNs_roc==0:
    
 
 
-
-    #############################################################################################
-    #############################################################################################
-        
-    #%% Plot class accur trace for all days (only use days with svm trained trials above thTrained) on top of each other
     
+    #%%
+    #############################################################################################
+    #############################################################################################
     if do_excInhHalf:
         Cols = 'm','b'
     else:
         Cols = 'r','k'
-        
-        
+               
+    #%% Plot class accur trace for all days (only use days with svm trained trials above thTrained) on top of each other
+    
     plt.figure()
     
     for iday in range(len(days)):    
@@ -1722,18 +1856,57 @@ if addNs_roc==0:
         plt.subplots_adjust(hspace=0.65)
         
         
+    
+    if superimpose:
+        ##%% data - shfl    
+        plt.subplot(222)
+        # exc
+        if do_excInhHalf==0:
+            av = av_av_test_data_exc_aligned - av_av_test_shfl_exc_aligned
+            plt.fill_between(time_aligned, av - sd_av_test_data_exc_aligned, av + sd_av_test_data_exc_aligned, alpha=0.5, edgecolor='b', facecolor='b')
+            plt.plot(time_aligned, av, 'b', label='exc')
+        # inh
+        av = av_av_test_data_inh_aligned - av_av_test_shfl_inh_aligned
+        plt.fill_between(time_aligned, av - sd_av_test_data_inh_aligned, av + sd_av_test_data_inh_aligned, alpha=0.5, edgecolor=Cols[0], facecolor=Cols[0])
+        plt.plot(time_aligned, av, color=Cols[0], label=labInh)
+        # allExc
+        av = av_av_test_data_allExc_aligned - av_av_test_shfl_allExc_aligned
+        plt.fill_between(time_aligned, av - sd_av_test_data_allExc_aligned, av + sd_av_test_data_allExc_aligned, alpha=0.5, edgecolor=Cols[1], facecolor=Cols[1])
+        plt.plot(time_aligned, av, color=Cols[1], label=labAll)
+        
+#        if chAl==1:
+#            plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
+#        else:
+#            plt.xlabel('Time relative to stim onset (ms)', fontsize=11)
+#        plt.ylabel('Classification accuracy (%)', fontsize=11)
+        ax = plt.gca()
+        if superimpose==0:    
+            plt.title('Testing data')
+            #plt.title('SVM trained on non-overlapping %.2f ms windows' %(regressBins*frameLength), fontsize=13)
+            #plt.legend()
+            makeNicePlots(ax,1,1)
+        # Plot a dot for significant time points
+        ymin, ymax = ax.get_ylim()
+        pp = pcorrtrace+0; pp[pp>palpha] = np.nan; pp[pp<=palpha] = ymax
+        plt.plot(time_aligned, pp, color=Cols[1])
+        ax = plt.gca()
+        makeNicePlots(ax,1,1)
+        plt.title('data-shfl')
+    
     plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False) 
-    
-    
     #xmin, xmax = ax.get_xlim()
     #plt.xlim([-1400,500])
     
     ##%% Save the figure    
     if savefigs:
-        if chAl==1:
-            dd = 'chAl_' + corrn + 'aveSdDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+        if doSd:
+            sdn = 'aveSdDays_'
         else:
-            dd = 'stAl_' + corrn + 'aveSdDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            sdn = 'aveSeDays_'
+        if chAl==1:
+            dd = 'chAl_' + corrn + sdn + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+        else:
+            dd = 'stAl_' + corrn + sdn + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
     
         if superimpose==1:        
             dd = dd+'_sup'
@@ -1749,8 +1922,8 @@ if addNs_roc==0:
     #    fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+'svg')
     #    plt.savefig(fign, dpi=300, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
 
-
-    #%% easy, hard, medium: Average class accuracy for testing trials of different stimulus strength: easy, hard, medium
+    
+    #%% Easy, hard, medium: Average class accuracy for testing trials of different stimulus strength: easy, hard, medium
     
     # Plot the average of aligned traces across all days (exc, inh, allExc superimposed)
     # only days with enough svm trained trials are used.
@@ -1885,21 +2058,23 @@ if addNs_roc==0:
         #    plt.savefig(fign, dpi=300, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
         
         
-   
-##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#%%   
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #%% Plots of adding neurons 1 by 1
+        
 ##################################################################################################
 ##################################################################################################
 ##################################################################################################
@@ -1970,7 +2145,7 @@ if addNs_roc:
     perClassErrorTest_shfl_exc_alln = np.array([np.transpose(perClassErrorTest_shfl_exc_all[iday][:,:,:,eventI_ds_allDays[iday]+fr2an], (1,0,2)) for iday in range(numD)])
 
     """
-    scio.savemat(fname+'/svm_classErr_shflTrsEachN_'+nowStr, {'mousename': mousename, 'numD':numD, 'mn_corr':mn_corr, 'thTrained':thTrained, 'fr2an':fr2an, 'eventI_ds_allDays':eventI_ds_allDays,
+    scio.savemat(fname+'/svm_addNsROC_classErr_shflTrsEachN_'+nowStr, {'mousename': mousename, 'numD':numD, 'mn_corr':mn_corr, 'thTrained':thTrained, 'fr2an':fr2an, 'eventI_ds_allDays':eventI_ds_allDays,
       'perClassErrorTest_data_allExc_all_shflTrsEachNn':perClassErrorTest_data_allExc_all_shflTrsEachNn, 'av_test_data_allExc_shflTrsEachN':av_test_data_allExc_shflTrsEachN,
       'perClassErrorTest_data_inh_all_shflTrsEachNn':perClassErrorTest_data_inh_all_shflTrsEachNn, 'av_test_data_inh_shflTrsEachN':av_test_data_inh_shflTrsEachN,
       'perClassErrorTest_data_exc_all_shflTrsEachNn':perClassErrorTest_data_exc_all_shflTrsEachNn, 'av_test_data_exc_shflTrsEachN':av_test_data_exc_shflTrsEachN,
@@ -1979,7 +2154,7 @@ if addNs_roc:
       'perClassErrorTest_data_exc_alln':perClassErrorTest_data_exc_alln, 'av_test_data_exc':av_test_data_exc, 'av_test_shfl_exc':av_test_shfl_exc,
       'perClassErrorTest_shfl_exc_alln':perClassErrorTest_shfl_exc_alln})
 
-    scio.savemat(fname+'/svm_shflClassErr_'+nowStr, {'av_test_shfl_allExc':av_test_shfl_allExc, 'av_test_shfl_inh':av_test_shfl_inh, 'av_test_shfl_exc':av_test_shfl_exc, 
+    scio.savemat(fname+'/svm_addNsROC_shflClassErr_'+nowStr, {'av_test_shfl_allExc':av_test_shfl_allExc, 'av_test_shfl_inh':av_test_shfl_inh, 'av_test_shfl_exc':av_test_shfl_exc, 
       'perClassErrorTest_shfl_exc_alln':perClassErrorTest_shfl_exc_alln})
     """
             
@@ -2408,64 +2583,65 @@ if addNs_roc:
     
     #%% Compute number of neurons to reach plateau for each day
     
-    nNsContHiCA = 1 #3 # if there is a gap of >=3 continuous n Ns with high CA (CA > thp percentile of CA across all Ns), call the first number of N as the point of plateuou.
-    alph = .05 # only set plateau if CA is sig different from chance
-    
-    platN_allExc, platN_inh, platN_exc, platN_exc_excSamp = numNeurPlateau()
-       
-    
-    #%% Plot number of neurons to plateau vs. training day
-    
-    plt.figure(figsize=(3,2))    
-    plt.plot(platN_allExc, 'k.-', label='allExc')
-    plt.plot(platN_inh, 'r.-', label='inh')
-    plt.plot(platN_exc, 'b.-', label='exc')
-    makeNicePlots(plt.gca())
-    plt.ylabel('# neurons to plateau', fontsize=11)        
-    plt.xlabel('Training day', fontsize=11)        
-    plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1, frameon=False)  
-
+    if h2l:
+        nNsContHiCA = 1 #3 # if there is a gap of >=3 continuous n Ns with high CA (CA > thp percentile of CA across all Ns), call the first number of N as the point of plateuou.
+        alph = .05 # only set plateau if CA is sig different from chance
         
-    #%% Plot ave and se (across days) : number of neurons to plateau
-
-    aa = np.nanmean(platN_allExc)
-    ai = np.nanmean(platN_inh)
-    ae = np.nanmean(platN_exc)
-    sa = np.nanstd(platN_allExc) / np.sqrt(sum(mn_corr>=thTrained))
-    si = np.nanstd(platN_inh) / np.sqrt(sum(mn_corr>=thTrained))
-    se = np.nanstd(platN_exc) / np.sqrt(sum(mn_corr>=thTrained))
-
-
-    plt.figure(figsize=(1,2))
+        platN_allExc, platN_inh, platN_exc, platN_exc_excSamp = numNeurPlateau()
+           
+        
+        #%% Plot number of neurons to plateau vs. training day
+        
+        plt.figure(figsize=(3,2))    
+        plt.plot(platN_allExc, 'k.-', label='allExc')
+        plt.plot(platN_inh, 'r.-', label='inh')
+        plt.plot(platN_exc, 'b.-', label='exc')
+        makeNicePlots(plt.gca())
+        plt.ylabel('# neurons to plateau', fontsize=11)        
+        plt.xlabel('Training day', fontsize=11)        
+        plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1, frameon=False)  
     
-    plt.errorbar(0, aa, sa, fmt='o', label='allExc', color='k', markeredgecolor='k')
-    plt.errorbar(1, ai, si, fmt='o', label='inh', color='r', markeredgecolor='r')
-    plt.errorbar(2, ae, se, fmt='o', label='exc', color='b', markeredgecolor='b')
-    
-    plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)#, frameon=False) 
-    #plt.xlabel('Population', fontsize=11)
-    plt.ylabel('# neurons to plateau', fontsize=11)
-    plt.xlim([-.2,3-1+.2])    
-    plt.xticks(range(3), ['allExc','inh','exc'])
-    ax = plt.gca()
-    makeNicePlots(ax)
-    yl = ax.get_ylim()
-    plt.ylim([yl[0]-2, yl[1]])
-#    plt.ylim([8, 80])
-   
-    if savefigs:
-        if chAl==1:
-            dd = 'chAl_' + corrn + 'avSeDays_numNeurPlateau_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-        else:
-            dd = 'stAl_' + corrn + 'avSeDays_numNeurPlateau_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
             
-        d = os.path.join(svmdir+dnow)
-        if not os.path.exists(d):
-            print 'creating folder'
-            os.makedirs(d)
+        #%% Plot ave and se (across days) : number of neurons to plateau
+    
+        aa = np.nanmean(platN_allExc)
+        ai = np.nanmean(platN_inh)
+        ae = np.nanmean(platN_exc)
+        sa = np.nanstd(platN_allExc) / np.sqrt(sum(mn_corr>=thTrained))
+        si = np.nanstd(platN_inh) / np.sqrt(sum(mn_corr>=thTrained))
+        se = np.nanstd(platN_exc) / np.sqrt(sum(mn_corr>=thTrained))
+    
+    
+        plt.figure(figsize=(1,2))
+        
+        plt.errorbar(0, aa, sa, fmt='o', label='allExc', color='k', markeredgecolor='k')
+        plt.errorbar(1, ai, si, fmt='o', label='inh', color='r', markeredgecolor='r')
+        plt.errorbar(2, ae, se, fmt='o', label='exc', color='b', markeredgecolor='b')
+        
+        plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)#, frameon=False) 
+        #plt.xlabel('Population', fontsize=11)
+        plt.ylabel('# neurons to plateau', fontsize=11)
+        plt.xlim([-.2,3-1+.2])    
+        plt.xticks(range(3), ['allExc','inh','exc'])
+        ax = plt.gca()
+        makeNicePlots(ax)
+        yl = ax.get_ylim()
+        plt.ylim([yl[0]-2, yl[1]])
+    #    plt.ylim([8, 80])
+       
+        if savefigs:
+            if chAl==1:
+                dd = 'chAl_' + corrn + 'avSeDays_numNeurPlateau_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            else:
+                dd = 'stAl_' + corrn + 'avSeDays_numNeurPlateau_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                 
-        fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])         
-        plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
+            d = os.path.join(svmdir+dnow)
+            if not os.path.exists(d):
+                print 'creating folder'
+                os.makedirs(d)
+                    
+            fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])         
+            plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
         
         
 
@@ -2489,13 +2665,13 @@ if addNs_roc:
             av = av_test_data_allExc[iday]
             sd = sd_test_data_allExc[iday]            
             x = np.arange(1, len(av)+1)
-            plt.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
+            plt.fill_between(x, av-sd, av+sd, alpha=alphFig, edgecolor=colors[i], facecolor=colors[i])
             plt.plot(x, av, colors[i], label=labs[i])
             if compWith_shflTrsEachN:
                 av = av_test_data_allExc_shflTrsEachN[iday]
                 sd = sd_test_data_allExc_shflTrsEachN[iday]            
                 x = np.arange(1, len(av)+1)
-                plt.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
+                plt.fill_between(x, av-sd, av+sd, alpha=alphFig, edgecolor=colors[i], facecolor=colors[i])
                 plt.plot(x, av, colors_shflTrsEachN[i], label=labs[i])            
 #            if ttest2(av_test_data_allExc[iday], av_test_data_allExc_shflTrsEachN[iday]) <= alph:
 #                plt.gca().text(50,50, str(np.mean(av_test_data_allExc_shflTrsEachN[iday] - av_test_data_allExc[iday])))
@@ -2507,13 +2683,13 @@ if addNs_roc:
             av = av_test_data_inh[iday]
             sd = sd_test_data_inh[iday]            
             x = np.arange(1, len(av)+1)
-            plt.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
+            plt.fill_between(x, av-sd, av+sd, alpha=alphFig, edgecolor=colors[i], facecolor=colors[i])
             plt.plot(x, av, colors[i], label=labs[i])            
             if compWith_shflTrsEachN:
                 av = av_test_data_inh_shflTrsEachN[iday]
                 sd = sd_test_data_inh_shflTrsEachN[iday]            
                 x = np.arange(1, len(av)+1)
-                plt.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
+                plt.fill_between(x, av-sd, av+sd, alpha=alphFig, edgecolor=colors[i], facecolor=colors[i])
                 plt.plot(x, av, colors_shflTrsEachN[i], label=labs[i])            
 #            if ttest2(av_test_data_inh[iday], av_test_data_inh_shflTrsEachN[iday]) <= alph:
 #                plt.gca().text(50,50, str(np.mean(av_test_data_inh_shflTrsEachN[iday] - av_test_data_inh[iday])))
@@ -2525,13 +2701,13 @@ if addNs_roc:
             av = av_test_data_exc[iday]
             sd = sd_test_data_exc[iday]            
             x = np.arange(1, len(av)+1)
-            plt.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
+            plt.fill_between(x, av-sd, av+sd, alpha=alphFig, edgecolor=colors[i], facecolor=colors[i])
             plt.plot(x, av, colors[i], label=labs[i])
             if compWith_shflTrsEachN:
                 av = av_test_data_exc_shflTrsEachN[iday]
                 sd = sd_test_data_exc_shflTrsEachN[iday]            
                 x = np.arange(1, len(av)+1)
-                plt.fill_between(x, av-sd, av+sd, alpha=alph, edgecolor=colors[i], facecolor=colors[i])
+                plt.fill_between(x, av-sd, av+sd, alpha=alphFig, edgecolor=colors[i], facecolor=colors[i])
                 plt.plot(x, av, colors_shflTrsEachN[i], label=labs[i])                        
 #            if ttest2(av_test_data_exc[iday], av_test_data_exc_shflTrsEachN[iday]) <= alph:
 #                plt.gca().text(50,50, str(np.mean(av_test_data_exc_shflTrsEachN[iday] - av_test_data_exc[iday])))

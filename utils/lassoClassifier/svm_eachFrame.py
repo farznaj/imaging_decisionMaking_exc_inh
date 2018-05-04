@@ -1252,7 +1252,8 @@ def shflTrsPerN(X_svm_bp, Y_svm_bp):
 #    print '%d HR trials; %d LR trials' %(sum(hr_trs), sum(lr_trs))
 
 
-#%%
+#%% If desired, break correlations between neurons in each trial
+    
 if shflTrsEachNeuron:
 
     ##%% Keep a copy of X_svm before shuffling trials

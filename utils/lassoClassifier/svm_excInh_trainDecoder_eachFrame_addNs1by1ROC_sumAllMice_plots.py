@@ -1,8 +1,13 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-Created on Sun Apr 15 23:56:47 2018
+Use vars of class accur computed on populations of different size (added based on ROC, high to low) to 
+    plot the following for all mice (summary quantifications); do it vs. training days, and for low/high behavioral performance
+    1) Change in classifier accuracy after breaking noise correaltions
+    2) Number of neurons to reach plateau
+    
 
+Created on Sun Apr 15 23:56:47 2018
 @author: farznaj
 """
 
@@ -67,7 +72,9 @@ for im in range(len(mice)):
     namtf = os.path.basename(dirROC)
     print namtf
     
-    ############ Load ROC vars
+    
+    ############ Load ROC vars ############
+    
     Data = scio.loadmat(dirROC, variable_names=['choicePref_all_alld_exc', 'choicePref_all_alld_inh'])  
     choicePref_all_alld_exc = Data.pop('choicePref_all_alld_exc').flatten() # nDays; each day: frames x neurons
     choicePref_all_alld_inh = Data.pop('choicePref_all_alld_inh').flatten()
@@ -82,10 +89,11 @@ for im in range(len(mice)):
     choicePref_inh_allM.append(choicePref_inh)
     
     
-    #%%
+    #%% Add Ns ROC: load class accuracy vars before and after breaking noise corrs, and for populations of different size (added based on ROC (high to low))
+    
     imagingDir = setImagingAnalysisNamesP(mousename)
     fname = os.path.join(imagingDir, 'analysis')            
-    finame = os.path.join(fname, 'svm_classErr_shflTrsEachN_*.mat')    
+    finame = os.path.join(fname, 'svm_addNsROC_classErr_shflTrsEachN_*.mat')    
     data = scio.loadmat(glob.glob(finame)[0])
     
     eventI_ds_allDays = np.array(data.pop('eventI_ds_allDays')).flatten().astype('float')
@@ -103,7 +111,7 @@ for im in range(len(mice)):
     av_test_data_inh_shflTrsEachN = np.array(data.pop('av_test_data_inh_shflTrsEachN')).flatten()
     av_test_data_exc_shflTrsEachN = np.array(data.pop('av_test_data_exc_shflTrsEachN')).flatten()
     
-    finame = os.path.join(fname, 'svm_shflClassErr_*.mat')    
+    finame = os.path.join(fname, 'svm_addNsROC_shflClassErr_*.mat')    
     finame = glob.glob(finame)
     finame = sorted(finame, key=os.path.getmtime)
     finame = finame[::-1][0] # so the latest file is the 1st one.    
@@ -131,8 +139,10 @@ for im in range(len(mice)):
 #    if mousename=='fni16':
 #        mn_corr0[days.index('151023_1')] = thTrained - 1 # see it will be excluded from analysis!    
     days2an_heatmap = mn_corr0 >= thTrained 
-       
-    # load behavioral performance
+    
+    
+    ############ load behavioral performance ############
+    
     imagingDir = setImagingAnalysisNamesP(mousename)
     fname = os.path.join(imagingDir, 'analysis')    
     # set svmStab mat file name that contains behavioral and class accuracy vars
@@ -148,18 +158,22 @@ for im in range(len(mice)):
     #    behCorrLR_all = Data.pop('behCorrLR_all').flatten()
             
     
-    ##%%
+    ########################
+    mn_corr_allM.append(mn_corr)
+    behCorr_all_allM.append(behCorr_all)
+    days2an_heatmap_allM.append(days2an_heatmap)    
+    
     av_test_data_allExc_allM.append(av_test_data_allExc)
     av_test_data_inh_allM.append(av_test_data_inh)
     av_test_data_exc_allM.append(av_test_data_exc)
-    av_test_data_exc_excSamp_allM.append(av_test_data_exc_excSamp)
-    mn_corr_allM.append(mn_corr)
+    av_test_data_exc_excSamp_allM.append(av_test_data_exc_excSamp)    
     av_test_shfl_allExc_allM.append(av_test_shfl_allExc)
     av_test_shfl_inh_allM.append(av_test_shfl_inh)
     av_test_shfl_exc_allM.append(av_test_shfl_exc)
     av_test_shfl_exc_excSamp_allM.append(av_test_shfl_exc_excSamp)
      
-       
+
+    ########################################################################################################################       
     ############################## Compute the change in CA from the actual case to shflTrsEachNeuron case ... aveaged across those population sizes that are significantly different between actual and shflTrsEachN
     # for each day do ttest across samples for each of the population sizes to see if shflTrsEachN is differnt fromt eh eactual case (ie neuron numbers in the decoder)
     dav_allExc, dav_inh, dav_exc_av, dav_exc = changeCA_shflTrsEachN()
@@ -168,8 +182,7 @@ for im in range(len(mice)):
     dav_allExc_allM.append(dav_allExc)
     dav_inh_allM.append(dav_inh)
     dav_exc_av_allM.append(dav_exc_av)
-    days2an_heatmap_allM.append(days2an_heatmap)
-    behCorr_all_allM.append(behCorr_all)
+    
 
 no
 
@@ -181,9 +194,7 @@ no
 #################################### Plots of change in CA after breaking noise correaltions ####################################
 #################################################################################################################################
 
-#%%
-
-############ Plot change in CA vs training day ############
+#%% Plot change in CA vs training day
 
 plt.figure(figsize=(3, 8))
 
@@ -226,7 +237,7 @@ if savefigs:
 
 
 
-############%% Plot ave and se of change in CA across days... compare exc, inh, allExc ############   
+#%% ############%% Plot ave and se of change in CA across days... compare exc, inh, allExc ############   
      
 plt.figure(figsize=(4, 2))
 
@@ -254,6 +265,11 @@ for im in range(len(mice)):
     plt.errorbar(2, ae, se, fmt='o', label='exc', color='b', markeredgecolor='b')        
     if im==len(mice)-1:
         plt.legend(loc=0, frameon=False, numpoints=1, bbox_to_anchor=(1, .73))    
+    if im>0:
+        plt.gca().spines['left'].set_color('white')
+        plt.gca().yaxis.set_visible(False)
+    else:
+        plt.ylabel('Change in CA (%)')          
     plt.xticks(range(3), ['allExc','inh','exc'], rotation=70)    
     plt.xlim([-.5, 2+.5])            
 #    ax = plt.gca();    yl = ax.get_ylim();     plt.ylim([yl[0]-2, yl[1]])
@@ -284,9 +300,9 @@ if savefigs:
 
     
     
-################## Behavior: compare change in CA (after removing noise corr) for days with low vs high behavioral performance ##################
+#%% ################## Behavior: compare change in CA (after removing noise corr) for days with low vs high behavioral performance ##################
 
-plotAll = 1 # if 0, plot only allExc; otherwise plot exc and inh too
+plotAll = 1 #1 # if 0, plot only allExc; otherwise plot exc and inh too
     
 if plotAll:
     labs = 'allExc', 'exc', 'inh'    
@@ -337,15 +353,17 @@ for im in range(len(mice)):
         plt.errorbar(x[1], np.nanmean(c), cs0, marker='o', color='lightblue', fmt='.', markeredgecolor='lightblue')       
         plt.errorbar(x[2], np.nanmean(bh), bhs, marker='o',color='r', fmt='.', markeredgecolor='r')        
         plt.errorbar(x[2], np.nanmean(b), bs0, marker='o',color='lightsalmon', fmt='.', markeredgecolor='lightsalmon')    
+        
     plt.xlim([x[0]-.5, x[-1]+.5]) # plt.xlim([-1,3])    
-    plt.xticks(x, [mice[im]], rotation=70) # 'vertical'    
+    plt.xticks([x[0]], [mice[im]], rotation=70) # 'vertical'    
     if im==len(mice)-1:
         plt.legend(loc=0, frameon=False, numpoints=1, bbox_to_anchor=(.7, .73))    
     if im>0:
         plt.gca().spines['left'].set_color('white')
         plt.gca().yaxis.set_visible(False)
     else:
-        plt.ylabel('Change in CA (%)')            
+        plt.ylabel('Change in CA (%)')
+        
     if plotAll:
         plt.ylim([-2, 13])
     else:
@@ -362,7 +380,7 @@ if savefigs:
     if chAl==1:
         dd = 'chAl_VSshflTrsEachN_CAchange_avSeDaysBeh_' + sn + 'addNsROC_' + '_'.join(mice) + '_' + nowStr
     else:
-        dd = 'stAl_VSshflTrsEachN_CAchange_avSeDaysBeh_addNsROCBeh_' + '_'.join(mice) + '_' + nowStr
+        dd = 'stAl_VSshflTrsEachN_CAchange_avSeDaysBeh_' + sn + 'addNsROC_' + '_'.join(mice) + '_' + nowStr
         
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
@@ -377,11 +395,11 @@ if savefigs:
 
 
 #%%
-####################################################################################
-####################################################################################
-####################################################################################
+########################################################################################################################################################################
+########################################################################################################################################################################
+########################################################################################################################################################################
     
-#%% Compute number of neurons to reach plateau for each day
+#%% Set number of neurons to reach plateau for each day
 
 nNsContHiCA = 1 #3 # if there is a gap of >=3 continuous n Ns with high CA (CA > thp percentile of CA across all Ns), call the first number of N as the point of plateuou.
 alph = .05 # only set plateau if CA is sig different from chance
@@ -419,10 +437,10 @@ for im  in range(len(mice)):
 
 #%%
 #################################################################################################################################
-#################################### Plots of number of neurons to reach plateau ####################################
+########################################## Plots of number of neurons to reach plateau ##########################################
 #################################################################################################################################
     
-#%%
+#%% ###################### Plot number of neurons to plateau vs. training day ####################
 
 mnp = 0
 mxp = 85
@@ -433,9 +451,8 @@ mx_inh = np.max([np.nanpercentile(platN_inh_allM[im], [mnp,mxp]) for im in range
 mn_exc = np.min([np.nanpercentile(platN_exc_allM[im], [mnp,mxp]) for im in range(len(mice))])
 mx_exc = np.max([np.nanpercentile(platN_exc_allM[im], [mnp,mxp]) for im in range(len(mice))])
 
-
-###################### Plot number of neurons to plateau vs. training day ####################
 f1 = plt.figure(1,figsize=(3,8))    
+
 for im  in range(len(mice)):
     platN_allExc = platN_allExc_allM[im]
     platN_inh = platN_inh_allM[im]
@@ -471,8 +488,10 @@ if savefigs:
 
 
 
-##################### Box plots #####################
+#%% ##################### Box plots : med and iqr across days  #####################
+    
 f2 = plt.figure(2,figsize=(3,6))
+
 for im  in range(len(mice)):
     platN_allExc = platN_allExc_allM[im]
     platN_inh = platN_inh_allM[im]
@@ -481,6 +500,7 @@ for im  in range(len(mice)):
     plt.figure(2)
     
     ###### allExc ######
+    
     plt.subplot(3, len(mice), im+1)    
     bp = plt.boxplot(platN_allExc[~np.isnan(platN_allExc)], 0, showfliers=False, labels=['allExc'])#, widths=.05)#, positions=[0])
     bp['boxes'][0].set(color='k')
@@ -498,6 +518,7 @@ for im  in range(len(mice)):
     
     
     ###### inh and exc ######
+    
     plt.subplot(3, len(mice), len(mice)+im+1)
     # inh
     bp = plt.boxplot(platN_inh[~np.isnan(platN_inh)], 0, showfliers=False)#, positions=[1])
@@ -522,6 +543,7 @@ for im  in range(len(mice)):
 
 
     ###### exc - inh ######
+    
     plt.subplot(3, len(mice), 2*len(mice)+im+1)    
     a = platN_exc - platN_inh
     bp = plt.boxplot(a[~np.isnan(a)], 0, showfliers=False, labels=['exc-inh'])
@@ -550,7 +572,8 @@ if savefigs:
 
     
     
-##################### Error bars : ave and se across days ##################### 
+#%% ##################### Error bars : ave and se across days ##################### 
+    
 f3 = plt.figure(3,figsize=(3,6))
 for im  in range(len(mice)):
     platN_allExc = platN_allExc_allM[im]
@@ -629,7 +652,138 @@ if savefigs:
     plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)   
     
     
+#%% ################## Behavior: compare # neurons to plateau for days with low vs high behavioral performance ##################
+
+plotAll = 1 # if 0, plot only allExc; otherwise plot exc and inh too
+labs = 'allExc', 'exc', 'inh'    
+
+for boxp in range(2): # plot ave,se and then med,iqr across days with low/high beh perf
+    plt.figure(figsize=(4, 2))
     
- 
+    for im in range(len(mice)):
+        
+        platN_allExc = platN_allExc_allM[im]
+        platN_inh = platN_inh_allM[im]
+        platN_exc = platN_exc_allM[im]
+        
+        days2an_heatmap = days2an_heatmap_allM[im]
+        behCorr_all = behCorr_all_allM[im]
     
+        
+        a = behCorr_all[days2an_heatmap]    
+        thb = np.percentile(a, perc_thb)     # thb = np.percentile(a, [10,90])
+        
+        loBehCorrDays = (a <= thb[0])    
+        hiBehCorrDays = (a >= thb[1])
+        print sum(loBehCorrDays), sum(hiBehCorrDays), ': num days with low and high beh performance'
+        
+        aa = platN_allExc[days2an_heatmap]
+        bb = platN_inh[days2an_heatmap]
+        cc = platN_exc[days2an_heatmap]
+        a = aa[loBehCorrDays]; ah = aa[hiBehCorrDays]
+        b = bb[loBehCorrDays]; bh = bb[hiBehCorrDays]
+        c = cc[loBehCorrDays]; ch = cc[hiBehCorrDays]    
+        x = range(len(labs))
+        
+        if boxp==0: # ave, se                   
+            plt.subplot(1, len(mice), im+1)
+    
+            ahs = np.nanstd(ah)/ np.sqrt(sum(~np.isnan(ah)))        
+            chs = np.nanstd(ch)/ np.sqrt(sum(~np.isnan(ch)))
+            bhs = np.nanstd(bh)/ np.sqrt(sum(~np.isnan(bh)))
+            as0 = np.nanstd(a) / np.sqrt(sum(~np.isnan(a)))
+            cs0 = np.nanstd(c) / np.sqrt(sum(~np.isnan(c)))
+            bs0 = np.nanstd(b) / np.sqrt(sum(~np.isnan(b)))
+        
+            plt.errorbar(x[0], np.nanmean(ah), ahs, marker='o', color='k', fmt='.', markeredgecolor='k', label='high beh')
+            plt.errorbar(x[0], np.nanmean(a), as0, marker='o', color='gray', fmt='.', markeredgecolor='gray', label='low beh')        
+            if plotAll:
+                plt.errorbar(x[1], np.nanmean(ch), chs, marker='o', color='b', fmt='.', markeredgecolor='b')
+                plt.errorbar(x[1], np.nanmean(c), cs0, marker='o', color='lightblue', fmt='.', markeredgecolor='lightblue')       
+                plt.errorbar(x[2], np.nanmean(bh), bhs, marker='o',color='r', fmt='.', markeredgecolor='r')        
+                plt.errorbar(x[2], np.nanmean(b), bs0, marker='o',color='lightsalmon', fmt='.', markeredgecolor='lightsalmon')    
+        
+        else: # box plot                    
+            plt.subplot(1, len(mice), im+1)
+
+            ##### allExc
+            bp1 = plt.boxplot(ah[~np.isnan(ah)], 0, showfliers=False, positions=[x[0]], widths=.35)#, patch_artist=True)#, labels=['high beh'])#, labels=['allExc'])#, widths=.05)#, positions=[0])
+            bp1['boxes'][0].set(color='k')
+            bp1['medians'][0].set(color='k')
+            bp1['whiskers'][0].set(linewidth=0); bp1['whiskers'][1].set(linewidth=0)
+            bp1['caps'][0].set(linewidth=0); bp1['caps'][1].set(linewidth=0)
+        
+            bp2 = plt.boxplot(a[~np.isnan(a)], 0, showfliers=False, positions=[x[0]], widths=.35)#, labels=['low beh'])#, labels=['allExc'])#, widths=.05)#, positions=[0])
+            bp2['boxes'][0].set(color='gray')
+            bp2['medians'][0].set(color='gray')
+            bp2['whiskers'][0].set(linewidth=0); bp2['whiskers'][1].set(linewidth=0)
+            bp2['caps'][0].set(linewidth=0); bp2['caps'][1].set(linewidth=0)
+            
+            ##### exc
+            bp = plt.boxplot(ch[~np.isnan(ch)], 0, showfliers=False, positions=[x[1]], widths=.35)#, labels=['allExc'])#, widths=.05)#, positions=[0])
+            bp['boxes'][0].set(color='b')
+            bp['medians'][0].set(color='b')
+            bp['whiskers'][0].set(linewidth=0); bp['whiskers'][1].set(linewidth=0)
+            bp['caps'][0].set(linewidth=0); bp['caps'][1].set(linewidth=0)
+        
+            bp = plt.boxplot(c[~np.isnan(c)], 0, showfliers=False, positions=[x[1]], widths=.35)#, labels=['allExc'])#, widths=.05)#, positions=[0])
+            bp['boxes'][0].set(color='lightblue')
+            bp['medians'][0].set(color='lightblue')
+            bp['whiskers'][0].set(linewidth=0); bp['whiskers'][1].set(linewidth=0)
+            bp['caps'][0].set(linewidth=0); bp['caps'][1].set(linewidth=0)
+        
+            ##### inh
+            bp = plt.boxplot(bh[~np.isnan(bh)], 0, showfliers=False, positions=[x[2]], widths=.35)#, labels=['allExc'])#, widths=.05)#, positions=[0])
+            bp['boxes'][0].set(color='r')
+            bp['medians'][0].set(color='r')
+            bp['whiskers'][0].set(linewidth=0); bp['whiskers'][1].set(linewidth=0)
+            bp['caps'][0].set(linewidth=0); bp['caps'][1].set(linewidth=0)
+        
+            bp = plt.boxplot(b[~np.isnan(b)], 0, showfliers=False, positions=[x[2]], widths=.35)#, labels=['allExc'])#, widths=.05)#, positions=[0])
+            bp['boxes'][0].set(color='lightsalmon')
+            bp['medians'][0].set(color='lightsalmon')
+            bp['whiskers'][0].set(linewidth=0); bp['whiskers'][1].set(linewidth=0)
+            bp['caps'][0].set(linewidth=0); bp['caps'][1].set(linewidth=0)
+            
+    
+        plt.ylim([-2, max(mx_inh, mx_exc, mx_allExc)])
+        plt.xlim([x[0]-.5, x[-1]+.5]) # plt.xlim([-1,3])    
+        plt.xticks([x[1]], [mice[im]], rotation=70) # 'vertical'    
+        if im==len(mice)-1:
+            plt.legend(loc=0, frameon=False, numpoints=1, bbox_to_anchor=(.7, .73))    
+            plt.gca().legend([bp1["boxes"][0], bp2["boxes"][0]], ['low beh', 'high beh'], bbox_to_anchor=(3, .73), frameon=False)
+        if im>0:
+            plt.gca().spines['left'].set_color('white')
+            plt.gca().yaxis.set_visible(False)
+        else:
+            plt.ylabel('# neurons to plateau')            
+    
+        makeNicePlots(plt.gca(),0,1)
+
+        
+    plt.subplots_adjust(hspace=.5, wspace=.5)
+    
+    
+    if savefigs:
+        if boxp==0:
+            bpa = 'avSeDays'
+        else:
+            bpa = 'boxplotDays'
+            
+        sn = '_'.join(labs) + '_'
+        
+        if chAl==1:
+            dd = 'chAl_numNeurPlateau_' + bpa + 'Beh_' + sn + 'addNsROC_' + '_'.join(mice) + '_' + nowStr
+        else:
+            dd = 'stAl_numNeurPlateau_' + bpa + 'Beh_' + sn + 'addNsROCBeh_' + '_'.join(mice) + '_' + nowStr
+            
+        d = os.path.join(svmdir+dnow)
+        if not os.path.exists(d):
+            print 'creating folder'
+            os.makedirs(d)
+                
+        fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])         
+        plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
+            
+            
         

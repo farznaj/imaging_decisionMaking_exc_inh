@@ -38,7 +38,9 @@ Created on Fri Oct 28 12:48:43 2016
 #allExc = 0 # use allexc and inh neurons for decoding (but not unsure neurons)                       
 #eqExcInh = 1 # use equal number of exc and inh neurons for decoding... numSamps of these populations will be made.
 def svm_notebook_setVars9(mousename, imagingFolder, mdfFileNumber, chAl, doInhAllexcEqexc, outcome2ana='corr', numSamples=50, numShufflesExc=50, trialHistAnalysis=0, iTiFlg=2):
-
+    
+    nRandCorrSel = 10
+    
     cbestKnown = 1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
     shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # if 1 shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
     

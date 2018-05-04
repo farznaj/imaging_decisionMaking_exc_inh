@@ -217,7 +217,7 @@ for im = 1:length(mice)
     disp([nPreMin, nPostMin])
 
 
-    %% Set time_aligned for the aligned trace for each mouse
+    %% Set downsampled time_aligned for the aligned trace for each mouse (assuming that choicePref was computed on downsampled traces).
 
     totLen = nPreMin + nPostMin +1;
     eventI = min(eventI_allDays);

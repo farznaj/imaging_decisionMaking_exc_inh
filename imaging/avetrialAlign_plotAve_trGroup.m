@@ -2,6 +2,7 @@
 % behavior_info
 
 %% specify what traces you want to plot
+
 traces = alldataSpikesGood; % alldataSpikesGoodInh; % %  % traces to be aligned.
 
 
@@ -57,7 +58,118 @@ time_all = {'time_aligned_initTone', 'time_aligned_stimOn', 'time_aligned_goTone
     'time_aligned_1stSideTry', 'time_aligned_reward'};
 
 
+
+%% For the paper: plot heatmap of trial-averaged activity for all neurons of a session across time in the trial (aligned on different trial events).
+
+saveFigs = 0;
+downsample = 0; % downsample the traces ?
+gp = 1;
+
+if downsample
+    % eventI_initTone0 = eventI_initTone;
+    % traces_aligned_fut_initTone0 = traces_aligned_fut_initTone;
+    % 
+    % eventI_stimOn0 = eventI_stimOn; 
+    % traces_aligned_fut_stimOn0 = traces_aligned_fut_stimOn;
+    % 
+    % eventI_1stSideTry0 = eventI_1stSideTry;
+    % traces_aligned_fut_1stSideTry0 = traces_aligned_fut_1stSideTry;
+    % 
+    % eventI_reward0 = eventI_reward;
+    % traces_aligned_fut_reward0 = traces_aligned_fut_reward;    
+    
+    normX = 1;
+
+    frameLength = 1000/30.9; % sec.
+    regressBins = round(100/frameLength); % 100ms # set to nan if you don't want to downsample.
+
+    [eventI_initTone, traces_aligned_fut_initTone, time_aligned_initTone] = downsamp_x(eventI_initTone0, traces_aligned_fut_initTone0, regressBins, normX);
+
+    [eventI_stimOn, traces_aligned_fut_stimOn, time_aligned_stimOn] = downsamp_x(eventI_stimOn0, traces_aligned_fut_stimOn0, regressBins, normX);
+
+    [eventI_1stSideTry, traces_aligned_fut_1stSideTry, time_aligned_1stSideTry] = downsamp_x(eventI_1stSideTry0, traces_aligned_fut_1stSideTry0, regressBins, normX);
+
+    [eventI_reward, traces_aligned_fut_reward, time_aligned_reward] = downsamp_x(eventI_reward0, traces_aligned_fut_reward0, regressBins, normX);
+end
+
+% No go tone
+nu = size(traces{1},2);
+traces_aligned_cat = cat(1, ...
+    traces_aligned_fut_initTone, NaN(gp, nu, numTrials), ...
+    traces_aligned_fut_stimOn, NaN(gp, nu, numTrials), ...
+    traces_aligned_fut_1stSideTry, NaN(gp, nu, numTrials), ...
+    traces_aligned_fut_reward);
+
+% traces_aligned_all = {'traces_aligned_fut_initTone', 'traces_aligned_fut_stimOn', 'traces_aligned_fut_1stSideTry', 'traces_aligned_fut_reward'};
+% eventI_all = {'eventI_initTone', 'eventI_stimOn', 'eventI_1stSideTry', 'eventI_reward'};
+% time_all = {'time_aligned_initTone', 'time_aligned_stimOn', 'time_aligned_1stSideTry', 'time_aligned_reward'};
+st = 1; 
+ttot = []; eltot = [];
+for isec = [1,2,4,5]  % loop over traces aligned on different events
+    tp = eval(traces_aligned_all{isec}); % traces_aligned_fut_initTone;
+    el = eval(eventI_all{isec}); % eventI_initTone;
+    tt = eval(time_all{isec});    
+
+    ln = size(tp, 1);
+    xsec = st : st+ln-1;
+    el = xsec(1)+el-1;
+    st = xsec(end)+gp+1;
+    ttot = [ttot, tt, NaN(1,gp)];
+    eltot = [eltot, el];
+end
+ttot(end) = [];
+
+        
+%%%%%% Plot heatmap (Ns x times (trial averaged), after sorting neurons based on when in the trial they fire the max
+
+a = nanmean(traces_aligned_cat, 3)';
+[aa, ii] = max(a, [], 2);
+[s2,si2] = sort(ii);
+top = a(si2,:);
+
+figure('position', [55   464   204   420]); 
+imagesc(top); 
+c = colorbar; c.Label.String = 'Trial-averaged inferred spikes (a.u.)';
+vline(eltot) %, 'r-.');
+set(gca, 'clim', [min(top(:)), prctile(top(:),99)])
+% e = eltot;
+% set(gca, 'xtick', e)
+% set(gca, 'xticklabel', round(ttot(e)))
+ylabel('Neurons')
+if downsample
+    xlabel('Downsampled frames')
+else
+    xlabel('Frames')
+end
+
+if saveFigs    
+    nowStr = datestr(now, 'yymmdd-HHMMSS');
+    
+    dirn0 = '/home/farznaj/Dropbox/ChurchlandLab/Projects/inhExcDecisionMaking/Heatmap_S';
+    nn = [mouse,'_',imagingFolder];
+    d = fullfile(dirn0, nn);
+    if ~exist(d,'dir')
+        mkdir(d)
+    end
+    
+    if downsample
+        dsn = '_downsampled';
+    else
+        dsn = '';
+    end
+    namv = sprintf('heatmap_S_allN_trAve_allEventsCat%s_%s', dsn, nowStr);
+
+    fn = fullfile(d, namv);
+    
+    savefig(gcf, fn)
+    % print to pdf
+    print('-dpdf', fn)
+end    
+
+
+
 %% concatenate the aligned traces with a NaN in between
+
 nu = size(traces{1},2);
 numTrials = length(alldata);
 traces_aligned_cat = cat(1, ...
@@ -66,12 +178,6 @@ traces_aligned_cat = cat(1, ...
     traces_aligned_fut_goTone, NaN(1, nu, numTrials), ...
     traces_aligned_fut_1stSideTry, NaN(1, nu, numTrials), ...
     traces_aligned_fut_reward);
-
-%%%% Plot heatmap (ns x times (trial averaged), after sorting neurons based on when in the trial they fire the max
-a = nanmean(traces_aligned_cat, 3)';
-[aa, ii] = max(a, [], 2);
-[s2,si2] = sort(ii);
-figure; imagesc(a(si2,:)); vline(eltot); colorbar;
 
 
 fprintf('size of traces_aligned_cat: %d  %d  %d\n', size(traces_aligned_cat))
@@ -108,6 +214,7 @@ mx = max([mxL;mxR]);
 
 
 %% set gaussian filter
+
 dofilter = true;
 
 if dofilter

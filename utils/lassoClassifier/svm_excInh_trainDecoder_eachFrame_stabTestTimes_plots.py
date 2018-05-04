@@ -2,9 +2,7 @@
 """
 vars are created in svm_excInh_trainDecoder_eachFrame_plots_stabTestTimes_setVars_post.py
 
-
 Created on Thu Nov 16 16:15:20 2017
-
 @author: farznaj
 """
 
@@ -18,7 +16,7 @@ saveDir_allMice = '/home/farznaj/Shares/Churchland_hpc_home/space_managed_data/f
 savefigs = 0
 set_save_p_samps = 0 # set it to 0 if p vals are already saved for the stab mat file under study # set and save p value across samples per day (takes time to be done !!)
 
-doTestingTrs = 1 # if 1 compute classifier performance only on testing trials; otherwise on all trials
+doTestingTrs = 0 # if 1 compute classifier performance only on testing trials; otherwise on all trials
 normWeights = 0 #1 # if 1, weights will be normalized to unity length. ### NOTE: you figured if you do np.dot(x,w) using normalized w, it will not match the output of svm (perClassError)
 
 corrTrained = 1
@@ -68,14 +66,21 @@ if normWeights:
 else:
     nw = 'wNotNormed_'
     
-    
+testIncorr = 0   
+
+
 #%% Set days (all days and good days) for each mouse
 
 days_allMice, numDaysAll, daysGood_allMice, dayinds_allMice, mn_corr_allMice = svm_setDays_allMice(mice, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, regressBins, useEqualTrNums, shflTrsEachNeuron, thTrained)
 numDaysGood = np.array([len(daysGood_allMice[im]) for im in range(len(mice))])
 
 
+#%% Load classAcc vars that were set in svm_excInh_trainDecoder_eachFrame_stabTestTimes_setVars_post.py and set their averages across days
 
+snn = 'stability_decoderTestedAllTimes_'        
+execfile("svm_excInh_load_av_classAcc.py")
+
+              
 #%% Define function for all plots below. Heatmaps of time vs time... showing either CA, or diff from max CA, etc... for exc,inh,allN
 
 # if doAv=1; average will be made across days that is provided in top; if 0, inputs are already averaged across days
@@ -429,81 +434,7 @@ def plotErrBarStabDur(doSe=0):
 
 
 
-#%% Load matlab vars
 
-################################################################################
-################################################################################
-    
-##%% Load class accur vars (averages of samples)
-
-cnam = glob.glob(os.path.join(saveDir_allMice, 'stability_decoderTestedAllTimes_' + nts + nw + '_'.join(mice) + '_*'))
-cnam = sorted(cnam, key=os.path.getmtime) # sort pnevFileNames by date (descending)
-cnam = cnam[::-1][0] # so the latest file is the 1st one.
-print cnam
-
-data = scio.loadmat(cnam, variable_names=['eventI_ds_allDays_allMice',
-                    'classAcc_allN_allDays_alig_avSamps_allMice',
-                    'classAcc_inh_allDays_alig_avSamps_allMice',
-                    'classAcc_exc_allDays_alig_avSamps_allMice',
-                    'classAcc_allN_shfl_allDays_alig_avSamps_allMice',
-                    'classAcc_inh_shfl_allDays_alig_avSamps_allMice',
-                    'classAcc_exc_shfl_allDays_alig_avSamps_allMice',
-                    'classAcc_allN_allDays_alig_sdSamps_allMice',
-                    'classAcc_inh_allDays_alig_sdSamps_allMice',
-                    'classAcc_exc_allDays_alig_sdSamps_allMice',
-                    'classAcc_allN_shfl_allDays_alig_sdSamps_allMice',
-                    'classAcc_inh_shfl_allDays_alig_sdSamps_allMice',
-                    'classAcc_exc_shfl_allDays_alig_sdSamps_allMice'])
-
-                    
-eventI_ds_allDays_allMice = data.pop('eventI_ds_allDays_allMice').flatten()                    
-eventI_ds_allDays_allMice = [eventI_ds_allDays_allMice[im].flatten() for im in range(len(mice))]
-
-# average of samps
-classAcc_allN_allDays_alig_avSamps_allMice = data.pop('classAcc_allN_allDays_alig_avSamps_allMice').flatten() # nGoodDays x nTrainedFrs x nTestingFrs
-classAcc_inh_allDays_alig_avSamps_allMice = data.pop('classAcc_inh_allDays_alig_avSamps_allMice').flatten() # nGoodDays x nTrainedFrs x nTestingFrs
-classAcc_exc_allDays_alig_avSamps_allMice = data.pop('classAcc_exc_allDays_alig_avSamps_allMice').flatten() # nGoodDays x nTrainedFrs x nTestingFrs x nExcSamps
-classAcc_allN_shfl_allDays_alig_avSamps_allMice = data.pop('classAcc_allN_shfl_allDays_alig_avSamps_allMice').flatten()
-classAcc_inh_shfl_allDays_alig_avSamps_allMice = data.pop('classAcc_inh_shfl_allDays_alig_avSamps_allMice').flatten()
-classAcc_exc_shfl_allDays_alig_avSamps_allMice = data.pop('classAcc_exc_shfl_allDays_alig_avSamps_allMice').flatten()
-# sd of samps
-classAcc_allN_allDays_alig_sdSamps_allMice = data.pop('classAcc_allN_allDays_alig_sdSamps_allMice').flatten() # nGoodDays x nTrainedFrs x nTestingFrs
-classAcc_inh_allDays_alig_sdSamps_allMice = data.pop('classAcc_inh_allDays_alig_sdSamps_allMice').flatten() # nGoodDays x nTrainedFrs x nTestingFrs
-classAcc_exc_allDays_alig_sdSamps_allMice = data.pop('classAcc_exc_allDays_alig_sdSamps_allMice').flatten() # nGoodDays x nTrainedFrs x nTestingFrs x nExcSamps
-classAcc_allN_shfl_allDays_alig_sdSamps_allMice = data.pop('classAcc_allN_shfl_allDays_alig_sdSamps_allMice').flatten()
-classAcc_inh_shfl_allDays_alig_sdSamps_allMice = data.pop('classAcc_inh_shfl_allDays_alig_sdSamps_allMice').flatten()
-classAcc_exc_shfl_allDays_alig_sdSamps_allMice = data.pop('classAcc_exc_shfl_allDays_alig_sdSamps_allMice').flatten()
-
-      
-classAcc_allN_allDays_alig_avSamps_allMice0 = classAcc_allN_allDays_alig_avSamps_allMice
-classAcc_inh_allDays_alig_avSamps_allMice0 = classAcc_inh_allDays_alig_avSamps_allMice
-classAcc_exc_allDays_alig_avSamps_allMice0 = classAcc_exc_allDays_alig_avSamps_allMice
-
-
-#%% Set some vars
-
-numExcSamps = np.shape(classAcc_exc_allDays_alig_avSamps_allMice[0])[-1]
-numSamps = 50 # this is the usual value, get it from classAcc_allN_allDays_alig_allMice[im].shape[-1]
-
-nowStr_allMice = [cnam[-17:-4]] * len(mice)
-
-
-#%% Set time_aligned for all mice
-
-time_aligned_allMice = []
-nPreMin_allMice = []   
- 
-for im in range(len(mice)):  
-    time_aligned, nPreMin, nPostMin = set_nprepost(classAcc_allN_allDays_alig_avSamps_allMice[im], eventI_ds_allDays_allMice[im], mn_corr_allMice[im], thTrained, regressBins, traceAl=1)    
-    
-    time_aligned_allMice.append(time_aligned)
-    nPreMin_allMice.append(nPreMin)
-
-
-lenTraces_AllMice = np.array([len(time_aligned_allMice[im]) for im in range(len(mice))])
-
-
-              
 #%% Set or load p values: across samples per day: is data different froms shfl (done for each pair of testing and training frames.)
 # (takes time to be done !!)
 # the measure is OK except we dont know what to do with exc bc it has exc samps... ... there is no easy way to set a threshold for p value that works for both inh and exc... given that exc is averaged across exc samps!
@@ -686,46 +617,6 @@ else:
     
     pnam = os.path.join(saveDir_allMice, 'pval_vsDiag_' + os.path.basename(cnam))
     scio.savemat(pnam, {'p_inh_diag_samps_allMice':p_inh_diag_samps_allMice, 'p_exc_diag_samps_allMice':p_exc_diag_samps_allMice, 'p_allN_diag_samps_allMice':p_allN_diag_samps_allMice})
-
-
-
-#%% Set averages of CA
-################################################################################
-################################################################################
-
-##%% exc: average across excSamps for each day (of each mouse)
-
-classAcc_exc_allDays_alig_avSamps2_allMice = [np.mean(classAcc_exc_allDays_alig_avSamps_allMice[im], axis=-1) for im in range(len(mice))] # nGoodDays x nTrainedFrs x nTestingFrs
-classAcc_exc_shfl_allDays_alig_avSamps2_allMice = [np.mean(classAcc_exc_shfl_allDays_alig_avSamps_allMice[im], axis=-1) for im in range(len(mice))] # nGoodDays x nTrainedFrs x nTestingFrs
-
-
-#%% Average CA across days for each mouse
-
-#AVERAGE only the last 10 days! in case naive vs trained makes a difference!
-#[np.max([-10,-len(days_allMice[im])]):]
-
-classAcc_allN_allDays_alig_avSamps_avDays_allMice = np.array([np.mean(classAcc_allN_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
-classAcc_inh_allDays_alig_avSamps_avDays_allMice = np.array([np.mean(classAcc_inh_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
-classAcc_exc_allDays_alig_avSamps_avDays_allMice = np.array([np.mean(classAcc_exc_allDays_alig_avSamps2_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
-# shfl
-classAcc_allN_shfl_allDays_alig_avSamps_avDays_allMice = np.array([np.mean(classAcc_allN_shfl_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
-classAcc_inh_shfl_allDays_alig_avSamps_avDays_allMice = np.array([np.mean(classAcc_inh_shfl_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
-classAcc_exc_shfl_allDays_alig_avSamps_avDays_allMice = np.array([np.mean(classAcc_exc_shfl_allDays_alig_avSamps2_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
-    
-
-
-######%% SD across days for each mouse
-
-# AVERAGE only the last 10 days! in case naive vs trained makes a difference!
-#[np.max([-10,-len(days_allMice[im])]):]
-    
-classAcc_allN_allDays_alig_avSamps_sdDays_allMice = np.array([np.std(classAcc_allN_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
-classAcc_inh_allDays_alig_avSamps_sdDays_allMice = np.array([np.std(classAcc_inh_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
-classAcc_exc_allDays_alig_avSamps_sdDays_allMice = np.array([np.std(classAcc_exc_allDays_alig_avSamps2_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
-# shfl
-classAcc_allN_shfl_allDays_alig_avSamps_sdDays_allMice = np.array([np.std(classAcc_allN_shfl_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
-classAcc_inh_shfl_allDays_alig_avSamps_sdDays_allMice = np.array([np.std(classAcc_inh_shfl_allDays_alig_avSamps_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
-classAcc_exc_shfl_allDays_alig_avSamps_sdDays_allMice = np.array([np.std(classAcc_exc_shfl_allDays_alig_avSamps2_allMice[im], axis=0) for im in range(len(mice))]) # nTrainedFrs x nTestingFrs
 
 
 #%% Compute change in CA when tested at time ts and trained at time tr relative to its max value (ie when trained on ts (t same as testing time))

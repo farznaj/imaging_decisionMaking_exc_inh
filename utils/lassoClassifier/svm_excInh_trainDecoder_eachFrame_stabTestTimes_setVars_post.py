@@ -14,6 +14,7 @@ mice = 'fni16', 'fni17', 'fni18', 'fni19'
 
 saveDir_allMice = '/home/farznaj/Shares/Churchland_hpc_home/space_managed_data/fni_allMice'
 
+testIncorr = 1 # if 1, use the decoder trained on correct trials to test how it does on incorrect trials, i.e. on predicting labels of incorrect trials (using incorr trial neural traces)
 doTestingTrs = 1 # if 1 compute classifier performance only on testing trials; otherwise on all trials
 normWeights = 0 #1 # if 1, weights will be normalized to unity length. ### NOTE: you figured if you do np.dot(x,w) using normalized w, it will not match the output of svm (perClassError)
 
@@ -22,7 +23,7 @@ corrTrained = 1
 ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 useEqualTrNums = 1
 shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
-thTrained = 10#10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
+thTrained = 10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
 
 trialHistAnalysis = 0
 iTiFlg = 2 # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
@@ -53,6 +54,9 @@ if doAllN==1:
 dir0 = '/stability_decoderTestedAllTimes/'
 set_save_p_samps = 0 # set and save p value across samples per day (takes time to be done !!)
 
+if testIncorr:
+    doTestingTrs = 0
+    
 if doTestingTrs:
     nts = 'testingTrs_'
 else:
@@ -63,7 +67,17 @@ if normWeights:
 else:
     nw = 'wNotNormed_'
     
-    
+if testIncorr:
+    sn = 'svm_testDecoderOnIncorrTrs'
+else:
+    sn = 'svm_testEachDecoderOnAllTimes'
+            
+if testIncorr:
+    snn = 'decoderTestedIncorrTrs_'
+else:
+    snn = 'stability_decoderTestedAllTimes_'
+
+            
 #%% Set days (all days and good days) for each mouse
 
 days_allMice, numDaysAll, daysGood_allMice, dayinds_allMice, mn_corr_allMice = svm_setDays_allMice(mice, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, regressBins, useEqualTrNums, shflTrsEachNeuron, thTrained)
@@ -110,7 +124,9 @@ for im in range(len(mice)):
         fn = 'svm_testEachDecoderOnAllTimes_testingTrs_%s*.mat' %nw
         finame = os.path.join(fname, fn)
     else:
-        finame = os.path.join(fname, 'svm_testEachDecoderOnAllTimes_[0-9]*.mat')
+#        finame = os.path.join(fname, 'svm_testEachDecoderOnAllTimes_[0-9]*.mat')
+        fn = '%s_%s*.mat' %(sn,nw)
+        finame = os.path.join(fname, fn)        
 
     stabTestDecodeName = glob.glob(finame)
     stabTestDecodeName = sorted(stabTestDecodeName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
@@ -181,12 +197,12 @@ for im in range(len(mice)):
     
         perClassErrorTest_data_inh_all = []
         perClassErrorTest_shfl_inh_all = []
-    #    perClassErrorTest_chance_inh_all = []
         perClassErrorTest_data_allExc_all = []
         perClassErrorTest_shfl_allExc_all = []
-    #    perClassErrorTest_chance_allExc_all = []
         perClassErrorTest_data_exc_all = []
         perClassErrorTest_shfl_exc_all = []
+    #    perClassErrorTest_chance_inh_all = []
+    #    perClassErrorTest_chance_allExc_all = []
     #    perClassErrorTest_chance_exc_all = []
           
         for iday in range(numDaysAll[im]):  
@@ -201,7 +217,7 @@ for im in range(len(mice)):
             signalCh = [2] # since gcamp is channel 2, should be always 2.
             postNProvided = 1; # If your directory does not contain pnevFile and instead it contains postFile, set this to 1 to get pnevFileName
             
-            imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)       
+            imfilename, pnevFileName, dataPath = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)       
     #        postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
     #        moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))        
             print(os.path.basename(imfilename))
@@ -267,9 +283,9 @@ for im in range(len(mice)):
         perClassErrorTest_data_exc_allMice.append(perClassErrorTest_data_exc_all) # each day: numShufflesExc x numSamples x numFrames    
         perClassErrorTest_shfl_exc_allMice.append(perClassErrorTest_shfl_exc_all)
         
-
-        
+  
 ########################################################################################################
+#no
 
 #%%        
 from datetime import datetime
@@ -283,16 +299,22 @@ numSamps = classErr_inh_allDays[0].shape[1]
 
 #%% For each mouse, align traces of all days, also replace the diagonal elements of matrices testTrainDiffFrs with testTrainSameFr
 
+time_aligned_allMice = []
+nPreMin_allMice = []   
+
 classAcc_allN_allDays_alig_allMice = []
 classAcc_inh_allDays_alig_allMice = []
 classAcc_exc_allDays_alig_allMice = []
-
 classAcc_allN_shfl_allDays_alig_allMice = []
 classAcc_inh_shfl_allDays_alig_allMice = []
 classAcc_exc_shfl_allDays_alig_allMice = []
 
-time_aligned_allMice = []
-nPreMin_allMice = []   
+classAccTest_data_allN_alig_allMice = []
+classAccTest_shfl_allN_alig_allMice = []
+classAccTest_data_inh_alig_allMice = []
+classAccTest_shfl_inh_alig_allMice = []
+classAccTest_data_exc_alig_allMice = []
+classAccTest_shfl_exc_alig_allMice = []
  
 for im in range(len(mice)):
     
@@ -301,7 +323,19 @@ for im in range(len(mice)):
     time_aligned, nPreMin, nPostMin = set_nprepost(classErr_allN_allDays_allMice[im], eventI_ds_allDays_allMice[im], mn_corr_allMice[im], thTrained, regressBins)
     time_aligned_allMice.append(time_aligned)
     nPreMin_allMice.append(nPreMin)
+
+    if testIncorr:    
+        # output: nGoodDays x nAlignedFrs x nSamps
+        classErr_allN_allDays_alig = alTrace(classErr_allN_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained)
+        classErr_allN_shfl_allDays_alig = alTrace(classErr_allN_shfl_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained)
+        # output: nGoodDays x nAlignedFrs x nSamps
+        classErr_inh_allDays_alig = alTrace(classErr_inh_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained)
+        classErr_inh_shfl_allDays_alig = alTrace(classErr_inh_shfl_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained)
+        # output: nExcSamps x nGoodDays x nAlignedFrs x nSamps    
+        classErr_exc_allDays_alig = [alTrace(classErr_exc_allDays_allMice[im][:,isamp], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained) for isamp in range(numExcSamps)]
+        classErr_exc_shfl_allDays_alig = [alTrace(classErr_exc_shfl_allDays_allMice[im][:,isamp], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained) for isamp in range(numExcSamps)]
     
+      
     # Align CA traces trained and tested on the same time point
     # output: nGoodDays x nAlignedFrs x nSamps
     if doTestingTrs==0:
@@ -314,22 +348,23 @@ for im in range(len(mice)):
         perClassErrorTest_data_exc_alig = alTrace(perClassErrorTest_data_exc_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=2)
         perClassErrorTest_shfl_exc_alig = alTrace(perClassErrorTest_shfl_exc_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=2)
     
-    # CA trained one time and tested all times   
-    # output: nGoodDays x nTrainedFrs x nTestingFrs x nSamps
-    classErr_allN_allDays_alig = alTrace_frfr(classErr_allN_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=[0,2])
-    classErr_allN_shfl_allDays_alig = alTrace_frfr(classErr_allN_shfl_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=[0,2])
-    # output: nGoodDays x nTrainedFrs x nTestingFrs x nSamps
-    classErr_inh_allDays_alig = alTrace_frfr(classErr_inh_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=[0,2])
-    classErr_inh_shfl_allDays_alig = alTrace_frfr(classErr_inh_shfl_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=[0,2])
-    # output: nExcSamps x nGoodDays x nTrainedFrs x nTestingFrs x nSamps    
-    classErr_exc_allDays_alig = [alTrace_frfr(classErr_exc_allDays_allMice[im][:,isamp], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=[0,2]) for isamp in range(numExcSamps)]
-    classErr_exc_shfl_allDays_alig = [alTrace_frfr(classErr_exc_shfl_allDays_allMice[im][:,isamp], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=[0,2]) for isamp in range(numExcSamps)]
-    
+    else:      
+        # CA trained one time and tested all times   
+        # output: nGoodDays x nTrainedFrs x nTestingFrs x nSamps
+        classErr_allN_allDays_alig = alTrace_frfr(classErr_allN_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=[0,2])
+        classErr_allN_shfl_allDays_alig = alTrace_frfr(classErr_allN_shfl_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=[0,2])
+        # output: nGoodDays x nTrainedFrs x nTestingFrs x nSamps
+        classErr_inh_allDays_alig = alTrace_frfr(classErr_inh_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=[0,2])
+        classErr_inh_shfl_allDays_alig = alTrace_frfr(classErr_inh_shfl_allDays_allMice[im], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=[0,2])
+        # output: nExcSamps x nGoodDays x nTrainedFrs x nTestingFrs x nSamps    
+        classErr_exc_allDays_alig = [alTrace_frfr(classErr_exc_allDays_allMice[im][:,isamp], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=[0,2]) for isamp in range(numExcSamps)]
+        classErr_exc_shfl_allDays_alig = [alTrace_frfr(classErr_exc_shfl_allDays_allMice[im][:,isamp], eventI_ds_allDays_allMice[im], nPreMin, nPostMin, mn_corr_allMice[im], thTrained, frsDim=[0,2]) for isamp in range(numExcSamps)]
+        
     
     #%% Replace the diagonal of class error matrix in testTrainDiffFrs with testTrainSameFr
     # Now you can compare each row of matrices testTrainDiffFrs (which shows how well each decoder does in all time points) with the diagonal element on that row (which shows how well the decoder does on its trained frame)
     
-    if doTestingTrs==0:
+    if np.logical_and(testIncorr==0, doTestingTrs==0):
         for iday in range(numDaysGood[im]):
             for ifr in range(len(time_aligned)):
                 
@@ -355,7 +390,18 @@ for im in range(len(mice)):
     classAcc_inh_shfl_allDays_alig = 100 - np.array(classErr_inh_shfl_allDays_alig) # nGoodDays x nTrainedFrs x nTestingFrs x nSamps
     classAcc_exc_shfl_allDays_alig = 100 - np.array(classErr_exc_shfl_allDays_alig) # nExcSamps x nGoodDays x nTrainedFrs x nTestingFrs x nSamps 
     
-
+    if testIncorr:
+        classAccTest_data_allN_alig = 100 - np.array(perClassErrorTest_data_allN_alig)
+        classAccTest_shfl_allN_alig = 100 - np.array(perClassErrorTest_shfl_allN_alig)
+        # output: nGoodDays x nAlignedFrs x nSamps
+        classAccTest_data_inh_alig = 100 - np.array(perClassErrorTest_data_inh_alig)
+        classAccTest_shfl_inh_alig = 100 - np.array(perClassErrorTest_shfl_inh_alig)
+        # output: nGoodDays x nAlignedFrs x numShufflesExc x nSamps
+        classAccTest_data_exc_alig = 100 - np.array(perClassErrorTest_data_exc_alig)
+        classAccTest_shfl_exc_alig = 100 - np.array(perClassErrorTest_shfl_exc_alig)
+        
+        
+        
     #%% Keep vars of all mice
     
     classAcc_allN_allDays_alig_allMice.append(classAcc_allN_allDays_alig)
@@ -366,25 +412,51 @@ for im in range(len(mice)):
     classAcc_inh_shfl_allDays_alig_allMice.append(classAcc_inh_shfl_allDays_alig)
     classAcc_exc_shfl_allDays_alig_allMice.append(classAcc_exc_shfl_allDays_alig)
     
+    if testIncorr:
+        classAccTest_data_allN_alig_allMice.append(classAccTest_data_allN_alig)
+        classAccTest_shfl_allN_alig_allMice.append(classAccTest_shfl_allN_alig)
+        # output: nGoodDays x nAlignedFrs x nSamps
+        classAccTest_data_inh_alig_allMice.append(classAccTest_data_inh_alig)
+        classAccTest_shfl_inh_alig_allMice.append(classAccTest_shfl_inh_alig)
+        # output: nGoodDays x nAlignedFrs x numShufflesExc x nSamps
+        classAccTest_data_exc_alig_allMice.append(classAccTest_data_exc_alig)
+        classAccTest_shfl_exc_alig_allMice.append(classAccTest_shfl_exc_alig)
+        
+        
+#%% Change the size of _exc arrays to : # nGoodDays x nTrainedFrs x nTestingFrs x nExcSamps x nSamps (otherwise they give error when trying to save them as mat file, bc it tries to convert them to an array since the first dimentions is 50 in all of them, but it cannot... so we move the excSamps dimention to the end!)
 
-# Change the size of _exc arrays to : # nGoodDays x nTrainedFrs x nTestingFrs x nExcSamps x nSamps (otherwise they give error when trying to save them as mat file, bc it tries to convert them to an array since the first dimentions is 50 in all of them, but it cannot... so we move the excSamps dimention to the end!)
-classAcc_exc_allDays_alig_allMice = [np.transpose(classAcc_exc_allDays_alig_allMice[im], (1,2,3,0,4)) for im in range(len(mice))] # nGoodDays x nTrainedFrs x nTestingFrs x nExcSamps x nSamps 
-classAcc_exc_shfl_allDays_alig_allMice = [np.transpose(classAcc_exc_shfl_allDays_alig_allMice[im], (1,2,3,0,4)) for im in range(len(mice))] # nGoodDays x nTrainedFrs x nTestingFrs x nExcSamps x nSamps
+if testIncorr:
+    classAcc_exc_allDays_alig_allMice = [np.transpose(classAcc_exc_allDays_alig_allMice[im], (1,2,0,3)) for im in range(len(mice))] # nGoodDays x nTrainedFrs x nTestingFrs x nExcSamps x nSamps 
+    classAcc_exc_shfl_allDays_alig_allMice = [np.transpose(classAcc_exc_shfl_allDays_alig_allMice[im], (1,2,0,3)) for im in range(len(mice))] # nGoodDays x nTrainedFrs x nTestingFrs x nExcSamps x nSamps
 
+else:
+    classAcc_exc_allDays_alig_allMice = [np.transpose(classAcc_exc_allDays_alig_allMice[im], (1,2,0,3)) for im in range(len(mice))] # nGoodDays x nTrainedFrs x nTestingFrs x nExcSamps x nSamps 
+    classAcc_exc_shfl_allDays_alig_allMice = [np.transpose(classAcc_exc_shfl_allDays_alig_allMice[im], (1,2,0,3)) for im in range(len(mice))] # nGoodDays x nTrainedFrs x nTestingFrs x nExcSamps x nSamps
+
+
+
+#%%
+################################################################################################
+################################################################################################
+################################################################################################
+################################################################################################
 
 #%% Set averages across samples for each day (of each mouse)
-
-################################################################################################
-################################################################################################
 
 classAcc_allN_allDays_alig_avSamps_allMice = []
 classAcc_inh_allDays_alig_avSamps_allMice = []
 classAcc_exc_allDays_alig_avSamps_allMice = []
-
 classAcc_allN_shfl_allDays_alig_avSamps_allMice = []
 classAcc_inh_shfl_allDays_alig_avSamps_allMice = []
 classAcc_exc_shfl_allDays_alig_avSamps_allMice = []
 
+classAccTest_data_allN_alig_avSamps_allMice = []
+classAccTest_shfl_allN_alig_avSamps_allMice = []
+classAccTest_data_inh_alig_avSamps_allMice = []
+classAccTest_shfl_inh_alig_avSamps_allMice = []
+classAccTest_data_exc_alig_avSamps_allMice = []
+classAccTest_shfl_exc_alig_avSamps_allMice = []
+        
 for im in range(len(mice)):
     
     classAcc_allN_allDays_alig_avSamps_allMice.append(np.mean(classAcc_allN_allDays_alig_allMice[im], axis=-1)) # nGoodDays x nTrainedFrs x nTestingFrs
@@ -394,6 +466,14 @@ for im in range(len(mice)):
     classAcc_allN_shfl_allDays_alig_avSamps_allMice.append(np.mean(classAcc_allN_shfl_allDays_alig_allMice[im], axis=-1)) # nGoodDays x nTrainedFrs x nTestingFrs
     classAcc_inh_shfl_allDays_alig_avSamps_allMice.append(np.mean(classAcc_inh_shfl_allDays_alig_allMice[im], axis=-1)) # nGoodDays x nTrainedFrs x nTestingFrs
     classAcc_exc_shfl_allDays_alig_avSamps_allMice.append(np.mean(classAcc_exc_shfl_allDays_alig_allMice[im], axis=-1)) # nGoodDays x nTrainedFrs x nTestingFrs x nExcSamps    
+    
+    if testIncorr:
+        classAccTest_data_allN_alig_avSamps_allMice.append(np.mean(classAccTest_data_allN_alig_allMice[im], axis=-1))
+        classAccTest_shfl_allN_alig_avSamps_allMice.append(np.mean(classAccTest_shfl_allN_alig_allMice[im], axis=-1))
+        classAccTest_data_inh_alig_avSamps_allMice.append(np.mean(classAccTest_data_inh_alig_allMice[im], axis=-1))
+        classAccTest_shfl_inh_alig_avSamps_allMice.append(np.mean(classAccTest_shfl_inh_alig_allMice[im], axis=-1))
+        classAccTest_data_exc_alig_avSamps_allMice.append(np.mean(classAccTest_data_exc_alig_allMice[im], axis=-1))
+        classAccTest_shfl_exc_alig_avSamps_allMice.append(np.mean(classAccTest_shfl_exc_alig_allMice[im], axis=-1))
 
 
 ############## Standard error across samples ############## 
@@ -401,10 +481,16 @@ for im in range(len(mice)):
 classAcc_allN_allDays_alig_sdSamps_allMice = []
 classAcc_inh_allDays_alig_sdSamps_allMice = []
 classAcc_exc_allDays_alig_sdSamps_allMice = []
-
 classAcc_allN_shfl_allDays_alig_sdSamps_allMice = []
 classAcc_inh_shfl_allDays_alig_sdSamps_allMice = []
 classAcc_exc_shfl_allDays_alig_sdSamps_allMice = []
+
+classAccTest_data_allN_alig_sdSamps_allMice = []
+classAccTest_shfl_allN_alig_sdSamps_allMice = []
+classAccTest_data_inh_alig_sdSamps_allMice = []
+classAccTest_shfl_inh_alig_sdSamps_allMice = []
+classAccTest_data_exc_alig_sdSamps_allMice = []
+classAccTest_shfl_exc_alig_sdSamps_allMice = []
 
 for im in range(len(mice)):
     
@@ -416,29 +502,78 @@ for im in range(len(mice)):
     classAcc_inh_shfl_allDays_alig_sdSamps_allMice.append(np.std(classAcc_inh_shfl_allDays_alig_allMice[im], axis=-1) / np.sqrt(numSamps)) # nGoodDays x nTrainedFrs x nTestingFrs
     classAcc_exc_shfl_allDays_alig_sdSamps_allMice.append(np.std(classAcc_exc_shfl_allDays_alig_allMice[im], axis=-1) / np.sqrt(numSamps)) # nGoodDays x nTrainedFrs x nTestingFrs x nExcSamps
 
-
+    if testIncorr:
+        classAccTest_data_allN_alig_sdSamps_allMice.append(np.std(classAccTest_data_allN_alig_allMice[im], axis=-1) / np.sqrt(numSamps))
+        classAccTest_shfl_allN_alig_sdSamps_allMice.append(np.std(classAccTest_shfl_allN_alig_allMice[im], axis=-1) / np.sqrt(numSamps))
+        classAccTest_data_inh_alig_sdSamps_allMice.append(np.std(classAccTest_data_inh_alig_allMice[im], axis=-1) / np.sqrt(numSamps))
+        classAccTest_shfl_inh_alig_sdSamps_allMice.append(np.std(classAccTest_shfl_inh_alig_allMice[im], axis=-1) / np.sqrt(numSamps))
+        classAccTest_data_exc_alig_sdSamps_allMice.append(np.std(classAccTest_data_exc_alig_allMice[im], axis=-1) / np.sqrt(numSamps))
+        classAccTest_shfl_exc_alig_sdSamps_allMice.append(np.std(classAccTest_shfl_exc_alig_allMice[im], axis=-1) / np.sqrt(numSamps))
+        
+        
 
 #%% Save the above vars
+   
+cnam = os.path.join(saveDir_allMice, snn + nts + nw + '_'.join(mice) + '_' + stabTestDecodeName[-17:-4] + '_' + nowStr)
 
-cnam = os.path.join(saveDir_allMice, 'stability_decoderTestedAllTimes_' + nts + nw + '_'.join(mice) + '_' + stabTestDecodeName[-17:-4] + '_' + nowStr)
+if testIncorr:
+    scio.savemat(cnam, {'eventI_ds_allDays_allMice':eventI_ds_allDays_allMice,
+                        'classAcc_allN_allDays_alig_allMice': classAcc_allN_allDays_alig_allMice, 
+                        'classAcc_inh_allDays_alig_allMice': classAcc_inh_allDays_alig_allMice, 
+                        'classAcc_exc_allDays_alig_allMice': classAcc_exc_allDays_alig_allMice, 
+                        'classAcc_allN_shfl_allDays_alig_allMice': classAcc_allN_shfl_allDays_alig_allMice, 
+                        'classAcc_inh_shfl_allDays_alig_allMice': classAcc_inh_shfl_allDays_alig_allMice, 
+                        'classAcc_exc_shfl_allDays_alig_allMice': classAcc_exc_shfl_allDays_alig_allMice,              
+                        'classAcc_allN_allDays_alig_avSamps_allMice': classAcc_allN_allDays_alig_avSamps_allMice,
+                        'classAcc_inh_allDays_alig_avSamps_allMice': classAcc_inh_allDays_alig_avSamps_allMice,
+                        'classAcc_exc_allDays_alig_avSamps_allMice': classAcc_exc_allDays_alig_avSamps_allMice,
+                        'classAcc_allN_shfl_allDays_alig_avSamps_allMice': classAcc_allN_shfl_allDays_alig_avSamps_allMice,
+                        'classAcc_inh_shfl_allDays_alig_avSamps_allMice': classAcc_inh_shfl_allDays_alig_avSamps_allMice,
+                        'classAcc_exc_shfl_allDays_alig_avSamps_allMice': classAcc_exc_shfl_allDays_alig_avSamps_allMice,                    
+                        'classAcc_allN_allDays_alig_sdSamps_allMice': classAcc_allN_allDays_alig_sdSamps_allMice,
+                        'classAcc_inh_allDays_alig_sdSamps_allMice': classAcc_inh_allDays_alig_sdSamps_allMice,
+                        'classAcc_exc_allDays_alig_sdSamps_allMice': classAcc_exc_allDays_alig_sdSamps_allMice,
+                        'classAcc_allN_shfl_allDays_alig_sdSamps_allMice': classAcc_allN_shfl_allDays_alig_sdSamps_allMice,
+                        'classAcc_inh_shfl_allDays_alig_sdSamps_allMice': classAcc_inh_shfl_allDays_alig_sdSamps_allMice,
+                        'classAcc_exc_shfl_allDays_alig_sdSamps_allMice': classAcc_exc_shfl_allDays_alig_sdSamps_allMice, 
+                        'classAccTest_data_allN_alig_avSamps_allMice': classAccTest_data_allN_alig_avSamps_allMice,
+                        'classAccTest_shfl_allN_alig_avSamps_allMice': classAccTest_shfl_allN_alig_avSamps_allMice,
+                        'classAccTest_data_inh_alig_avSamps_allMice': classAccTest_data_inh_alig_avSamps_allMice,
+                        'classAccTest_shfl_inh_alig_avSamps_allMice': classAccTest_shfl_inh_alig_avSamps_allMice,
+                        'classAccTest_data_exc_alig_avSamps_allMice': classAccTest_data_exc_alig_avSamps_allMice,
+                        'classAccTest_shfl_exc_alig_avSamps_allMice': classAccTest_shfl_exc_alig_avSamps_allMice,
+                        'classAccTest_data_allN_alig_sdSamps_allMice': classAccTest_data_allN_alig_sdSamps_allMice,
+                        'classAccTest_shfl_allN_alig_sdSamps_allMice': classAccTest_shfl_allN_alig_sdSamps_allMice,
+                        'classAccTest_data_inh_alig_sdSamps_allMice': classAccTest_data_inh_alig_sdSamps_allMice,
+                        'classAccTest_shfl_inh_alig_sdSamps_allMice': classAccTest_shfl_inh_alig_sdSamps_allMice,
+                        'classAccTest_data_exc_alig_sdSamps_allMice': classAccTest_data_exc_alig_sdSamps_allMice,
+                        'classAccTest_shfl_exc_alig_sdSamps_allMice': classAccTest_shfl_exc_alig_sdSamps_allMice,
+                        'classAccTest_data_allN_alig_allMice': classAccTest_data_allN_alig_allMice,
+                        'classAccTest_shfl_allN_alig_allMice': classAccTest_shfl_allN_alig_allMice,
+                        'classAccTest_data_inh_alig_allMice': classAccTest_data_inh_alig_allMice,
+                        'classAccTest_shfl_inh_alig_allMice': classAccTest_shfl_inh_alig_allMice,
+                        'classAccTest_data_exc_alig_allMice': classAccTest_data_exc_alig_allMice,
+                        'classAccTest_shfl_exc_alig_allMice': classAccTest_shfl_exc_alig_allMice})
 
-scio.savemat(cnam, {'eventI_ds_allDays_allMice':eventI_ds_allDays_allMice,
-                    'classAcc_allN_allDays_alig_allMice': classAcc_allN_allDays_alig_allMice, 
-                    'classAcc_inh_allDays_alig_allMice': classAcc_inh_allDays_alig_allMice, 
-                    'classAcc_exc_allDays_alig_allMice': classAcc_exc_allDays_alig_allMice, 
-                    'classAcc_allN_shfl_allDays_alig_allMice': classAcc_allN_shfl_allDays_alig_allMice, 
-                    'classAcc_inh_shfl_allDays_alig_allMice': classAcc_inh_shfl_allDays_alig_allMice, 
-                    'classAcc_exc_shfl_allDays_alig_allMice': classAcc_exc_shfl_allDays_alig_allMice,              
-                    'classAcc_allN_allDays_alig_avSamps_allMice': classAcc_allN_allDays_alig_avSamps_allMice,
-                    'classAcc_inh_allDays_alig_avSamps_allMice': classAcc_inh_allDays_alig_avSamps_allMice,
-                    'classAcc_exc_allDays_alig_avSamps_allMice': classAcc_exc_allDays_alig_avSamps_allMice,
-                    'classAcc_allN_shfl_allDays_alig_avSamps_allMice': classAcc_allN_shfl_allDays_alig_avSamps_allMice,
-                    'classAcc_inh_shfl_allDays_alig_avSamps_allMice': classAcc_inh_shfl_allDays_alig_avSamps_allMice,
-                    'classAcc_exc_shfl_allDays_alig_avSamps_allMice': classAcc_exc_shfl_allDays_alig_avSamps_allMice,                    
-                    'classAcc_allN_allDays_alig_sdSamps_allMice': classAcc_allN_allDays_alig_sdSamps_allMice,
-                    'classAcc_inh_allDays_alig_sdSamps_allMice': classAcc_inh_allDays_alig_sdSamps_allMice,
-                    'classAcc_exc_allDays_alig_sdSamps_allMice': classAcc_exc_allDays_alig_sdSamps_allMice,
-                    'classAcc_allN_shfl_allDays_alig_sdSamps_allMice': classAcc_allN_shfl_allDays_alig_sdSamps_allMice,
-                    'classAcc_inh_shfl_allDays_alig_sdSamps_allMice': classAcc_inh_shfl_allDays_alig_sdSamps_allMice,
-                    'classAcc_exc_shfl_allDays_alig_sdSamps_allMice': classAcc_exc_shfl_allDays_alig_sdSamps_allMice})
+    
+else:    
+    scio.savemat(cnam, {'eventI_ds_allDays_allMice':eventI_ds_allDays_allMice,
+                        'classAcc_allN_allDays_alig_allMice': classAcc_allN_allDays_alig_allMice, 
+                        'classAcc_inh_allDays_alig_allMice': classAcc_inh_allDays_alig_allMice, 
+                        'classAcc_exc_allDays_alig_allMice': classAcc_exc_allDays_alig_allMice, 
+                        'classAcc_allN_shfl_allDays_alig_allMice': classAcc_allN_shfl_allDays_alig_allMice, 
+                        'classAcc_inh_shfl_allDays_alig_allMice': classAcc_inh_shfl_allDays_alig_allMice, 
+                        'classAcc_exc_shfl_allDays_alig_allMice': classAcc_exc_shfl_allDays_alig_allMice,              
+                        'classAcc_allN_allDays_alig_avSamps_allMice': classAcc_allN_allDays_alig_avSamps_allMice,
+                        'classAcc_inh_allDays_alig_avSamps_allMice': classAcc_inh_allDays_alig_avSamps_allMice,
+                        'classAcc_exc_allDays_alig_avSamps_allMice': classAcc_exc_allDays_alig_avSamps_allMice,
+                        'classAcc_allN_shfl_allDays_alig_avSamps_allMice': classAcc_allN_shfl_allDays_alig_avSamps_allMice,
+                        'classAcc_inh_shfl_allDays_alig_avSamps_allMice': classAcc_inh_shfl_allDays_alig_avSamps_allMice,
+                        'classAcc_exc_shfl_allDays_alig_avSamps_allMice': classAcc_exc_shfl_allDays_alig_avSamps_allMice,                    
+                        'classAcc_allN_allDays_alig_sdSamps_allMice': classAcc_allN_allDays_alig_sdSamps_allMice,
+                        'classAcc_inh_allDays_alig_sdSamps_allMice': classAcc_inh_allDays_alig_sdSamps_allMice,
+                        'classAcc_exc_allDays_alig_sdSamps_allMice': classAcc_exc_allDays_alig_sdSamps_allMice,
+                        'classAcc_allN_shfl_allDays_alig_sdSamps_allMice': classAcc_allN_shfl_allDays_alig_sdSamps_allMice,
+                        'classAcc_inh_shfl_allDays_alig_sdSamps_allMice': classAcc_inh_shfl_allDays_alig_sdSamps_allMice,
+                        'classAcc_exc_shfl_allDays_alig_sdSamps_allMice': classAcc_exc_shfl_allDays_alig_sdSamps_allMice})
     
