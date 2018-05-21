@@ -1,5 +1,12 @@
 % First run corr_excInh_setVars to get FRs
+%     alFR = 'chAl'; % 'initAl'; % the firing rate traces were aligned on what
+%   OR
+%     alFR = 'initAl';
+%     outcome2ana = '';
+%
 % Then run choicePref_ROC_exc_inh_plots_setVars to get ROCs (to set ipsi, contra tuned neurons) 
+%     outcome2ana = 'corr'; %''; % 'corr'; 'incorr'; '';
+%     doChoicePref = 0; %2; 
 % Then run this script
 
 % E_ipsi and I_ipsi have ROC > .5 (right before the choice), we want to see
@@ -220,52 +227,54 @@ FractContraTrs = numContraTrs ./ sum([numIpsiTrs ; numContraTrs],1);
 
 %% Plot fraction of exc and inh neurons that are ipsi or contra ; also fraction of trials that are ipsi or contra
 
-figure; %('position', [1   311   336   420]); 
+if doPlots
+    figure; %('position', [1   311   336   420]); 
 
-subplot(221); hold on; 
-plot(fract_Ei_Ec(1,:), 'k-') % 'color', 'k', 'marker', '.') 
-plot(fract_Ei_Ec(2,:), 'k--') %'color', rgb('gray'), 'marker', '.')
-xlim([.8 4.2])
-set(gca,'xtick', 1:length(mice))
-set(gca,'xticklabel', mice)
-legend('Ipsi','Contra')
-ylabel('Fract neurons')
-title('Exc')
+    subplot(221); hold on; 
+    plot(fract_Ei_Ec(1,:), 'k-') % 'color', 'k', 'marker', '.') 
+    plot(fract_Ei_Ec(2,:), 'k--') %'color', rgb('gray'), 'marker', '.')
+    xlim([.8 4.2])
+    set(gca,'xtick', 1:length(mice))
+    set(gca,'xticklabel', mice)
+    legend('Ipsi','Contra')
+    ylabel('Fract neurons')
+    title('Exc')
 
-subplot(223); hold on; 
-plot(fract_Ii_Ic(1,:), 'r-') %'color', 'r', 'marker', '.') 
-plot(fract_Ii_Ic(2,:), 'r--') %'color', rgb('lightsalmon'), 'marker', '.')
-xlim([.8 4.2])
-set(gca,'xtick', 1:length(mice))
-set(gca,'xticklabel', mice)
-legend('Ipsi','Contra')
-ylabel('Fract neurons')
-title('Inh')
+    subplot(223); hold on; 
+    plot(fract_Ii_Ic(1,:), 'r-') %'color', 'r', 'marker', '.') 
+    plot(fract_Ii_Ic(2,:), 'r--') %'color', rgb('lightsalmon'), 'marker', '.')
+    xlim([.8 4.2])
+    set(gca,'xtick', 1:length(mice))
+    set(gca,'xticklabel', mice)
+    legend('Ipsi','Contra')
+    ylabel('Fract neurons')
+    title('Inh')
 
-subplot(222); hold on; 
-plot(FractIpsiTrs, 'k-') %'color', 'r', 'marker', '.') 
-plot(FractContraTrs, 'k--') %'color', rgb('lightsalmon'), 'marker', '.')
-xlim([.8 4.2])
-set(gca,'xtick', 1:length(mice))
-set(gca,'xticklabel', mice)
-legend('Ipsi','Contra')
-ylabel('Fract trials')
-title('trials')
+    subplot(222); hold on; 
+    plot(FractIpsiTrs, 'k-') %'color', 'r', 'marker', '.') 
+    plot(FractContraTrs, 'k--') %'color', rgb('lightsalmon'), 'marker', '.')
+    xlim([.8 4.2])
+    set(gca,'xtick', 1:length(mice))
+    set(gca,'xticklabel', mice)
+    legend('Ipsi','Contra')
+    ylabel('Fract trials')
+    title('trials')
 
 
-%%%%%% num ipsi - num contra ... hist across days
-%{
-for im = 1:length(mice)
-    figure; 
+    %%%%%% num ipsi - num contra ... hist across days
+    %{
+    for im = 1:length(mice)
+        figure; 
 
-    subplot(211); hold on % exc: ipsi - contra
-    histogram(num_exc_ipsi_timeM1{im} - num_exc_contra_timeM1{im})
+        subplot(211); hold on % exc: ipsi - contra
+        histogram(num_exc_ipsi_timeM1{im} - num_exc_contra_timeM1{im})
 
-    subplot(212); hold on % inh: ipsi - contra
-    histogram(num_inh_ipsi_timeM1{im} - num_inh_contra_timeM1{im})
+        subplot(212); hold on % inh: ipsi - contra
+        histogram(num_inh_ipsi_timeM1{im} - num_inh_contra_timeM1{im})
 
+    end
+    %}
 end
-%}
 
 
 %% Compute correlatin between paris of neurons
@@ -920,12 +929,18 @@ end
 
 
 
+no
 %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Plots : avePairwise %%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 if doPlots
     
     %% Plot errorbar, showing each mouse, ave +/- se of rAve across days (already averaged across neurons for each day)
-
+    %{
     x = 1:length(mice);
     gp = .2;
     marg = .2;
@@ -985,45 +1000,88 @@ if doPlots
         % print to pdf
         print('-dpdf', fn)
     end    
+    %}
 
-
-    %% Same as above but EE and II of all pairs. Also a different subplot arrangement. 
+    
+    %% Plot errorbar, showing each mouse, ave +/- se of rAve across days (already averaged across neurons for each day)
+    %%%%% all pairs, same-tuned pair, diff-tuned pairs
     
     x = 1:length(mice);
-    gp = .2;
+    gp = .2; %0; %.2;
     marg = .2;
+    mn = min([rAve_EE_shfl_avDays - rAve_EE_shfl_seDays , rAve_EI_shfl_avDays - rAve_EI_shfl_seDays , rAve_II_shfl_avDays - rAve_II_shfl_seDays]); 
+    mne = min(rAve_EE_diff_same_shfl_avDays - rAve_EE_diff_same_shfl_seDays); mne = min(mne);
+    mnei = min(rAve_EI_diff_same_shfl_avDays - rAve_EI_diff_same_shfl_seDays); mnei = min(mnei);
+    mni = min(rAve_II_diff_same_shfl_avDays - rAve_II_diff_same_shfl_seDays); mni = min(mni);
+%     mn = min([mn, mne,mnei,mni])
+%     mn = mn + mn/5;
     
-    figure('name', 'All mice', 'position', [14   636   661   290]); 
+    figure('name', 'All mice', 'position', [34   661   788   280]); %[39   703   905   236]); 
     
-    %%%%%%%%%% Plot EE and II, all pairs %%%%%%%%%%%    
-    subplot(131); hold on    
+    %%%%%%%%%% Plot EE, II, and EI all pairs %%%%%%%%%%%    
+    subplot(141); hold on    
     h1 = errorbar(x, rAve_EE_avDays, rAve_EE_seDays, 'k.', 'linestyle', 'none');
-    h2 = errorbar(x, rAve_II_avDays, rAve_II_seDays, 'r.', 'linestyle', 'none');   
+    h2 = errorbar(x+gp, rAve_II_avDays, rAve_II_seDays, 'r.', 'linestyle', 'none');   
+    h3 = errorbar(x+2*gp, rAve_EI_avDays, rAve_EI_seDays, 'color', rgb('green'), 'marker', '.', 'linestyle', 'none');
     errorbar(x, rAve_EE_shfl_avDays, rAve_EE_shfl_seDays, 'color',rgb('gray'), 'marker','.', 'linestyle', 'none');
-    errorbar(x, rAve_II_shfl_avDays, rAve_II_shfl_seDays, 'color',rgb('lightsalmon'), 'linestyle', 'none');        
-    xlim([x(1)-marg, x(end)+marg])
-    set(gca,'xtick', x)
+    errorbar(x+gp, rAve_II_shfl_avDays, rAve_II_shfl_seDays, 'color',rgb('lightsalmon'), 'linestyle', 'none');        
+    errorbar(x+2*gp, rAve_EI_shfl_avDays, rAve_EI_shfl_seDays, 'color',rgb('lightgreen'), 'linestyle', 'none');        
+    xlim([x(1)-marg, x(end)+2*gp+marg])
+    yl = get(gca, 'ylim'); ylim([mn-range(yl)/50, yl(2)])
+    set(gca,'xtick', x+gp)
     set(gca,'xticklabel', mice)    
     ylabel('corr (mean +/- se days)')
-    legend([h1,h2], {'EE','II'})
+    legend([h1,h2,h3], {'EE','II', 'EI'}, 'location','northoutside')
     set(gca, 'tickdir', 'out')
     
-    %%%%%%%%%% Plot EE and II, same and diff %%%%%%%%%%%
-    subplot(132); hold on
+    %%%%%%%%%% Plot EE, same and diff %%%%%%%%%%%
+    subplot(142); hold on
     h1 = errorbar(x, rAve_EE_diff_same_avDays(1,:), rAve_EE_diff_same_seDays(1,:), 'color',rgb('gray'), 'marker','.', 'linestyle', 'none');
-    h2 = errorbar(x, rAve_EE_diff_same_avDays(2,:), rAve_EE_diff_same_seDays(2,:), 'k.', 'linestyle', 'none');
-    h3 = errorbar(x+gp, rAve_II_diff_same_avDays(1,:), rAve_II_diff_same_seDays(1,:), 'color',rgb('lightsalmon'), 'marker','.', 'linestyle', 'none');
-    h4 = errorbar(x+gp, rAve_II_diff_same_avDays(2,:), rAve_II_diff_same_seDays(2,:), 'r.', 'linestyle', 'none');        
+    h2 = errorbar(x+gp, rAve_EE_diff_same_avDays(2,:), rAve_EE_diff_same_seDays(2,:), 'k.', 'linestyle', 'none');
+    errorbar(x, rAve_EE_diff_same_shfl_avDays(1,:), rAve_EE_diff_same_shfl_seDays(1,:), 'color',rgb('gray'), 'marker','.', 'linestyle', 'none');
+    errorbar(x+gp, rAve_EE_diff_same_shfl_avDays(2,:), rAve_EE_diff_same_shfl_seDays(2,:), 'k.', 'linestyle', 'none');
     xlim([x(1)-marg, x(end)+gp+marg])
+    yl = get(gca, 'ylim'); ylim([mne-range(yl)/50, yl(2)])
     set(gca,'xtick', x+gp/2)
     set(gca,'xticklabel', mice)
     ylabel('corr (mean +/- se days)')
-    legend([h1,h2], {'diff','same'})
+    legend([h1,h2], {'diff','same'}, 'location','northoutside')
     set(gca, 'tickdir', 'out')
+    title('EE')
+    
+    %%%%%%%%%% Plot II, same and diff %%%%%%%%%%%
+    subplot(143); hold on
+    h1 = errorbar(x, rAve_II_diff_same_avDays(1,:), rAve_II_diff_same_seDays(1,:), 'color',rgb('lightsalmon'), 'marker','.', 'linestyle', 'none');
+    h2 = errorbar(x+gp, rAve_II_diff_same_avDays(2,:), rAve_II_diff_same_seDays(2,:), 'r.', 'linestyle', 'none');
+    errorbar(x, rAve_II_diff_same_shfl_avDays(1,:), rAve_II_diff_same_shfl_seDays(1,:), 'color',rgb('lightsalmon'), 'marker','.', 'linestyle', 'none');
+    errorbar(x+gp, rAve_II_diff_same_shfl_avDays(2,:), rAve_II_diff_same_shfl_seDays(2,:), 'r.', 'linestyle', 'none');            
+    xlim([x(1)-marg, x(end)+gp+marg])
+    yl = get(gca, 'ylim'); ylim([mni-range(yl)/50, yl(2)])
+    set(gca,'xtick', x+gp/2)
+    set(gca,'xticklabel', mice)
+    ylabel('corr (mean +/- se days)')
+    legend([h1,h2], {'diff','same'}, 'location','northoutside')
+    set(gca, 'tickdir', 'out')
+    title('II')    
+    
+    %%%%%%%%%% Plot EI, same and diff %%%%%%%%%%%
+    subplot(144); hold on
+    h1 = errorbar(x, rAve_EI_diff_same_avDays(1,:), rAve_EI_diff_same_seDays(1,:), 'color', rgb('lightgreen'), 'marker','.', 'linestyle', 'none');
+    h2 = errorbar(x+gp, rAve_EI_diff_same_avDays(2,:), rAve_EI_diff_same_seDays(2,:), 'color', rgb('green'), 'marker', '.', 'linestyle', 'none');
+    errorbar(x, rAve_EI_diff_same_shfl_avDays(1,:), rAve_EI_diff_same_shfl_seDays(1,:), 'color', rgb('lightgreen'), 'marker','.', 'linestyle', 'none');
+    errorbar(x+gp, rAve_EI_diff_same_shfl_avDays(2,:), rAve_EI_diff_same_shfl_seDays(2,:), 'color', rgb('green'), 'marker', '.', 'linestyle', 'none');    
+    xlim([x(1)-marg, x(end)+gp+marg])
+    yl = get(gca, 'ylim'); ylim([mnei-range(yl)/50, yl(2)])
+    set(gca,'xtick', x+gp/2)
+    set(gca,'xticklabel', mice)
+    ylabel('corr (mean +/- se days)')
+    legend([h1,h2], {'diff','same'}, 'location','northoutside')
+    set(gca, 'tickdir', 'out')
+    title('EI')
     
     
     if saveFigs
-        namv = sprintf('corrFR_avePairwise_aveSeDays_allEE_allII_FR%s_ROC%s_%s_curr%s_allMice_%s', alFR, al, time2an, o2a, nowStr);
+        namv = sprintf('corrFR_avePairwise_aveSeDays_all_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', alFR, al, time2an, o2a, nowStr);
 
         d = fullfile(dirn0fr, 'sumAllMice', nnow);
         if ~exist(d,'dir')
@@ -1033,12 +1091,11 @@ if doPlots
 
         savefig(gcf, fn)
         print('-dpdf', fn)
-    end    
+    end
     
     
     
-    
-    %% Plot errorbar, showing each mouse, ave +/- se of rAve across all neurons of all days
+    %% (Same as above but all neurons of all days pooled)... Plot errorbar, showing each mouse, ave +/- se of rAve across all neurons of all days
 
     x = 1:length(mice);
     gp = 0; 
@@ -1107,55 +1164,72 @@ if doPlots
         savefig(gcf, fn)                
     end    
 
-
+    
+    
     %% Any change in corr_diff and corr_same across days?  compare mean of corr_same and corr_diff across days of training
 
     for im = 1:length(mice)
 
-        figure('name', mice{im}); 
+        figure('name', mice{im}, 'position', [32         566        1091         408]); 
 
+        %%%% EE, II, EI %%%%
+        subplot(244)
+        a = plot([rAve_EE_avEachDay{im}; rAve_II_avEachDay{im}; rAve_EI_avEachDay{im}]');
+        set(a(1),'color','b')
+        set(a(2),'color','r')
+        set(a(3),'color','g') 
+        legend('EE', 'II', 'EI', 'location', 'best')
+        ylabel('corr (avePairWise)')
+        xlabel('Training days')        
+        xlim([0, numDaysAll(im)+1])
+        
+        
         %%%%%%%% EI %%%%%%%%
-        subplot(231)
+        subplot(241)
         plot([rAve_EI_same_avEachDay{im}; rAve_EI_diff_avEachDay{im}]');
-        legend('Same tuning', 'Diff tuning')
+        legend('Same tuning', 'Diff tuning', 'location', 'best')
         ylabel('corr (avePairWise)')
         xlabel('Training days')
         title('EI')
-
-        subplot(234)
+        xlim([0, numDaysAll(im)+1])
+        
+        subplot(245)
         plot(rAve_EI_same_avEachDay{im} ./ rAve_EI_diff_avEachDay{im});
         ylabel('corrSame/corrDiff')
         xlabel('Training days')
-
+        xlim([0, numDaysAll(im)+1])
 
 
         %%%%%%%% EE %%%%%%%%
-        subplot(232)
+        subplot(242)
         plot([rAve_EE_same_avEachDay{im}; rAve_EE_diff_avEachDay{im}]');
     %     legend('Same tuning', 'Diff tuning')
         ylabel('corr (avePairWise)')
         xlabel('Training days')
         title('EE')
-
-        subplot(235)
+        xlim([0, numDaysAll(im)+1])
+        
+        subplot(246)
         plot(rAve_EE_same_avEachDay{im} ./ rAve_EE_diff_avEachDay{im});
         ylabel('corrSame/corrDiff')
         xlabel('Training days')
-
+        xlim([0, numDaysAll(im)+1])
 
 
         %%%%%%%% II %%%%%%%%    
-        subplot(233)
+        subplot(243)
         plot([rAve_II_same_avEachDay{im}; rAve_II_diff_avEachDay{im}]');
     %     legend('Same tuning', 'Diff tuning')
         ylabel('corr (avePairWise)')
         xlabel('Training days')
         title('II')
-
-        subplot(236)
+        xlim([0, numDaysAll(im)+1])
+        
+        subplot(247)
         plot(rAve_II_same_avEachDay{im} ./ rAve_II_diff_avEachDay{im});
         ylabel('corrSame/corrDiff')
         xlabel('Training days')
+        xlim([0, numDaysAll(im)+1])
 
         if saveFigs
             namv = sprintf('corrFR_avePairwise_trainingDays_sameDiffTun_FR%s_ROC%s_%s_curr%s_%s_%s', alFR, al, time2an, o2a, mice{im}, nowStr);
@@ -1167,6 +1241,109 @@ if doPlots
             fn = fullfile(dirn0fr, mice{im}, nnow, namv);
 
             savefig(gcf, fn)
+        end
+               
+    end
+
+
+    %% All mice: compare noise corr for low vs high behavioral performance levels 
+
+    perc_thb = [10,90]; %[20,80] # perc_thb = [15,85] # percentiles of behavioral performance for determining low and high performance.
+
+    x = 1:3; %length(mice);
+    gp = .2;
+    marg = .2;
+
+    figure('name', 'All mice', 'position', [34   661   788   280]);
+    
+    for im = 1:length(mice)
+        mouse = mice{im};    
+        
+        mn_corr = mnTrNum_allMice{im};
+        mn_corr0 = mn_corr; % will be used for the heatmaps of CA for all days; We need to exclude 151023 from fni16, this day had issues! ...  in the mat file of stabTestTrainTimes, its class accur is very high ... and in the mat file of excInh_trainDecoder_eachFrame it is very low ...ANYWAY I ended up removing it from the heatmap of CA for all days!!! but it is included in other analyses!!
+%         if strcmp(mouse, 'fni16')
+%             tr = find(cellfun(@isempty, strfind(days_allMice{im}, '151023_1'))==0);
+%             mn_corr0(tr) = thMinTrs - 1; % # see it will be excluded from analysis!    
+%         end
+        days2an_heatmap = (mn_corr0 >= thMinTrs);
+
+        %%%%%%%%% set svm_stab mat file name that contains behavioral and class accuracy vars
+        [~,~,dirn] = setImagingAnalysisNames(mouse, 'analysis', []);    % dirn = fullfile(dirn0fr, mouse);
+        finame = fullfile(dirn, 'svm_stabilityBehCA_*.mat');
+        stabBehName = dir(finame);
+        [~,i] = sort([stabBehName.datenum], 'descend');
+        stabBehName = fullfile(dirn, stabBehName(i).name)
+
+        % load beh vars    
+        load(stabBehName, 'behCorr_all')
+
+        %%%%%%%% Compare change in CA (after removing noise corr) for days with low vs high behavioral performance ##################
+        a = behCorr_all(days2an_heatmap);    
+        thb = prctile(a, perc_thb);
+
+        loBehCorrDays = (a <= thb(1));
+        hiBehCorrDays = (a >= thb(2));
+        fprintf('%d, %d, num days with low and high beh performance\n', sum(loBehCorrDays), sum(hiBehCorrDays))
+
+        aa = rAve_EE_avEachDay{im}(days2an_heatmap);
+        bb = rAve_II_avEachDay{im}(days2an_heatmap);
+        cc = rAve_EI_avEachDay{im}(days2an_heatmap);
+        
+        % set corrs for low and high behavioral performance days
+        a = aa(loBehCorrDays); 
+        b = bb(loBehCorrDays); 
+        c = cc(loBehCorrDays); 
+        ah = aa(hiBehCorrDays); % EE
+        bh = bb(hiBehCorrDays); % II
+        ch = cc(hiBehCorrDays); % EI
+        
+        % set se of corrs across low and high beh perform days
+        as0 = nanstd(a) / sqrt(sum(~isnan(a)));
+        bs0 = nanstd(b) / sqrt(sum(~isnan(b)));
+        cs0 = nanstd(c) / sqrt(sum(~isnan(c)));
+        ahs = nanstd(ah)/ sqrt(sum(~isnan(ah)));
+        bhs = nanstd(bh)/ sqrt(sum(~isnan(bh)));
+        chs = nanstd(ch)/ sqrt(sum(~isnan(ch)));
+        
+%         figure; %('name', 'All mice', 'position', [14   636   661   290]); 
+%         set(gca, 'position', [0.2919    0.1908    0.5229    0.7095])
+
+        %%%%%%%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%%%%%%%%%% 
+        %%%%%%%%%%%%%%%%%%%%% PLOT %%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%%%%%%%%%%        
+        subplot(1,length(mice),im); 
+%         subplot(248)
+        hold on
+
+        % EI
+        h1 = errorbar(x(1), nanmean(ch), chs, 'color', rgb('green'), 'marker','.', 'linestyle', 'none', 'markersize', 10);
+        h2 = errorbar(x(1)+gp, nanmean(c), cs0, 'color', rgb('lightgreen'), 'marker','.', 'linestyle', 'none', 'markersize', 10);        
+        % EE
+        h11 = errorbar(x(2), nanmean(ah), ahs, 'b.', 'linestyle', 'none', 'markersize', 10);
+        h12 = errorbar(x(2)+gp, nanmean(a), as0, 'color', rgb('lightblue'), 'marker','.', 'linestyle', 'none', 'markersize', 10);
+        % II
+        h11 = errorbar(x(3), nanmean(bh), bhs, 'r.', 'linestyle', 'none', 'markersize', 10);
+        h12 = errorbar(x(3)+gp, nanmean(b), bs0, 'color', rgb('lightsalmon'), 'marker','.', 'linestyle', 'none', 'markersize', 10);
+
+        xlim([x(1)-marg, x(end)+gp+marg])
+        set(gca,'xtick', x+gp)
+        set(gca,'xticklabel', {'EI','EE','II'})
+        ylabel('corr (mean +/- se days)')
+        legend([h1,h2], {'highBeh','lowBeh'}, 'location', 'northoutside')
+        set(gca, 'tickdir', 'out')
+        
+        
+        if saveFigs
+            namv = sprintf('corrFR_avePairwise_trainingDays_sameDiffTun_FR%s_ROC%s_%s_curr%s_allMice_%s', alFR, al, time2an, o2a, nowStr);
+
+            d = fullfile(dirn0fr, 'sumAllMice', nnow);
+            if ~exist(d,'dir')
+                mkdir(d)
+            end
+            fn = fullfile(d, namv);
+
+            savefig(gcf, fn)
+            print('-dpdf', fn)
         end    
     end
 
@@ -1490,17 +1667,19 @@ if doPlots
         
         
         %%%%%%%%%%% Plot hists and shade the significant areas %%%%%%%%%%%
-        s = [rAve_EE_shfl{im}{:}]; 
-        m = nanmean(s);
-        s = nanstd(s); 
-        mse = [m-2*s , m+2*s];         
-        s = [rAve_II_shfl{im}{:}]; 
-        m = nanmean(s);
-        s = nanstd(s); 
-        msi = [mi-2*si mi+2*si];
-        s = [rAve_EI_shfl{im}{:}]; 
-        m = nanmean(s);
-        s = nanstd(s); 
+        sh = [rAve_EE_shfl{im}{:}]; 
+        m = nanmean(sh);
+        s = nanstd(sh); 
+        mse = [m-2*s , m+2*s];   
+        
+        sh = [rAve_II_shfl{im}{:}]; 
+        m = nanmean(sh);
+        s = nanstd(sh); 
+        msi = [m-2*s m+2*s];
+        
+        sh = [rAve_EI_shfl{im}{:}]; 
+        m = nanmean(sh);
+        s = nanstd(sh); 
         msei = [m-2*s , m+2*s];         
     
         % EE
@@ -1698,7 +1877,11 @@ end
 
 
 %% 
-%%%%%%%%%%%%%%%%%%%%%%%%%  Set pairwise correlations between FR of pairs of neurons  %%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%  Set pairwise correlations between FR of pairs of neurons  %%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % We don't average pairwise correlations (unlike what we did above). 
@@ -1910,7 +2093,8 @@ end
 %%
 %%%%%%%%%%%%%%%%%%%%% Plots : pairwise averaged per day %%%%%%%%%%%%%%%%%%%%%%%%%%%
 if doPlots
-    %% Plot errorbar, showing each mouse, ave +/- se of r_aveDays across days (already averaged across PW corrs for each day)
+    
+    %%% Plot errorbar, showing each mouse, ave +/- se of r_aveDays across days (already averaged across PW corrs for each day)
 
     x = 1:length(mice);
     gp = .2;
@@ -2211,9 +2395,14 @@ end
 
 
 %% 
-%%%%%%%%%%%%%%% Pairwair corrs without any averaging %%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Pairwair corrs without any averaging %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 %% Pool across days (for each mouse) corrs for same-tuning and opposite-tunning neurons
 
@@ -2502,14 +2691,17 @@ end
 
 
 %%
-%%%%%%%%%%%%%%%%%%%%%%%%% Correlation between population-averaged FRs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%% Correlation between population-averaged FRs %%%%%%%%%%%%%%%%%%%%%%%
 % For each day, we average FR across neurons of each population
 % (Ei,Ec,Ii,Ic), then we compute correlations between different
 % populations. So for each day we get one number (for each correlation).
 % non-specific connectivity: both E_ipsi and E_contra should have corr with
 % I...  (though we already know we have I_ipsi and I_contra...)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Compute correlations in population-averaged FR between exc and inh (FR averaged across neurons of each population) for each day
 

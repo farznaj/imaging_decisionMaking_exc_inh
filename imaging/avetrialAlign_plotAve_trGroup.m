@@ -58,6 +58,7 @@ time_all = {'time_aligned_initTone', 'time_aligned_stimOn', 'time_aligned_goTone
     'time_aligned_1stSideTry', 'time_aligned_reward'};
 
 
+numTrials = length(alldata);
 
 %% For the paper: plot heatmap of trial-averaged activity for all neurons of a session across time in the trial (aligned on different trial events).
 
@@ -119,7 +120,6 @@ for isec = [1,2,4,5]  % loop over traces aligned on different events
 end
 ttot(end) = [];
 
-        
 %%%%%% Plot heatmap (Ns x times (trial averaged), after sorting neurons based on when in the trial they fire the max
 
 a = nanmean(traces_aligned_cat, 3)';
@@ -127,11 +127,18 @@ a = nanmean(traces_aligned_cat, 3)';
 [s2,si2] = sort(ii);
 top = a(si2,:);
 
+%%% identify inh neurons
+load(moreName, 'inhibitRois_pix')
+inhSorted = inhibitRois_pix(si2);
+
+
 figure('position', [55   464   204   420]); 
-imagesc(top); 
+imagesc(top); hold on
 c = colorbar; c.Label.String = 'Trial-averaged inferred spikes (a.u.)';
 vline(eltot) %, 'r-.');
 set(gca, 'clim', [min(top(:)), prctile(top(:),99)])
+%%%% mark inh neurons %%%%
+plot(ones(1, sum(inhSorted==1)), find(inhSorted==1), '.', 'color', rgb('orange'))
 % e = eltot;
 % set(gca, 'xtick', e)
 % set(gca, 'xticklabel', round(ttot(e)))
@@ -171,7 +178,6 @@ end
 %% concatenate the aligned traces with a NaN in between
 
 nu = size(traces{1},2);
-numTrials = length(alldata);
 traces_aligned_cat = cat(1, ...
     traces_aligned_fut_initTone, NaN(1, nu, numTrials), ...
     traces_aligned_fut_stimOn, NaN(1, nu, numTrials), ...

@@ -85,7 +85,7 @@ for rr = 1 : size(maskGcamp,3);
     
     %
     %%%%%%%%%%%%%%%%%
-    % Compute roiSing: signal magnitude of ch2 ROI (maskGcamp) on ch1 image (inhibitImage).
+    % Compute roiSig: signal magnitude of ch2 ROI (maskGcamp) on ch1 image (inhibitImage).
     %
     roiMask0 = maskGcamp(:,:,rr); % mask of ch2 ROI % figure; imagesc(roiMask)    
     % set pixels outside the ROI to nan. use this if you are doing roiSig = nanmean(roiIm(:)); below

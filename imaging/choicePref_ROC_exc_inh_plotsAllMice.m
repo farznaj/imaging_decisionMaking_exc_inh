@@ -336,8 +336,160 @@ end
 
 
 
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%% Fractions of significantly choice-tuned neurons %%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%% Average and se across days %%%%%%%%%%%%%%%%%%%%
+
+%% Fract significantly choice tuned neurons, compare between exc and inh
+
+exc_fractSigTuned_eachDay_avDays = cellfun(@nanmean, exc_fractSigTuned_eachDay);
+exc_fractSigTuned_eachDay_seDays = cellfun(@nanstd, exc_fractSigTuned_eachDay) ./ sqrt(numDaysGood);
+
+inh_fractSigTuned_eachDay_avDays = cellfun(@nanmean, inh_fractSigTuned_eachDay);
+inh_fractSigTuned_eachDay_seDays = cellfun(@nanstd, inh_fractSigTuned_eachDay) ./ sqrt(numDaysGood);
+
+p_allM = nan(1,length(mice));
+for im=1:length(mice)
+    [~,p_allM(im)] = ttest2(exc_fractSigTuned_eachDay{im} , inh_fractSigTuned_eachDay{im});
+end
+
+x = (1:length(mice))';
+gp = .1; 
+
+% all preferences (ipsi and contra)
+fign = figure('position', [17   714   207   251]);
+
+y = [exc_fractSigTuned_eachDay_avDays; inh_fractSigTuned_eachDay_avDays]';
+ye = [exc_fractSigTuned_eachDay_seDays; inh_fractSigTuned_eachDay_seDays]';
+
+b = errorbar([x,x+gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
+b(1).Color = 'b'; %'b';
+b(2).Color = 'r'; %rgb('lightblue');
+set(gca,'xtick',x+gp/2)
+set(gca,'xticklabel',x)
+xlabel('Mice')
+ylabel('Fraction choice-tuned') % significant
+title('All neurons')
+set(gca, 'tickdir', 'out', 'box', 'off')
+xlim([.5,4.5])
+% mark mice with sig diff btwn exc and inh
+hold on
+yl = get(gca,'ylim');
+plot(find(p_allM<=.05)+gp/2, yl(2)-range(diff(yl))/20, 'k*')
+
+legend(b, 'exc', 'inh')
+
+% save figure
+if savefigs        
+    fdn = fullfile(dirn00, strcat(namc,'_','fractSigTunedOfAllN_aveSeDays_time-1_ROC_curr_chAl_excInh_', dm0, nowStr));
+    savefig(fign, fdn)    
+    print(fign, '-dpdf', fdn)
+end 
+
+
+%% In significantly choice selective neurons, what fraction are ipsi and what fraction are contra, show it separately for exc and inh
+
+% set average and se across days
+exc_fractSigIpsiTuned_eachDay_avDays = cellfun(@nanmean, exc_fractSigIpsiTuned_eachDay);
+exc_fractSigContraTuned_eachDay_avDays = cellfun(@nanmean, exc_fractSigContraTuned_eachDay);
+exc_fractSigIpsiTuned_eachDay_seDays = cellfun(@nanstd, exc_fractSigIpsiTuned_eachDay) ./ sqrt(numDaysGood);
+exc_fractSigContraTuned_eachDay_seDays = cellfun(@nanstd, exc_fractSigContraTuned_eachDay) ./ sqrt(numDaysGood);
+
+inh_fractSigIpsiTuned_eachDay_avDays = cellfun(@nanmean, inh_fractSigIpsiTuned_eachDay);
+inh_fractSigContraTuned_eachDay_avDays = cellfun(@nanmean, inh_fractSigContraTuned_eachDay);
+inh_fractSigIpsiTuned_eachDay_seDays = cellfun(@nanstd, inh_fractSigIpsiTuned_eachDay) ./ sqrt(numDaysGood);
+inh_fractSigContraTuned_eachDay_seDays = cellfun(@nanstd, inh_fractSigContraTuned_eachDay) ./ sqrt(numDaysGood);
+
+x = (1:length(mice))';
+gp = .25; 
+
+fign = figure('position', [41   483   385   470]);
+
+% excitatory neurons
+y = [exc_fractSigIpsiTuned_eachDay_avDays; exc_fractSigContraTuned_eachDay_avDays]';
+ye = [exc_fractSigIpsiTuned_eachDay_seDays; exc_fractSigContraTuned_eachDay_seDays]';
+subplot(222)
+b = errorbar([x,x+gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
+b(1).Color = 'k'; %'b';
+b(2).Color = 'g'; %rgb('lightblue');
+set(gca,'xtick',x+gp/2)
+set(gca,'xticklabel',x)
+xlabel('Mice')
+ylabel('Fraction choice-tuned') % significant
+legend({'Ipsi-pref', 'Contra-pref'})%, 'position', [0.1655    0.7861    0.2786    0.0821])
+set(gca, 'tickdir', 'out', 'box', 'off')
+title('Excitatory')
+xlim([.5,4.5])
+
+% inhibitory neurons
+y = [inh_fractSigIpsiTuned_eachDay_avDays; inh_fractSigContraTuned_eachDay_avDays]';
+ye = [inh_fractSigIpsiTuned_eachDay_seDays; inh_fractSigContraTuned_eachDay_seDays]';
+subplot(224)
+b = errorbar([x,x+gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
+b(1).Color = 'k'; %'r';
+b(2).Color = 'g'; %rgb('lightsalmon');
+set(gca,'xtick',x+gp/2)
+set(gca,'xticklabel',x)
+xlabel('Mice')
+ylabel('Fraction choice-tuned') % significant
+% legend({'Ipsi-pref', 'Contra-pref'}) %, 'position', [0.1655    0.2861    0.2786    0.0821])
+set(gca, 'tickdir', 'out', 'box', 'off')
+title('Inhibitory')
+xlim([.5,4.5])
+
+
+% ipsi-selective
+y = [exc_fractSigIpsiTuned_eachDay_avDays; inh_fractSigIpsiTuned_eachDay_avDays]';
+subplot(221); hold on
+b = errorbar([x,x+gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
+b(1).Color = 'b'; % ipsi
+b(2).Color = 'r'; % ipsi
+set(gca,'xtick',x+gp/2)
+set(gca,'xticklabel',x)
+xlabel('Mice')
+ylabel('Fraction choice-tuned') % significant
+legend({'Exc', 'Inh'})%, 'position', [0.1655    0.2861    0.2786    0.0821])
+set(gca, 'tickdir', 'out', 'box', 'off')
+title('Ipsi-selective')
+xlim([.5,4.5])
+
+
+% contra-selective
+y = [exc_fractSigContraTuned_eachDay_avDays; inh_fractSigContraTuned_eachDay_avDays]';
+subplot(223); hold on
+b = errorbar([x,x+gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
+b(1).Color = 'b'; %rgb('lightblue'); % contra
+b(2).Color = 'r'; %rgb('lightsalmon'); % contra
+set(gca,'xtick',x+gp/2)
+set(gca,'xticklabel',x)
+xlabel('Mice')
+ylabel('Fraction choice-tuned') % significant
+% legend({'Exc', 'Inh'})%, 'position', [0.1655    0.2861    0.2786    0.0821])
+set(gca, 'tickdir', 'out', 'box', 'off')
+title('Contra-selective')
+xlim([.5,4.5])
+
+
+% save figure
+if savefigs        
+    fdn = fullfile(dirn00, strcat(namc,'_','fractIpsiContraOfSigTuned_aveSeDays_time-1_ROC_curr_chAl_excInh_', dm0, nowStr));
+    savefig(fign, fdn)    
+    print(fign, '-dpdf', fdn)
+end 
+
+
+
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%% Same as above, but vars were computed on pooled
+%%%%%%%%%%%%%%%%%%%%%%% days... so no error bar for sd across days !! 
 
 %% Plot fractions of significantly choice-tuned neurons, compare between exc and inh
+
+%%% what fraction of neurons are significant... all neurons, neurons with AUC>.5 and neurons with AUC<.5
 
 fign = figure;
 
@@ -397,42 +549,81 @@ set(gca, 'tickdir', 'out', 'box', 'off')
 
 % save figure
 if savefigs        
-    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_fractSigTuned_time-1_', dm0, nowStr));
+    fdn = fullfile(dirn00, strcat(namc,'_','fractSigTunedOfAllN_time-1_ROC_curr_chAl_excInh_', dm0, nowStr));
     savefig(fign, fdn)    
     print(fign, '-dpdf', fdn)
 end 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%
+%% In significantly choice selective neurons, what fraction are ipsi and what fraction are contra, show it separately for exc and inh
+
 fign = figure;
 
-% ipsi-preferring neurons
+% excitatory neurons
 y = [exc_fractSigIpsiTuned; exc_fractSigContraTuned]';
 subplot(222)
 b = bar(x, y);
 b(1).FaceColor = 'b';
 b(2).FaceColor = rgb('lightblue');
+b(1).EdgeColor = 'none';
+b(2).EdgeColor = 'none';
 xlabel('Mice')
 ylabel('Fraction choice-tuned') % significant
-legend({'Ipsi-preferring', 'Contra-preferring'}, 'position', [0.1655    0.7861    0.2786    0.0821])
+legend({'Ipsi-pref', 'Contra-pref'})%, 'position', [0.1655    0.7861    0.2786    0.0821])
 set(gca, 'tickdir', 'out', 'box', 'off')
 title('Excitatory')
 
-% contra-preferring neurons
+
+% inhibitory neurons
 y = [inh_fractSigIpsiTuned; inh_fractSigContraTuned]';
 subplot(224)
 b = bar(x, y);
 b(1).FaceColor = 'r';
 b(2).FaceColor = rgb('lightsalmon');
+b(1).EdgeColor = 'none';
+b(2).EdgeColor = 'none';
 xlabel('Mice')
 ylabel('Fraction choice-tuned') % significant
-legend({'Ipsi-preferring', 'Contra-preferring'}, 'position', [0.1655    0.2861    0.2786    0.0821])
+legend({'Ipsi-pref', 'Contra-pref'}) %, 'position', [0.1655    0.2861    0.2786    0.0821])
 set(gca, 'tickdir', 'out', 'box', 'off')
 title('Inhibitory')
 
+
+% ipsi-selective
+y = [exc_fractSigIpsiTuned; inh_fractSigIpsiTuned]';
+subplot(221); hold on
+b = bar(x, y);
+b(1).FaceColor = 'b'; % ipsi
+b(2).FaceColor = 'r'; % ipsi
+b(1).EdgeColor = 'none';
+b(2).EdgeColor = 'none';
+xlabel('Mice')
+ylabel('Fraction choice-tuned') % significant
+legend({'Exc', 'Inh'})%, 'position', [0.1655    0.2861    0.2786    0.0821])
+set(gca, 'tickdir', 'out', 'box', 'off')
+title('Ipsi-selective')
+
+
+% contra-selective
+y = [exc_fractSigContraTuned; inh_fractSigContraTuned]';
+subplot(223); hold on
+b = bar(x, y);
+b(1).FaceColor = rgb('lightblue'); % contra
+b(2).FaceColor = rgb('lightsalmon'); % contra
+b(1).EdgeColor = 'none';
+b(2).EdgeColor = 'none';
+xlabel('Mice')
+ylabel('Fraction choice-tuned') % significant
+legend({'Exc', 'Inh'})%, 'position', [0.1655    0.2861    0.2786    0.0821])
+set(gca, 'tickdir', 'out', 'box', 'off')
+title('Contra-selective')
+
+% y = [exc_fractSigIpsiTuned; exc_fractSigContraTuned; inh_fractSigIpsiTuned; inh_fractSigContraTuned]';
+
+
 % save figure
 if savefigs        
-    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_fractIpsiContraSigTuned_time-1_', dm0, nowStr));
+    fdn = fullfile(dirn00, strcat(namc,'_','fractIpsiContraOfSigTuned_time-1_ROC_curr_chAl_excInh_', dm0, nowStr));
     savefig(fign, fdn)    
     print(fign, '-dpdf', fdn)
 end 
@@ -453,6 +644,5 @@ for im = 1:length(mice)
     fh = figure('name', mice{im});
     [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, alpha, fh, nBins); %, doSmooth, lineStyles, sp, bins);
 end
-
 
 

@@ -505,7 +505,7 @@ for im in range(len(mice)):
                     xtot = np.concatenate((X_svm00, X_svm_incorr00),axis=2)
                     xf = xtot[ifr,:,:]
                 else:
-                    xf = X_svm[ifr,:,:]
+                    xf = X_svm00[ifr,:,:]
         
                 m = np.mean(xf, axis=1)
                 s = np.std(xf, axis=1)   

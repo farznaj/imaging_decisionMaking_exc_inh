@@ -252,10 +252,15 @@ def svm_setDays_allMice(mice, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg
 
 
 #%% Extend the built in two tailed ttest function to one-tailed
-
+# 'right': ### a>b
+# 'left':  ### a<b
+        
 def ttest2(a, b, **tailOption):
     import scipy.stats as stats
     import numpy as np
+    
+    a = np.array(a)[~np.isnan(a)]
+    b = np.array(b)[~np.isnan(b)]
     
     h, p = stats.ttest_ind(a, b)
     
@@ -513,10 +518,19 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     plt.sca(current_ax)
     return im.axes.figure.colorbar(im, cax=cax, **kwargs)    
    
+
+
+#%% smooth (got from internet)
+    
+def smooth(y, box_pts):
+    box = np.ones(box_pts)/box_pts
+    y_smooth = np.convolve(y, box, mode='same')
+    return y_smooth
+
    
 #%% Plot histogram of verctors a and b on axes h1 and h2
 
-def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1='exc',lab2='inh',plotCumsum=0):
+def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1='exc',lab2='inh',plotCumsum=0,doSmooth=0):
 #    import matplotlib.gridspec as gridspec    
 #    r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
 #    binEvery = r/float(10)
@@ -539,6 +553,8 @@ def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1=
     hist = hist/float(np.sum(hist))    
     if plotCumsum:
         hist = np.cumsum(hist)
+    if doSmooth!=0:        
+        hist = smooth(hist, doSmooth)
     ax1 = plt.subplot(h1) #(gs[0,0:2])
     # plot the center of bins
     plt.plot(bin_edges[0:-1]+binEvery/2., hist, color=colors[0], label=lab1)    #    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[0], alpha=.4, label=lab1)
@@ -548,6 +564,8 @@ def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1=
     hist = hist/float(np.sum(hist));     #d = stats.mode(np.diff(bin_edges))[0]/float(2)
     if plotCumsum:
         hist = np.cumsum(hist)
+    if doSmooth!=0:
+        hist = smooth(hist, doSmooth)
     plt.plot(bin_edges[0:-1]+binEvery/2., hist, color=colors[1], label=lab2)        #    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[1], alpha=.4, label=lab2)
 
     # set labels, etc
@@ -593,7 +611,7 @@ def errbarAllDays(a,b,p,gs,colors = ['g','k'],lab1='exc',lab2='inh',lab='ave(CA)
     
     if type(h1)==list: # h1 is not provided; otherwise h1 is provided as a matplotlib.gridspec.SubplotSpec
         h1 = gs[1,0:2]
-    if type(h1)==list:
+    if type(h2)==list:
         h2 = gs[1,2:3]
     
     if np.ndim(a)==1:
@@ -626,8 +644,8 @@ def errbarAllDays(a,b,p,gs,colors = ['g','k'],lab1='exc',lab2='inh',lab='ave(CA)
     makeNicePlots(ax1,0,1)
 
     ax2 = plt.subplot(h2)
-    plt.errorbar(0, np.nanmean(eav), np.nanstd(eav)/np.sqrt(len(eav)), marker='o', color='k')
-    plt.errorbar(1, np.nanmean(iav), np.nanstd(iav)/np.sqrt(len(eav)), marker='o', color='k')
+    plt.errorbar(0, np.nanmean(eav), np.nanstd(eav)/np.sqrt(len(eav)), marker='o', color='k', markeredgecolor='none')
+    plt.errorbar(1, np.nanmean(iav), np.nanstd(iav)/np.sqrt(len(eav)), marker='o', color='k', markeredgecolor='none')
     plt.xticks([0,1], (lab1, lab2), rotation='vertical')
     plt.xlim([-1,2])
     makeNicePlots(ax2,0,1)
@@ -1679,7 +1697,7 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
     if addNs_roc:
         diffn = 'diffNumNsROC_'
         if doInhAllexcEqexc[3]==1:
-            h2l = 'hi2loROC_'
+            h2l = '' #'hi2loROC_'
         else:
             h2l = 'lo2hiROC_'        
     elif addNs_rand:        
@@ -1762,7 +1780,7 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
         svmName = sorted(svmName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
     else:
         print svmn
-        sys.exit('No such mat file!')
+#        sys.exit('No such mat file!')
 
     return svmName
     
@@ -3653,20 +3671,28 @@ def plotStabScore(top, lab, cmins, cmaxs, cmap='jet', cblab='', ax=plt, xl = 'Ti
 #%% Compute the change in CA from the actual case to shflTrsEachNeuron case ... aveaged across those population sizes that are significantly different between actual and shflTrsEachN
 # for each day do ttest across samples for each of the population sizes to see if shflTrsEachN is differnt fromt eh eactual case (ie neuron numbers in the decoder)
     
-def changeCA_shflTrsEachN():    
-    
-    if mousename == 'fni18':
-        alph = .05
-        thN = 0 # at least have 3 population sizes that are sig diff btwn act and shflTrsEachN, in order to compute the change in CA after breaking noise corrs.
-    elif mousename == 'fni19':
-        alph = .001
-        thN = 6#3 # at least have 3 population sizes that are sig diff btwn act and shflTrsEachN, in order to compute the change in CA after breaking noise corrs.            
+def changeCA_shflTrsEachN(lastPopSize=0, onlySigPops=1):    
+
+#    lastPopSize = 0 # if 1, compute CA changes on the last population size (ie when all neurons are included in the population). If 0, average change in CA across all population sizes
+#    onlySigPops = 1 # if 1, only use population sizes that show sig difference between original and shuffled. If 0, include all population sizes, regardless of significancy
+
+    if onlySigPops==0:  # include all regardless of sig
+        alph = 1
+        thN = -1        
     else:
-        alph = .001
-        thN = 3 # at least have 3 population sizes that are sig diff btwn act and shflTrsEachN, in order to compute the change in CA after breaking noise corrs.
+        if mousename == 'fni18':
+            alph = .05
+            thN = 0 # at least have 3 population sizes that are sig diff btwn act and shflTrsEachN, in order to compute the change in CA after breaking noise corrs.
+        elif mousename == 'fni19':
+            alph = .001
+            thN = 6#3 # at least have 3 population sizes that are sig diff btwn act and shflTrsEachN, in order to compute the change in CA after breaking noise corrs.            
+        else:
+            alph = .001
+            thN = 3 # at least have 3 population sizes that are sig diff btwn act and shflTrsEachN, in order to compute the change in CA after breaking noise corrs.
     
     thE = 5 # when setting average across exc samps: only use days that have more than 5 valid exc samples
     
+   
     dav_allExc = np.full((numD), np.nan)
     dav_inh = np.full((numD), np.nan)
     dav_exc = np.full((numD, numExcSamples), np.nan)
@@ -3677,38 +3703,71 @@ def changeCA_shflTrsEachN():
             ### allExc
             a = perClassErrorTest_data_allExc_all_shflTrsEachNn[iday]#[:,:,eventI_ds_allDays[iday]+fr2an] # nNeurons x nSamps
             b = perClassErrorTest_data_allExc_alln[iday]#[:,:,eventI_ds_allDays[iday]+fr2an]
+            if lastPopSize:
+                a = a[-1]; b = b[-1]; ax = 0  # use the last population size
+            else:
+                ax = 1            
             # ttest across samples for each population size
-            p = sci.stats.ttest_ind(a, b, axis=1)[1] # nNeurons
-            if sum(p<=alph)>=thN:
+            p = sci.stats.ttest_ind(a, b, axis=ax)[1] # nNeurons
+            if lastPopSize:
+                check = p<=alph
+            else:
+                check = sum(p<=alph) >= thN
+            if check:
                 aav = av_test_data_allExc_shflTrsEachN[iday].flatten()
                 bav = av_test_data_allExc[iday].flatten()
-                d = (aav - bav)[p<=alph]
-                dav_allExc[iday] = np.nanmean(d)
+                if lastPopSize:
+                    dav_allExc[iday] = aav[-1] - bav[-1] # use the last population size
+                else:
+                    d = (aav - bav)[p<=alph]
+                    dav_allExc[iday] = np.nanmean(d)
     
     
             ### inh
             a = perClassErrorTest_data_inh_all_shflTrsEachNn[iday]#[:,:,eventI_ds_allDays[iday]+fr2an] # nNeurons x nSamps
             b = perClassErrorTest_data_inh_alln[iday]#[:,:,eventI_ds_allDays[iday]+fr2an]
+            if lastPopSize:
+                a = a[-1]; b = b[-1]; ax = 0
+            else:
+                ax = 1                        
             # ttest across samples for each population size
-            p = sci.stats.ttest_ind(a, b, axis=1)[1] # nNeurons
-            if sum(p<=alph)>=thN:
+            p = sci.stats.ttest_ind(a, b, axis=ax)[1] # nNeurons
+            if lastPopSize:
+                check = p<=alph
+            else:
+                check = sum(p<=alph) >= thN            
+            if check:#sum(p<=alph)>=thN:
                 aav = av_test_data_inh_shflTrsEachN[iday].flatten()
                 bav = av_test_data_inh[iday].flatten()
-                d = (aav - bav)[p<=alph]
-                dav_inh[iday] = np.nanmean(d)
+                if lastPopSize:
+                    dav_inh[iday] = aav[-1] - bav[-1]
+                else:
+                    d = (aav - bav)[p<=alph]
+                    dav_inh[iday] = np.nanmean(d)
     
     
             ### exc
             a = np.transpose(perClassErrorTest_data_exc_all_shflTrsEachNn[iday], (1,0,2))#[:,:,:,eventI_ds_allDays[iday]+fr2an] # nExcSamps x nNeurons x nSamps
             b = np.transpose(perClassErrorTest_data_exc_alln[iday], (1,0,2))#[:,:,:,eventI_ds_allDays[iday]+fr2an]
+            if lastPopSize:
+                a = a[:,-1,:]; b = b[:,-1,:]; ax = 1
+            else:
+                ax = 2
             # ttest across samples for each population size
-            p = sci.stats.ttest_ind(a, b, axis=2)[1] # nExcSamps x nNeurons
+            p = sci.stats.ttest_ind(a, b, axis=ax)[1] # nExcSamps x nNeurons
             for iexc in range(numExcSamples):
-                if sum(p[iexc]<=alph)>=thN:
+                if lastPopSize:
+                    check = p[iexc]<=alph
+                else:
+                    check = sum(p[iexc]<=alph) >= thN
+                if check:#sum(p[iexc]<=alph)>=thN:
                     aav = av_test_data_exc_shflTrsEachN_excSamp[iday][iexc] # numShufflesExc x number of neurons in the decoder
                     bav = av_test_data_exc_excSamp[iday][iexc]
-                    d = (aav - bav)[p[iexc]<=alph] # pooled neurons of all exc samps with sig difference between shflTrsEachN and the actual case
-                    dav_exc[iday, iexc] = np.nanmean(d)
+                    if lastPopSize:
+                        dav_exc[iday, iexc] = aav[-1] - bav[-1]
+                    else:
+                        d = (aav - bav)[p[iexc]<=alph] # pooled neurons of all exc samps with sig difference between shflTrsEachN and the actual case
+                        dav_exc[iday, iexc] = np.nanmean(d)
     
     
     # Average across exc samps: only use days that have more than 5 valid exc samples

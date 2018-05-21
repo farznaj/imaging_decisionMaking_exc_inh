@@ -175,7 +175,7 @@ if doPost
     close all
     % best is to set the 2 vars below to 0 so u get times of events for all trials; later decide which ones to set to nan.
     rmvTrsStimRateChanged = 0; % if 1, early-go-tone trials w stimRate categ different before and after go tone, will be excluded.
-    do = 1; % set to 1 when first evaluating a session, to get plots and save figs and vars.
+    do = 0; % set to 1 when first evaluating a session, to get plots and save figs and vars.
 
     normalizeSpikes = 1; % if 1, spikes trace of each neuron will be normalized by its max.
     warning('Note you have set normalizeSpikes to 1!!!')

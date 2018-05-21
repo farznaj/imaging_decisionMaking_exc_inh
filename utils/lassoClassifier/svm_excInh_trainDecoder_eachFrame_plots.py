@@ -16,13 +16,13 @@ Created on Sun Mar 12 15:12:29 2017
     
 #%% Change the following vars:
 
-mousename = 'fni19'
+mousename = 'fni18'
 
-decodeStimCateg = 1
+decodeStimCateg = 0
 use_both_remCorr_testing = [1,0,0] # if decodeStimCate = 1, decide which one (testing, remCorr, or Both) you want to use for the rest of this code
-shflTrsEachNeuron = 0 # 1st set to 1, then to 0 to compare how decoder changes after removing noise corrs. # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
-addNs_roc = 0 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
-h2l = 0 # if 1, load svm file in which neurons were added from high to low AUC. If 0: low to high AUC.
+shflTrsEachNeuron = 1 # 1st set to 1, then to 0 to compare how decoder changes after removing noise corrs. # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
+addNs_roc = 1 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
+h2l = 1 # if 1, load svm file in which neurons were added from high to low AUC. If 0: low to high AUC.
 do_excInhHalf = 0 # 0: Load vars for inh,exc,allExc, 1: Load exc,inh SVM vars for excInhHalf (ie when the population consists of half exc and half inh) and allExc2inhSize (ie when populatin consists of allExc but same size as 2*inh size)
 loadYtest = 0 # get svm performance for different trial strength # to load the svm files that include testTrInds_allSamps, etc vars (ie in addition to percClassError, they include the Y_hat for each trial)
 
@@ -308,33 +308,36 @@ for iday in range(len(days)): # np.arange(3, len(days)): #
     perClassErrorTest_data_inh_all.append(perClassErrorTest_data_inh) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
     perClassErrorTest_shfl_inh_all.append(perClassErrorTest_shfl_inh)
     perClassErrorTest_chance_inh_all.append(perClassErrorTest_chance_inh)
-    perClassErrorTestBoth_inh_all.append(perClassErrorTestBoth_inh) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
-    perClassErrorTestBoth_shfl_inh_all.append(perClassErrorTestBoth_shfl_inh)
-    perClassErrorTestBoth_chance_inh_all.append(perClassErrorTestBoth_chance_inh)
-    perClassErrorTestRemCorr_inh_all.append(perClassErrorTestRemCorr_inh) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
-    perClassErrorTestRemCorr_shfl_inh_all.append(perClassErrorTestRemCorr_shfl_inh)
-    perClassErrorTestRemCorr_chance_inh_all.append(perClassErrorTestRemCorr_chance_inh)   
+    if decodeStimCateg:
+        perClassErrorTestBoth_inh_all.append(perClassErrorTestBoth_inh) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
+        perClassErrorTestBoth_shfl_inh_all.append(perClassErrorTestBoth_shfl_inh)
+        perClassErrorTestBoth_chance_inh_all.append(perClassErrorTestBoth_chance_inh)
+        perClassErrorTestRemCorr_inh_all.append(perClassErrorTestRemCorr_inh) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
+        perClassErrorTestRemCorr_shfl_inh_all.append(perClassErrorTestRemCorr_shfl_inh)
+        perClassErrorTestRemCorr_chance_inh_all.append(perClassErrorTestRemCorr_chance_inh)   
     
     perClassErrorTest_data_allExc_all.append(perClassErrorTest_data_allExc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs
     perClassErrorTest_shfl_allExc_all.append(perClassErrorTest_shfl_allExc)
     perClassErrorTest_chance_allExc_all.append(perClassErrorTest_chance_allExc) 
-    perClassErrorTestBoth_allExc_all.append(perClassErrorTestBoth_allExc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
-    perClassErrorTestBoth_shfl_allExc_all.append(perClassErrorTestBoth_shfl_allExc)
-    perClassErrorTestBoth_chance_allExc_all.append(perClassErrorTestBoth_chance_allExc)
-    perClassErrorTestRemCorr_allExc_all.append(perClassErrorTestRemCorr_allExc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
-    perClassErrorTestRemCorr_shfl_allExc_all.append(perClassErrorTestRemCorr_shfl_allExc)
-    perClassErrorTestRemCorr_chance_allExc_all.append(perClassErrorTestRemCorr_chance_allExc)   
+    if decodeStimCateg:
+        perClassErrorTestBoth_allExc_all.append(perClassErrorTestBoth_allExc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
+        perClassErrorTestBoth_shfl_allExc_all.append(perClassErrorTestBoth_shfl_allExc)
+        perClassErrorTestBoth_chance_allExc_all.append(perClassErrorTestBoth_chance_allExc)
+        perClassErrorTestRemCorr_allExc_all.append(perClassErrorTestRemCorr_allExc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
+        perClassErrorTestRemCorr_shfl_allExc_all.append(perClassErrorTestRemCorr_shfl_allExc)
+        perClassErrorTestRemCorr_chance_allExc_all.append(perClassErrorTestRemCorr_chance_allExc)   
 
     if do_excInhHalf==0: #np.logical_and(do_excInhHalf==0, addNs_roc==0):
         perClassErrorTest_data_exc_all.append(perClassErrorTest_data_exc) # each day: numShufflesExc x numSamples x numFrames   # if addNs_roc: # numShufflesExc x number of neurons in the decoder x numSamples x nFrs 
         perClassErrorTest_shfl_exc_all.append(perClassErrorTest_shfl_exc)
         perClassErrorTest_chance_exc_all.append(perClassErrorTest_chance_exc)
-        perClassErrorTestBoth_exc_all.append(perClassErrorTestBoth_exc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
-        perClassErrorTestBoth_shfl_exc_all.append(perClassErrorTestBoth_shfl_exc)
-        perClassErrorTestBoth_chance_exc_all.append(perClassErrorTestBoth_chance_exc)
-        perClassErrorTestRemCorr_exc_all.append(perClassErrorTestRemCorr_exc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
-        perClassErrorTestRemCorr_shfl_exc_all.append(perClassErrorTestRemCorr_shfl_exc)
-        perClassErrorTestRemCorr_chance_exc_all.append(perClassErrorTestRemCorr_chance_exc)   
+        if decodeStimCateg:
+            perClassErrorTestBoth_exc_all.append(perClassErrorTestBoth_exc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
+            perClassErrorTestBoth_shfl_exc_all.append(perClassErrorTestBoth_shfl_exc)
+            perClassErrorTestBoth_chance_exc_all.append(perClassErrorTestBoth_chance_exc)
+            perClassErrorTestRemCorr_exc_all.append(perClassErrorTestRemCorr_exc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
+            perClassErrorTestRemCorr_shfl_exc_all.append(perClassErrorTestRemCorr_shfl_exc)
+            perClassErrorTestRemCorr_chance_exc_all.append(perClassErrorTestRemCorr_chance_exc)   
 
     if loadYtest:
         perClassErrorTest_data_easy_inh_all.append(perClassEr_easy_inh)
@@ -997,9 +1000,9 @@ if addNs_roc==0:
             
 
 
-    #%%######################### PLOTS #########################
-    ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##
-    ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##
+    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PLOTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     #%% Compare number of inh vs exc for each day
     
@@ -1043,35 +1046,51 @@ if addNs_roc==0:
     asp = 'auto' #2
     cmap ='jet'
     
-    for iplot in range(3): # iplot = 0   
+    for iplot in [-1,0,1,2]: # iplot = 0   
+
+        if iplot==-1: ### plot class accuracy for each day: data - shfl
+            if do_excInhHalf==0:
+                topall = av_test_data_inh_aligned.T[days2an_heatmap] - av_test_shfl_inh_aligned.T[days2an_heatmap], av_test_data_exc_aligned.T[days2an_heatmap] - av_test_shfl_exc_aligned.T[days2an_heatmap], av_test_data_allExc_aligned.T[days2an_heatmap] - av_test_shfl_allExc_aligned.T[days2an_heatmap]
+            else:
+                topall = av_test_data_inh_aligned.T[days2an_heatmap] - av_test_shfl_inh_aligned.T[days2an_heatmap], av_test_data_allExc_aligned.T[days2an_heatmap] - av_test_shfl_allExc_aligned.T[days2an_heatmap]
+            namp = 'classAccur_dataMshfl'
+            cblab = 'Class accuracy (%) (data-shfl)'
         
-        if iplot==0: ### plot class accuracy for each day
-#            topall = av_test_data_inh_aligned.T[days2an_heatmap], av_test_data_exc_aligned.T[days2an_heatmap], av_test_data_allExc_aligned.T[days2an_heatmap]
-            topall = av_test_data_inh_aligned.T[days2an_heatmap], av_test_data_allExc_aligned.T[days2an_heatmap]
+        if iplot==0: ### plot class accuracy for each day: data
+            if do_excInhHalf==0:
+                topall = av_test_data_inh_aligned.T[days2an_heatmap], av_test_data_exc_aligned.T[days2an_heatmap], av_test_data_allExc_aligned.T[days2an_heatmap]
+            else:
+                topall = av_test_data_inh_aligned.T[days2an_heatmap], av_test_data_allExc_aligned.T[days2an_heatmap]
             namp = 'classAccur_'
             cblab = 'Class accuracy (%)'
  
         if iplot==1: ### plot significancy of CA for each day (data vs shfl)
-#            te = ttest_pval_exc_aligned[rng.permutation(numExcSamples)[0]].T[days2an_heatmap]  < alph  # a random exc samp
-#            te = np.mean(ttest_pval_exc_aligned, axis=0).T[days2an_heatmap]  < alph  # ave exc samps       
-#            topall = ttest_pval_inh_aligned.T[days2an_heatmap] < alph, te, ttest_pval_allExc_aligned.T[days2an_heatmap] < alph
-            topall = ttest_pval_inh_aligned.T[days2an_heatmap] < alph, ttest_pval_allExc_aligned.T[days2an_heatmap] < alph
+            if do_excInhHalf==0:
+                te = ttest_pval_exc_aligned[rng.permutation(numExcSamples)[0]].T[days2an_heatmap]  < alph  # a random exc samp
+    #            te = np.mean(ttest_pval_exc_aligned, axis=0).T[days2an_heatmap]  < alph  # ave exc samps       
+                topall = ttest_pval_inh_aligned.T[days2an_heatmap] < alph, te, ttest_pval_allExc_aligned.T[days2an_heatmap] < alph
+            else:
+                topall = ttest_pval_inh_aligned.T[days2an_heatmap] < alph, ttest_pval_allExc_aligned.T[days2an_heatmap] < alph
             namp = 'sigDataShfl_'
             cblab = 'Sig class accuracy (data vs shfl)'
             
         if iplot==2: ### plot p val of CA for each day (data vs shfl)
-#            te = ttest_pval_exc_aligned[rng.permutation(numExcSamples)[0]].T[days2an_heatmap]  # a random exc samp
-#            te = np.mean(ttest_pval_exc_aligned, axis=0).T[days2an_heatmap]  # ave exc samps       
-#            topall = ttest_pval_inh_aligned.T[days2an_heatmap], te, ttest_pval_allExc_aligned.T[days2an_heatmap]
-            topall = ttest_pval_inh_aligned.T[days2an_heatmap], ttest_pval_allExc_aligned.T[days2an_heatmap]
+            if do_excInhHalf==0:
+                te = ttest_pval_exc_aligned[rng.permutation(numExcSamples)[0]].T[days2an_heatmap]  # a random exc samp
+#                te = np.mean(ttest_pval_exc_aligned, axis=0).T[days2an_heatmap]  # ave exc samps       
+                topall = ttest_pval_inh_aligned.T[days2an_heatmap], te, ttest_pval_allExc_aligned.T[days2an_heatmap]
+            else:
+                topall = ttest_pval_inh_aligned.T[days2an_heatmap], ttest_pval_allExc_aligned.T[days2an_heatmap]
             namp = 'pDataShfl_'
             cblab = 'P class accuracy (data vs shfl)'
 
         topi = topall[0]
         tope = topall[1]
-#        topa = topall[2]
-        tope = topall[0]
-        topa = topall[1]
+        if do_excInhHalf==0:
+            topa = topall[2]
+        else:
+            topa = topall[1]
+            tope = topall[0] # when exc is not run (ie when you are waiting for it to be done), just make it like inh so the code doesnt give error            
         
         
         fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(7,5))
@@ -1159,8 +1178,9 @@ if addNs_roc==0:
 
 
 
+    #%% 
     #########################################################################################################
-    #%% ########################## Plots : svm performance vs behavioral performance ########################
+    ########################## Plots : svm performance vs behavioral performance ############################
     #########################################################################################################
     
     perc_thb = [10,90] #[20,80] # perc_thb = [15,85] # percentiles of behavioral performance for determining low and high performance.
@@ -1358,8 +1378,9 @@ if addNs_roc==0:
 
 
     
+    #%% 
     ##############################################################################################################
-    #%% ###################################### Plots of choice signal onset ######################################
+    ###################################### Plots of choice signal onset ##########################################
     ##############################################################################################################
 
     #%% Only get good days
@@ -1567,13 +1588,16 @@ if addNs_roc==0:
 
 
     
-    #%%
+    #%% 
     #############################################################################################
+    ############ Line plots of class accuracy (each day, and average of days) ###################
     #############################################################################################
+    
     if do_excInhHalf:
         Cols = 'm','b'
     else:
         Cols = 'r','k'
+        
                
     #%% Plot class accur trace for all days (only use days with svm trained trials above thTrained) on top of each other
     
@@ -2459,8 +2483,11 @@ if addNs_roc:
     # for each day do ttest across samples for each of the population sizes to see if shflTrsEachN is differnt fromt eh eactual case (ie neuron numbers in the decoder)
     
     if compWith_shflTrsEachN:
-        dav_allExc, dav_inh, dav_exc_av, dav_exc = changeCA_shflTrsEachN()       
-        
+
+        lastPopSize = 0 # if 1, compute CA changes on the last population size (ie when all neurons are included in the population). If 0, average change in CA across all population sizes
+        onlySigPops = 1 # if 1, only use population sizes that show sig difference between original and shuffled. If 0, include all population sizes, regardless of significancy
+
+        dav_allExc, dav_inh, dav_exc_av, dav_exc = changeCA_shflTrsEachN(lastPopSize, onlySigPops)
         
         
     #%% Plots of change in CA after breaking noise correaltions
@@ -2562,10 +2589,19 @@ if addNs_roc:
         
 
         if savefigs:
-            if chAl==1:
-                dd = 'chAl_' + corrn + 'VSshflTrsEachN_avSeDays_CAchange_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            if lastPopSize:
+                ppn = 'lastPop_'
             else:
-                dd = 'stAl_' + corrn + 'VSshflTrsEachN_avSeDays_CAchange_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                ppn = 'avePop_'
+            if onlySigPops:
+                spn = 'onlySig_'
+            else:
+                spn = 'all_'
+            
+            if chAl==1:
+                dd = 'chAl_' + corrn + 'VSshflTrsEachN_avSeDays_CAchange_' + ppn + spn + 'addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            else:
+                dd = 'stAl_' + corrn + 'VSshflTrsEachN_avSeDays_CAchange_' + ppn + spn + 'addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                 
             d = os.path.join(svmdir+dnow)
             if not os.path.exists(d):
@@ -2671,7 +2707,7 @@ if addNs_roc:
                 av = av_test_data_allExc_shflTrsEachN[iday]
                 sd = sd_test_data_allExc_shflTrsEachN[iday]            
                 x = np.arange(1, len(av)+1)
-                plt.fill_between(x, av-sd, av+sd, alpha=alphFig, edgecolor=colors[i], facecolor=colors[i])
+                plt.fill_between(x, av-sd, av+sd, alpha=alphFig, edgecolor=colors_shflTrsEachN[i], facecolor=colors_shflTrsEachN[i])
                 plt.plot(x, av, colors_shflTrsEachN[i], label=labs[i])            
 #            if ttest2(av_test_data_allExc[iday], av_test_data_allExc_shflTrsEachN[iday]) <= alph:
 #                plt.gca().text(50,50, str(np.mean(av_test_data_allExc_shflTrsEachN[iday] - av_test_data_allExc[iday])))
@@ -2689,7 +2725,7 @@ if addNs_roc:
                 av = av_test_data_inh_shflTrsEachN[iday]
                 sd = sd_test_data_inh_shflTrsEachN[iday]            
                 x = np.arange(1, len(av)+1)
-                plt.fill_between(x, av-sd, av+sd, alpha=alphFig, edgecolor=colors[i], facecolor=colors[i])
+                plt.fill_between(x, av-sd, av+sd, alpha=alphFig, edgecolor=colors_shflTrsEachN[i], facecolor=colors_shflTrsEachN[i])
                 plt.plot(x, av, colors_shflTrsEachN[i], label=labs[i])            
 #            if ttest2(av_test_data_inh[iday], av_test_data_inh_shflTrsEachN[iday]) <= alph:
 #                plt.gca().text(50,50, str(np.mean(av_test_data_inh_shflTrsEachN[iday] - av_test_data_inh[iday])))
@@ -2707,7 +2743,7 @@ if addNs_roc:
                 av = av_test_data_exc_shflTrsEachN[iday]
                 sd = sd_test_data_exc_shflTrsEachN[iday]            
                 x = np.arange(1, len(av)+1)
-                plt.fill_between(x, av-sd, av+sd, alpha=alphFig, edgecolor=colors[i], facecolor=colors[i])
+                plt.fill_between(x, av-sd, av+sd, alpha=alphFig, edgecolor=colors_shflTrsEachN[i], facecolor=colors_shflTrsEachN[i])
                 plt.plot(x, av, colors_shflTrsEachN[i], label=labs[i])                        
 #            if ttest2(av_test_data_exc[iday], av_test_data_exc_shflTrsEachN[iday]) <= alph:
 #                plt.gca().text(50,50, str(np.mean(av_test_data_exc_shflTrsEachN[iday] - av_test_data_exc[iday])))

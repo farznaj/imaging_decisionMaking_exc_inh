@@ -6,8 +6,8 @@
 
 downSampSpikes = 1; %0; %1; % downsample spike traces (non-overalapping moving average of 3 frames).
 
-alFR = 'chAl'; % 'initAl'; % the firing rate traces were aligned on what
-outcome2ana = ''; %'corr';
+alFR = 'initAl'; %'chAl'; % 'initAl'; % the firing rate traces were aligned on what
+outcome2ana = ''; %'' 'corr';
 
 fni18_rmvDay4 = 0; % if 1, remove 4th day of fni18.
 doChoicePref = 0; %2; 

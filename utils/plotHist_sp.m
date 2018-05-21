@@ -1,5 +1,13 @@
-function bins = plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, sp,yy, documsum, numBins, bins)
-
+function [bins,ye,yi,x,h1,h2] = plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, sp,yy, documsum, nBins, bins, doSmooth)
+    
+    if ~exist('sp', 'var') | isempty(sp)
+        sp = subplot(1,1,1);
+    end
+    
+    if ~exist('doSmooth', 'var')
+        doSmooth = 0;
+    end
+    
     if ~exist('tit','var')
         tit = [];
     end
@@ -12,14 +20,16 @@ function bins = plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, sp,yy, documsu
         cols = mat2cell(cols,[1,1]);
     end
     
-    if ~exist('numBins', 'var')
-        numBins = 10;
+    if ~exist('nBins', 'var')
+        nBins = 10;
     end
-    
-    if ~exist('bins','var')
-        r1 = round(min([y1(:);y2(:)]),1); 
-        r2 = round(max([y1(:);y2(:)])+.05,1);
-        bins = r1 : (r2-r1)/numBins : r2;
+
+        
+    if ~exist('bins','var') | isempty(bins)
+        ally = [y1(:);y2(:)];
+        r1 = round(min(ally)-.05, 1);  %min(ally); %   % round(min(ally), 1); 
+        r2 = round(max(ally)+.05, 1);
+        bins = r1 : (r2-r1)/nBins : r2;
     end
 
     [nexc, e] = histcounts(y1(:), bins);
@@ -35,22 +45,28 @@ function bins = plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, sp,yy, documsu
     ye = nexc/sum(nexc);
     yi = ninh/sum(ninh);
 
-%     ye = smooth(ye);
-    %     yi = smooth(yi);
+    if doSmooth
+        ye = smooth(ye,5);
+        yi = smooth(yi,5);
+    end
     
     figure(fign)
     hold(sp,'on')
-    plot(sp, x, ye, 'color', cols{1})
-    plot(sp, x, yi, 'color', cols{2})
+    h1 = plot(sp, x, ye, 'color', cols{1});
+    h2 = plot(sp, x, yi, 'color', cols{2});
     if ~isempty(yy)
-        plot(sp, [yy yy],[0 max([ye,yi])], 'k:')
+        plot(sp, [yy yy],[0 max([ye(:);yi(:)])], 'k:')
     end
 
     [h,p] = ttest2(y1(:),y2(:));
     if isempty(tit)
         title(sp, sprintf('p=%.3f',round(p,3)))
     else
-        title(sp, sprintf('%dms; p=%.3f',tit,round(p,3)))
+        if isnumeric(tit)
+            title(sp, sprintf('%dms; p=%.3f',tit,round(p,3)))
+        else
+            title(sp, sprintf('%s; p=%.3f',tit,round(p,3)))
+        end
     end
     
     

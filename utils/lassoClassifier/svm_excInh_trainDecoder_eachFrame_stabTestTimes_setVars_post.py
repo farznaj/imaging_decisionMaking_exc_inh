@@ -16,7 +16,7 @@ saveDir_allMice = '/home/farznaj/Shares/Churchland_hpc_home/space_managed_data/f
 
 testIncorr = 1 # if 1, use the decoder trained on correct trials to test how it does on incorrect trials, i.e. on predicting labels of incorrect trials (using incorr trial neural traces)
 doTestingTrs = 1 # if 1 compute classifier performance only on testing trials; otherwise on all trials
-normWeights = 0 #1 # if 1, weights will be normalized to unity length. ### NOTE: you figured if you do np.dot(x,w) using normalized w, it will not match the output of svm (perClassError)
+normWeights = 0 # 1 if 1, weights will be normalized to unity length. ### NOTE: you figured if you do np.dot(x,w) using normalized w, it will not match the output of svm (perClassError)
 
 #savefigs = 0
 corrTrained = 1
@@ -404,6 +404,7 @@ for im in range(len(mice)):
         
     #%% Keep vars of all mice
     
+    # set vars for cross-time testing corr (or testing incorr)
     classAcc_allN_allDays_alig_allMice.append(classAcc_allN_allDays_alig)
     classAcc_inh_allDays_alig_allMice.append(classAcc_inh_allDays_alig)
     classAcc_exc_allDays_alig_allMice.append(classAcc_exc_allDays_alig)
@@ -412,7 +413,7 @@ for im in range(len(mice)):
     classAcc_inh_shfl_allDays_alig_allMice.append(classAcc_inh_shfl_allDays_alig)
     classAcc_exc_shfl_allDays_alig_allMice.append(classAcc_exc_shfl_allDays_alig)
     
-    if testIncorr:
+    if testIncorr: # set vars for testing corr
         classAccTest_data_allN_alig_allMice.append(classAccTest_data_allN_alig)
         classAccTest_shfl_allN_alig_allMice.append(classAccTest_shfl_allN_alig)
         # output: nGoodDays x nAlignedFrs x nSamps

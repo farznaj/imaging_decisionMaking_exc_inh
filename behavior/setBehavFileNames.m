@@ -41,7 +41,7 @@ if isempty(strfind(pwd, 'gamalamin')) % Farzaneh
         dataPath = '/Volumes/churchland/data';
     elseif isunix
         if isempty(strfind(pwd, 'sonas')) % Unix in the office
-            dataPath = '~/Shares/Churchland/data';
+            dataPath = '~/Shares/Churchland_nlsas_data/data'; %dataPath = '~/Shares/Churchland/data';
             altDataPath = '~/Shares/Churchland_hpc_home/space_managed_data'; % the new space-managed server (wos, to which data is migrated from grid)
         else
             dataPath = '/sonas-hs/churchland/nlsas/data/data'; % server

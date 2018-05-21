@@ -21,9 +21,9 @@ Created on Sun Mar 12 15:12:29 2017
 #%%
 mice = 'fni16', 'fni17', 'fni18', 'fni19'
 
-savefigs = 0
+savefigs = 1
 useAllNdecoder = 1 # if 1: use the decoder that was trained on all neurons; # if 0: Use the decoder that was trained only on inh or only exc.
-normWeights = 0 # if 1, weights will be normalized to unity length.
+normWeights = 1 #0# if 1, weights will be normalized to unity length.
 
 doPlots = 1 #1 # plot hists of w per mouse
 thTrained = 10#10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
@@ -78,6 +78,11 @@ else:
     
 colors = ['b','r']  #        colors = ['k','r']                   
 
+if normWeights:
+    binEvery = .01 #.001 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+else:
+    binEvery = .001
+smoothVal = 5    
 
 #%%  Define function to plot exc, inh distribution of weights, all sessions pooled on 1 subplot, and individual sessions on a different subplot.
     
@@ -90,7 +95,7 @@ def plotHistErrBarWsEI(we,wi, lab, ylab, doIndivDays=0, fig=np.nan,h1=[],h2=[]):
     #### set vars: hist and P val for all days pooled (exc vs inh)
 #        lab = 'w'
 #        ylab = 'Fract neurons (all days)'
-    binEvery = .001 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
+#    binEvery = .005 #.001 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
     
     a = np.concatenate((we)) #np.reshape(wexc,(-1,)) 
     b = np.concatenate((wi)) #np.reshape(winh,(-1,))
@@ -107,7 +112,7 @@ def plotHistErrBarWsEI(we,wi, lab, ylab, doIndivDays=0, fig=np.nan,h1=[],h2=[]):
         gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
         h1 = gs[0,0:2]
         h2 = gs[0,2:3]
-    ax1,_ = histerrbar(h1,h2,a,b,binEvery,p,lab,colors,ylab,lab1,lab2)
+    ax1,_ = histerrbar(h1,h2,a,b,binEvery,p,lab,colors,ylab,lab1,lab2,0,doSmooth=smoothVal)
     #plt.xlabel(lab)
 #        ax1.set_xlim([-.05, .05])
     yl = ax1.get_ylim()
@@ -128,8 +133,8 @@ def plotHistErrBarWsEI(we,wi, lab, ylab, doIndivDays=0, fig=np.nan,h1=[],h2=[]):
             p.append(p0)
         p = np.array(p)    
 
-        ax2,_ = errbarAllDays(a,b,p,gs,colors,lab1,lab2)
-        
+        ax2,_ = errbarAllDays(a,b,p,gs,colors,lab1,lab2, ylab)
+#        ax2,_ = errbarAllDays(a,b,p,gs,colors = ['g','k'],lab1='exc',lab2='inh',lab='ave(CA)', h1=[], h2=[])        
         makeNicePlots(ax2,1,1)
         
         
@@ -175,7 +180,9 @@ corr_hr_lr_allMice = []
 
 #%%
 for im in range(len(mice)):
-        
+    
+    mousename = mice[im] 
+    
     #%%            
     if mousename == 'fni18': #set one of the following to 1:
         allDays = 1# all 7 days will be used (last 3 days have z motion!)
@@ -230,7 +237,7 @@ for im in range(len(mice)):
         
         # from setImagingAnalysisNamesP import *
         
-        imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
+        imfilename, pnevFileName, dataPath = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
         
         postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
         moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
@@ -239,8 +246,15 @@ for im in range(len(mice)):
 
         
         #%%
-        svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained) # for chAl: the latest file is with soft norm; earlier file is 
-        svmName = svmName[0]
+#        svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained) # for chAl: the latest file is with soft norm; earlier file is 
+#        svmName = svmName[0]
+        doInhAllexcEqexc = [0,2,0]
+        useEqualTrNums = 1
+        shflTrsEachNeuron = 0
+        shflTrLabs = 0
+        
+        svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron, shflTrLabs)[0]
+        svmName_allN = svmName        
         print os.path.basename(svmName)    
         
 
@@ -269,6 +283,10 @@ for im in range(len(mice)):
             
             
             ######                        
+            Data = scio.loadmat(svmName, variable_names='w_data_allExc')
+            w_bestc_data = Data.pop('w_data_allExc')#.squeeze()
+            
+            """
             Data = scio.loadmat(svmName, variable_names=['regType','cvect','perClassErrorTest']) #,'perClassErrorTrain','perClassErrorTest','perClassErrorTest_chance','perClassErrorTest_shfl'])
             
             regType = Data.pop('regType').astype('str')
@@ -285,7 +303,7 @@ for im in range(len(mice)):
             doPlotscpath = 0;
             _, _, _, _, w_bestc_data, b_bestc_data = setClassErrAtBestc(cbestFrs, cvect, doPlotscpath, np.nan, np.nan, np.nan, np.nan, wAllC, bAllC)
             del perClassErrorTest, wAllC, bAllC    
-        
+            """
             
             if normWeights: ##%% normalize weights of each sample            
                 normw = sci.linalg.norm(w_bestc_data, axis=1);   # numSamps x numFrames #2-norm of each decoder (particular sample and frame)
@@ -306,8 +324,9 @@ for im in range(len(mice)):
 #            winh0 = w_bestc_data[:,inhRois==1,:] # numSamples x nNeurons x nFrames
 #            wexc0 = w_bestc_data[:,inhRois==0,:]
 
+
+        #%% Use the other svm file in which SVM was trained using only inh or exc.            
         else:  
-            #%% Use the other svm file in which SVM was trained using only inh or exc.
             _,_,_,_,_,_,_,_,_, winh0, wexc0, w_data_exc, _, _, _, svmName_excInh, svmName_allN = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, 0, 1, 0)
             # weights are samps x neurons x frames
 
@@ -474,8 +493,8 @@ def plotHistErrBarWsEI_allMice(we_allM, wi_allM, ne, ni, lab, colors):
     #plt.figure(figsize=(2,3))
     gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
     ax = plt.subplot(gs[1,0:2])
-    plt.errorbar(range(len(mice)), wexc_aveM, wexc_sdM, fmt='o', label='exc', color=colors[0])
-    plt.errorbar(range(len(mice)), winh_aveM, winh_sdM, fmt='o', label='inh', color=colors[1])
+    plt.errorbar(range(len(mice)), wexc_aveM, wexc_sdM, fmt='o', label='exc', color=colors[0], markerfacecolor=colors[0], markeredgecolor=colors[0], markersize=4)
+    plt.errorbar(range(len(mice)), winh_aveM, winh_sdM, fmt='o', label='inh', color=colors[1], markerfacecolor=colors[1], markeredgecolor=colors[1], markersize=4)
     
     plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1) 
     plt.xlabel('Mice', fontsize=11)
@@ -500,6 +519,8 @@ def plotHistErrBarWsEI_allMice(we_allM, wi_allM, ne, ni, lab, colors):
 
 #%% Hist of w at frame -1 --> at the end of this page you compute inha and exca, which are a general version of _all2 vars.... ie they include w values for all frames instead of just frame -1.
 
+#binEvery=.012; smoothVal=7
+
 ##### weights        
 lab = 'w'
 plotHistErrBarWsEI_allMice(wexcAve_all2_allMice, winhAve_all2_allMice, numExcEachMouse, numInhEachMouse, lab, colors)
@@ -507,6 +528,8 @@ plotHistErrBarWsEI_allMice(wexcAve_all2_allMice, winhAve_all2_allMice, numExcEac
 ##### Abs weights        
 lab = 'abs w'
 plotHistErrBarWsEI_allMice([abs(wexcAve_all2_allMice[im]) for im in range(len(mice))], [abs(winhAve_all2_allMice[im]) for im in range(len(mice))], numExcEachMouse, numInhEachMouse, lab, colors)
+
+
 
 
 #%% Plot time course of w (above we just plotted time -1) 
@@ -745,20 +768,20 @@ for im in range(len(mice)):
 #        dpmAllm.append(dpm)
                 
     #### weights            
-    av_winh = winhAveDay_aligned.flatten() # nFrames (average across sessions; each session: averaged across neurons)
-    sd_winh = winhSdDay_aligned.flatten()
+    av_winh = winhAveDay_aligned[im] #.flatten() # nFrames (average across sessions; each session: averaged across neurons)
+    sd_winh = winhSdDay_aligned[im] #.flatten()
     
-    av_wexc = wexcAveDay_aligned.flatten()
-    sd_wexc = wexcSdDay_aligned.flatten()
+    av_wexc = wexcAveDay_aligned[im] #.flatten()
+    sd_wexc = wexcSdDay_aligned[im] #.flatten()
     
     _,pcorrtrace = stats.ttest_ind(winhAve_all_allMice_eachFr_aligned_all[im].T, wexcAve_all_allMice_eachFr_aligned_all[im].T, nan_policy='omit') # p value of class accuracy being different from 50
 
     #### Abs
-    av_winh_abs = winhAbsAveDay_aligned.flatten()
-    sd_winh_abs = winhAbsSdDay_aligned.flatten()
+    av_winh_abs = winhAbsAveDay_aligned[im] #.flatten()
+    sd_winh_abs = winhAbsSdDay_aligned[im] #.flatten()
     
-    av_wexc_abs = wexcAbsAveDay_aligned.flatten()
-    sd_wexc_abs = wexcAbsSdDay_aligned.flatten()
+    av_wexc_abs = wexcAbsAveDay_aligned[im] #.flatten()
+    sd_wexc_abs = wexcAbsSdDay_aligned[im] #.flatten()
     
     _,pAbscorrtrace = stats.ttest_ind(winhAbsAve_all_allMice_eachFr_aligned_all[im].T, wexcAbsAve_all_allMice_eachFr_aligned_all[im].T, nan_policy='omit')
     
