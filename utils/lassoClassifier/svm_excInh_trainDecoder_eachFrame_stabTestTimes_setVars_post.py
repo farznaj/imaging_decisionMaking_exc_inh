@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 """
+# For testIncorr: vars are generated in svm_excInh_trainDecoder_eachFrame_testIncorrTrs_setVars.py (in this case set normWeights in below to nan)... unless you want to load the vars that are generated svm_excInh_trainDecoder_eachFrame_plots_stabTestTimes_setVars.py (by manuall projection)... in this case set normWeights below to either 1 or 0. 
+
 # vars are generated in svm_excInh_trainDecoder_eachFrame_plots_stabTestTimes_setVars.py
 # here we do the next set of postporc (aligning, replacing the diagonal with cross-validated data)
+
 
 Created on Mon Dec  4 10:53:56 2017
 
 @author: farznaj
 """
+import numpy as np
 
 #%%
 
@@ -15,10 +19,10 @@ mice = 'fni16', 'fni17', 'fni18', 'fni19'
 saveDir_allMice = '/home/farznaj/Shares/Churchland_hpc_home/space_managed_data/fni_allMice'
 
 testIncorr = 1 # if 1, use the decoder trained on correct trials to test how it does on incorrect trials, i.e. on predicting labels of incorrect trials (using incorr trial neural traces)
-doTestingTrs = 1 # if 1 compute classifier performance only on testing trials; otherwise on all trials
-normWeights = 0 # 1 if 1, weights will be normalized to unity length. ### NOTE: you figured if you do np.dot(x,w) using normalized w, it will not match the output of svm (perClassError)
+normWeights = np.nan #0 # for testIncorr: set to nan, if you loaded svm file in which incorr vars were set and saved in svm_excInh_trainDecoder_eachFrame.  1 if 1, weights will be normalized to unity length. ### NOTE: you figured if you do np.dot(x,w) using normalized w, it will not match the output of svm (perClassError)
 
 #savefigs = 0
+doTestingTrs = 1 # will be set to 0 if testIncorr=1; for the generalization analsyis (train/test at different times, it makes sense to set it to 1 to avoid affects of autocorrelatins) # if 1 compute classifier performance only on testing trials; otherwise on all trials
 corrTrained = 1
 ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 useEqualTrNums = 1
@@ -57,15 +61,17 @@ set_save_p_samps = 0 # set and save p value across samples per day (takes time t
 if testIncorr:
     doTestingTrs = 0
     
-if doTestingTrs:
+if doTestingTrs==1:
     nts = 'testingTrs_'
 else:
     nts = ''
 
-if normWeights:
+if normWeights==1:
     nw = 'wNormed_'
+elif normWeights==0:
+    nw = 'wNotNormed_'    
 else:
-    nw = 'wNotNormed_'
+    nw = ''
     
 if testIncorr:
     sn = 'svm_testDecoderOnIncorrTrs'
@@ -186,7 +192,7 @@ for im in range(len(mice)):
     
 
     #%%
-    if doTestingTrs==0:
+    if doTestingTrs==0: # it will be used when decoder trained on corr and tested on incorr
         ######################################################################################################
         ######################################################################################################
         ######################################################################################################
@@ -244,8 +250,13 @@ for im in range(len(mice)):
     
             perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, \
             w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, trsExcluded, \
-            testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, trsnow_allSamps_inh, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, trsnow_allSamps_allExc, testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc, trsnow_allSamps_exc \
-            = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0)
+            perClassErrorTest_data_inh_incorr, perClassErrorTest_shfl_inh_incorr, perClassErrorTest_data_allExc_incorr, perClassErrorTest_shfl_allExc_incorr, perClassErrorTest_data_exc_incorr, perClassErrorTest_shfl_exc_incorr, \
+            = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0, testIncorr=testIncorr)
+    
+#            perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, \
+#            w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, trsExcluded, \
+#            testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, trsnow_allSamps_inh, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, trsnow_allSamps_allExc, testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc, trsnow_allSamps_exc \
+#            = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0)
             
     #        perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN = \
     #            loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron)

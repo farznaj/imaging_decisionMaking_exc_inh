@@ -41,7 +41,7 @@ def svm_notebook_setVars9(mousename, imagingFolder, mdfFileNumber, chAl, doInhAl
     
     nRandCorrSel = 10
     
-    cbestKnown = 0 #1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
+    cbestKnown = 1 #1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
     shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # if 1 shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
     
     shflTrLabs = 0 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    

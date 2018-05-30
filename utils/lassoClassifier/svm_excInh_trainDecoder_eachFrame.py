@@ -55,12 +55,12 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     imagingFolder = '151102' #'150818' #'151102' #'151019' #'151006' #'151023' #'151023' #'151001' 
     mdfFileNumber = [1,2] #[1] #
 
-    cbestKnown = 0 #1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
+    cbestKnown = 1 #1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
     shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations in neurons FRs across trials.
 
     shflTrLabs = 0 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
     outcome2ana = 'corr' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
-    doInhAllexcEqexc = [0,0,1,-1] # [0,0,1,2]  # 
+    doInhAllexcEqexc = [1,0,0,0] # [0,0,1,2]  # 
     #    1st element: analyze inhibitory neurons (train SVM for numSamples for each value of C)
     #    2nd element: if 1: analyze all excitatory neurons (train SVM for numSamples for each value of C)   
                     # if 2: analyze all neurons (exc, inh, unsure) ... this is like code svm_eachFrame.py   
@@ -1151,7 +1151,8 @@ elif outcome2ana == 'incorr':
 else:
     print '\tall trials: %d HR; %d LR' %(numHrLr)
         
-print '\tincorrect trials: %d HR; %d LR' %((Y_svm_incorr==1).sum(), (Y_svm_incorr==0).sum())
+if decodeStimCateg==0:
+    print '\tincorrect trials: %d HR; %d LR' %((Y_svm_incorr==1).sum(), (Y_svm_incorr==0).sum())
 
 # Divide data into high-rate (modeled as 1) and low-rate (modeled as 0) trials
 hr_trs = (Y_svm==1)
@@ -1644,7 +1645,7 @@ shuffleTrs = False # set to 0 so for each iteration of numSamples, all frames ar
 # Remember each numSamples will have a different set of training and testing dataset, however for each numSamples, the same set of testing/training dataset
 # will be used for all frames and all values of c (unless shuffleTrs is 1, in which case different frames and c values will have different training/testing datasets.)
 
-def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest=np.nan,fr2an=np.nan, shflTrLabs=0, X_svm_incorr=0):
+def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest=np.nan,fr2an=np.nan, shflTrLabs=0, X_svm_incorr=0, Y_svm_incorr=0):
     # numSamples = 10; # number of iterations for finding the best c (inverse of regularization parameter)
     # if you don't want to regularize, go with a very high cbest and don't run the section below.
     # cbest = 10**6    
@@ -2727,7 +2728,7 @@ if np.all([decodeStimCateg==0, addNs_roc==0, addNs_rand==0]):   # run svm on all
             perClassErrorTrain_inh, perClassErrorTest_inh, wAllC_inh, bAllC_inh, cbestAll_inh, cbest_inh, cvect, \
             perClassErrorTestShfl_inh, perClassErrorTestChance_inh, testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh0, trsnow_allSamps, \
             perClassErrorTest_incorr_inh, perClassErrorTest_shfl_incorr_inh, perClassErrorTest_chance_incorr_inh, Ytest_hat_allSampsFrs_incorr_inh \
-            = setbesc_frs(Xinh,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_inh,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=Xinh_incorr) # outputs have size the number of shuffles in setbestc (shuffles per c value)
+            = setbesc_frs(Xinh,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_inh,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=Xinh_incorr, Y_svm_incorr=Y_svm_incorr) # outputs have size the number of shuffles in setbestc (shuffles per c value)
         else:
             perClassErrorTrain_inh, perClassErrorTest_inh, wAllC_inh, bAllC_inh, cbestAll_inh, cbest_inh, cvect, perClassErrorTestShfl_inh, perClassErrorTestChance_inh, testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh0, trsnow_allSamps = setbesc_frs(Xinh,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_inh,fr2an=np.nan, shflTrLabs=shflTrLabs) # outputs have size the number of shuffles in setbestc (shuffles per c value)
         
@@ -2781,7 +2782,7 @@ if np.all([decodeStimCateg==0, addNs_roc==0, addNs_rand==0]):   # run svm on all
             perClassErrorTrain_allExc, perClassErrorTest_allExc, wAllC_allExc, bAllC_allExc, cbestAll_allExc, cbest_allExc, cvect, \
             perClassErrorTestShfl_allExc, perClassErrorTestChance_allExc, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc0, trsnow_allSamps, \
             perClassErrorTest_incorr_allExc, perClassErrorTest_shfl_incorr_allExc, perClassErrorTest_chance_incorr_allExc, Ytest_hat_allSampsFrs_incorr_allExc \
-            = setbesc_frs(XallExc,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_allExc,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=XallExc_incorr) # outputs have size the number of shuffles in setbestc (shuffles per c value)
+            = setbesc_frs(XallExc,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_allExc,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=XallExc_incorr, Y_svm_incorr=Y_svm_incorr) # outputs have size the number of shuffles in setbestc (shuffles per c value)
         else:
             perClassErrorTrain_allExc, perClassErrorTest_allExc, wAllC_allExc, bAllC_allExc, cbestAll_allExc, cbest_allExc, cvect, perClassErrorTestShfl_allExc, perClassErrorTestChance_allExc, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc0, trsnow_allSamps = setbesc_frs(XallExc,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_allExc,fr2an=np.nan, shflTrLabs=shflTrLabs) # outputs have size the number of shuffles in setbestc (shuffles per c value)
         
@@ -2854,7 +2855,7 @@ if np.all([decodeStimCateg==0, addNs_roc==0, addNs_rand==0]):   # run svm on all
                 perClassErrorTrain_exc, perClassErrorTest_exc, wAllC_exc, bAllC_exc, cbestAll_exc0, cbest_exc0, cvect, \
                 perClassErrorTestShfl_exc, perClassErrorTestChance_exc, testTrInds_allSamps_exc00, Ytest_allSamps_exc00, Ytest_hat_allSampsFrs_exc00, trsnow_allSamps00, \
                 perClassErrorTest_incorr_exc, perClassErrorTest_shfl_incorr_exc, perClassErrorTest_chance_incorr_exc, Ytest_hat_allSampsFrs_incorr_exc \
-                = setbesc_frs(Xnow,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_now,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=Xnow_incorr) # outputs have size the number of shuffles in setbestc (shuffles per c value)
+                = setbesc_frs(Xnow,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_now,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=Xnow_incorr, Y_svm_incorr=Y_svm_incorr) # outputs have size the number of shuffles in setbestc (shuffles per c value)
             else:
                 perClassErrorTrain_exc, perClassErrorTest_exc, wAllC_exc, bAllC_exc, cbestAll_exc0, cbest_exc0, cvect, perClassErrorTestShfl_exc, perClassErrorTestChance_exc, testTrInds_allSamps_exc00, Ytest_allSamps_exc00, Ytest_hat_allSampsFrs_exc00, trsnow_allSamps00 = setbesc_frs(Xnow,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_now,fr2an=np.nan, shflTrLabs=shflTrLabs) # outputs have size the number of shuffles in setbestc (shuffles per c value)
         

@@ -16,6 +16,8 @@ thTrained = 10 # if days have fewer than this number of hr and lr trials, they w
 savefigs = 0
 doPlots = 0 # plot for each mouse hists of FR at timebin -1 
 
+corrTrained = 1
+
 if normX:
     nmd = 'norm2max_'
 else:
@@ -130,7 +132,7 @@ for im in range(len(mice)):
         
         # from setImagingAnalysisNamesP import *
         
-        imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
+        imfilename, pnevFileName, dataPath = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
         
         postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
         moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
@@ -1054,6 +1056,8 @@ def plthistfr(a,b,dnow0,dpm0):
     #ax1.set_xlim([-.0005,.015])            
     plt.subplots_adjust(wspace=1.5)
     makeNicePlots(ax1,1,0)
+    
+#    ax1.set_xscale('log')
     
     #% Save the figure           
     if savefigs:

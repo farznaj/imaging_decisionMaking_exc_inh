@@ -21,6 +21,8 @@ Created on Sun Mar 12 15:12:29 2017
 #%%
 mice = 'fni16', 'fni17', 'fni18', 'fni19'
 
+loadSVMfile_WithTestIncorr = 1 # if 1, the newest svm file which also includes testing on incorr trials will be loaded.
+
 savefigs = 1
 useAllNdecoder = 1 # if 1: use the decoder that was trained on all neurons; # if 0: Use the decoder that was trained only on inh or only exc.
 normWeights = 1 #0# if 1, weights will be normalized to unity length.
@@ -248,7 +250,10 @@ for im in range(len(mice)):
         #%%
 #        svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained) # for chAl: the latest file is with soft norm; earlier file is 
 #        svmName = svmName[0]
-        doInhAllexcEqexc = [0,2,0]
+        if loadSVMfile_WithTestIncorr:
+            doInhAllexcEqexc = [0,2,0,-1]
+        else:
+            doInhAllexcEqexc = [0,2,0]
         useEqualTrNums = 1
         shflTrsEachNeuron = 0
         shflTrLabs = 0
@@ -327,7 +332,8 @@ for im in range(len(mice)):
 
         #%% Use the other svm file in which SVM was trained using only inh or exc.            
         else:  
-            _,_,_,_,_,_,_,_,_, winh0, wexc0, w_data_exc, _, _, _, svmName_excInh, svmName_allN = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, 0, 1, 0)
+            _,_,_,_,_,_,_,_,_, winh0, wexc0, w_data_exc, _, _, _, svmName_excInh, svmName_allN ,\
+            = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, 0, 1, 0)
             # weights are samps x neurons x frames
 
             if normWeights: ##%% normalize weights of each sample        

@@ -752,6 +752,11 @@ stimAftGoToneParams = {rmv_timeGoTone_if_stimOffset_aft_goTone, rmv_time1stSide_
     time1stIncorrectTry, timeReward, timeCommitIncorrResp, time1stCorrectResponse, timeStop, centerLicks, leftLicks, rightLicks, timeStimOnsetAll, timeSingleStimOffset] = ...
     setEventTimesRelBcontrolScopeTTL(alldata, trs2rmv, scopeTTLOrigTime, stimAftGoToneParams, outcomes);
 
+a = matfile(postName);
+if ~isprop(a, 'timeSingleStimOffset')
+    save(postName, '-append', 'timeSingleStimOffset')
+end
+
 % below are problematic trials in which go tone happened earlier than
 % stimulus offset... you need to take care of them for your analyses!
 % trsGoToneEarlierThanStimOffset = find(timeCommitCL_CR_Gotone < timeStimOffset)';
@@ -1089,7 +1094,7 @@ for itrac = 1:3
 
     fprintf('Making plots for the %s traces...\n', traceType(2:end-1))
     
-    set_aligned_traces
+    set_aligned_traces % here time vars (eg timeStimOnset, etc) get saved.
     
     if itrac~=1
         close(fannoy) 

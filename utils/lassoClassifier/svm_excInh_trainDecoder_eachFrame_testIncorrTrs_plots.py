@@ -11,6 +11,7 @@ classAccTest_data_allN_... --> testing correct
 Created on Mon Apr 30 22:33:08 2018
 @author: farznaj
 """
+import numpy as np
 
 #%%
 
@@ -20,11 +21,11 @@ saveDir_allMice = '/home/farznaj/Shares/Churchland_hpc_home/space_managed_data/f
           
 startDayFni19 = 16 #1 # this will only affect the plot of aveSe across days # what day is the start day for mouse fni19: amazing changes during learning. I believe he was more posterior. In early days he represents stimulus category, in later days he represents choice. So we go with his choice days for this summary.
 
-savefigs = 0
+savefigs = 1
 set_save_p_samps = 0 # set it to 0 if p vals are already saved for the stab mat file under study # set and save p value across samples per day (takes time to be done !!)
 
 doTestingTrs = 0 # if 1 compute classifier performance only on testing trials; otherwise on all trials
-normWeights = 0 #1 # if 1, weights will be normalized to unity length. ### NOTE: you figured if you do np.dot(x,w) using normalized w, it will not match the output of svm (perClassError)
+normWeights = np.nan #0 #1 # if 1, weights will be normalized to unity length. ### NOTE: you figured if you do np.dot(x,w) using normalized w, it will not match the output of svm (perClassError)
 
 corrTrained = 1
 ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
@@ -74,10 +75,12 @@ if doTestingTrs:
 else:
     nts = ''
 
-if normWeights:
+if normWeights==1:
     nw = 'wNormed_'
-else:
+elif normWeights==0:
     nw = 'wNotNormed_'    
+else:
+    nw = ''
    
 from datetime import datetime
 nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
