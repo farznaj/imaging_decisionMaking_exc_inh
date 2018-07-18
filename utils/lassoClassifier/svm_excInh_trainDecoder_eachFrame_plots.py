@@ -16,31 +16,30 @@ Created on Sun Mar 12 15:12:29 2017
     
 #%% Change the following vars:
 
-mousename = 'fni19'
+mousename = 'fni16'
 
-testIncorr = 0 # load svm file that includes testing corr as well as testing incorr trials.
-decodeStimCateg = 1
-noExtraStimDayAnalysis = 1 # if 1, exclude days with extraStim from analysis
+decodeStimCateg = 0
+noExtraStimDayAnalysis = 0 # if 1, exclude days with extraStim from analysis; if 0, include all days
 use_both_remCorr_testing = [1,0,0] # if decodeStimCate = 1, decide which one (testing, remCorr, or Both) you want to use for the rest of this code
 shflTrsEachNeuron = 0 # 1st set to 1, then to 0 to compare how decoder changes after removing noise corrs. # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
 addNs_roc = 0 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
 h2l = 1 # if 1, load svm file in which neurons were added from high to low AUC. If 0: low to high AUC.
 do_excInhHalf = 0 # 0: Load vars for inh,exc,allExc, 1: Load exc,inh SVM vars for excInhHalf (ie when the population consists of half exc and half inh) and allExc2inhSize (ie when populatin consists of allExc but same size as 2*inh size)
 loadYtest = 0 # get svm performance for different trial strength # to load the svm files that include testTrInds_allSamps, etc vars (ie in addition to percClassError, they include the Y_hat for each trial)
-
-
+testIncorr = 1 # 1 #set it to 1 to load the latest svm file even if you dont want to analyze incorr trials. # load svm file that includes testing corr as well as testing incorr trials.
 
 corrTrained = 1 # 1 # svm was trained on what trial outcomes: if corr, set to 1; if all outcomes, set to 0)
-savefigs = 1
 doAllN = 1 # matters only when do_excInhHalf =0; plot allN, instead of allExc
+savefigs = 0
 
-doIncorr = 0
-
+if shflTrsEachNeuron:
+    testIncorr = 0 # it was ran in the past, so there is no testIncorr in the file name    
+    doAllN = 0 # matters only when do_excInhHalf =0; plot allN, instead of allExc
 
 thTrained = 10  # number of trials of each class used for svm training, min acceptable value to include a day in analysis
 loadWeights = 0
 useEqualTrNums = 1
-
+doIncorr = 0
 import numpy as np
 allDays = np.nan
 noZmotionDays = np.nan
@@ -135,6 +134,8 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 '''
 
 days2an = np.arange(0, len(days)) # range(len(days)) # 
+if np.logical_and(shflTrsEachNeuron==1, corrTrained==0):
+    days2an = np.delete(days2an, 33) # fni17 151013 doesnt have the mat file: excInh_SVMtrained_eachFrame_shflTrsPerN_eqExc_currChoice_chAl_ds3_eqTrs_171016-*
 
 
 numInh = np.full(len(days2an), np.nan)
@@ -194,8 +195,8 @@ fractTrs_50msExtraStim = np.full(len(days2an), np.nan)
 
 #%% Loop over days    
 
-# iday = 6
 cntd = -1
+#iday = 0
 for iday in days2an: # range(len(days)): # np.arange(3, len(days)): # 
         
     #%%            
@@ -694,9 +695,9 @@ stabBehName = stabBehName[0]
 
 # load beh vars    
 Data = scio.loadmat(stabBehName)
-behCorr_all = Data.pop('behCorr_all').flatten() # the following comment is for the above mat file: I didnt save _all vars... so what is saved is only for one day! ... have to reset these 3 vars again here!
-behCorrHR_all = Data.pop('behCorrHR_all').flatten()
-behCorrLR_all = Data.pop('behCorrLR_all').flatten()
+behCorr_all = Data.pop('behCorr_all').flatten()[days2an] # the following comment is for the above mat file: I didnt save _all vars... so what is saved is only for one day! ... have to reset these 3 vars again here!
+behCorrHR_all = Data.pop('behCorrHR_all').flatten()[days2an]
+behCorrLR_all = Data.pop('behCorrLR_all').flatten()[days2an]
 #    classAccurTMS_inh = Data.pop('classAccurTMS_inh') # the following comment is for the above mat file: there was also problem in setting these vars, so you need to reset these 3 vars here
 #    classAccurTMS_exc = Data.pop('classAccurTMS_exc')
 #    classAccurTMS_allExc = Data.pop('classAccurTMS_allExc')
@@ -719,8 +720,7 @@ if np.logical_and(decodeStimCateg==1, mousename=='fni18'): # first day ('151209_
 ##################################################################################################
 ##################################################################################################
 
-#no
-
+no
 #%% Go to line 1900 for addNs_roc plots. 
 
 if addNs_roc==0:    
@@ -900,6 +900,18 @@ if addNs_roc==0:
             ttest_pval_exc_aligned = ttest_pval_exc_aligned0
             
             
+    #%% Save aligned vars (CVsample-averaged CA vars for each day)
+    """
+    if decodeStimCateg:
+        nnow = 'decodeStimCateg_'
+    else:
+        nnow = 'decodeChoice_'
+    finamen = os.path.join(fname, 'svm_CA_' + nnow + nowStr+'.mat')
+        
+    scio.savemat(finamen, {'av_test_data_allExc_aligned':av_test_data_allExc_aligned, 'av_test_data_exc_aligned':av_test_data_exc_aligned, 'av_test_data_inh_aligned':av_test_data_inh_aligned, 'nPreMin':nPreMin, 'days2an_heatmap':days2an_heatmap, 'behCorr_all':behCorr_all})
+    """
+        
+#    no
         
     #%% Define function to find the onset of emergence of choice signal
      
@@ -932,6 +944,7 @@ if addNs_roc==0:
     #%% For each day find the onset of emergence of choice signal. Then see how the onset of choice signal varies with training days. Also do a scatter plot of the onset time vs. behavioral performance.
     
     sigDur = 500 # ms # we need 500ms continuous significancy for CA of data vs shuffle, to count it as choice signal emergence.
+    # choice signal onset will be set to nan if the above criteria is not met (ie there is not 500ms continuous sig CA data vs shfl)
     
     te = ttest_pval_exc_aligned[rng.permutation(numExcSamples)[0]].T  < alph  # a random exc samp    #    te = np.mean(ttest_pval_exc_aligned, axis=0).T[days2an_heatmap]  < alph  # ave exc samps       
     topall = ttest_pval_allExc_aligned.T < alph , te , ttest_pval_inh_aligned.T < alph
@@ -1055,7 +1068,8 @@ if addNs_roc==0:
         _,pcorrtrace = stats.ttest_ind(av_test_data_allExc_aligned.transpose(), av_test_data_inh_aligned.transpose(), nan_policy= 'omit') # p value of class accuracy being different from 50            
             
 
-
+    
+    no
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PLOTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1239,7 +1253,9 @@ if addNs_roc==0:
     ########################## Plots : svm performance vs behavioral performance ############################
     #########################################################################################################
     
-    perc_thb = [10,90] #[20,80] # perc_thb = [15,85] # percentiles of behavioral performance for determining low and high performance.
+#    perc_thb = [10,90] #[20,80] #  # percentiles of behavioral performance for determining low and high performance.
+#    perc_thb = [15,85]
+    perc_thb = [20,80]
     
     
     #%% Plot CA vs. day, also compare CA for days with low vs high behavioral performance   
@@ -1316,9 +1332,9 @@ if addNs_roc==0:
         d = os.path.join(svmdir+dnow) #,mousename)       
     #            daysnew = (np.array(days))[dayinds]
         if chAl==1:
-            dd = 'chAl_' + corrn + 'classAccur_vs_days_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+            dd = 'chAl_' + corrn + 'classAccur_vs_days_loHiBeh_'+'perc'+str(perc_thb)+'_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
         else:
-            dd = 'stAl_' + corrn + 'classAccur_vs_days_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+            dd = 'stAl_' + corrn + 'classAccur_vs_days_loHiBeh_'+'perc'+str(perc_thb)+'_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
         if not os.path.exists(d):
             print 'creating folder'
             os.makedirs(d)            
@@ -1659,7 +1675,7 @@ if addNs_roc==0:
     
     plt.figure()
     
-    for iday in range(len(days)):    # perhaps only plot days2an_heatmap (not all days!)
+    for iday in range(len(days2an)):    # perhaps only plot days2an_heatmap (not all days!)
     
         if mn_corr[iday] >= thTrained:    
             totLen = len(av_test_data_inh[iday])

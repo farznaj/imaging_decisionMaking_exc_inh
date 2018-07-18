@@ -641,6 +641,8 @@ end
 clear spikes activity dFOF
 
 
+
+
 %% Plot mscan lag (mscan lag should be ok bc you control for it when you compute all data.frameTimes? 
 % badAlign is different: if the end of sampleOff does not align with the beginning of codeTime, something is wrong, so badAlign must be excluded.
 
@@ -1018,8 +1020,8 @@ if plot_ave_noTrGroup
     respSide2ana = 'all'; % 'all'; 'HR'; 'LR';    
   
     
-    %%%%%% plot average imaging traces aligned on trial events
-    cprintf('blue', 'Plot average imaging traces aligned on trial events\n')
+    %%%%%% plot average imaging traces and wheel revolution aligned on trial events
+    cprintf('blue', 'Plot average imaging traces and wheel revolution aligned on trial events\n')
     evT = {'1', 'timeInitTone', 'timeStimOnset', 'timeStimOffset', 'timeCommitCL_CR_Gotone',...
         'time1stSideTry', 'time1stCorrectTry', 'time1stIncorrectTry',...
         'timeReward', 'timeCommitIncorrResp', 'timeStop'};
@@ -1028,6 +1030,8 @@ if plot_ave_noTrGroup
     if savefigs
         savefig(fullfile(pd, 'figs','caTraces_trEventAl'))    
     end
+    
+    
     
     %%%%%% plot average lick traces aligned on trial events.
     cprintf('blue', 'Plot average lick traces aligned on trial events.\n')

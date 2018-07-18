@@ -121,6 +121,8 @@ stimCoded_HRSpecific ./ stimCoded_LRSpecific
 %%%%%%%%%%%%%%%%% Plot %%%%%%%%%%%%%%%%%        
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Example in Supp Fig 2C: im=1; iday=45;
+
 %%%%%%%%%%%% Plots of each mouse: Scatter plot of AUC_corr vs AUC_incorr for individual neurons; use jet colormap for days (early to late days go from blue to red) %%%%%%%%%%%%
 
 for im = 1:length(mice)  
@@ -135,6 +137,7 @@ for im = 1:length(mice)
             %%%%%% exc %%%%%% 
             x = choicePref_exc_al_allMice_incorr{im}{iday}(nPreMin_incorr,:); % AUC of exc neurons at time bin -1 computed on incorrect trials
             y = choicePref_exc_al_allMice_corr{im}{iday}(nPreMin_corr,:);
+%             [r,p] = corrcoef(x,y); disp([r(2), p(2)])
             % plot
             subplot(221); hold on;
             plot(x, y, '.', 'color', cmp(iday,:), 'markersize', 5)            
@@ -142,6 +145,7 @@ for im = 1:length(mice)
             %%%%%% inh %%%%%%
             x = choicePref_inh_al_allMice_incorr{im}{iday}(nPreMin_incorr,:);
             y = choicePref_inh_al_allMice_corr{im}{iday}(nPreMin_corr,:);            
+%             [r,p] = corrcoef(x,y); disp([r(2), p(2)])
             % plot
             subplot(223); hold on;
             plot(x, y, '.', 'color', cmp(iday,:), 'markersize', 5)        

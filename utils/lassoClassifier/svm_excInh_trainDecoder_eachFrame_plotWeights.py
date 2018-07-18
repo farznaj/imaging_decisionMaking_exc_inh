@@ -23,7 +23,7 @@ mice = 'fni16', 'fni17', 'fni18', 'fni19'
 
 loadSVMfile_WithTestIncorr = 1 # if 1, the newest svm file which also includes testing on incorr trials will be loaded.
 
-savefigs = 1
+savefigs = 0
 useAllNdecoder = 1 # if 1: use the decoder that was trained on all neurons; # if 0: Use the decoder that was trained only on inh or only exc.
 normWeights = 1 #0# if 1, weights will be normalized to unity length.
 
@@ -452,7 +452,7 @@ for im in range(len(mice)):
 
 
 
-
+no
 #%%        
 ##############################################################################################################################################################
 ###############    PLOTS OF ALL MICE   ############################################################################################################################
@@ -489,7 +489,14 @@ def plotHistErrBarWsEI_allMice(we_allM, wi_allM, ne, ni, lab, colors):
     ax1.set_title('num exc = %d; inh = %d' %(sum(ne), sum(ni)))
     
     
-    ########## individual mouse
+    ########## individual mouse ###########
+    ee = np.array([np.concatenate((we_allM[im])) for im in range(len(mice))])
+    ii = np.array([np.concatenate((wi_allM[im])) for im in range(len(mice))])
+    
+    p_w_ei = np.full((len(mice)), np.nan)
+    for im in range(len(mice)):
+        _, p_w_ei[im] = stats.ttest_ind(ee[im], ii[im])
+        
     wexc_aveM = np.array([np.mean(np.concatenate((we_allM[im]))) for im in range(len(mice))])        
     winh_aveM = np.array([np.mean(np.concatenate((wi_allM[im]))) for im in range(len(mice))])
     
@@ -501,11 +508,17 @@ def plotHistErrBarWsEI_allMice(we_allM, wi_allM, ne, ni, lab, colors):
     ax = plt.subplot(gs[1,0:2])
     plt.errorbar(range(len(mice)), wexc_aveM, wexc_sdM, fmt='o', label='exc', color=colors[0], markerfacecolor=colors[0], markeredgecolor=colors[0], markersize=4)
     plt.errorbar(range(len(mice)), winh_aveM, winh_sdM, fmt='o', label='inh', color=colors[1], markerfacecolor=colors[1], markeredgecolor=colors[1], markersize=4)
+    # mark sig mice
+    py = np.full(len(mice), np.nan)
+    yl = ax.get_ylim()
+    py[p_w_ei <= .05] = yl[1]                     
+    plt.plot(range(len(mice)), py, marker='*', markerfacecolor='r', markeredgecolor='r')
     
     plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1) 
     plt.xlabel('Mice', fontsize=11)
     plt.ylabel('Classifier weights', fontsize=11)
     plt.xlim([-.2,len(mice)-1+.2])
+    plt.ylim([yl[0], yl[1]+np.diff(yl)/10.])
     plt.xticks(range(len(mice)),mice)
     ax = plt.gca()
     makeNicePlots(ax,0,1)
@@ -521,19 +534,26 @@ def plotHistErrBarWsEI_allMice(we_allM, wi_allM, ne, ni, lab, colors):
         fign = os.path.join(d, suffn[0:5]+cha+'dist_'+dp+'_'+lab+'_excVSinh_'+dpp+'.'+fmt[0])
         plt.savefig(fign, bbox_inches='tight')
         
+      
+    return p_w_ei
+
         
 
 #%% Hist of w at frame -1 --> at the end of this page you compute inha and exca, which are a general version of _all2 vars.... ie they include w values for all frames instead of just frame -1.
-
+# All mice plot
+        
 #binEvery=.012; smoothVal=7
 
 ##### weights        
 lab = 'w'
 plotHistErrBarWsEI_allMice(wexcAve_all2_allMice, winhAve_all2_allMice, numExcEachMouse, numInhEachMouse, lab, colors)
 
+
 ##### Abs weights        
 lab = 'abs w'
-plotHistErrBarWsEI_allMice([abs(wexcAve_all2_allMice[im]) for im in range(len(mice))], [abs(winhAve_all2_allMice[im]) for im in range(len(mice))], numExcEachMouse, numInhEachMouse, lab, colors)
+we_allM = [abs(wexcAve_all2_allMice[im]) for im in range(len(mice))]
+wi_allM = [abs(winhAve_all2_allMice[im]) for im in range(len(mice))]
+p_w_ei = plotHistErrBarWsEI_allMice(we_allM, wi_allM, numExcEachMouse, numInhEachMouse, lab, colors)
 
 
 

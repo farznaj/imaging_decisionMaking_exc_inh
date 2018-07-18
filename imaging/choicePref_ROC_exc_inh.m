@@ -98,10 +98,13 @@ for im = 1:length(mice)
     else
         choicePref_all_alld_exc = cell(1, length(days));
         choicePref_all_alld_inh = cell(1, length(days));
+        choicePref_all_alld_allN = cell(1, length(days));
         choicePref_all_alld_exc_shfl = cell(1, length(days));
         choicePref_all_alld_inh_shfl = cell(1, length(days));
+        choicePref_all_alld_allN_shfl = cell(1, length(days));
         choicePref_all_alld_exc_chance = cell(1, length(days));
         choicePref_all_alld_inh_chance = cell(1, length(days));
+        choicePref_all_alld_allN_chance = cell(1, length(days));
     end
 
     corr_ipsi_contra = nan(length(days),2); % number of correct ipsi (left) and contra (right) trials.
@@ -357,17 +360,23 @@ for im = 1:length(mice)
 
             %% Now loop through exc, inh neurons to do ROC analysis
 
-            for nt = 0:1 % neuron type (0:exc ; 1:inh)    
+            for nt = 0:2 % neuron type (0:exc ; 1:inh)    
 
                 if nt==0
                     disp('Analyzing excitatory neurons...')
                 elseif nt==1
                     disp('Analyzing inhibitory neurons...')
+                elseif nt==2
+                    disp('Analyzing all neurons...')
                 end        
 
                 %%% Set the neuron traces
-                X_svm_now = X_svm(:,inhibitRois==nt,:);
-
+                if nt==2
+                    X_svm_now = X_svm;
+                else
+                    X_svm_now = X_svm(:,inhibitRois==nt,:);
+                end
+                
 
                 %%  %%%%%%%%%%%%%%% Compute choicePref for each frame % for both actual and shuffled trial labels.
                 % choicePref_all: frames x units. choicePref at each frame for each neuron
@@ -392,6 +401,10 @@ for im = 1:length(mice)
                     choicePref_all_alld_inh{iday} = choicePref_all; % frames x neurons
                     choicePref_all_alld_inh_shfl{iday} = choicePref_all_shfl; % frames x neurons x samps
                     choicePref_all_alld_inh_chance{iday} = choicePref_all_chance;
+                elseif nt==2
+                    choicePref_all_alld_allN{iday} = choicePref_all; % frames x neurons
+                    choicePref_all_alld_allN_shfl{iday} = choicePref_all_shfl; % frames x neurons x samps
+                    choicePref_all_alld_allN_chance{iday} = choicePref_all_chance;                    
                 end        
             end    
         end
@@ -431,7 +444,8 @@ for im = 1:length(mice)
             save(fullfile(d,namv), 'X_svm_all_alld_exc', 'X_svm_all_alld_inh', 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'ipsiTrs_allDays', 'contraTrs_allDays')
         else
             disp('saving roc vars for exc and inh neurons....')            
-            save(fullfile(d,namv), 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'choicePref_all_alld_exc', 'choicePref_all_alld_inh', 'choicePref_all_alld_exc_shfl', 'choicePref_all_alld_inh_shfl', 'choicePref_all_alld_exc_chance', 'choicePref_all_alld_inh_chance')        
+%             save(fullfile(d,namv), 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'choicePref_all_alld_exc', 'choicePref_all_alld_inh', 'choicePref_all_alld_exc_shfl', 'choicePref_all_alld_inh_shfl', 'choicePref_all_alld_exc_chance', 'choicePref_all_alld_inh_chance')        
+            save(fullfile(d,namv), 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'choicePref_all_alld_exc', 'choicePref_all_alld_inh', 'choicePref_all_alld_exc_shfl', 'choicePref_all_alld_inh_shfl', 'choicePref_all_alld_exc_chance', 'choicePref_all_alld_inh_chance', 'choicePref_all_alld_allN', 'choicePref_all_alld_allN_shfl', 'choicePref_all_alld_allN_chance')
         end
     end
     

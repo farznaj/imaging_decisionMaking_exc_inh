@@ -394,12 +394,12 @@ end
 
 % set average and se across days
 exc_fractSigIpsiTuned_eachDay_avDays = cellfun(@nanmean, exc_fractSigIpsiTuned_eachDay);
-exc_fractSigContraTuned_eachDay_avDays = cellfun(@nanmean, exc_fractSigContraTuned_eachDay);
+exc_fractSigContraTuned_eachDay_avDays = cellfun(@nanmean, exc_fractSigContraTuned_eachDay); % this is 1 - exc_fractSigIpsiTuned_eachDay_avDays
 exc_fractSigIpsiTuned_eachDay_seDays = cellfun(@nanstd, exc_fractSigIpsiTuned_eachDay) ./ sqrt(numDaysGood);
 exc_fractSigContraTuned_eachDay_seDays = cellfun(@nanstd, exc_fractSigContraTuned_eachDay) ./ sqrt(numDaysGood);
 
 inh_fractSigIpsiTuned_eachDay_avDays = cellfun(@nanmean, inh_fractSigIpsiTuned_eachDay);
-inh_fractSigContraTuned_eachDay_avDays = cellfun(@nanmean, inh_fractSigContraTuned_eachDay);
+inh_fractSigContraTuned_eachDay_avDays = cellfun(@nanmean, inh_fractSigContraTuned_eachDay); % this is 1 - inh_fractSigIpsiTuned_eachDay_avDays
 inh_fractSigIpsiTuned_eachDay_seDays = cellfun(@nanstd, inh_fractSigIpsiTuned_eachDay) ./ sqrt(numDaysGood);
 inh_fractSigContraTuned_eachDay_seDays = cellfun(@nanstd, inh_fractSigContraTuned_eachDay) ./ sqrt(numDaysGood);
 
@@ -644,5 +644,400 @@ for im = 1:length(mice)
     fh = figure('name', mice{im});
     [fh,bins] = plotHist(y1,y2,xlab,ylab,leg, cols, alpha, fh, nBins); %, doSmooth, lineStyles, sp, bins);
 end
+
+
+
+
+
+
+%% Learing figure: All mice: Plot fraction of choice selective neurons per day
+
+figure; 
+for im = 1:length(mice)
+    e = exc_fractSigTuned_eachDay{im};
+    e(isnan(e)) = [];
+    
+    i = inh_fractSigTuned_eachDay{im};
+    i(isnan(i)) = [];
+    
+    subplot(2,2,im); hold on
+    plot(e, 'b')
+    plot(i, 'r')
+    xlim([1, length(e)])
+    
+    set(gca,'tickdir','out', 'box','off')
+    title(mouse)
+    xlabel('Days')
+    if im==1
+        ylabel('Fraction choice selective neurons')
+    end
+end
+
+if savefigs
+    savefig(gcf, fullfile(dirn00, [namc,'_','ROC_curr_chAl_excInh_trainindDays_fractSigTunedOfAllN_', nowStr,'.fig']))
+    print(gcf, '-dpdf', fullfile(dirn00, [namc,'_','ROC_curr_chAl_excInh_trainingDays_heatmaps_aveNeurs_', nowStr]))
+end
+    
+
+%% Learning figure: All mice: compare fraction of choice selective neurons for low vs high behavioral performance days
+
+perc_thb = [20,80]; %[10,90]; % # perc_thb = [15,85] # percentiles of behavioral performance for determining low and high performance.
+
+x = 1:3;
+gp = .2;
+marg = .2;
+
+figure('name', 'All mice', 'position', [34   661   788   280]);
+
+for im = 1:length(mice)
+    mouse = mice{im};    
+
+    mn_corr = mnTrNum_allMice{im};
+    mn_corr0 = mn_corr; % will be used for the heatmaps of CA for all days; We need to exclude 151023 from fni16, this day had issues! ...  in the mat file of stabTestTrainTimes, its class accur is very high ... and in the mat file of excInh_trainDecoder_eachFrame it is very low ...ANYWAY I ended up removing it from the heatmap of CA for all days!!! but it is included in other analyses!!
+%         if strcmp(mouse, 'fni16')
+%             tr = find(cellfun(@isempty, strfind(days_allMice{im}, '151023_1'))==0);
+%             mn_corr0(tr) = thMinTrs - 1; % # see it will be excluded from analysis!    
+%         end
+    days2an_heatmap = (mn_corr0 >= thMinTrs);
+
+    %%%%%%%%% set svm_stab mat file name that contains behavioral and class accuracy vars
+    [~,~,dirn] = setImagingAnalysisNames(mouse, 'analysis', []);    % dirn = fullfile(dirn0fr, mouse);
+    finame = fullfile(dirn, 'svm_stabilityBehCA_*.mat');
+    stabBehName = dir(finame);
+    [~,i] = sort([stabBehName.datenum], 'descend');
+    stabBehName = fullfile(dirn, stabBehName(i).name)
+
+    % load beh vars    
+    load(stabBehName, 'behCorr_all')
+
+    %%%%%%%% Compare change in CA (after removing noise corr) for days with low vs high behavioral performance ##################
+    a = behCorr_all(days2an_heatmap);    
+    thb = prctile(a, perc_thb);
+
+    loBehCorrDays = (a <= thb(1));
+    hiBehCorrDays = (a >= thb(2));
+    fprintf('%d, %d, num days with low and high beh performance\n', sum(loBehCorrDays), sum(hiBehCorrDays))
+
+    
+    %%%%%%%%%%%%%%%%%%%
+    aa = exc_fractSigTuned_eachDay{im}(days2an_heatmap);
+    bb = inh_fractSigTuned_eachDay{im}(days2an_heatmap);
+    cc = allN_fractSigTuned_eachDay{im}(days2an_heatmap);
+
+    % set corrs for low and high behavioral performance days
+    a = aa(loBehCorrDays); 
+    b = bb(loBehCorrDays); 
+    c = cc(loBehCorrDays); 
+    ah = aa(hiBehCorrDays); % EE
+    bh = bb(hiBehCorrDays); % II
+    ch = cc(hiBehCorrDays); % II
+
+    % set se of corrs across low and high beh perform days
+    as0 = nanstd(a) / sqrt(sum(~isnan(a)));
+    bs0 = nanstd(b) / sqrt(sum(~isnan(b)));
+    cs0 = nanstd(c) / sqrt(sum(~isnan(c)));
+    ahs = nanstd(ah)/ sqrt(sum(~isnan(ah)));
+    bhs = nanstd(bh)/ sqrt(sum(~isnan(bh)));
+    chs = nanstd(ch)/ sqrt(sum(~isnan(ch)));
+
+%         figure; %('name', 'All mice', 'position', [14   636   661   290]); 
+%         set(gca, 'position', [0.2919    0.1908    0.5229    0.7095])
+
+%     disp([ttest(a, ah), ttest(b, bh)])
+    
+    
+    %%%%%%%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%%%%%%%%%% 
+    %%%%%%%%%%%%%%%%%%%%% PLOT %%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%%%%%%%%%%        
+    subplot(1,length(mice),im); 
+%         subplot(248)
+    hold on
+
+    % E
+    h11 = errorbar(x(1), nanmean(ah), ahs, 'b.', 'linestyle', 'none', 'markersize', 10);
+    h12 = errorbar(x(1)+gp, nanmean(a), as0, 'color', rgb('lightblue'), 'marker','.', 'linestyle', 'none', 'markersize', 10);
+    % mark sig (low vs high beh)
+%     yl = get(gca, 'ylim');    
+    yl = [min(nanmean(ah)-ahs, nanmean(bh)-bhs) ,  max(nanmean(ah)+ahs, nanmean(bh)+bhs)];
+    at = ttest2(a, ah);
+    at(at==0) = nan;
+    ylv = at * yl(2)+range(yl)/5;
+    plot(x(1), ylv, 'k*'); 
+    
+    % I
+    h11 = errorbar(x(2), nanmean(bh), bhs, 'r.', 'linestyle', 'none', 'markersize', 10);
+    h12 = errorbar(x(2)+gp, nanmean(b), bs0, 'color', rgb('lightsalmon'), 'marker','.', 'linestyle', 'none', 'markersize', 10);
+    % mark sig (low vs high beh)
+    at = ttest2(b, bh);
+    at(at==0) = nan;
+    ylv = at * yl(2)+range(yl)/5;
+    plot(x(2), ylv, 'k*'); 
+    
+    % allN
+    h11 = errorbar(x(3), nanmean(ch), chs, 'k.', 'linestyle', 'none', 'markersize', 10);
+    h12 = errorbar(x(3)+gp, nanmean(c), cs0, 'color', rgb('gray'), 'marker','.', 'linestyle', 'none', 'markersize', 10);
+    % mark sig (low vs high beh)
+    at = ttest2(c, ch);
+    at(at==0) = nan;
+    ylv = at * yl(2)+range(yl)/5;
+    plot(x(3), ylv, 'k*'); 
+    
+    
+    xlim([x(1)-marg, x(end)+gp+marg])
+    set(gca,'xtick', x+gp)
+    set(gca,'xticklabel', {'Exc','Inh', 'All'})
+    ylabel('Fract choice selective')
+    legend([h11,h12], {'highBeh','lowBeh'}, 'location', 'northoutside')
+    set(gca, 'tickdir', 'out')
+    title(mouse)
+
+end
+
+
+if savefigs
+    savefig(gcf, fullfile(dirn00, [namc,'_','ROC_curr_chAl_excInh_trainindDays_fractSigTunedOfAllN_earlyLateDays_', nowStr,'.fig']))
+    print(gcf, '-dpdf', fullfile(dirn00, [namc,'_','ROC_curr_chAl_excInh_trainindDays_fractSigTunedOfAllN_earlyLateDays_', nowStr]))
+end
+
+
+
+
+
+
+%% Compare choice selectivity for low vs high behavioral performance days
+
+onlySig = 0; % use average AUC of only sig choice selective neurons
+perc_thb = [20,80]; %[10,90]; % # perc_thb = [15,85] # percentiles of behavioral performance for determining low and high performance.
+
+xlab = simpleTokenize(namc, '_'); xlab = xlab{1};
+x = 1:3;
+gp = .2;
+marg = .2;
+fnow = figure('name', 'All mice', 'position', [34   661   788   280]);
+
+for im = 1:length(mice)
+
+    mouse = mice{im};    
+    dirnFig = fullfile(dirn0, mouse);
+    
+    if strcmp(outcome2ana, '')
+        dirnFig = fullfile(dirnFig, 'allOutcome');
+    elseif strcmp(outcome2ana, 'corr')
+        dirnFig = fullfile(dirnFig, 'corr');
+    elseif strcmp(outcome2ana, 'incorr')
+        dirnFig = fullfile(dirnFig, 'incorr');
+    end
+    
+    if doshfl
+        dirnFig = fullfile(dirnFig, 'shuffled_actual_ROC');
+    end
+    
+    if ~exist(dirnFig, 'dir')
+        mkdir(dirnFig)
+    end
+    
+    [~,~,dirn] = setImagingAnalysisNames(mouse, 'analysis', []); 
+    cd(dirn)
+    
+   
+    time_aligned = time_aligned_allMice{im};
+    nowStr = nowStr_allMice{im};
+    mnTrNum = mnTrNum_allMice{im};
+    days = days_allMice{im};
+    corr_ipsi_contra = corr_ipsi_contra_allMice{im};
+    set(groot,'defaultAxesColorOrder',cod)    
+    
+    
+    %% 
+    %%% Average AUC across neurons for each day and each frame
+    %%% Pool AUC across all neurons of all days (for each frame)
+    
+    if ~onlySig
+        aveexc = aveexc_allMice{im};
+        aveinh = aveinh_allMice{im};
+        aveallN = aveallN_allMice{im};
+    end
+    %{
+    aveexc_shfl = aveexc_shfl_allMice{im};
+    aveinh_shfl = aveinh_shfl_allMice{im};
+    aveallN_shfl = aveallN_shfl_allMice{im};
+    
+    aveexc_shfl0 = aveexc_shfl0_allMice{im};
+    aveinh_shfl0 = aveinh_shfl0_allMice{im};
+    aveallN_shfl0 = aveallN_shfl0_allMice{im};
+    
+    seexc = seexc_allMice{im};
+    seinh = seinh_allMice{im};
+    seallN = seallN_allMice{im};
+    
+    seexc_shfl = seexc_shfl_allMice{im};
+    seinh_shfl = seinh_shfl_allMice{im};
+    seallN_shfl = seallN_shfl_allMice{im};
+    %}
+    
+
+    % run ttest across days for each frame
+    %{
+    % ttest: is exc (neuron-averaged ROC pooled across days) ROC
+    % different from inh ROC? Do it for each time bin seperately.
+    [h,p] = ttest2(aveexc',aveinh'); % 1 x nFrs
+    hh0 = h;
+    hh0(h==0) = nan;
+
+
+    % ttest: is exc (single neuron ROC pooled across days) ROC
+    % different from inh ROC? Do it for each time bin seperately.
+    h = ttest2(excall', inhall'); % h: 1 x nFrs
+    hh = h;
+    hh(h==0) = nan;
+%     h = ttest2(excall_shfl', inhall_shfl')
+    %}
+    
+    %% Learning figure: compare magnitude of choice selectivity at time bin -1 for low vs high behavioral performance days
+
+    
+    mouse = mice{im};    
+    mn_corr = mnTrNum_allMice{im};
+    mn_corr0 = mn_corr; % will be used for the heatmaps of CA for all days; We need to exclude 151023 from fni16, this day had issues! ...  in the mat file of stabTestTrainTimes, its class accur is very high ... and in the mat file of excInh_trainDecoder_eachFrame it is very low ...ANYWAY I ended up removing it from the heatmap of CA for all days!!! but it is included in other analyses!!
+%         if strcmp(mouse, 'fni16')
+%             tr = find(cellfun(@isempty, strfind(days_allMice{im}, '151023_1'))==0);
+%             mn_corr0(tr) = thMinTrs - 1; % # see it will be excluded from analysis!    
+%         end
+    days2an_heatmap = (mn_corr0 >= thMinTrs);
+
+    %%%%%%%%% set svm_stab mat file name that contains behavioral and class accuracy vars
+    [~,~,dirn] = setImagingAnalysisNames(mouse, 'analysis', []);    % dirn = fullfile(dirn0fr, mouse);
+    finame = fullfile(dirn, 'svm_stabilityBehCA_*.mat');
+    stabBehName = dir(finame);
+    [~,i] = sort([stabBehName.datenum], 'descend');
+    stabBehName = fullfile(dirn, stabBehName(i).name)
+
+    % load beh vars    
+    load(stabBehName, 'behCorr_all')
+
+    %%%%%%%% Compare change in CA (after removing noise corr) for days with low vs high behavioral performance ##################
+    a = behCorr_all(days2an_heatmap);    
+    thb = prctile(a, perc_thb);
+
+    loBehCorrDays = (a <= thb(1));
+    hiBehCorrDays = (a >= thb(2));
+    fprintf('%d, %d, num days with low and high beh performance\n', sum(loBehCorrDays), sum(hiBehCorrDays))
+
+    
+    %%
+
+    if onlySig % use average AUC of only sig choice selective neurons
+        aa = choicePref_exc_onlySig_aveNs_allMice{im}(days2an_heatmap);
+        bb = choicePref_inh_onlySig_aveNs_allMice{im}(days2an_heatmap);
+        cc = choicePref_allN_onlySig_aveNs_allMice{im}(days2an_heatmap);
+        figure; hold on; plot(aa, 'b'); plot(bb,'r'); plot(cc,'k')
+    else
+        aa = aveexc(nPreMin_allMice(im), days2an_heatmap);
+        bb = aveinh(nPreMin_allMice(im), days2an_heatmap);
+        cc = aveallN(nPreMin_allMice(im), days2an_heatmap);
+    end
+    
+    
+    % set corrs for low and high behavioral performance days
+    a = aa(loBehCorrDays); 
+    b = bb(loBehCorrDays); 
+    c = cc(loBehCorrDays); 
+    ah = aa(hiBehCorrDays); % E
+    bh = bb(hiBehCorrDays); % I
+    ch = cc(hiBehCorrDays); % allN
+
+    % set se of corrs across low and high beh perform days
+    as0 = nanstd(a) / sqrt(sum(~isnan(a)));
+    bs0 = nanstd(b) / sqrt(sum(~isnan(b)));
+    cs0 = nanstd(c) / sqrt(sum(~isnan(c)));
+    ahs = nanstd(ah)/ sqrt(sum(~isnan(ah)));
+    bhs = nanstd(bh)/ sqrt(sum(~isnan(bh)));
+    chs = nanstd(ch)/ sqrt(sum(~isnan(ch)));
+
+%         figure; %('name', 'All mice', 'position', [14   636   661   290]); 
+%         set(gca, 'position', [0.2919    0.1908    0.5229    0.7095])
+
+%     disp([ttest(a, ah), ttest(b, bh)])
+    
+    
+    %%%%%%%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%%%%%%%%%% 
+    %%%%%%%%%%%%%%%%%%%%% PLOT %%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%%%%%%%%%%           
+    
+    figure(fnow)
+    subplot(1,length(mice),im); 
+    hold on
+
+    % E
+    h11 = errorbar(x(1), nanmean(ah), ahs, 'b.', 'linestyle', 'none', 'markersize', 10);
+    h12 = errorbar(x(1)+gp, nanmean(a), as0, 'color', rgb('lightblue'), 'marker','.', 'linestyle', 'none', 'markersize', 10);
+    % mark sig (low vs high beh)
+%     yl = get(gca, 'ylim');    
+    yl = [min(nanmean(ah)-ahs, nanmean(bh)-bhs) ,  max(nanmean(ah)+ahs, nanmean(bh)+bhs)];
+    at = ttest2(a, ah);
+    at(at==0) = nan;
+    ylv = at * yl(2)+range(yl)/5;
+    plot(x(1), ylv, 'k*'); 
+    
+    % I
+    h11 = errorbar(x(2), nanmean(bh), bhs, 'r.', 'linestyle', 'none', 'markersize', 10);
+    h12 = errorbar(x(2)+gp, nanmean(b), bs0, 'color', rgb('lightsalmon'), 'marker','.', 'linestyle', 'none', 'markersize', 10);
+    % mark sig (low vs high beh)
+    at = ttest2(b, bh);
+    at(at==0) = nan;
+    ylv = at * yl(2)+range(yl)/5;
+    plot(x(2), ylv, 'k*'); 
+    
+    % AllN
+    h11 = errorbar(x(3), nanmean(ch), chs, 'k.', 'linestyle', 'none', 'markersize', 10);
+    h12 = errorbar(x(3)+gp, nanmean(c), cs0, 'color', rgb('gray'), 'marker','.', 'linestyle', 'none', 'markersize', 10);
+    % mark sig (low vs high beh)
+    at = ttest2(c, ch);
+    at(at==0) = nan;
+    ylv = at * yl(2)+range(yl)/5;
+    plot(x(3), ylv, 'k*'); 
+    
+    
+    xlim([x(1)-marg, x(end)+gp+marg])
+    set(gca,'xtick', x+gp)
+    set(gca,'xticklabel', {'Exc','Inh', 'All'})
+    ylabel(xlab)
+    legend([h11,h12], {'highBeh','lowBeh'}, 'location', 'northoutside')
+    set(gca, 'tickdir', 'out')
+    title(mouse)
+
+    
+end
+
+if savefigs
+    if onlySig
+        osig = 'aveNeursOnlySig';
+    else
+        osig = 'aveNeurs';
+    end
+    
+    savefig(gcf, fullfile(dirn00, [namc,'_','ROC_curr_chAl_excInh_trainindDays_',osig,'_earlyLateDays_', nowStr,'.fig']))
+    print(gcf, '-dpdf', fullfile(dirn00, [namc,'_','ROC_curr_chAl_excInh_trainindDays_',osig,'_earlyLateDays_', nowStr]))
+end
+
+
+% Note: with training, the fraction of choice selective neurons goes up,
+% but surprisingly the magnitude of choice selectivity goes down.... my
+% concern is that in earlier days the AUC of shuffled dist is also higher
+% than in later days (I think because earelier days have fewere trials,
+% their AUC estimate is noisier), so even if I only take the sig neurons to
+% compute magnitude of choice selectivity, it is not a surprise that in
+% early days the AUC magnitude is higher, just how the magnitude of shuffle
+% AUC is higher... so I think it makes more sense to only use the fraction
+% of significantly choice selective neurons, and not their magnitude when
+% comparing early vs late days (and the effect of training on single
+% neurons)!
+
+
+
+
+
+
+
 
 

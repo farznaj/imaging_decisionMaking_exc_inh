@@ -11,25 +11,46 @@ Created on Thu Apr  6 16:46:51 2017
 @author: farznaj
 """
 
-mousename = 'fni17' #'fni19' #
+mousename = 'fni19' #'fni19' #
 
 
-savefigs = 0
-doPlots = 0 #1 # plot event times for each day
-excludeTrs = 0 # If 1, some trials will be excluded from the dists; You need to set the svmName file which contains trsExcluded
-# I think it maks sense to set excludeTrs to 0 bc those trials that are nan will have nan event Times...
+excludeTrs = 1 # If 1, some trials will be excluded from the dists; You need to set the svmName file which contains trsExcluded # I think it maks sense to set excludeTrs to 0 bc those trials that are nan will have nan event Times...
+
+# below matters if excludeTrs=1
+testIncorr = 1 # set to 1 for the latest SVM file (it also includes testing incorr trs)
+decodeStimCateg = 0
+noExtraStimDayAnalysis = 0 # if 1, exclude days with extraStim from analysis
+
+savefigs = 1
+
 
 corrTrained = 1 # whether svm was trained using only correct trials (set to 1) or all trials (set to 0).
+thTrained = 10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
+doPlots = 0 #1 # plot event times for each day
+shflTrsEachNeuron = 0
+useEqualTrNums = 1
+import numpy as np
+
+doInhAllexcEqexc = [1,0,0,0]
+if testIncorr:
+    doInhAllexcEqexc[3]=-1
+elif decodeStimCateg:
+    doInhAllexcEqexc[3]=0
+else:
+    doInhAllexcEqexc = np.delete(doInhAllexcEqexc, -1)
+        
 ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone.
 if mousename == 'fni18': #set one of the following to 1:
     allDays = 1# all 7 days will be used (last 3 days have z motion!)
     noZmotionDays = 0 # 4 days that dont have z motion will be used.
     noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
+    noExtraStimDays = 0
 elif mousename == 'fni19':    
     allDays = 1
     noExtraStimDays = 0   
-else:
-    import numpy as np
+    noZmotionDays = 0 # 4 days that dont have z motion will be used.
+    noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!    
+else:    
     allDays = np.nan
     noZmotionDays = np.nan
     noZmotionDays_strict = np.nan
@@ -38,65 +59,51 @@ else:
     
 trialHistAnalysis = 0
 iTiFlg = 2 # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
+chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
+stAl = ch_st_goAl[1]
+goToneAl = ch_st_goAl[2]
 
 execfile("defFuns.py")
-#execfile("svm_plots_setVars_n.py")  
-days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
 
+if decodeStimCateg:
+    corrTrained=0
+    
+if corrTrained==0:
+    corrn = 'allOutcomeTrained_'
+else:
+    corrn = 'corrTrained_'
+    
+if decodeStimCateg:
+    corrn = 'decodeStimCateg_' + corrn
 
-#%% Set the following vars:
-'''
-mousename = 'fni17' #'fni17'
-
-trialHistAnalysis = 0;
-iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
-execfile("svm_plots_setVars.py")  
-
-savefigs = 1
-doPlots = 0 #1 # plot dist of each day 
-
-chAl = 0 # Related to setting svmName; If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
-'''
-
-#%% 
-import numpy as np
+if noExtraStimDayAnalysis:
+    corrn = corrn + 'noExtraStim_'
+    
+if excludeTrs:
+    corrn = corrn + 'onlySVMtrs_'   
+else:
+    corrn = corrn + 'allTrs_'
+    
 frameLength = 1000/30.9; # sec.
 regressBins = int(np.round(100/frameLength)) # must be same regressBins used in svm_eachFrame. 100ms # set to nan if you don't want to downsample.
 
 dnow = '/timeDists/'+mousename+'/'
 #dnow = '/classAccurTraces_eachFrame_timeDists/'+mousename+'/'
-
-
-#%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
-
-def setSVMname(pnevFileName, trialHistAnalysis, chAl, regressBins=3):
-    import glob
-
-    if chAl==1:
-        al = 'chAl'
-    else:
-        al = 'stAl'
-
-    if trialHistAnalysis:
-        svmn = 'svmPrevChoice_eachFrame_%s_ds%d_*' %(al,regressBins)
-    else:
-        svmn = 'svmCurrChoice_eachFrame_%s_ds%d_*' %(al,regressBins)
     
-    svmn = svmn + os.path.basename(pnevFileName) #pnevFileName[-32:]    
-    svmName = glob.glob(os.path.join(os.path.dirname(pnevFileName), 'svm', svmn))
-    svmName = sorted(svmName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
+from datetime import datetime
+nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
+
     
-#    if len(svmName)>0:
-#        svmName = svmName[0] # get the latest file
-#    else:
-#        svmName = ''
-#    
-    return svmName
-    
+#%% Set days
+
+#execfile("svm_plots_setVars_n.py")  
+#days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
+days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays, loadYtest=0, decodeStimCateg=decodeStimCateg)
+
 
 #%%
 timeStimOnset_all = []
-timeStimOffset0_all = []
+timeSingleStimOffset_all = []
 timeStimOffset_all = []
 timeCommitCL_CR_Gotone_all = []
 time1stSideTry_all = []
@@ -106,9 +113,12 @@ timeReward_all = []
 timeCommitIncorrResp_all = []
 time1stCorrectTry_all = []
 time1stIncorrectTry_all = []
+corr_hr_lr = np.full((len(days),2), np.nan) # number of hr, lr correct trials for each day
+fractTrs_50msExtraStim = np.full(len(days), np.nan)    
    
-   
+# iday = 35 # fni17: 151015_1   
 for iday in range(len(days)):    
+    
     #%% Plot distributions of go tone, stim, choice times
     
     imagingFolder = days[iday][0:6]; #'151013'
@@ -126,8 +136,17 @@ for iday in range(len(days)):
 #    Data = scio.loadmat(postName, variable_names=['outcomes'])
 #    outcomes = (Data.pop('outcomes').astype('float'))[0,:]
     
+
+    #%% Set number of hr, lr trials that were used for svm training
     
-    ######### Load time of some trial events    
+    svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, [1,0,0], regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]   
+    
+    corr_hr, corr_lr = set_corr_hr_lr(postName, svmName)    
+    corr_hr_lr[iday,:] = [corr_hr, corr_lr]        
+
+    
+    #%% Load time of some trial events    
+    
     Data = scio.loadmat(postName, variable_names=['timeCommitCL_CR_Gotone', 'timeStimOnset', 'timeStimOffset', 'time1stSideTry', 'timeReward', 'timeCommitIncorrResp', 'time1stCorrectTry', 'time1stIncorrectTry'])
     timeCommitCL_CR_Gotone = np.array(Data.pop('timeCommitCL_CR_Gotone')).flatten().astype('float')
     timeStimOnset = np.array(Data.pop('timeStimOnset')).flatten().astype('float')
@@ -147,7 +166,7 @@ for iday in range(len(days)):
     # timeStimOffset includes extra stim, etc... so we set timeStimeOffset0 (which is stimOffset after 1 repetition) here
     Data = scio.loadmat(postName, variable_names=['timeSingleStimOffset'])
     if len(Data) > 3:
-        timeStimOffset0 = np.array(Data.pop('timeSingleStimOffset')).flatten().astype('float')
+        timeSingleStimOffset = np.array(Data.pop('timeSingleStimOffset')).flatten().astype('float')
     else:
         import datetime
         import glob
@@ -179,15 +198,20 @@ for iday in range(len(days)):
         #        Data = scio.loadmat(bnow, variable_names=['all_data'],squeeze_me=True,struct_as_record=False)
         #        waitDuration_all.append(np.array([Data['all_data'][i].waitDuration for i in range(len(Data['all_data']))])) # remember difference indexing in matlab and python!
         #    sdur = timeStimOnset + waitDuration_all
-        timeStimOffset0 = timeStimOnset + sdur    
+        timeSingleStimOffset = timeStimOnset + sdur    
 
     
+    #%%
+    fractTrs_50msExtraStim[iday] = np.mean((timeStimOffset - timeSingleStimOffset)>50) 
 
-    ######### load trsExcluded if you want to check the dist of only those trials that went into SVM     
+            
+    #%% Load trsExcluded if you want to check the dist of only those trials that went into SVM     
+    
     if excludeTrs==1:
-        svmName = setSVMname(pnevFileName, trialHistAnalysis, chAl, regressBins) # for chAl: the latest file is with soft norm; earlier file is 
+#        svmName = setSVMname(pnevFileName, trialHistAnalysis, chAl, regressBins) # for chAl: the latest file is with soft norm; earlier file is 
+        svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins=3, useEqualTrNums=1, corrTrained=corrTrained, shflTrsEachNeuron=shflTrsEachNeuron, shflTrLabs=0)
         svmName = svmName[0]
-    #    print os.path.basename(svmName)    
+        print os.path.basename(svmName)    
     
         Data = scio.loadmat(svmName, variable_names=['trsExcluded'])    
         trsExcluded = Data.pop('trsExcluded').astype('bool').squeeze()                    
@@ -195,7 +219,7 @@ for iday in range(len(days)):
     
         ######### Exclude trsExcluded from event times
         timeStimOnset[trsExcluded] = np.nan
-        timeStimOffset0[trsExcluded] = np.nan    
+        timeSingleStimOffset[trsExcluded] = np.nan    
         timeStimOffset[trsExcluded] = np.nan
         timeCommitCL_CR_Gotone[trsExcluded] = np.nan    
         time1stSideTry[trsExcluded] = np.nan    
@@ -208,9 +232,10 @@ for iday in range(len(days)):
     
     
     
-    ######### Keep vars for all days
+    #%% Keep vars for all days
+    
     timeStimOnset_all.append(timeStimOnset)
-    timeStimOffset0_all.append(timeStimOffset0)
+    timeSingleStimOffset_all.append(timeSingleStimOffset)
     timeStimOffset_all.append(timeStimOffset)
     timeCommitCL_CR_Gotone_all.append(timeCommitCL_CR_Gotone)    
     time1stSideTry_all.append(time1stSideTry)    
@@ -236,14 +261,16 @@ for iday in range(len(days)):
     #ep_svr = np.arange(eventI+1, eventI + np.round(minStimDur/frameLength) + 1).astype(int) # frames on stimAl.traces that will be used for trainning SVM.   
     
     
-    ######### Plots    
+    #%% Plots   
+    
     if doPlots:
         plt.figure()
         plt.subplot(2,1,1)
         plt.plot(timeCommitCL_CR_Gotone - timeStimOnset, 'b', label = 'goTone')
         plt.plot(timeStimOffset - timeStimOnset, 'r', label = 'stimOffset')
-        plt.plot(timeStimOffset0 - timeStimOnset, 'k', label = 'stimOffset_1rep')
+        plt.plot(timeSingleStimOffset - timeStimOnset, 'k', label = 'stimOffset_1rep')
         plt.plot(time1stSideTry - timeStimOnset, 'm', label = '1stSideTry')
+        plt.plot(timeReward - timeStimOnset, 'g', label = 'reward')
     #        plt.plot([1, np.shape(timeCommitCL_CR_Gotone)[0]],[th_stim_dur, th_stim_dur], 'g:', label = 'th_stim_dur')
     #    plt.plot([1, np.shape(timeCommitCL_CR_Gotone)[0]],[ep_ms[-1], ep_ms[-1]], 'k:', label = 'epoch end')
         plt.xlabel('Trial')
@@ -259,23 +286,43 @@ for iday in range(len(days)):
         plt.hist(a[~np.isnan(a)], color='b')
         a = timeStimOffset - timeStimOnset
         plt.hist(a[~np.isnan(a)], color='r')
-        a = timeStimOffset0 - timeStimOnset
+        a = timeSingleStimOffset - timeStimOnset
         plt.hist(a[~np.isnan(a)], color='k')
         a = time1stSideTry - timeStimOnset
         plt.hist(a[~np.isnan(a)], color='m')
+        a = timeReward - timeStimOnset
+        plt.hist(a[~np.isnan(a)], color='g')
         plt.xlabel('Time relative to stim onset (ms)')
         plt.ylabel('# trials')
         
 
 
+#%%
+mn_corr = np.min(corr_hr_lr,axis=1) # number of trials of each class. 90% of this was used for training, and 10% for testing.
+
+print 'num days to be excluded with few svm-trained trs:', sum(mn_corr < thTrained)    
+print np.array(days)[mn_corr < thTrained]
+
+
+####### Set days without extraStim
+#    days=np.array(days); days[fractTrs_50msExtraStim<.1]
+if noExtraStimDayAnalysis: # dont analyze days with extra stim
+    days2an_noExtraStim = np.logical_and(fractTrs_50msExtraStim < .1 , mn_corr >= thTrained)
+else:
+    days2an_noExtraStim = mn_corr >= thTrained #fractTrs_50msExtraStim < 2 # include all days
+    
+days2an_final = days2an_noExtraStim
+    
+    
+#############################################################################################
 #############################################################################################
         
 #%% For each session subtract all event times from stimOnset times
 
-lenD = len(timeStimOffset0_all)
+lenD = len(timeSingleStimOffset_all)
 
 ############################### Relative to stimulus onset ###############################
-timeStimOffset0_all_relOn = np.array([timeStimOffset0_all[iday] - timeStimOnset_all[iday] for iday in range(lenD)])
+timeSingleStimOffset_all_relOn = np.array([timeSingleStimOffset_all[iday] - timeStimOnset_all[iday] for iday in range(lenD)])
 timeStimOffset_all_relOn = np.array([timeStimOffset_all[iday] - timeStimOnset_all[iday] for iday in range(lenD)])
 timeCommitCL_CR_Gotone_all_relOn = np.array([timeCommitCL_CR_Gotone_all[iday] - timeStimOnset_all[iday] for iday in range(lenD)])
 time1stSideTry_all_relOn = np.array([time1stSideTry_all[iday] - timeStimOnset_all[iday] for iday in range(lenD)])
@@ -289,54 +336,54 @@ time1stIncorrectTry_all_relOn = np.array([time1stIncorrectTry_all[iday] - timeSt
 time1stSideTry_all_relGo = np.array([time1stSideTry_all[iday] - timeCommitCL_CR_Gotone_all[iday] for iday in range(lenD)]) # reaction time... from go tone to choice
 
 
-#%% Pool all trials of all days
+#%% Pool all trials of all days... only use the good days
  
-initTone_1st_pooled = np.concatenate((timeInitTone_1st_all_relOn))
+initTone_1st_pooled = np.concatenate((timeInitTone_1st_all_relOn[days2an_final]))
 initTone_1st_pooled = initTone_1st_pooled[~np.isnan(initTone_1st_pooled)]
 print initTone_1st_pooled.shape
 
-initTone_last_pooled = np.concatenate((timeInitTone_last_all_relOn))
+initTone_last_pooled = np.concatenate((timeInitTone_last_all_relOn[days2an_final]))
 initTone_last_pooled = initTone_last_pooled[~np.isnan(initTone_last_pooled)]
 print initTone_last_pooled.shape
  
-stimOff0_pooled = np.concatenate((timeStimOffset0_all_relOn))
+stimOff0_pooled = np.concatenate((timeSingleStimOffset_all_relOn[days2an_final]))
 #print stimOff0_pooled.shape
 stimOff0_pooled = stimOff0_pooled[~np.isnan(stimOff0_pooled)]
 print stimOff0_pooled.shape
 
-stimOff_pooled = np.concatenate((timeStimOffset_all_relOn))
+stimOff_pooled = np.concatenate((timeStimOffset_all_relOn[days2an_final]))
 #print stimOff_pooled.shape
 stimOff_pooled = stimOff_pooled[~np.isnan(stimOff_pooled)]
 print stimOff_pooled.shape
 
-goTone_pooled = np.concatenate((timeCommitCL_CR_Gotone_all_relOn))
+goTone_pooled = np.concatenate((timeCommitCL_CR_Gotone_all_relOn[days2an_final]))
 #print goTone_pooled.shape
 goTone_pooled = goTone_pooled[~np.isnan(goTone_pooled)]
 print goTone_pooled.shape
 
-choice_pooled = np.concatenate((time1stSideTry_all_relOn))
+choice_pooled = np.concatenate((time1stSideTry_all_relOn[days2an_final]))
 #print choice_pooled.shape
 choice_pooled = choice_pooled[~np.isnan(choice_pooled)]
 print choice_pooled.shape
 
-choiceCorr_pooled = np.concatenate((time1stCorrectTry_all_relOn))
+choiceCorr_pooled = np.concatenate((time1stCorrectTry_all_relOn[days2an_final]))
 choiceCorr_pooled = choiceCorr_pooled[~np.isnan(choiceCorr_pooled)]
 print choiceCorr_pooled.shape
 
-choiceIncorr_pooled = np.concatenate((time1stIncorrectTry_all_relOn))
+choiceIncorr_pooled = np.concatenate((time1stIncorrectTry_all_relOn[days2an_final]))
 choiceIncorr_pooled = choiceIncorr_pooled[~np.isnan(choiceIncorr_pooled)]
 print choiceIncorr_pooled.shape
 
-rew_pooled = np.concatenate((timeReward_all_relOn))
+rew_pooled = np.concatenate((timeReward_all_relOn[days2an_final]))
 rew_pooled = rew_pooled[~np.isnan(rew_pooled)]
 print rew_pooled.shape
 
-punish_pooled = np.concatenate((timeCommitIncorrResp_all_relOn))
+punish_pooled = np.concatenate((timeCommitIncorrResp_all_relOn[days2an_final]))
 punish_pooled = punish_pooled[~np.isnan(punish_pooled)]
 print punish_pooled.shape
 
 
-rt_pooled = np.concatenate((time1stSideTry_all_relGo))
+rt_pooled = np.concatenate((time1stSideTry_all_relGo[days2an_final]))
 #print rt_pooled.shape
 rt_pooled = rt_pooled[~np.isnan(rt_pooled)]
 print rt_pooled.shape
@@ -370,6 +417,7 @@ plt.xlabel('Time relative to stim onset (ms)')
 plt.ylabel('Number of trials')
 plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
 
+xl = plt.gca().get_xlim()
 _,p = stats.ttest_ind(choiceCorr_pooled, choiceIncorr_pooled, nan_policy = 'omit')
 print p
 print choiceCorr_pooled.mean(), choiceIncorr_pooled.mean()
@@ -393,6 +441,15 @@ plt.xlabel('Time relative to stim onset (ms)')
 plt.ylabel('Number of trials')
 plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
 
+xll = plt.gca().get_xlim()
+mnxl = min([xl[0], xll[0]])
+mxxl = max([xl[1], xll[1]])
+
+plt.subplot(211)
+plt.xlim([mnxl, mxxl])
+
+plt.subplot(212)
+plt.xlim([mnxl, mxxl])
 
 
 
@@ -401,7 +458,7 @@ plt.legend(loc='center left', bbox_to_anchor=(1, .7))
 
 #%%
 timeStimOnset_all_relCh = np.array([timeStimOnset_all[iday] - time1stSideTry_all[iday] for iday in range(lenD)])
-timeStimOffset0_all_relCh = np.array([timeStimOffset0_all[iday] - time1stSideTry_all[iday] for iday in range(lenD)])
+timeSingleStimOffset_all_relCh = np.array([timeSingleStimOffset_all[iday] - time1stSideTry_all[iday] for iday in range(lenD)])
 timeStimOffset_all_relCh = np.array([timeStimOffset_all[iday] - time1stSideTry_all[iday] for iday in range(lenD)])
 timeCommitCL_CR_Gotone_all_relCh = np.array([timeCommitCL_CR_Gotone_all[iday] - time1stSideTry_all[iday] for iday in range(lenD)])
 #time1stSideTry_all_relCh = np.array([time1stSideTry_all[iday] - time1stSideTry_all[iday] for iday in range(lenD)])
@@ -413,55 +470,55 @@ time1stCorrectTry_all_relCh = np.array([time1stCorrectTry_all[iday] - time1stSid
 time1stIncorrectTry_all_relCh = np.array([time1stIncorrectTry_all[iday] - time1stSideTry_all[iday] for iday in range(lenD)])
 
 
-#%% Pool all trials of all days
+#%% Pool all trials of all days... only good days
  
-initTone_1st_pooled_relCh = np.concatenate((timeInitTone_1st_all_relCh))
+initTone_1st_pooled_relCh = np.concatenate((timeInitTone_1st_all_relCh[days2an_final]))
 initTone_1st_pooled_relCh = initTone_1st_pooled_relCh[~np.isnan(initTone_1st_pooled_relCh)]
 print initTone_1st_pooled_relCh.shape
 
-initTone_last_pooled_relCh = np.concatenate((timeInitTone_last_all_relCh))
+initTone_last_pooled_relCh = np.concatenate((timeInitTone_last_all_relCh[days2an_final]))
 initTone_last_pooled_relCh = initTone_last_pooled_relCh[~np.isnan(initTone_last_pooled_relCh)]
 print initTone_last_pooled_relCh.shape
 
-stimOn_pooled_relCh = np.concatenate((timeStimOnset_all_relCh))
+stimOn_pooled_relCh = np.concatenate((timeStimOnset_all_relCh[days2an_final]))
 stimOn_pooled_relCh = stimOn_pooled_relCh[~np.isnan(stimOn_pooled_relCh)]
 print stimOn_pooled_relCh.shape
 
-stimOff0_pooled_relCh = np.concatenate((timeStimOffset0_all_relCh))
+stimOff0_pooled_relCh = np.concatenate((timeSingleStimOffset_all_relCh[days2an_final]))
 #print stimOff0_pooled_relCh.shape
 stimOff0_pooled_relCh = stimOff0_pooled_relCh[~np.isnan(stimOff0_pooled_relCh)]
 print stimOff0_pooled_relCh.shape
 
-stimOff_pooled_relCh = np.concatenate((timeStimOffset_all_relCh))
+stimOff_pooled_relCh = np.concatenate((timeStimOffset_all_relCh[days2an_final]))
 #print stimOff_pooled_relCh.shape
 stimOff_pooled_relCh = stimOff_pooled_relCh[~np.isnan(stimOff_pooled_relCh)]
 print stimOff_pooled_relCh.shape
 
-goTone_pooled_relCh = np.concatenate((timeCommitCL_CR_Gotone_all_relCh))
+goTone_pooled_relCh = np.concatenate((timeCommitCL_CR_Gotone_all_relCh[days2an_final]))
 #print goTone_pooled_relCh.shape
 goTone_pooled_relCh = goTone_pooled_relCh[~np.isnan(goTone_pooled_relCh)]
 print goTone_pooled_relCh.shape
 
 '''
-choice_pooled_relCh = np.concatenate((time1stSideTry_all_relCh))
+choice_pooled_relCh = np.concatenate((time1stSideTry_all_relCh[days2an_final]))
 #print choice_pooled_relCh.shape
 choice_pooled_relCh = choice_pooled_relCh[~np.isnan(choice_pooled_relCh)]
 print choice_pooled_relCh.shape
 '''
 
-choiceCorr_pooled_relCh = np.concatenate((time1stCorrectTry_all_relCh))
+choiceCorr_pooled_relCh = np.concatenate((time1stCorrectTry_all_relCh[days2an_final]))
 choiceCorr_pooled_relCh = choiceCorr_pooled_relCh[~np.isnan(choiceCorr_pooled_relCh)]
 print choiceCorr_pooled_relCh.shape
 
-choiceIncorr_pooled_relCh = np.concatenate((time1stIncorrectTry_all_relCh))
+choiceIncorr_pooled_relCh = np.concatenate((time1stIncorrectTry_all_relCh[days2an_final]))
 choiceIncorr_pooled_relCh = choiceIncorr_pooled_relCh[~np.isnan(choiceIncorr_pooled_relCh)]
 print choiceIncorr_pooled_relCh.shape
 
-rew_pooled_relCh = np.concatenate((timeReward_all_relCh))
+rew_pooled_relCh = np.concatenate((timeReward_all_relCh[days2an_final]))
 rew_pooled_relCh = rew_pooled_relCh[~np.isnan(rew_pooled_relCh)]
 print rew_pooled_relCh.shape
 
-punish_pooled_relCh = np.concatenate((timeCommitIncorrResp_all_relCh))
+punish_pooled_relCh = np.concatenate((timeCommitIncorrResp_all_relCh[days2an_final]))
 punish_pooled_relCh = punish_pooled_relCh[~np.isnan(punish_pooled_relCh)]
 print punish_pooled_relCh.shape
 
@@ -469,16 +526,12 @@ print punish_pooled_relCh.shape
 
 
 
-
-#%%
-
-
-
 #%% Plot dist of stimOffset, goTone, choice, reaction time
 
 binwidth = 100
 
-plt.figure(figsize=(4.5,6))
+#plt.figure(figsize=(4.5,6))
+plt.figure(figsize=(3,8))
 
 ############################### Relative to stimulus onset ###############################
 plt.subplot(311)
@@ -488,9 +541,9 @@ plt.hist(stimOff_pooled, color='r', alpha=.5, label = 'stimOffset')
 plt.hist(goTone_pooled, color='b', alpha=.5, label = 'goTone')
 plt.hist(choice_pooled, color='m', alpha=.5, label = '1stSideTry')
 """
-colors = 'k','r','b','m'
-labs = 'stimOffset_1rep', 'stimOffset', 'goTone', '1stSideTry'
-a = stimOff0_pooled, stimOff_pooled, goTone_pooled, choice_pooled
+colors = 'k','r','b','m','g'
+labs = 'stimOffset_1rep', 'stimOffset', 'goTone', '1stSideTry', 'reward'
+a = stimOff0_pooled, stimOff_pooled, goTone_pooled, choice_pooled, rew_pooled
 binEvery = 100
 
 bn = np.arange(np.min(np.concatenate((a))), np.max(np.concatenate((a))), binEvery)
@@ -510,6 +563,10 @@ ax = plt.gca();
 makeNicePlots(ax)#,0,1)
 yl = ax.get_ylim()
 plt.ylim([yl[0]-np.diff(yl)/20, yl[1]+np.diff(yl)/20])
+xl = ax.get_xlim()
+xlmn = np.min([np.percentile(a[i],1) for i in range(len(a))])
+xlmx = np.max([np.percentile(a[i],99) for i in range(len(a))])
+plt.xlim([xlmn, xlmx])
 #plt.ylim([-yl[1]/20, yl[1]+yl[1]/20])
 #plt.ylim([-yl[1]/20, yl[1]])
 #np.mean(goTone_pooled<999) # fraction of trials with go tone before stim offset
@@ -534,6 +591,7 @@ plt.ylim([yl[0]-np.diff(yl)/20, yl[1]+np.diff(yl)/20])
 #plt.ylim([-yl[1]/20, yl[1]+yl[1]/20])
 
 
+
 ############################### Relative to choice onset ###############################
 plt.subplot(313)
 """
@@ -542,13 +600,23 @@ plt.hist(stimOff_pooled_relCh, color='r', alpha=.5, label = 'stimOffset')
 plt.hist(goTone_pooled_relCh, color='b', alpha=.5, label = 'goTone')
 plt.hist(choice_pooled_relCh, color='m', alpha=.5, label = '1stSideTry')
 """
-colors = 'k','r','b','m'
-labs = 'stimOnset', 'stimOffset_1rep', 'stimOffset', 'goTone'
-a = stimOn_pooled_relCh, stimOff0_pooled_relCh, stimOff_pooled_relCh, goTone_pooled_relCh
-labs = 'stimOnset', 'stimOffset', 'goTone'
-a = stimOn_pooled_relCh, stimOff_pooled_relCh, goTone_pooled_relCh
-binEvery = 100
 
+#colors = 'm','k','r','b','g' # 'k','r','b','m','g'
+#labs = 'stimOnset', 'stimOffset_1rep', 'stimOffset', 'goTone', 'reward'
+#a = stimOn_pooled_relCh, stimOff0_pooled_relCh, stimOff_pooled_relCh, goTone_pooled_relCh, rew_pooled_relCh
+
+#### no stimOffset1rep
+colors = 'm','r','b','g'
+labs = 'stimOnset', 'stimOffset', 'goTone', 'reward'
+a = stimOn_pooled_relCh, stimOff_pooled_relCh, goTone_pooled_relCh, rew_pooled_relCh
+
+#### only go tone and reward
+#colors = 'b','g'
+#labs = 'goTone', 'reward'
+#a = goTone_pooled_relCh, rew_pooled_relCh
+
+
+binEvery = 100
 bn = np.arange(np.min(np.concatenate((a))), np.max(np.concatenate((a))), binEvery)
 bn[-1] = np.max(np.concatenate(a)) # unlike digitize, histogram doesn't count the right most value
 
@@ -562,36 +630,40 @@ plt.xlabel('Time relative to choice onset (ms)')
 plt.ylabel('Number of trials')
 plt.legend(loc='center left', bbox_to_anchor=(1, .7)) 
 
-ax = plt.gca();
-makeNicePlots(ax)#,0,1)
+ax = plt.gca()
 yl = ax.get_ylim()
 plt.ylim([yl[0]-np.diff(yl)/20, yl[1]+np.diff(yl)/20])
-#plt.ylim([-yl[1]/20, yl[1]+yl[1]/20])
-#plt.ylim([-yl[1]/20, yl[1]])
-#np.mean(goTone_pooled_relCh<999) # fraction of trials with go tone before stim offset
+xl = ax.get_xlim()
+xlmn = np.min([np.percentile(a[i],1) for i in range(len(a))])
+xlmx = np.max([np.percentile(a[i],99) for i in range(len(a))])
+plt.xlim([xlmn, xlmx])
+#plt.xlim([-1000, 800]) # partOfX
+makeNicePlots(ax,1,0)
+
 
 plt.subplots_adjust(hspace=0.65)
 
 
+##%%
 ##%% Save the figure    
 if savefigs:
-    dd = 'timeDists_allPooled'
-    '''
-    if chAl==1:
-        dd = 'chAl_timeDists'
-    else:
-        dd = 'stAl_timeDists'
-    '''
+    dd = 'timeDists_allDaysPooled_' + corrn +  days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+#    dd = 'timeDists_allDaysPooled_' + corrn +  days[35][0:6] + '_' + nowStr
+#    dd = 'timeDists_allDaysPooled_' + corrn +  days[35][0:6] + '_partOfX_' + nowStr
+#    dd = 'timeDists_allDaysPooled_' + corrn + days[0][0:6] + '-to-' + days[-1][0:6] + '_partOfX' + '_' + nowStr
         
     d = os.path.join(svmdir+dnow)
     if not os.path.exists(d):
         print 'creating folder'
         os.makedirs(d)
             
-    fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+fmt[0])
+    fign = os.path.join(svmdir+dnow, dd+'.'+fmt[0])
+    
     plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
 
 
-
-
+                
+        
+        
+        
 

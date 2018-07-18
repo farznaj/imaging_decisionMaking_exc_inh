@@ -6,7 +6,7 @@
 
 downSampSpikes = 1; %0; %1; % downsample spike traces (non-overalapping moving average of 3 frames).
 
-alFR = 'initAl'; %'chAl'; % 'initAl'; % the firing rate traces were aligned on what
+alFR = 'chAl'; % 'initAl'; % the firing rate traces were aligned on what
 outcome2ana = ''; %'' 'corr';
 
 fni18_rmvDay4 = 0; % if 1, remove 4th day of fni18.
@@ -104,7 +104,7 @@ for im = 1:length(mice)
     [~,~,dirn] = setImagingAnalysisNames(mouse, 'analysis', []);    % dirn = fullfile(dirn0fr, mouse);
     
     
-    %% Load FR vars
+    %% Load FR vars (vars are saved in choicePref_ROC_exc_inh.m)
 
     namv = sprintf('FR%s%s_curr_%s%s_stimstr%d%s_%s_*.mat', dsn, nmd, alFR,o2a,thStimStrength,namz,mouse);    
     a = dir(fullfile(dirn,namv));

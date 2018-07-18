@@ -41,8 +41,8 @@ def svm_notebook_setVars9(mousename, imagingFolder, mdfFileNumber, chAl, doInhAl
     
     nRandCorrSel = 10
     
-    cbestKnown = 1 #1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
-    shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # if 1 shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
+    cbestKnown = 0 #1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
+    shflTrsEachNeuron = 1  # Set to 0 for normal SVM training. # if 1 shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
     
     shflTrLabs = 0 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
 #    outcome2ana = 'corr' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        

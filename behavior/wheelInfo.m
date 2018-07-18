@@ -1,7 +1,6 @@
 function [traces_wheel, times_wheel] = wheelInfo(alldata)
 % [traces_wheel, times_wheel] = wheelInfo(alldata)
-% Run script wheelAnalysis to get some plots and understand better wheel
-% data.
+% Run script wheelAnalysis to get some plots and better understand the wheel data.
 % remember in the arduino code the max length for the rotary position array
 % is defined 2500, which at 100Hz will be 25sec.... so if you see a
 % mismatch in the length of trial (computed from bcontrol or imaging data)

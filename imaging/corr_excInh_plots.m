@@ -2,7 +2,7 @@
 %     alFR = 'chAl'; % 'initAl'; % the firing rate traces were aligned on what
 %   OR
 %     alFR = 'initAl';
-%     outcome2ana = '';
+% outcome2ana = '';
 %
 % Then run choicePref_ROC_exc_inh_plots_setVars to get ROCs (to set ipsi, contra tuned neurons) 
 %     outcome2ana = 'corr'; %''; % 'corr'; 'incorr'; '';
@@ -28,8 +28,9 @@ rPop_EI_same_allMice --> corr btwn pop-averaged FRs
 
 %% Set the following vars
 
-saveFigs = 0; 
-doPlots = 0;
+nBinsMedFrs = 50; %100; % if nan,dont bin FRs, use all neurons; otherwise only use those inh and exc (for computing corr between all exc and all inh) whose FR is within a small bin. This will not affect corrs of same/diff tuning... it is only for corrs of all neurons.
+saveFigs = 1; 
+doPlots = 1;
 if strcmp(alFR,'chAl') % only if alFR is chAl, set the 2 vars below:
     cprintf('r', 'MAKE SURE you set the 2 vars below!\n')
 end
@@ -227,7 +228,7 @@ FractContraTrs = numContraTrs ./ sum([numIpsiTrs ; numContraTrs],1);
 
 %% Plot fraction of exc and inh neurons that are ipsi or contra ; also fraction of trials that are ipsi or contra
 
-if doPlots
+if 0%doPlots
     figure; %('position', [1   311   336   420]); 
 
     subplot(221); hold on; 
@@ -333,13 +334,91 @@ for im = 1:length(mice)
                 trs = true(1, size(fr_exc_ipsi_timeM1{im}{iday}, 2)); %1:length(ipsiTrs_allDays_allMice{im}{iday});
             end
 
+            if isnan(nBinsMedFrs) % dont bin FRs, use all neurons; otherwise only use those inh and exc (for computing corr between all exc and all inh) whose FR is within a small bin 
+                
+                ns_e = ones(size(fr_exc_timeM1{im}{iday},1),1);
+                ns_i = ones(size(fr_inh_timeM1{im}{iday},1),1);
+
+            else
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                %%
+                e = fr_exc_timeM1{im}{iday}(:,trs); % ns x trs
+                i = fr_inh_timeM1{im}{iday}(:,trs); % ns x trs
+
+
+                %% Bin median of FRs
+
+                y1 = median(e, 2);
+                y2 = median(i, 2);
+
+                ally = [y1(:);y2(:)];
+                r1 = min(ally);
+                r2 = max(ally);
+                bins = r1 : (r2-r1)/nBinsMedFrs : r2;
+
+                [nexc, be, ie] = histcounts(y1(:), bins);
+                [ninh, bi, ii] = histcounts(y2(:), bins);
+
+                ye = nexc/sum(nexc);
+                yi = ninh/sum(ninh);
+
+
+                %% Get the inh FR bin with most neurons in it, and use those neurons to compute correlations
+
+                if subMeanResp % yi is negative, and smaller values are larger ... we want to pick the value close to 0 because that one has more exc neurons
+                    imi = find(yi==max(yi),1,'last');
+                else
+    %                 imi = find(yi==max(yi),1,'first');
+                    % [me,ime] = max(ye); 
+                    [mi,imi] = max(yi);
+                    % disp([me, mi])
+                    % disp([ime, imi])
+                end
+
+                % excIndsToUse = (ie==ime); 
+                excIndsToUse = (ie==imi); 
+                inhIndsToUse = (ii==imi);
+
+                binFRtoUse = bins(imi:imi+1);    % this range of FRs will be used.
+
+                disp([imi, sum(excIndsToUse), sum(inhIndsToUse)])
+
+
+                ns_e = excIndsToUse;
+                ns_i = inhIndsToUse;
+
+
+                %%
+                if iday==1
+                    doSmooth = 0;
+                    fign = figure;
+                    sp = subplot(1,1,1);
+                    cols = {'b','r'};
+
+                    x = mode(diff(bins))/2 + bins; x = x(1:end-1);
+
+                    if doSmooth
+                        ye = smooth(ye,5);
+                        yi = smooth(yi,5);
+                    end
+
+                    figure(fign)
+                    hold(sp,'on')
+                    h1 = plot(sp, x, ye, 'color', cols{1});
+                    h2 = plot(sp, x, yi, 'color', cols{2});
+                end
+            end
+            
+
+            %%            
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %%%%% exc,exc: corr between similarly-tuned neurons
             [r_Ei_Ei{im}{iday}, p_Ei_Ei{im}{iday}] = corr(fr_exc_ipsi_timeM1{im}{iday}(:,trs)'); % ns x ns
             [r_Ec_Ec{im}{iday}, p_Ec_Ec{im}{iday}] = corr(fr_exc_contra_timeM1{im}{iday}(:,trs)'); 
             %%%%% exc,exc: corr between oppositely-tuned neurons
             [r_Ei_Ec{im}{iday}, p_Ei_Ec{im}{iday}] = corr(fr_exc_ipsi_timeM1{im}{iday}(:,trs)', fr_exc_contra_timeM1{im}{iday}(:,trs)'); % ns x ns
             %%%%% exc,exc: corr between all neurons
-            [r_E_E{im}{iday}, p_E_E{im}{iday}] = corr(fr_exc_timeM1{im}{iday}(:,trs)', fr_exc_timeM1{im}{iday}(:,trs)'); % ns x ns
+            [r_E_E{im}{iday}, p_E_E{im}{iday}] = corr(fr_exc_timeM1{im}{iday}(ns_e,trs)', fr_exc_timeM1{im}{iday}(ns_e,trs)'); % ns x ns
 
             %%%%% inh,inh: corr between similarly-tuned neurons
             [r_Ii_Ii{im}{iday}, p_Ii_Ii{im}{iday}] = corr(fr_inh_ipsi_timeM1{im}{iday}(:,trs)');
@@ -347,7 +426,7 @@ for im = 1:length(mice)
             %%%%% inh,inh: corr between oppositely-tuned neurons
             [r_Ii_Ic{im}{iday}, p_Ii_Ic{im}{iday}] = corr(fr_inh_ipsi_timeM1{im}{iday}(:,trs)', fr_inh_contra_timeM1{im}{iday}(:,trs)'); % ns x ns
             %%%%% inh,inh: corr between all neurons
-            [r_I_I{im}{iday}, p_I_I{im}{iday}] = corr(fr_inh_timeM1{im}{iday}(:,trs)', fr_inh_timeM1{im}{iday}(:,trs)'); % ns x ns
+            [r_I_I{im}{iday}, p_I_I{im}{iday}] = corr(fr_inh_timeM1{im}{iday}(ns_i,trs)', fr_inh_timeM1{im}{iday}(ns_i,trs)'); % ns x ns
 
             %%%%% exc,inh: corr between similarly-tuned neurons of exc and inh
             [r_Ei_Ii{im}{iday}, p_Ei_Ii{im}{iday}] = corr(fr_exc_ipsi_timeM1{im}{iday}(:,trs)', fr_inh_ipsi_timeM1{im}{iday}(:,trs)');
@@ -357,7 +436,7 @@ for im = 1:length(mice)
             [r_Ei_Ic{im}{iday}, p_Ei_Ic{im}{iday}] = corr(fr_exc_ipsi_timeM1{im}{iday}(:,trs)', fr_inh_contra_timeM1{im}{iday}(:,trs)');
             [r_Ec_Ii{im}{iday}, p_Ec_Ii{im}{iday}] = corr(fr_exc_contra_timeM1{im}{iday}(:,trs)', fr_inh_ipsi_timeM1{im}{iday}(:,trs)');
             %%%%% exc,inh: corr between all neurons
-            [r_E_I{im}{iday}, p_E_I{im}{iday}] = corr(fr_exc_timeM1{im}{iday}(:,trs)', fr_inh_timeM1{im}{iday}(:,trs)'); % ns x ns
+            [r_E_I{im}{iday}, p_E_I{im}{iday}] = corr(fr_exc_timeM1{im}{iday}(ns_e,trs)', fr_inh_timeM1{im}{iday}(ns_i,trs)'); % ns x ns
             
             
             %%%%%%%%%%%%%%%%%%%%%%%%% shuffled: corr between neurons after shuffling trials %%%%%%%%%%%%%%%%%%%%%%%%%            
@@ -372,8 +451,8 @@ for im = 1:length(mice)
             x2 = fr_exc_contra_timeM1{im}{iday}(:,trs)';
             r_Ei_Ec_shfl{im}{iday} = corr(x1(randperm(ntrs),:) , x2(randperm(ntrs),:)); % ns x ns
             %%%%% exc,exc: corr between all neurons
-            x1 = fr_exc_timeM1{im}{iday}(:,trs)';
-            x2 = fr_exc_timeM1{im}{iday}(:,trs)';
+            x1 = fr_exc_timeM1{im}{iday}(ns_e,trs)';
+            x2 = fr_exc_timeM1{im}{iday}(ns_e,trs)';
             r_E_E_shfl{im}{iday} = corr(x1(randperm(ntrs),:) , x2(randperm(ntrs),:)); % ns x ns
 
             %%%%% inh,inh: corr between similarly-tuned neurons
@@ -386,8 +465,8 @@ for im = 1:length(mice)
             x2 = fr_inh_contra_timeM1{im}{iday}(:,trs)';
             r_Ii_Ic_shfl{im}{iday} = corr(x1(randperm(ntrs),:) , x2(randperm(ntrs),:)); % ns x ns
             %%%%% inh,inh: corr between all neurons
-            x1 = fr_inh_timeM1{im}{iday}(:,trs)';
-            x2 = fr_inh_timeM1{im}{iday}(:,trs)';
+            x1 = fr_inh_timeM1{im}{iday}(ns_i,trs)';
+            x2 = fr_inh_timeM1{im}{iday}(ns_i,trs)';
             r_I_I_shfl{im}{iday} = corr(x1(randperm(ntrs),:) , x2(randperm(ntrs),:)); % ns x ns
 
             %%%%% exc,inh: corr between similarly-tuned neurons of exc and inh
@@ -405,8 +484,8 @@ for im = 1:length(mice)
             x2 = fr_inh_ipsi_timeM1{im}{iday}(:,trs)';
             r_Ec_Ii_shfl{im}{iday} = corr(x1(randperm(ntrs),:) , x2(randperm(ntrs),:));
             %%%%% exc,inh: corr between all neurons of exc and inh
-            x1 = fr_exc_timeM1{im}{iday}(:,trs)';
-            x2 = fr_inh_timeM1{im}{iday}(:,trs)';
+            x1 = fr_exc_timeM1{im}{iday}(ns_e,trs)';
+            x2 = fr_inh_timeM1{im}{iday}(ns_i,trs)';
             r_E_I_shfl{im}{iday} = corr(x1(randperm(ntrs),:) , x2(randperm(ntrs),:));
             
         end
@@ -929,7 +1008,6 @@ end
 
 
 
-no
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1016,7 +1094,7 @@ if doPlots
 %     mn = min([mn, mne,mnei,mni])
 %     mn = mn + mn/5;
     
-    figure('name', 'All mice', 'position', [34   661   788   280]); %[39   703   905   236]); 
+    fign = figure('name', 'All mice', 'position', [34   661   788   280]); %[39   703   905   236]); 
     
     %%%%%%%%%% Plot EE, II, and EI all pairs %%%%%%%%%%%    
     subplot(141); hold on    
@@ -1089,7 +1167,7 @@ if doPlots
         end
         fn = fullfile(d, namv);
 
-        savefig(gcf, fn)
+        savefig(fign, fn)
         print('-dpdf', fn)
     end
     
@@ -1825,10 +1903,12 @@ if doPlots
     m = nanmean(s);
     s = nanstd(s); 
     mse = [m-2*s , m+2*s];         
+    
     s = [rAve_II_allMiceNs_shfl]; 
     m = nanmean(s);
     s = nanstd(s); 
-    msi = [mi-2*si mi+2*si];
+    msi = [m-2*s m+2*s];
+    
     s = [rAve_EI_allMiceNs_shfl]; 
     m = nanmean(s);
     s = nanstd(s); 
@@ -1872,7 +1952,7 @@ if doPlots
         
 end
 
-
+no
 
 
 

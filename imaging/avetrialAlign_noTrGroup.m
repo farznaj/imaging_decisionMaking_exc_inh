@@ -1,11 +1,11 @@
 function [traceEventAlign, timeEventAlign, nvalidtrs, traceEventAlign_wheelRev,...
-    timeEventAlign_wheelRev, nvalidtrs_wheel] = avetrialAlign_noTrGroup(eventTime, traces, alldata, frameLength, trs2rmv, alignWheel, printsize, doplots)
+    timeEventAlign_wheelRev, nvalidtrs_wheel] = avetrialAlign_noTrGroup(eventTime, traces, alldata, frameLength, trs2rmv, alignWheel, printsize, doplots, doNpreNpost)
 
 % eventTime = time1stCenterLick; timeInitTone; % 'beg'; timeStimOnset; % timeStimOnset; % timeReward;  % eventTime = cellfun(@(x)x(1),timeInitTone); %timeInitTone; % first trial initi tone.
 % traces =  alldataSpikesGood; % alldataDfofGood; % traces to be aligned.
 
 if ~exist('alignWheel', 'var')
-    alignWheel = false;
+    alignWheel = 0; %false; % set to nan if you want to only align wheel and not df/f traces!
 end
 
 if ~exist('printsize', 'var')
@@ -16,79 +16,91 @@ if ~exist('doplots', 'var')
     doplots = false;
 end
 
+if ~exist('doNpreNpost', 'var')
+    doNpreNpost = false;
+end
+
 
 %% Align traces on eventTimes. (the earlier method which doesn't require nPre and nPost frames and will include all avaialble frames before and after the event of interest. But later you need to zoom just on frames with a large number of trials contributing to them.)
-traceTimeVec = {alldata.frameTimes}; % time vector of the trace that you want to realign.
-shiftTime = frameLength / 2;
-scaleTime = frameLength;
 
-% find the frame during which the event of interest (eg. time1stCenterLick) happened for each trial.
-if length(eventTime)==1 && eventTime==1
-    % align on the first frame (when scanning started, this may make more sense than trial init. tone bc mice seem to use this bc of shutter sound).
-    eventInds_f = ones(size(alldata));
-    eventInds_f(trs2rmv) = NaN;
+if ~isnan(alignWheel)
+    traceTimeVec = {alldata.frameTimes}; % time vector of the trace that you want to realign.
+    shiftTime = frameLength / 2;
+    scaleTime = frameLength;
+
+    % find the frame during which the event of interest (eg. time1stCenterLick) happened for each trial.
+    if length(eventTime)==1 && eventTime==1
+        % align on the first frame (when scanning started, this may make more sense than trial init. tone bc mice seem to use this bc of shutter sound).
+        eventInds_f = ones(size(alldata));
+        eventInds_f(trs2rmv) = NaN;
+    else
+        eventInds_f = eventTimeToIdx(eventTime, traceTimeVec); % index of eventTime on traceTimeVec array for each trial.
+    end
+
+    % align on the last frame
+    % eventInds_f = cellfun(@(x)size(x,1), traces);
+
+    % Align dfof traces on particular events (like time1stCenterLick).
+    % traceEventAlign: frames x units x trials
+    % timeEventAlign: 1 x frames
+    [traceEventAlign, timeEventAlign, nvalidtrs] = triggerAlignTraces(traces, eventInds_f, shiftTime, scaleTime); % frames x units x trials.
+
+
+
+    % some checks
+    %{
+    numTrsWevent = sum(~isnan(eventInds_f))
+    mnFrame0_mxFrame0_mxNumFrames = [min(eventInds_f) max(eventInds_f) max(framesPerTrial)]
+    eventFrameNum = max(eventInds_f) % find(timeEventAlign==frameLength/2) % in what
+     frame of traceEventAlign, the event exists.
+    %}
+    if ~isequal(max(eventInds_f), find(timeEventAlign==frameLength/2)), error('something wrong!'); end
+
+    % nvalidtrs = sum(~isnan(traceEventAlign),3); % frames x neurons; number of trials that contribute to each frame for each neuron.
+    % nvalidtrs = nvalidtrs(:,1);
+    % figure; subplot(221), plot(nvalidtrs(:,1)) % shows at each frame of traceEventAlign how many trials are contributing to the average.
+    % xlabel('Frame')
+    % ylabel('# Contributing trials')
+
+    if printsize
+        fprintf('%d %d %d = size(traceEventAlign)\n', size(traceEventAlign)) % frames x units x trials.
+    end
+
+
+
+    % traceTimeVec = framet;
+    % eventInds = frame0s;
+    %{
+    if iscell(eventTime)
+        eventTime = cellfun(@(x)x(1), eventTime);
+    end
+    % frametimes and eventTime are relatie to bcontrol ttl onset. so we compare them to find on what frame eventTime happened.
+    framet = {alldata.frameTimes};
+    frame0s = findFrame0(framet, eventTime);
+    %}
+
+    %{
+    %% Align dfof traces on particular events (like time1stCenterLick).
+    shiftTime = frameLength / 2;
+    scaleTime = frameLength;
+    % frames x units x trials
+    % in timeEventAlign frame0 (ie the frame to align trials on) will be 0+frameLength/2.
+    % in traceEventAlign, traces are shifted by max(frame0s) - frame0s(itr)
+    [traceEventAlign, timeEventAlign] = triggerAlignTraces(alldataDfofGood, frame0s, shiftTime, scaleTime);
+    %}
+    % spikes
+    % [traceEventAlign_s, timeEventAlign_s] = triggerAlignTraces(alldataSpikesGood, frame0s, shiftTime, scaleTime);
+
 else
-    eventInds_f = eventTimeToIdx(eventTime, traceTimeVec); % index of eventTime on traceTimeVec array for each trial.
+    traceEventAlign = [];
+    timeEventAlign = [];
+    nvalidtrs = [];
 end
-
-% align on the last frame
-% eventInds_f = cellfun(@(x)size(x,1), traces);
-
-% Align dfof traces on particular events (like time1stCenterLick).
-% traceEventAlign: frames x units x trials
-% timeEventAlign: 1 x frames
-[traceEventAlign, timeEventAlign, nvalidtrs] = triggerAlignTraces(traces, eventInds_f, shiftTime, scaleTime); % frames x units x trials.
-
-
-
-% some checks
-%{
-numTrsWevent = sum(~isnan(eventInds_f))
-mnFrame0_mxFrame0_mxNumFrames = [min(eventInds_f) max(eventInds_f) max(framesPerTrial)]
-eventFrameNum = max(eventInds_f) % find(timeEventAlign==frameLength/2) % in what
- frame of traceEventAlign, the event exists.
-%}
-if ~isequal(max(eventInds_f), find(timeEventAlign==frameLength/2)), error('something wrong!'); end
-
-% nvalidtrs = sum(~isnan(traceEventAlign),3); % frames x neurons; number of trials that contribute to each frame for each neuron.
-% nvalidtrs = nvalidtrs(:,1);
-% figure; subplot(221), plot(nvalidtrs(:,1)) % shows at each frame of traceEventAlign how many trials are contributing to the average.
-% xlabel('Frame')
-% ylabel('# Contributing trials')
-
-if printsize
-    fprintf('%d %d %d = size(traceEventAlign)\n', size(traceEventAlign)) % frames x units x trials.
-end
-
-
-
-% traceTimeVec = framet;
-% eventInds = frame0s;
-%{
-if iscell(eventTime)
-    eventTime = cellfun(@(x)x(1), eventTime);
-end
-% frametimes and eventTime are relatie to bcontrol ttl onset. so we compare them to find on what frame eventTime happened.
-framet = {alldata.frameTimes};
-frame0s = findFrame0(framet, eventTime);
-%}
-
-%{
-%% Align dfof traces on particular events (like time1stCenterLick).
-shiftTime = frameLength / 2;
-scaleTime = frameLength;
-% frames x units x trials
-% in timeEventAlign frame0 (ie the frame to align trials on) will be 0+frameLength/2.
-% in traceEventAlign, traces are shifted by max(frame0s) - frame0s(itr)
-[traceEventAlign, timeEventAlign] = triggerAlignTraces(alldataDfofGood, frame0s, shiftTime, scaleTime);
-%}
-% spikes
-% [traceEventAlign_s, timeEventAlign_s] = triggerAlignTraces(alldataSpikesGood, frame0s, shiftTime, scaleTime);
 
 
 %% Align wheelRev on eventTime
 
-if alignWheel
+if alignWheel==1 || isnan(alignWheel)
     
     wheelTimeRes = alldata(1).wheelSampleInt;
     shiftTime = wheelTimeRes / 2;
@@ -127,8 +139,17 @@ if alignWheel
     end
     
     
-    % Align dfof traces on particular events (like time1stCenterLick).
-    [traceEventAlign_wheelRev, timeEventAlign_wheelRev, nvalidtrs_wheel] = triggerAlignTraces(traces_wheel, eventInds_w, shiftTime, scaleTime);
+    % Align wheel traces on particular events (like time1stCenterLick).
+    if doNpreNpost
+        [traceEventAlign_wheelRev, timeEventAlign_wheelRev, nvalidtrs_wheel] = triggerAlignTraces(traces_wheel, eventInds_w, shiftTime, scaleTime);
+    end
+    
+    if doNpreNpost     % above code will add so many nans... below is better
+        nPreFrames =[]; nPostFrames = [];
+        [traceEventAlign_wheelRev, timeEventAlign_wheelRev, eventI_wheelRev, nPreFrames, nPostFrames] = triggerAlignTraces_prepost(traces_wheel, eventInds_w, nPreFrames, nPostFrames, shiftTime, scaleTime, 1); % frames x units x trials        
+        cprintf('blue', 'alignedEvent: %s; nPreFrs= %i; nPostFrs= %i\n', 'firstSideTry', nPreFrames, nPostFrames)
+        nvalidtrs_wheel = eventI_wheelRev;
+    end
     
     % some checks
     %{

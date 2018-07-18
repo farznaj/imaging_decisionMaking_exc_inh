@@ -69,6 +69,9 @@ disp(['Analyzing ', topn])
 alldatanow = alldata(trs2ana);
 trs2rmvnow = find(ismember(find(trs2ana), trs2rmv));
 
+% alldatanow = alldata;
+% trs2rmvnow = trs2rmv;
+
 
 %% Plot licks in ms resolution. Show all licks during a trial. Align licks on different trial events.
 % this is useful if you don't want to align with imaging data.
@@ -110,10 +113,16 @@ for i = 1:length(evT)
     traces = traces_lick_time;
     traces = cellfun(@(x)ismember(x, lickInds), traces, 'uniformoutput', 0); % Only extract the licks that you want to analyze (center, left or right).
     traces = traces(trs2ana);
-    
-    % [traceEventAlign_licks, timeEventAlign_licks] = triggerAlignTraces(traces, eventTime);
+
     [traceEventAlign, timeEventAlign, nvalidtrs] = triggerAlignTraces(traces, eventTime);
-    
+    %{
+    if doNpreNpost     % above code will add so many nans... below is better
+        nPreFrames =[]; nPostFrames = [];
+        [traceEventAlign_lick, timeEventAlign_lick, eventI_lick, nPreFrames, nPostFrames] ...
+        = triggerAlignTraces_prepost(traces, round(eventTime), nPreFrames, nPostFrames); %, shiftTime, scaleTime, 1); % frames x units x trials        
+    end    
+    %}
+
     
     %% Plot
     

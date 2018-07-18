@@ -51,23 +51,24 @@ if 'ipykernel' in sys.modules:
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni17' #''fni19' #'fni16' #fni16' #
-    imagingFolder = '151102' #'150818' #'151102' #'151019' #'151006' #'151023' #'151023' #'151001' 
-    mdfFileNumber = [1,2] #[1] #
+    mousename = 'fni16' #''fni19' #'fni16' #fni16' #
+    imagingFolder = '150918' #'150818' #'151102' #'151019' #'151006' #'151023' #'151023' #'151001' 
+    mdfFileNumber = [1,2,3,4] #[1] #
 
-    cbestKnown = 1 #1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
-    shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations in neurons FRs across trials.
+    cbestKnown = 0 #1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
+    shflTrsEachNeuron = 1  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations in neurons FRs across trials.
 
     shflTrLabs = 0 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
     outcome2ana = 'corr' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
-    doInhAllexcEqexc = [1,0,0,0] # [0,0,1,2]  # 
+    doInhAllexcEqexc = [1,0,0] # [0,0,1,2]  # 
     #    1st element: analyze inhibitory neurons (train SVM for numSamples for each value of C)
     #    2nd element: if 1: analyze all excitatory neurons (train SVM for numSamples for each value of C)   
                     # if 2: analyze all neurons (exc, inh, unsure) ... this is like code svm_eachFrame.py   
     #    3rd element: if 1: analyze excitatory neurons, equal number to inhibitory neurons (train SVM for numSamples for each value of C, repeat this numShufflesExc times (each time subselecting n exc neurons))
                     # if 2: take half exc, half inh, and run svm
                     # if 3: take lenInh*2 of only exc and run svm. 
-    # if there is a 4th element (eg [0,1,0,1]), the following analysis will be done; if 4th element is: 
+    # if there is a 4th element (eg [0,1,0,1]), the following analysis will be done; otherwise we will decode choice. 
+        # If 4th element is: 
         # -1, test decoder on incorrect trials (in addition to correct trials.)     
         # 0, train svm to decode stimulus category (HR vs LR) on equal number of corr and incorr trials.
         # 1: add neurons based on their ROC choice tuning : sort from highest to lowest choice tuning. ##(if eqExc, exc ns are first subsampled then they are sorted based on ROC; and then svm is run) 
@@ -192,6 +193,7 @@ if len(doInhAllexcEqexc)==4:
         elif doInhAllexcEqexc[3]==2:
             print 'Adding neurons 1 by 1 from low to high ROC (choice tuning) for SVM analysis' 
 else:
+    testIncorr = 0
     addNs_rand = 0
     addNs_roc = 0
     decodeStimCateg = 0

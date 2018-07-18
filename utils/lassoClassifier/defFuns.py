@@ -1672,7 +1672,10 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
     
     if len(doInhAllexcEqexc)==4:
         if doInhAllexcEqexc[3]==-1:
-            testIncorr = 1
+            if shflTrsEachNeuron:
+                testIncorr = 0
+            else:
+                testIncorr = 1
             decodeStimCateg = 0
             addNs_rand = 0
             addNs_roc = 0        
@@ -1721,6 +1724,9 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
     else:
         diffn = ''
         h2l = ''
+        
+        
+        
     if testIncorr:
         inc = 'testIncorr_'
     else:
@@ -2503,13 +2509,15 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
     svmName_excInh = []
     for idi in range(3):
         
+        print '------'
         doInhAllexcEqexc = np.full((4), 0)        
-        if testIncorr:
+        if np.logical_or(testIncorr, shflTrsEachNeuron):
             doInhAllexcEqexc[-1] = -1
         
         doInhAllexcEqexc[idi] = 1
+
         
-        ########## set svm file name ##########
+        #################################### Set svm file name ############################
         if idi==1 and doAllN: # plot allN, instead of allExc
             # old:
 #            svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, shflTrsEachNeuron, shflTrLabs)[0] # for chAl: the latest file is with soft norm; earlier file is 
@@ -2523,6 +2531,8 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
 #        svmName = svmName[0] # use [0] for the latest file; use [-1] for the earliest file
         print os.path.basename(svmName)    
 
+
+        #################################### Load vars ####################################
         ######### inh ######### 
         if doInhAllexcEqexc[0] == 1: 
             if loadWeights==1:
@@ -3759,6 +3769,7 @@ def changeCA_shflTrsEachN(lastPopSize=0, onlySigPops=1):
             if lastPopSize:
                 a = a[-1]; b = b[-1]; ax = 0  # use the last population size
             else:
+#                a = a[-15:-5]; b = b[-15:-5]; 
                 ax = 1            
             # ttest across samples for each population size
             p = sci.stats.ttest_ind(a, b, axis=ax)[1] # nNeurons
@@ -3782,6 +3793,7 @@ def changeCA_shflTrsEachN(lastPopSize=0, onlySigPops=1):
             if lastPopSize:
                 a = a[-1]; b = b[-1]; ax = 0
             else:
+#                a = a[-15:-5]; b = b[-15:-5]; 
                 ax = 1                        
             # ttest across samples for each population size
             p = sci.stats.ttest_ind(a, b, axis=ax)[1] # nNeurons
@@ -3805,6 +3817,7 @@ def changeCA_shflTrsEachN(lastPopSize=0, onlySigPops=1):
             if lastPopSize:
                 a = a[:,-1,:]; b = b[:,-1,:]; ax = 1
             else:
+#                a = a[:,-15:-5,:]; b = b[:,-15:-5,:];
                 ax = 2
             # ttest across samples for each population size
             p = sci.stats.ttest_ind(a, b, axis=ax)[1] # nExcSamps x nNeurons
@@ -3836,6 +3849,10 @@ def changeCA_shflTrsEachN(lastPopSize=0, onlySigPops=1):
 
 
 #%% Compute number of neurons to reach plateau for each day
+    
+# It makes sense to call it plateau if the highest ~15th percentile of CA are within 1 s.e.m of each other (hence no statistical change in CA). 
+# then, once this condition of being plateau is met, use what you are doing below, ie finding the first point where the curve reaches the mean of CA of the
+# highest 15th percentile, to find the number of neurons to reach plateau.
     
 def numNeurPlateau():
     

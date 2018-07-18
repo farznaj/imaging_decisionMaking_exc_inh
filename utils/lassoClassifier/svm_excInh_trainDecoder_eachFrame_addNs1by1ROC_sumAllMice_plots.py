@@ -176,9 +176,13 @@ for im in range(len(mice)):
     ########################################################################################################################       
     ############################## Compute the change in CA from the actual case to shflTrsEachNeuron case ... aveaged across those population sizes that are significantly different between actual and shflTrsEachN
     # for each day do ttest across samples for each of the population sizes to see if shflTrsEachN is differnt fromt eh eactual case (ie neuron numbers in the decoder)
-    dav_allExc, dav_inh, dav_exc_av, dav_exc = changeCA_shflTrsEachN()
+#    dav_allExc, dav_inh, dav_exc_av, dav_exc = changeCA_shflTrsEachN()
     
-    
+    lastPopSize = 1 # if 1, compute CA changes on the last population size (ie when all neurons are included in the population). If 0, average change in CA across all population sizes
+    onlySigPops = 0 #1 # if 1, only use population sizes that show sig difference between original and shuffled. If 0, include all population sizes, regardless of significancy
+
+    dav_allExc, dav_inh, dav_exc_av, dav_exc = changeCA_shflTrsEachN(lastPopSize, onlySigPops)
+        
     dav_allExc_allM.append(dav_allExc)
     dav_inh_allM.append(dav_inh)
     dav_exc_av_allM.append(dav_exc_av)
@@ -243,12 +247,14 @@ plt.figure(figsize=(4, 2))
 
 for im in range(len(mice)):
     
-    dav_allExc = dav_allExc_allM[im]
-    dav_inh = dav_inh_allM[im]
-    dav_exc_av = dav_exc_av_allM[im]
+    dav_allExc = dav_allExc_allM[im]#[0:min(15,len(dav_allExc_allM[im]))]
+    dav_inh = dav_inh_allM[im]#[0:min(15,len(dav_allExc_allM[im]))]
+    dav_exc_av = dav_exc_av_allM[im]#[0:min(15,len(dav_allExc_allM[im]))]
 #    days2an_heatmap = days2an_heatmap_allM[im]
 #    behCorr_all = behCorr_all_allM[im]
-
+    
+    print stats.ttest_ind(dav_inh, dav_exc_av, nan_policy='omit')
+    
     aa = np.nanmean(dav_allExc)
     ai = np.nanmean(dav_inh)
     ae = np.nanmean(dav_exc_av)
@@ -273,7 +279,7 @@ for im in range(len(mice)):
     plt.xticks(range(3), ['allExc','inh','exc'], rotation=70)    
     plt.xlim([-.5, 2+.5])            
 #    ax = plt.gca();    yl = ax.get_ylim();     plt.ylim([yl[0]-2, yl[1]])
-    plt.ylim([-1.7, 11])
+#    plt.ylim([-1.7, 11])
 #    if im>0:
 #        plt.gca().spines['left'].set_color('white')
 #        plt.gca().yaxis.set_visible(False)

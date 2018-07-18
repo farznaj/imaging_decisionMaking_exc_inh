@@ -127,7 +127,7 @@ for i = ievents
     
     cnt = cnt+1;
     
-    % set DF/F traces (C: temporal component) and wheel traces
+    % Align DF/F traces (C: temporal component) and wheel traces
     
     disp(['------- ', evT{i}, ' -------'])
     
@@ -148,9 +148,9 @@ for i = ievents
     
     alignWheel = 1; printsize = 1;
     
-    [traceEventAlign, timeEventAlign, nvalidtrs, traceEventAlign_wheelRev, ...
-        timeEventAlign_wheelRev, nvalidtrs_wheel] = ...
-        avetrialAlign_noTrGroup(eventTime, traces, alldatanow, frameLength, trs2rmvnow, alignWheel, printsize, doplots);
+    [traceEventAlign, timeEventAlign, nvalidtrs, ...
+        traceEventAlign_wheelRev, timeEventAlign_wheelRev, nvalidtrs_wheel] ...
+        = avetrialAlign_noTrGroup(eventTime, traces, alldatanow, frameLength, trs2rmvnow, alignWheel, printsize, doplots);
     
     %     disp('---------------------')
     %     figure, hold on

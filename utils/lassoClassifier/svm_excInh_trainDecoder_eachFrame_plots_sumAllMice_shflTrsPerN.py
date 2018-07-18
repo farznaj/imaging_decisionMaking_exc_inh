@@ -70,6 +70,8 @@ execfile("defFuns.py") # Define common funcitons
     
 for shflTrsEachNeuron in [1,0]:  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
     
+    if shflTrsEachNeuron==0: # when it is 1, you need to load the old svm files for shflTrsEachNeuron... so in defFuns you need to uncomment the old codes for loading allN svm file, and comment the new codes! it would be nice to run svm for shflTrsEachNeuron again...
+        testIncorr = 1 # load the latest svm file (for the regular case)
     ###
     av_test_data_inh_allMice = []
     sd_test_data_inh_allMice = []
@@ -139,7 +141,7 @@ for shflTrsEachNeuron in [1,0]:  # Set to 0 for normal SVM training. # Shuffle t
             noZmotionDays = np.nan
             noZmotionDays_strict = np.nan
             noExtraStimDays = np.nan
-0   
+   
         
 #        execfile("svm_plots_setVars_n.py")      
         days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays)
@@ -178,7 +180,7 @@ for shflTrsEachNeuron in [1,0]:  # Set to 0 for normal SVM training. # Shuffle t
             
             # from setImagingAnalysisNamesP import *
             
-            imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
+            imfilename, pnevFileName, dataPath = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
             
             postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
             moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
@@ -207,7 +209,7 @@ for shflTrsEachNeuron in [1,0]:  # Set to 0 for normal SVM training. # Shuffle t
             perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, \
             w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, trsExcluded, \
             perClassErrorTest_data_inh_incorr, perClassErrorTest_shfl_inh_incorr, perClassErrorTest_data_allExc_incorr, perClassErrorTest_shfl_allExc_incorr, perClassErrorTest_data_exc_incorr, perClassErrorTest_shfl_exc_incorr, \
-            = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0, testIncorr=0)
+            = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0, testIncorr=testIncorr)
             
 #            perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN ,\
 #            = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron)
@@ -582,7 +584,7 @@ def plotnow(top, tops, e, es, lab, labs, ylab, col, p):
     pp[p<=.05] = yl
     plt.plot(range(numDays), pp, marker='*',color=col, linestyle='')
     
-    
+no    
 #%% Plots of individual mice
 
 pn = 2 # which p value to use: wilcoxon, MW, ttest  
@@ -868,6 +870,24 @@ for im in range(len(mice)):
 
 numMice = len(mice)
 numDays_allMice = np.array([len(av_test_data_inh_allMice[im]) for im in range(numMice)])
+
+# orig - shflTrsPerN
+'''
+for im in range(len(mice)):
+    i = -av_test_data_inh_allMice[im] + av_test_data_inh_allMice_shflTrsPerN[im]
+    #av_av_test_data_inh_allMice = np.array([np.nanmean(i, axis=0) for im in range(numMice)]) # numMice
+    #sd_av_test_data_inh_allMice = np.array([np.nanstd(i, axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
+    
+    e = -av_test_data_exc_allMice[im] + av_test_data_exc_allMice_shflTrsPerN[im]
+    #av_av_test_data_exc_allMice = np.array([np.nanmean(e, axis=0) for im in range(numMice)]) # numMice
+    #sd_av_test_data_exc_allMice = np.array([np.nanstd(e, axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
+    
+    #av_av_test_shfl_inh_allMice = np.array([np.nanmean(av_test_shfl_inh_allMice[im], axis=0) for im in range(numMice)])
+    #sd_av_test_shfl_inh_allMice = np.array([np.nanstd(av_test_shfl_inh_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])
+    
+    print i.mean(), e.mean(), stats.ttest_ind(i,e)
+'''
+
 
 av_av_test_data_inh_allMice = np.array([np.nanmean(av_test_data_inh_allMice[im], axis=0) for im in range(numMice)]) # numMice
 sd_av_test_data_inh_allMice = np.array([np.nanstd(av_test_data_inh_allMice[im], axis=0)/np.sqrt(numDays_allMice[im]) for im in range(numMice)])

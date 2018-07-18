@@ -29,7 +29,7 @@ savefigs = 1
 
 doAllN = 1 # plot allN, instead of allExc
 time2an = -1; # relative to eventI, look at classErr in what time stamp.
-thTrained = 10#10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
+thTrained = 10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
 corrTrained = 1
 doIncorr = 0
 
@@ -687,7 +687,7 @@ if num2AnInhAllexcEqexc == 3:
 #%% Plot classErr (averaged across all sessions) for each mouse
 
 #, markerfacecolor=colors[0], markeredgecolor=colors[0], markersize=4
-gp = .1
+gp = .2
 x = np.arange(0,numMice)
 
 plt.figure(figsize=(1.7,3))
