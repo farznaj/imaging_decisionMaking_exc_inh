@@ -84,7 +84,8 @@ if normWeights:
     binEvery = .01 #.001 # .01 #mv = 2; bn = np.arange(0.05,mv,binEvery)
 else:
     binEvery = .001
-smoothVal = 5    
+smoothVal = 0 #5    
+
 
 #%%  Define function to plot exc, inh distribution of weights, all sessions pooled on 1 subplot, and individual sessions on a different subplot.
     
@@ -452,6 +453,20 @@ for im in range(len(mice)):
 
 
 
+# Plot dist of weights for individual sessions
+"""
+im = 3
+plt.figure(figsize=(5,3*len(wexcAve_all2_allMice[im])))    
+for iday in range(len(wexcAve_all2_allMice[im])):
+    a = wexcAve_all2_allMice[im][iday]
+    b = winhAve_all2_allMice[im][iday]
+    
+    gs = gridspec.GridSpec(len(wexcAve_all2_allMice[im]), 3)#, width_ratios=[2, 1]) 
+    h1 = gs[iday,0:2]
+    h2 = gs[iday,2:3]    
+    ax1,_ = histerrbar(h1,h2,a,b,binEvery,p,lab,colors,ylab,lab1,lab2,0,doSmooth=smoothVal)
+"""
+    
 no
 #%%        
 ##############################################################################################################################################################

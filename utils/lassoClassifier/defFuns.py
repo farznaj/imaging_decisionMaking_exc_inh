@@ -527,10 +527,10 @@ def smooth(y, box_pts):
     y_smooth = np.convolve(y, box, mode='same')
     return y_smooth
 
-   
+
 #%% Plot histogram of verctors a and b on axes h1 and h2
 
-def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1='exc',lab2='inh',plotCumsum=0,doSmooth=0):
+def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1='exc',lab2='inh',plotCumsum=0,doSmooth=0, addErrBar=0):
 #    import matplotlib.gridspec as gridspec    
 #    r = np.max(np.concatenate((a,b))) - np.min(np.concatenate((a,b)))
 #    binEvery = r/float(10)
@@ -548,7 +548,10 @@ def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1=
     bn = np.arange(np.min(np.concatenate((a,b))), np.max(np.concatenate((a,b))), binEvery)
     bn[-1] = np.max([np.max(a),np.max(b)])#+binEvery/10. # unlike digitize, histogram doesn't count the right most value
     
-    # plt hist of a
+    
+    #######################################
+    ############# plt hist of a ###########
+    #######################################
     hist, bin_edges = np.histogram(a, bins=bn)
     hist = hist/float(np.sum(hist))    
     if plotCumsum:
@@ -560,7 +563,29 @@ def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1=
     plt.plot(bin_edges[0:-1]+binEvery/2., hist, color=colors[0], label=lab1)    #    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[0], alpha=.4, label=lab1)    
 #    plt.xscale('log')
     
-    # plot his of b
+    if addErrBar:
+        # set errorbars defined as :  np.sqrt(n*(1-n/N))/N if y axis is fraction; and sqrt(n(1-n/N)) if y axis is numbers. (Peter Latham defined errorbars this way!)
+        ind = np.digitize(a, bins=bn)
+        N = float(len(a))
+        
+        errbr = np.full((len(bn)-1), np.nan)
+        n_allbins = []
+        for indnum in np.arange(1, len(bn)):
+            n = np.sum(ind==indnum)
+            n_allbins.append(n)
+#            errbr[indnum-1] = np.sqrt((n/N)/N)
+            errbr[indnum-1] = np.sqrt(n*(1-n/N))/N
+            #errbr[indnum-1] = np.sqrt(n/N)/N
+#            errbr[indnum-1] = np.sqrt((n/N)*(1-n/N))
+            
+        plt.fill_between(bin_edges[0:-1]+binEvery/2., hist-errbr, hist+errbr, alpha=.5, facecolor=colors[0], edgecolor=colors[0])
+#        plt.plot(bin_edges[0:-1]+binEvery/2., hist+errbr, color=colors[0])#, label=lab1)
+#        plt.plot(bin_edges[0:-1]+binEvery/2., hist-errbr, color=colors[0])#, label=lab1)
+    
+
+    #####################################
+    ########### plot his of b ########### 
+    #####################################
     hist, bin_edges = np.histogram(b, bins=bn)
     hist = hist/float(np.sum(hist));     #d = stats.mode(np.diff(bin_edges))[0]/float(2)
     if plotCumsum:
@@ -569,6 +594,28 @@ def histerrbar(h1,h2,a,b,binEvery,p,lab,colors = ['g','k'],ylab='Fraction',lab1=
         hist = smooth(hist, doSmooth)
     plt.plot(bin_edges[0:-1]+binEvery/2., hist, color=colors[1], label=lab2)        #    plt.bar(bin_edges[0:-1], hist, binEvery, color=colors[1], alpha=.4, label=lab2)
 #    plt.xscale('log')
+    
+    
+    if addErrBar:
+        # set errorbars defined as :  np.sqrt(n*(1-n/N))/N if y axis is fraction; and sqrt(n(1-n/N)) if y axis is numbers. (Peter Latham defined errorbars this way!)
+        ind = np.digitize(b, bins=bn)
+        N = float(len(b))
+        
+        errbr = np.full((len(bn)-1), np.nan)
+        n_allbins = []
+        for indnum in np.arange(1, len(bn)):
+            n = np.sum(ind==indnum)
+            n_allbins.append(n)
+#            errbr[indnum-1] = np.sqrt((n/N)/N)
+            errbr[indnum-1] = np.sqrt(n*(1-n/N))/N            
+            #errbr[indnum-1] = np.sqrt(n/N)/N
+#            errbr[indnum-1] = np.sqrt((n/N)*(1-n/N))
+            
+#        plt.plot(bin_edges[0:-1]+binEvery/2., hist, color=colors[1], label=lab2)
+        plt.fill_between(bin_edges[0:-1]+binEvery/2., hist-errbr, hist+errbr, alpha=.5, facecolor=colors[1], edgecolor=colors[1])
+#        plt.plot(bin_edges[0:-1]+binEvery/2., hist+errbr, color=colors[1])#, label=lab2)
+#        plt.plot(bin_edges[0:-1]+binEvery/2., hist-errbr, color=colors[1])#, label=lab2)    
+    
     
     # set labels, etc
     yl = plt.gca().get_ylim()
