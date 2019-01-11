@@ -683,6 +683,8 @@ if ~isempty(fl)
         if any(mscanLag(fll) >= 32+5) % well, we dont want >32, but may be relax it upto 32+5.
             fprintf('mscanLag = %d ms\t\n', mscanLag(fll))
             error('mscan >= 32+5ms; why so large?!')
+%             trs2rmv = sort([trs2rmv; fll']);
+%             save(imfilename, '-append', 'trs2rmv')            
         else % positive values will be taken care of in mergeAlldata ... so it should be fine! though if you want to be conservative you should exclude them.
             warning('\t%d trial(s) with [32 < mscanLag < 32+5]ms are not in trs2rmv', length(fll))
             fprintf('mscanLag = %d ms\t\n', mscanLag(fll))
@@ -1091,7 +1093,7 @@ else
     saveAlVars = 0;
 end
 
-for itrac = 1:3
+for itrac = 1:3 %2
        
     traceType = traceTypeAll{itrac};
     traces = tracesAll{itrac};
@@ -1103,16 +1105,22 @@ for itrac = 1:3
     if itrac~=1
         close(fannoy) 
     end
+    
 %     load(postName, 'outcomes') % outcomes based on animal's 1st choice. we need to load them again bc they are changed in set_aligned_traces
     % on July 3, 2017 you made popClassifier_trialHistory a function.
     % Before that outcomes and allResp_HR_LR were getting changed there,
     % but above you only loaded outcomes... so plots below were not
     % quite correct if there was allowCorr.
-    
+
     if save_aligned_traces & itrac==1 & saveAlVars==1 % only save it for S
         save(postName, '-append', 'trialHistory', 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs', 'stimAl_noEarlyDec', 'stimOffAl')
     end
 
+	%{
+    [~,b] = fileparts(postName); 
+    newPostName = ['post_Ctrace_', b(6:end)];
+    save(newPostName, 'firstSideTryAl', 'firstSideTryAl_COM', 'goToneAl', 'goToneAl_noStimAft', 'rewardAl', 'commitIncorrAl', 'initToneAl', 'stimAl_allTrs', 'stimAl_noEarlyDec', 'stimOffAl')
+    %}
     
     %% Plot average ca traces (across all neurons) for HR and LR trials, aligned on different trial events. (at the begining of the script you set some vars... check them if you want to customize them!).
 

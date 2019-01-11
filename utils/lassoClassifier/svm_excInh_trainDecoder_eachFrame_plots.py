@@ -13,30 +13,45 @@ Created on Sun Mar 12 15:12:29 2017
 
 # Use the following script for the plots of all mice (change in CA after breaking noise correslations):
 # svm_excInh_trainDecoder_eachFrame_shflTrsEachN_sumAllMice_plots.py
-    
+
 #%% Change the following vars:
 
 mousename = 'fni16'
 
+do_Ctrace = 0 # if 1, use C trace (denoised fluorescent trace), instead of S (inferred spikes)
+same_HRLR_acrossDays = 0 # normally 0, but if 1, svm will be trained on n trials, where n is the minimum number of trials across all sessions of a mouse (this variable is already computed and saved in the analysis folder of each mouse) # set to 1 to balance the number of trials across training days to make sure svm performance is not affected by that.
+decodeOutcome = 1
 decodeStimCateg = 0
 noExtraStimDayAnalysis = 0 # if 1, exclude days with extraStim from analysis; if 0, include all days
-use_both_remCorr_testing = [1,0,0] # if decodeStimCate = 1, decide which one (testing, remCorr, or Both) you want to use for the rest of this code
 shflTrsEachNeuron = 0 # 1st set to 1, then to 0 to compare how decoder changes after removing noise corrs. # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
 addNs_roc = 0 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
 h2l = 1 # if 1, load svm file in which neurons were added from high to low AUC. If 0: low to high AUC.
 do_excInhHalf = 0 # 0: Load vars for inh,exc,allExc, 1: Load exc,inh SVM vars for excInhHalf (ie when the population consists of half exc and half inh) and allExc2inhSize (ie when populatin consists of allExc but same size as 2*inh size)
 loadYtest = 0 # get svm performance for different trial strength # to load the svm files that include testTrInds_allSamps, etc vars (ie in addition to percClassError, they include the Y_hat for each trial)
-testIncorr = 1 # 1 #set it to 1 to load the latest svm file even if you dont want to analyze incorr trials. # load svm file that includes testing corr as well as testing incorr trials.
 
-corrTrained = 1 # 1 # svm was trained on what trial outcomes: if corr, set to 1; if all outcomes, set to 0)
+ch_st_goAl = [-1,0,0] # [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
+trialHistAnalysis = 0 # 1 # 
+testIncorr = 1 # 0 # set to 0 for trialHistoryAnalysis  #set it to 1 to load the latest svm file even if you dont want to analyze incorr trials. # load svm file that includes testing corr as well as testing incorr trials.
+corrTrained = 1 # 0 # set to 0 for trialHistoryAnalysis # svm was trained on what trial outcomes: if corr, set to 1; if all outcomes, set to 0)
+
 doAllN = 1 # matters only when do_excInhHalf =0; plot allN, instead of allExc
-savefigs = 0
+savefigs = 0 #1
+plotSingleSessions = 1 # plot individual sessions when addNs_roc=0
+
+if decodeStimCateg:
+    use_both_remCorr_testing = [1,0,0] # [1,0,0]: use this for decodeStimCateg  # if decodeStimCateg = 1, decide which one (testing, remCorr, or Both) you want to use for the rest of this code
+elif decodeOutcome:
+    use_both_remCorr_testing = [0,0,1] #[0,0,1] #[0,0,1]: use this for decodeOutcome; since remCorr included only correct trials, CA of remCorr is similar for both shfl and data... so we only use the testing data!
+
 
 if shflTrsEachNeuron:
     testIncorr = 0 # it was ran in the past, so there is no testIncorr in the file name    
     doAllN = 0 # matters only when do_excInhHalf =0; plot allN, instead of allExc
 
-thTrained = 10  # number of trials of each class used for svm training, min acceptable value to include a day in analysis
+if do_Ctrace:
+    testIncorr = 0
+    
+thTrained = 10  # number of trials of each class used for svm training, min acceptable value to include a day in analysis; i.e. if a day has <10 hr trials and <10 lr trials, it wont be included in the analysis.
 loadWeights = 0
 useEqualTrNums = 1
 doIncorr = 0
@@ -50,18 +65,17 @@ if mousename == 'fni18': #set one of the following to 1:
     allDays = 1 # all 7 days will be used (last 3 days have z motion!)
     noZmotionDays = 0 # 4 days that dont have z motion will be used.
     noZmotionDays_strict = 0 # 3 days will be used, which more certainly dont have z motion!
+    if do_Ctrace:
+        allDays = 0
+        noZmotionDays = 1
 elif mousename == 'fni19':    
     allDays = 1    
     noExtraStimDays = 0   
 
-    
-ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
-#loadInhAllexcEqexc = 1 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)       
-trialHistAnalysis = 0;
-iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
+#loadInhAllexcEqexc = 1 # if 1, load 2nd run of the svm_excInh_trainDecoder_eachFrame code: you ran inh,exc,allExc separately; also for all days the new vector inhRois_pix was used (not the old inhRois)           
+iTiFlg = 2 # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
 superimpose = 1 # the averaged aligned traces of testing and shuffled will be plotted on the same figure
 thStimStrength = 3 # needed if loadYtest=1 # 2; # threshold of stim strength for defining hard, medium and easy trials.
-plotSingleSessions = 0 # plot individual sessions when addNs_roc=0
     
 chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
 stAl = ch_st_goAl[1]
@@ -81,7 +95,7 @@ if doAllN==1:
 else:
     labAll = 'allExc'
 
-if decodeStimCateg:
+if decodeStimCateg or decodeOutcome:
     corrTrained=0
     
 if corrTrained==0:
@@ -94,7 +108,21 @@ if decodeStimCateg:
 
 if noExtraStimDayAnalysis:
     corrn = corrn + 'noExtraStim_'
-    
+
+if decodeOutcome:
+    corrn = 'decodeOutcome_' + corrn    
+
+if same_HRLR_acrossDays:
+    thTrained = 20 # use this if you want to analyze days that svm was run on 20HR and 20LR trials (these are the lateset SVM_sameTrNum files)... if a day doesn't have these latest files, the ealier svm_sameTr file will be loaded, but when we check thTrained we exclude these days.
+    corrn = 'sameTrNumAllDays_20Trs_' + corrn    
+    testIncorr = 0
+
+if do_Ctrace:
+    corrn = 'Ctrace_' + corrn
+
+if mousename=='fni18' and noZmotionDays:
+    corrn = corrn + 'noZmotionDays_'
+
     
 #if loadInhAllexcEqexc==1:
 if addNs_roc:   
@@ -114,9 +142,11 @@ if doAllN==1:
     else:
         print 'bestc = c that gives min cv error'
 
+
+
 execfile("defFuns.py")
 #execfile("svm_plots_setVars_n.py")  
-days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays, loadYtest, decodeStimCateg)
+days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays, loadYtest, decodeStimCateg, decodeOutcome)
 # remove some days if needed:
 #days = np.delete(days, [14])
 
@@ -126,7 +156,23 @@ regressBins = int(np.round(100/frameLength)) # must be same regressBins used in 
 from datetime import datetime
 nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 
-   
+
+if same_HRLR_acrossDays:    
+    dataPath = '/home/farznaj/Shares/Churchland_nlsas_data/data/'
+    if mousename=='fni18' or mousename=='fni19':
+        dataPath = '/home/farznaj/Shares/Churchland_hpc_home/space_managed_data/'
+        
+    a = os.path.join(dataPath, mousename, 'imaging', 'analysis', 'SVM_minHRLR_acrossDays_choiceDecode_chAl.mat')
+    data = scio.loadmat(a) #, {'mnHRLR_acrossDays':mnHRLR_acrossDays, 'mn_corr':mn_corr, 'days2an_heatmap':days2an_heatmap})
+    
+    aa = scio.loadmat(a, variable_names=['days2an_heatmap'])
+    days2an_heatmap = aa.pop('days2an_heatmap').flatten()
+    
+    days = list(np.array(days)[days2an_heatmap.astype(bool)])
+
+print 'number of days to be analyzed: ', len(days)
+
+
 #%% Initiate vars
 '''
 #####################################################################################################################################################   
@@ -134,13 +180,18 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 '''
 
 days2an = np.arange(0, len(days)) # range(len(days)) # 
-if np.logical_and(shflTrsEachNeuron==1, corrTrained==0):
+
+if (mousename=='fni17' and shflTrsEachNeuron==1 and corrTrained==0):
     days2an = np.delete(days2an, 33) # fni17 151013 doesnt have the mat file: excInh_SVMtrained_eachFrame_shflTrsPerN_eqExc_currChoice_chAl_ds3_eqTrs_171016-*
 
 
 numInh = np.full(len(days2an), np.nan)
 numAllexc = np.full(len(days2an), np.nan)
-corr_hr_lr = np.full((len(days2an),2), np.nan) # number of hr, lr correct trials for each day
+if decodeOutcome:
+    corr_hr_lr = np.full((len(days2an),4), np.nan) # number of hr, lr correct trials, and hr, lr incorrect trials for each day
+else:
+    corr_hr_lr = np.full((len(days2an),2), np.nan) # number of hr, lr correct trials for each day
+
 eventI_allDays = np.full(len(days2an), np.nan) # frame at which choice happened (if traces were downsampled in svm_eachFrame, it will be the downsampled frame number)
 eventI_ds_allDays = np.full(len(days2an), np.nan)
 perClassErrorTest_data_inh_all = []
@@ -193,11 +244,12 @@ perClassErrorTestRemCorr_shfl_exc_all = []
 perClassErrorTestRemCorr_chance_exc_all = []      
 fractTrs_50msExtraStim = np.full(len(days2an), np.nan)    
 
+
 #%% Loop over days    
 
 cntd = -1
-#iday = 0
-for iday in days2an: # range(len(days)): # np.arange(3, len(days)): # 
+# iday = 0
+for iday in days2an: # np.arange(3, len(days)): # range(len(days)): # 
         
     #%%            
     cntd = cntd+1
@@ -220,7 +272,7 @@ for iday in days2an: # range(len(days)): # np.arange(3, len(days)): #
     
     print(os.path.basename(imfilename))
 
-    
+        
     #%% Identify days with extra stim
     
     d = scio.loadmat(postName, variable_names=['timeStimOffset', 'timeSingleStimOffset', 'timeStimOnset'])
@@ -231,11 +283,16 @@ for iday in days2an: # range(len(days)): # np.arange(3, len(days)): #
 
 
     #%% Get number of hr, lr trials that were used for svm training
-    
-    svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, [1,0,0], regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]   
-    
-    corr_hr, corr_lr = set_corr_hr_lr(postName, svmName)
-    corr_hr_lr[cntd,:] = [corr_hr, corr_lr]        
+
+#    svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, [1,0,0], regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]   
+    svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, 1, [1,0,0], regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]   
+
+    if decodeOutcome:
+        [corr_hr, corr_lr, incorr_hr, incorr_lr] = set_corr_incorr_hr_lr(postName, svmName)
+        corr_hr_lr[cntd,:] = [corr_hr, corr_lr, incorr_hr, incorr_lr]
+    else:
+        corr_hr, corr_lr = set_corr_hr_lr(postName, svmName)
+        corr_hr_lr[cntd,:] = [corr_hr, corr_lr]        
     
     
     #%% Load matlab vars to set eventI_ds (downsampled eventI)
@@ -243,7 +300,7 @@ for iday in days2an: # range(len(days)): # np.arange(3, len(days)): #
     eventI, eventI_ds = setEventIds(postName, chAl, regressBins=3, trialHistAnalysis=0)
     
     eventI_allDays[cntd] = eventI
-    eventI_ds_allDays[cntd] = eventI_ds    
+    eventI_ds_allDays[cntd] = eventI_ds
 
     
     #%% Load SVM vars
@@ -261,7 +318,7 @@ for iday in days2an: # range(len(days)): # np.arange(3, len(days)): #
         loadSVM_excInh_excInhHalf(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, loadWeights, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0)
         perClassErrorTest_data_exc = 0; perClassErrorTest_shfl_exc = 0; perClassErrorTest_chance_exc = 0; 
         
-    elif decodeStimCateg:
+    elif decodeStimCateg or decodeOutcome:
         perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, \
         perClassErrorTestRemCorr_inh, perClassErrorTestRemCorr_shfl_inh, perClassErrorTestRemCorr_chance_inh, \
         perClassErrorTestBoth_inh, perClassErrorTestBoth_shfl_inh, perClassErrorTestBoth_chance_inh, \
@@ -275,7 +332,7 @@ for iday in days2an: # range(len(days)): # np.arange(3, len(days)): #
         testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, trsnow_allSamps_inh, \
         testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, trsnow_allSamps_allExc, \
         testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc, trsnow_allSamps_exc, \
-        = loadSVM_excInh_decodeStimCateg(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=loadYtest)        
+        = loadSVM_excInh_decodeStimCateg(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=loadYtest, decodeOutcome=decodeOutcome)
 
         ############################################
         ###### average across nRandCorr samps ######
@@ -316,7 +373,7 @@ for iday in days2an: # range(len(days)): # np.arange(3, len(days)): #
             perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, \
             w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, trsExcluded, \
             perClassErrorTest_data_inh_incorr, perClassErrorTest_shfl_inh_incorr, perClassErrorTest_data_allExc_incorr, perClassErrorTest_shfl_allExc_incorr, perClassErrorTest_data_exc_incorr, perClassErrorTest_shfl_exc_incorr, \
-            = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0, testIncorr=testIncorr)
+            = loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0, testIncorr=testIncorr, same_HRLR_acrossDays=same_HRLR_acrossDays, do_Ctrace=do_Ctrace)
         else:
             perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, perClassErrorTest_data_allExc, perClassErrorTest_shfl_allExc, perClassErrorTest_chance_allExc, perClassErrorTest_data_exc, perClassErrorTest_shfl_exc, perClassErrorTest_chance_exc, \
             w_data_inh, w_data_allExc, w_data_exc, b_data_inh, b_data_allExc, b_data_exc, svmName_excInh, svmName_allN, trsExcluded, \
@@ -348,7 +405,7 @@ for iday in days2an: # range(len(days)): # np.arange(3, len(days)): #
     perClassErrorTest_data_inh_all.append(perClassErrorTest_data_inh) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
     perClassErrorTest_shfl_inh_all.append(perClassErrorTest_shfl_inh)
     perClassErrorTest_chance_inh_all.append(perClassErrorTest_chance_inh)
-    if decodeStimCateg:
+    if decodeStimCateg or decodeOutcome:
         perClassErrorTestBoth_inh_all.append(perClassErrorTestBoth_inh) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
         perClassErrorTestBoth_shfl_inh_all.append(perClassErrorTestBoth_shfl_inh)
         perClassErrorTestBoth_chance_inh_all.append(perClassErrorTestBoth_chance_inh)
@@ -359,7 +416,7 @@ for iday in days2an: # range(len(days)): # np.arange(3, len(days)): #
     perClassErrorTest_data_allExc_all.append(perClassErrorTest_data_allExc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs
     perClassErrorTest_shfl_allExc_all.append(perClassErrorTest_shfl_allExc)
     perClassErrorTest_chance_allExc_all.append(perClassErrorTest_chance_allExc) 
-    if decodeStimCateg:
+    if decodeStimCateg or decodeOutcome:
         perClassErrorTestBoth_allExc_all.append(perClassErrorTestBoth_allExc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
         perClassErrorTestBoth_shfl_allExc_all.append(perClassErrorTestBoth_shfl_allExc)
         perClassErrorTestBoth_chance_allExc_all.append(perClassErrorTestBoth_chance_allExc)
@@ -371,7 +428,7 @@ for iday in days2an: # range(len(days)): # np.arange(3, len(days)): #
         perClassErrorTest_data_exc_all.append(perClassErrorTest_data_exc) # each day: numShufflesExc x numSamples x numFrames   # if addNs_roc: # numShufflesExc x number of neurons in the decoder x numSamples x nFrs 
         perClassErrorTest_shfl_exc_all.append(perClassErrorTest_shfl_exc)
         perClassErrorTest_chance_exc_all.append(perClassErrorTest_chance_exc)
-        if decodeStimCateg:
+        if decodeStimCateg or decodeOutcome:
             perClassErrorTestBoth_exc_all.append(perClassErrorTestBoth_exc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
             perClassErrorTestBoth_shfl_exc_all.append(perClassErrorTestBoth_shfl_exc)
             perClassErrorTestBoth_chance_exc_all.append(perClassErrorTestBoth_chance_exc)
@@ -414,7 +471,7 @@ numD = len(perClassErrorTest_data_inh_all)
 
 print '_____________________ Done with all days _____________________'
 
-
+#no
 #%%    
 ######################################################################################################################################################    
 ######################################################################################################################################################          
@@ -436,7 +493,7 @@ elif do_excInhHalf:
     numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc \
         = av_se_CA_trsamps_excInhHalf(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all)
 
-elif decodeStimCateg:
+elif decodeStimCateg or decodeOutcome:
     numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, \
     av_test_remCorr_data_inh, sd_test_remCorr_data_inh, av_test_remCorr_shfl_inh, sd_test_remCorr_shfl_inh, av_test_remCorr_chance_inh, sd_test_remCorr_chance_inh, \
     av_test_both_data_inh, sd_test_both_data_inh, av_test_both_shfl_inh, sd_test_both_shfl_inh, av_test_both_chance_inh, sd_test_both_chance_inh, \
@@ -456,6 +513,12 @@ elif decodeStimCateg:
         perClassErrorTestRemCorr_allExc_all, perClassErrorTestRemCorr_shfl_allExc_all, perClassErrorTestRemCorr_chance_allExc_all, \
         perClassErrorTestBoth_allExc_all, perClassErrorTestBoth_shfl_allExc_all, perClassErrorTestBoth_chance_allExc_all)
 
+
+    if len(perClassErrorTestRemCorr_inh_all[0]) and np.isnan(perClassErrorTestRemCorr_inh_all[0]): # when you decoded outcome and traces were outcome aligned, you sent remCorr and _both vars to nan (instead of those huge matrices), bc anyway you were going to only use the testing data
+        ignore = 1
+    else:
+        ignore = 0
+
     # for each day run ttest across samples between data and shfl, to see if classifier performance (in each frame) is significantly different from shuffled case or not.
     ttest_pval_allExc = np.array([stats.ttest_ind(perClassErrorTest_data_allExc_all[iday], perClassErrorTest_shfl_allExc_all[iday], axis=0)[1] for iday in range(numD)])
     ttest_pval_inh = np.array([stats.ttest_ind(perClassErrorTest_data_inh_all[iday], perClassErrorTest_shfl_inh_all[iday], axis=0)[1] for iday in range(numD)])    
@@ -467,15 +530,18 @@ elif decodeStimCateg:
         ttest_pval_exc.append(ttest_pval_exc_e) 
     ttest_pval_exc = np.array(ttest_pval_exc) # samps # days # frs
 
-    ttest_pval_allExc_remCorr = np.array([stats.ttest_ind(perClassErrorTestRemCorr_allExc_all[iday], perClassErrorTestRemCorr_shfl_allExc_all[iday], axis=0)[1] for iday in range(numD)])
-    ttest_pval_inh_remCorr = np.array([stats.ttest_ind(perClassErrorTestRemCorr_inh_all[iday], perClassErrorTestRemCorr_shfl_inh_all[iday], axis=0)[1] for iday in range(numD)])    
-    ttest_pval_exc_remCorr = [] # = np.full((perClassErrorTestRemCorr_data_exc_all[iday].shape[-1], numExcSamples), np.nan)
-    for iexc in range(numExcSamples):
-        ttest_pval_exc_e = []
-        for iday in range(numD):
-            ttest_pval_exc_e.append(stats.ttest_ind(perClassErrorTestRemCorr_exc_all[iday][iexc], perClassErrorTestRemCorr_shfl_inh_all[iday][iexc], axis=0)[1])
-        ttest_pval_exc_remCorr.append(ttest_pval_exc_e) 
-    ttest_pval_exc_remCorr = np.array(ttest_pval_exc_remCorr) # samps # days # frs
+
+    if ignore==0:
+        ttest_pval_allExc_remCorr = np.array([stats.ttest_ind(perClassErrorTestRemCorr_allExc_all[iday], perClassErrorTestRemCorr_shfl_allExc_all[iday], axis=0)[1] for iday in range(numD)])
+        ttest_pval_inh_remCorr = np.array([stats.ttest_ind(perClassErrorTestRemCorr_inh_all[iday], perClassErrorTestRemCorr_shfl_inh_all[iday], axis=0)[1] for iday in range(numD)])    
+        ttest_pval_exc_remCorr = [] # = np.full((perClassErrorTestRemCorr_data_exc_all[iday].shape[-1], numExcSamples), np.nan)
+        for iexc in range(numExcSamples):
+            ttest_pval_exc_e = []
+            for iday in range(numD):
+                ttest_pval_exc_e.append(stats.ttest_ind(perClassErrorTestRemCorr_exc_all[iday][iexc], perClassErrorTestRemCorr_shfl_inh_all[iday][iexc], axis=0)[1])
+            ttest_pval_exc_remCorr.append(ttest_pval_exc_e) 
+        ttest_pval_exc_remCorr = np.array(ttest_pval_exc_remCorr) # samps # days # frs
+
 
     ttest_pval_allExc_both = np.array([stats.ttest_ind(perClassErrorTestBoth_allExc_all[iday], perClassErrorTestBoth_shfl_allExc_all[iday], axis=0)[1] for iday in range(numD)])
     ttest_pval_inh_both = np.array([stats.ttest_ind(perClassErrorTestBoth_inh_all[iday], perClassErrorTestBoth_shfl_inh_all[iday], axis=0)[1] for iday in range(numD)])    
@@ -647,7 +713,6 @@ else:
     sd_l2_test_c_st = sd_l2_test_c + 0
 '''    
 
-
 #%% Decide what days to analyze: exclude days with too few trials used for training SVM, also exclude incorr from days with too few incorr trials.
 
 # th for min number of trs of each class
@@ -656,17 +721,20 @@ thTrained = 30 #25; # 1/10 of this will be the testing tr num! and 9/10 was used
 thIncorr = 4 #5
 '''
 mn_corr = np.min(corr_hr_lr,axis=1) # number of trials of each class. 90% of this was used for training, and 10% for testing.
+if decodeOutcome:
+    mn_corr = 2*mn_corr # bc in decodeOutcome, corr_hr_lr shows hr and lr for each class, so the total number of trials per class will be twice the mn_corr.
 #mn_corr = np.delete(mn_corr, [46]) # #np.append(mn_corr,[12,12])
-print '%d days will be excluded: too few trials for svm training' %(sum(mn_corr < thTrained))
+print '%d days will be excluded: < %d trials per choice for svm training' %(sum(mn_corr < thTrained), thTrained)
 print np.array(days)[mn_corr < thTrained]
-numDaysGood = sum(mn_corr>=thTrained)
 
+numDaysGood = sum(mn_corr>=thTrained)
+print 'Final number of days: %d' %(numDaysGood)
 
 ###%% NOTE: Do you want to do this?    
 #days = np.array(days)
 #days = days[days2an]
 mn_corr0 = mn_corr + 0 # will be used for the heatmaps of CA for all days; We need to exclude 151023 from fni16, this day had issues! ...  in the mat file of stabTestTrainTimes, its class accur is very high ... and in the mat file of excInh_trainDecoder_eachFrame it is very low ...ANYWAY I ended up removing it from the heatmap of CA for all days!!! but it is included in other analyses!!
-if np.logical_and(mousename=='fni16', decodeStimCateg==0): #np.logical_and(mousename=='fni16', corrTrained==1):
+if (mousename=='fni16' and decodeStimCateg==0 and same_HRLR_acrossDays==0 and decodeOutcome==0): #np.logical_and(mousename=='fni16', corrTrained==1):
     mn_corr0[days.index('151023_1')] = thTrained - 1 # see it will be excluded from analysis!    
 days2an_heatmap = mn_corr0 >= thTrained     
 
@@ -680,7 +748,20 @@ else:
     
 days2an_heatmap = np.logical_and(days2an_heatmap , days2an_noExtraStim)
 
+# across all days that went into the learning analysis, the mim number of HR (or LR) trials was mnHRLR_acrossDays
+mnHRLR_acrossDays = min(mn_corr[days2an_heatmap]) # min(mn_corr[mn_corr>=thTrained]) 
+#print mnHRLR_acrossDays
 
+# save mn_corr etc vars in the analysis folder for each mouse
+'''
+a = os.path.join(dataPath, mousename, 'imaging', 'analysis', 'SVM_minHRLR_acrossDays_choiceDecode_chAl.mat')
+scio.savemat(a, {'mnHRLR_acrossDays':mnHRLR_acrossDays, 'mn_corr':mn_corr, 'days2an_heatmap':days2an_heatmap})
+
+aa = scio.loadmat(a, variable_names=['mnHRLR_acrossDays'])
+aaa = aa.pop('mnHRLR_acrossDays')[0,:]
+aaa, mnHRLR_acrossDays
+'''
+#no
 
 #%% Load behavioral performance vars (for plots of svm performance vs behavioral performance)
 
@@ -688,7 +769,12 @@ days2an_heatmap = np.logical_and(days2an_heatmap , days2an_noExtraStim)
 imagingDir = setImagingAnalysisNamesP(mousename)
 fname = os.path.join(imagingDir, 'analysis')    
 # set svmStab mat file name that contains behavioral and class accuracy vars
-finame = os.path.join(fname, 'svm_stabilityBehCA_*.mat')
+
+if trialHistAnalysis==0:
+    finame = os.path.join(fname, 'svm_stabilityBehCA_*.mat')
+else:
+    finame = os.path.join(fname, 'svm_trialHist_stabilityBehCA_*.mat')
+    
 stabBehName = glob.glob(finame)
 stabBehName = sorted(stabBehName, key=os.path.getmtime)[::-1] # so the latest file is the 1st one.
 stabBehName = stabBehName[0]
@@ -706,7 +792,8 @@ if np.logical_and(decodeStimCateg==1, mousename=='fni18'): # first day ('151209_
     behCorr_all = np.delete(behCorr_all, 0)
     behCorrHR_all = np.delete(behCorrHR_all, 0)
     behCorrLR_all = np.delete(behCorrLR_all, 0)
-    
+
+
 ##################################################################################################
 ##################################################################################################
 ##################################################################################################
@@ -720,7 +807,7 @@ if np.logical_and(decodeStimCateg==1, mousename=='fni18'): # first day ('151209_
 ##################################################################################################
 ##################################################################################################
 
-no
+
 #%% Go to line 1900 for addNs_roc plots. 
 
 if addNs_roc==0:    
@@ -753,6 +840,7 @@ if addNs_roc==0:
     av_test_data_inh_aligned = alTrace(av_test_data_inh, eventI_ds_allDays, nPreMin, nPostMin)
     av_test_shfl_inh_aligned = alTrace(av_test_shfl_inh, eventI_ds_allDays, nPreMin, nPostMin)
     av_test_chance_inh_aligned = alTrace(av_test_chance_inh, eventI_ds_allDays, nPreMin, nPostMin)    
+    
     if do_excInhHalf==0:
         av_test_data_exc_aligned = alTrace(av_test_data_exc, eventI_ds_allDays, nPreMin, nPostMin)
         av_test_shfl_exc_aligned = alTrace(av_test_shfl_exc, eventI_ds_allDays, nPreMin, nPostMin)
@@ -760,26 +848,30 @@ if addNs_roc==0:
     av_test_data_allExc_aligned = alTrace(av_test_data_allExc, eventI_ds_allDays, nPreMin, nPostMin)
     av_test_shfl_allExc_aligned = alTrace(av_test_shfl_allExc, eventI_ds_allDays, nPreMin, nPostMin)
     av_test_chance_allExc_aligned = alTrace(av_test_chance_allExc, eventI_ds_allDays, nPreMin, nPostMin)
-    if decodeStimCateg:
-        av_test_remCorr_data_inh_aligned = alTrace(av_test_remCorr_data_inh, eventI_ds_allDays, nPreMin, nPostMin)
-        av_test_remCorr_shfl_inh_aligned = alTrace(av_test_remCorr_shfl_inh, eventI_ds_allDays, nPreMin, nPostMin)
-        av_test_remCorr_chance_inh_aligned = alTrace(av_test_remCorr_chance_inh, eventI_ds_allDays, nPreMin, nPostMin)    
-        av_test_both_data_inh_aligned = alTrace(av_test_both_data_inh, eventI_ds_allDays, nPreMin, nPostMin)
-        av_test_both_shfl_inh_aligned = alTrace(av_test_both_shfl_inh, eventI_ds_allDays, nPreMin, nPostMin)
-        av_test_both_chance_inh_aligned = alTrace(av_test_both_chance_inh, eventI_ds_allDays, nPreMin, nPostMin)    
-        if do_excInhHalf==0:
-            av_test_remCorr_data_exc_aligned = alTrace(av_test_remCorr_data_exc, eventI_ds_allDays, nPreMin, nPostMin)
-            av_test_remCorr_shfl_exc_aligned = alTrace(av_test_remCorr_shfl_exc, eventI_ds_allDays, nPreMin, nPostMin)
-            av_test_remCorr_chance_exc_aligned = alTrace(av_test_remCorr_chance_exc, eventI_ds_allDays, nPreMin, nPostMin)    
-            av_test_both_data_exc_aligned = alTrace(av_test_both_data_exc, eventI_ds_allDays, nPreMin, nPostMin)
-            av_test_both_shfl_exc_aligned = alTrace(av_test_both_shfl_exc, eventI_ds_allDays, nPreMin, nPostMin)
-            av_test_both_chance_exc_aligned = alTrace(av_test_both_chance_exc, eventI_ds_allDays, nPreMin, nPostMin)    
-        av_test_remCorr_data_allExc_aligned = alTrace(av_test_remCorr_data_allExc, eventI_ds_allDays, nPreMin, nPostMin)
-        av_test_remCorr_shfl_allExc_aligned = alTrace(av_test_remCorr_shfl_allExc, eventI_ds_allDays, nPreMin, nPostMin)
-        av_test_remCorr_chance_allExc_aligned = alTrace(av_test_remCorr_chance_allExc, eventI_ds_allDays, nPreMin, nPostMin)        
-        av_test_both_data_allExc_aligned = alTrace(av_test_both_data_allExc, eventI_ds_allDays, nPreMin, nPostMin)
-        av_test_both_shfl_allExc_aligned = alTrace(av_test_both_shfl_allExc, eventI_ds_allDays, nPreMin, nPostMin)
-        av_test_both_chance_allExc_aligned = alTrace(av_test_both_chance_allExc, eventI_ds_allDays, nPreMin, nPostMin)        
+    
+    if decodeStimCateg or decodeOutcome:
+        if ignore==0:
+            av_test_remCorr_data_inh_aligned = alTrace(av_test_remCorr_data_inh, eventI_ds_allDays, nPreMin, nPostMin)
+            av_test_remCorr_shfl_inh_aligned = alTrace(av_test_remCorr_shfl_inh, eventI_ds_allDays, nPreMin, nPostMin)
+            av_test_remCorr_chance_inh_aligned = alTrace(av_test_remCorr_chance_inh, eventI_ds_allDays, nPreMin, nPostMin)    
+            av_test_both_data_inh_aligned = alTrace(av_test_both_data_inh, eventI_ds_allDays, nPreMin, nPostMin)
+            av_test_both_shfl_inh_aligned = alTrace(av_test_both_shfl_inh, eventI_ds_allDays, nPreMin, nPostMin)
+            av_test_both_chance_inh_aligned = alTrace(av_test_both_chance_inh, eventI_ds_allDays, nPreMin, nPostMin)    
+        
+            if do_excInhHalf==0:
+                av_test_remCorr_data_exc_aligned = alTrace(av_test_remCorr_data_exc, eventI_ds_allDays, nPreMin, nPostMin)
+                av_test_remCorr_shfl_exc_aligned = alTrace(av_test_remCorr_shfl_exc, eventI_ds_allDays, nPreMin, nPostMin)
+                av_test_remCorr_chance_exc_aligned = alTrace(av_test_remCorr_chance_exc, eventI_ds_allDays, nPreMin, nPostMin)    
+                av_test_both_data_exc_aligned = alTrace(av_test_both_data_exc, eventI_ds_allDays, nPreMin, nPostMin)
+                av_test_both_shfl_exc_aligned = alTrace(av_test_both_shfl_exc, eventI_ds_allDays, nPreMin, nPostMin)
+                av_test_both_chance_exc_aligned = alTrace(av_test_both_chance_exc, eventI_ds_allDays, nPreMin, nPostMin)    
+                
+            av_test_remCorr_data_allExc_aligned = alTrace(av_test_remCorr_data_allExc, eventI_ds_allDays, nPreMin, nPostMin)
+            av_test_remCorr_shfl_allExc_aligned = alTrace(av_test_remCorr_shfl_allExc, eventI_ds_allDays, nPreMin, nPostMin)
+            av_test_remCorr_chance_allExc_aligned = alTrace(av_test_remCorr_chance_allExc, eventI_ds_allDays, nPreMin, nPostMin)        
+            av_test_both_data_allExc_aligned = alTrace(av_test_both_data_allExc, eventI_ds_allDays, nPreMin, nPostMin)
+            av_test_both_shfl_allExc_aligned = alTrace(av_test_both_shfl_allExc, eventI_ds_allDays, nPreMin, nPostMin)
+            av_test_both_chance_allExc_aligned = alTrace(av_test_both_chance_allExc, eventI_ds_allDays, nPreMin, nPostMin)        
     
         # keep a copy of testing data vars:
         av_test_data_inh_aligned0 = av_test_data_inh_aligned
@@ -803,20 +895,21 @@ if addNs_roc==0:
         ttest_pval_exc_aligned.append(alTrace(ttest_pval_exc[iexc], eventI_ds_allDays, nPreMin, nPostMin))
     ttest_pval_exc_aligned = np.array(ttest_pval_exc_aligned) # excSamps x frs x days
     
-    if decodeStimCateg:
-        ttest_pval_inh_aligned_remCorr = alTrace(ttest_pval_inh_remCorr, eventI_ds_allDays, nPreMin, nPostMin)
-        ttest_pval_allExc_aligned_remCorr = alTrace(ttest_pval_allExc_remCorr, eventI_ds_allDays, nPreMin, nPostMin)
-        ttest_pval_exc_aligned_remCorr = []
-        for iexc in range(numExcSamples):
-            ttest_pval_exc_aligned_remCorr.append(alTrace(ttest_pval_exc_remCorr[iexc], eventI_ds_allDays, nPreMin, nPostMin))
-        ttest_pval_exc_aligned_remCorr = np.array(ttest_pval_exc_aligned_remCorr) # excSamps x frs x days        
- 
-        ttest_pval_inh_aligned_both = alTrace(ttest_pval_inh_both, eventI_ds_allDays, nPreMin, nPostMin)
-        ttest_pval_allExc_aligned_both = alTrace(ttest_pval_allExc_both, eventI_ds_allDays, nPreMin, nPostMin)
-        ttest_pval_exc_aligned_both = []
-        for iexc in range(numExcSamples):
-            ttest_pval_exc_aligned_both.append(alTrace(ttest_pval_exc_both[iexc], eventI_ds_allDays, nPreMin, nPostMin))
-        ttest_pval_exc_aligned_both = np.array(ttest_pval_exc_aligned_both) # excSamps x frs x days        
+    if decodeStimCateg or decodeOutcome:
+        if ignore==0:
+            ttest_pval_inh_aligned_remCorr = alTrace(ttest_pval_inh_remCorr, eventI_ds_allDays, nPreMin, nPostMin)
+            ttest_pval_allExc_aligned_remCorr = alTrace(ttest_pval_allExc_remCorr, eventI_ds_allDays, nPreMin, nPostMin)
+            ttest_pval_exc_aligned_remCorr = []
+            for iexc in range(numExcSamples):
+                ttest_pval_exc_aligned_remCorr.append(alTrace(ttest_pval_exc_remCorr[iexc], eventI_ds_allDays, nPreMin, nPostMin))
+            ttest_pval_exc_aligned_remCorr = np.array(ttest_pval_exc_aligned_remCorr) # excSamps x frs x days        
+     
+            ttest_pval_inh_aligned_both = alTrace(ttest_pval_inh_both, eventI_ds_allDays, nPreMin, nPostMin)
+            ttest_pval_allExc_aligned_both = alTrace(ttest_pval_allExc_both, eventI_ds_allDays, nPreMin, nPostMin)
+            ttest_pval_exc_aligned_both = []
+            for iexc in range(numExcSamples):
+                ttest_pval_exc_aligned_both.append(alTrace(ttest_pval_exc_both[iexc], eventI_ds_allDays, nPreMin, nPostMin))
+            ttest_pval_exc_aligned_both = np.array(ttest_pval_exc_aligned_both) # excSamps x frs x days        
         
         # keep a copy of testing data vars:        
         ttest_pval_inh_aligned0 = ttest_pval_inh_aligned
@@ -849,7 +942,7 @@ if addNs_roc==0:
     
     #%% In decodeStimCateg, decide which one (testing, remCorr, or Both) you want to use for the rest of this code
 
-    if decodeStimCateg:    
+    if decodeStimCateg or decodeOutcome:    
         if use_both_remCorr_testing[0]==1: # use Both
             av_test_data_inh_aligned = av_test_both_data_inh_aligned
             av_test_shfl_inh_aligned = av_test_both_shfl_inh_aligned
@@ -1069,7 +1162,7 @@ if addNs_roc==0:
             
 
     
-    no
+#    no
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PLOTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1116,6 +1209,11 @@ if addNs_roc==0:
     asp = 'auto' #2
     cmap ='jet'
     
+    if chAl==1:
+        xl = 'Time since choice onset (ms)'
+    else:
+        xl = 'Time since stimulus onset (ms)'
+        
     for iplot in [-1,0,1,2]: # iplot = 0   
 
         if iplot==-1: ### plot class accuracy for each day: data - shfl
@@ -1177,7 +1275,7 @@ if addNs_roc==0:
         lab = 'inh'
         top = topi
         ax = axes.flat[0]
-        img = plotStabScore(top, lab, cminc, cmaxc, cmap, cblab, ax)
+        img = plotStabScore(top, lab, cminc, cmaxc, cmap, cblab, ax, xl)
         ax.set_aspect(asp)
         makeNicePlots(ax,1)
         xlim = ax.get_xlim()
@@ -1187,7 +1285,7 @@ if addNs_roc==0:
         lab = 'exc'
         top = tope
         ax = axes.flat[1]
-        img = plotStabScore(top, lab, cminc, cmaxc, cmap, cblab, ax)
+        img = plotStabScore(top, lab, cminc, cmaxc, cmap, cblab, ax, xl)
     #    y=-1; pp = np.full(ps.shape, np.nan); pp[pc<=.05] = y
     #    ax.plot(range(len(time_aligned)), pp, color='r', lw=2)
         ax.set_aspect(asp)
@@ -1207,7 +1305,7 @@ if addNs_roc==0:
         lab = labAll
         top = topa
         ax = axes.flat[2]
-        img = plotStabScore(top, lab, cminc, cmaxc, cmap, cblab, ax)
+        img = plotStabScore(top, lab, cminc, cmaxc, cmap, cblab, ax, xl)
         #plt.colorbar(label=cblab) #,fraction=0.14, pad=0.04); #plt.clim(cmins, cmaxs)
         #add_colorbar(img)
         cb_ax = fig.add_axes([0.92, 0.15, 0.02, 0.72])
@@ -1252,11 +1350,12 @@ if addNs_roc==0:
     #########################################################################################################
     ########################## Plots : svm performance vs behavioral performance ############################
     #########################################################################################################
-    
+#    
 #    perc_thb = [10,90] #[20,80] #  # percentiles of behavioral performance for determining low and high performance.
 #    perc_thb = [15,85]
     perc_thb = [20,80]
-    
+#    perc_thb = [20,70]
+#    perc_thb = [10,80]    
     
     #%% Plot CA vs. day, also compare CA for days with low vs high behavioral performance   
     
@@ -1295,9 +1394,14 @@ if addNs_roc==0:
     hiBehCorrDays = (a >= thb[1])
     print sum(loBehCorrDays), sum(hiBehCorrDays), ': num days with low and high beh performance'
     
-    aa = av_test_data_allExc_aligned[nPreMin-1, days2an_heatmap]
-    bb = av_test_data_inh_aligned[nPreMin-1, days2an_heatmap]
-    cc = av_test_data_exc_aligned[nPreMin-1, days2an_heatmap]
+    
+    aa = av_test_data_allExc_aligned[nPreMin-1, days2an_heatmap] 
+    bb = av_test_data_inh_aligned[nPreMin-1, days2an_heatmap] 
+    cc = av_test_data_exc_aligned[nPreMin-1, days2an_heatmap] 
+    if same_HRLR_acrossDays: # we subtract the shuffle and then add 50 to it, this is bc when same_HRLR_acrossDays, shfl is not really at 50 (due to low trial num)
+        aa = aa - av_test_shfl_allExc_aligned[nPreMin-1, days2an_heatmap] + 50 
+        bb = bb - av_test_shfl_inh_aligned[nPreMin-1, days2an_heatmap] + 50
+        cc = cc - av_test_shfl_exc_aligned[nPreMin-1, days2an_heatmap] + 50        
     a = aa[loBehCorrDays]; ah = aa[hiBehCorrDays]
     b = bb[loBehCorrDays]; bh = bb[hiBehCorrDays]
     c = cc[loBehCorrDays]; ch = cc[hiBehCorrDays]    
@@ -1726,8 +1830,11 @@ if addNs_roc==0:
     plt.title('testing')
     if chAl==1:
         plt.xlabel('Time since choice onset (ms)', fontsize=13)
-    else:
+    elif chAl==0:
         plt.xlabel('Time since stim onset (ms)', fontsize=13)
+    elif chAl==-1:
+        plt.xlabel('Time since outcome onset (ms)', fontsize=13)        
+        
     plt.ylabel('Classification accuracy (%)', fontsize=13)
     ax = plt.gca()
     makeNicePlots(ax,1)
@@ -1774,6 +1881,7 @@ if addNs_roc==0:
     if plotSingleSessions:
         # fni17, 151015: example day, excShfl 3
         ####### pick an example exc shfl
+        iday = -1
         if do_excInhHalf==0:
             iexcshfl = rng.permutation(perClassErrorTest_data_exc_all[iday].shape[0])[0]
             print iexcshfl
@@ -1810,8 +1918,11 @@ if addNs_roc==0:
             
             if chAl==1:
                 plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
-            else:
+            elif chAl==0:
                 plt.xlabel('Time relative to stim onset (ms)', fontsize=11)
+            elif chAl==-1:
+                plt.xlabel('Time relative to outcome onset (ms)', fontsize=11)
+                
             plt.ylabel('Classification accuracy (%)', fontsize=11)
             if superimpose==0:    
                 plt.title('Testing data')
@@ -1878,7 +1989,7 @@ if addNs_roc==0:
     
         
     #%% Plot the average of aligned traces across all days (exc, inh, allExc superimposed)
-    
+#    superimpose=0
     # only days with enough svm trained trials are used.
            
     plt.figure() #(figsize=(4.5,3))
@@ -1899,8 +2010,11 @@ if addNs_roc==0:
     
     if chAl==1:
         plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
-    else:
+    elif chAl==0:
         plt.xlabel('Time relative to stim onset (ms)', fontsize=11)
+    elif chAl==-1:
+        plt.xlabel('Time relative to outcome onset (ms)', fontsize=11)
+        
     plt.ylabel('Classification accuracy (%)', fontsize=11)
     ax = plt.gca()
     if superimpose==0:    
@@ -2072,8 +2186,11 @@ if addNs_roc==0:
         plt.plot(time_aligned, av_av_test_data_exc_medium_aligned, 'b', label='medium', linestyle=':')
         if chAl==1:
             plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
-        else:
+        elif chAl==0:
             plt.xlabel('Time relative to stim onset (ms)', fontsize=11)
+        elif chAl==-1:
+            plt.xlabel('Time relative to outcome onset (ms)', fontsize=11)
+        
         plt.ylabel('Class accuracy (%)', fontsize=11)
         makeNicePlots(plt.gca(),1,1)
         plt.title('exc')
@@ -2092,8 +2209,11 @@ if addNs_roc==0:
         plt.plot(time_aligned, av_av_test_data_inh_medium_aligned, color=Cols[0], label=labInh, linestyle=':')
         if chAl==1:
             plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
-        else:
+        elif chAl==0:
             plt.xlabel('Time relative to stim onset (ms)', fontsize=11)
+        elif chAl==-1:
+            plt.xlabel('Time relative to outcome onset (ms)', fontsize=11)
+        
         plt.ylabel('Class accuracy (%)', fontsize=11)
         makeNicePlots(plt.gca(),1,1)
         plt.title('inh')
@@ -2111,8 +2231,11 @@ if addNs_roc==0:
         plt.plot(time_aligned, av_av_test_data_allExc_medium_aligned, color=Cols[1], label=labAll, linestyle=':')       
         if chAl==1:
             plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
-        else:
+        elif chAl==0:
             plt.xlabel('Time relative to stim onset (ms)', fontsize=11)
+        elif chAl==-1:
+            plt.xlabel('Time relative to outcome onset (ms)', fontsize=11)
+            
         plt.ylabel('Class accuracy (%)', fontsize=11)
         makeNicePlots(plt.gca(),1,1)
         plt.title('allExc')
@@ -2910,7 +3033,11 @@ if addNs_roc:
     
     plt.legend(loc='center left', bbox_to_anchor=(1, .7), numpoints=1)#, frameon=False) 
     #plt.xlabel('Population', fontsize=11)
-    plt.ylabel('Classification accuracy (%)\n [-97 0] ms rel. choice', fontsize=11)
+    if chAl==1:
+        plt.ylabel('Classification accuracy (%)\n [-97 0] ms rel. choice', fontsize=11)
+    elif chAl==0:
+        plt.ylabel('Classification accuracy (%)\n [-97 0] ms rel. stimulus', fontsize=11)
+        
     plt.xlim([-.2,3-1+.2])
     plt.xticks(range(3), ['allExc','inh','exc'])
     ax = plt.gca()

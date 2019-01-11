@@ -40,14 +40,14 @@ thQStimStrength = [3]#3 # 0 to 3 : hard to easy # # set to nan if you want to in
 # 2: medium easy (50th<= sr < 75th); 
 # 3: easy (75th<= sr <= max);
 
+ch_st_goAl = [1,0,0] # [0,1,0] # whether do analysis on traces aligned on choice, stim or go tone. #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces.  #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
+trialHistAnalysis = 0 # 1 # 
+corrTrained = 1 # 0 #  set to 0 for trialHistoryAnalysis
+
+doIncorr = 0
 
 doAllN = 1 # plot allN, instead of allExc
 thTrained = 10#10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
-corrTrained = 1
-doIncorr = 0
-
-ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces.  #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
-
 
 useEqualTrNums = 1
 chAl = ch_st_goAl[0] # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM. 
@@ -69,7 +69,6 @@ nowStr = datetime.now().strftime('%y%m%d-%H%M%S')
 #time2an = -1; # relative to eventI, look at classErr in what time stamp.
 shflTrsEachNeuron = 0
 
-trialHistAnalysis = 0;
 iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
 import numpy as np
 frameLength = 1000/30.9; # sec.
@@ -168,7 +167,7 @@ for im in range(len(mice)):
         
         # from setImagingAnalysisNamesP import *
         
-        imfilename, pnevFileName = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
+        imfilename, pnevFileName, dataPath = setImagingAnalysisNamesP(mousename, imagingFolder, mdfFileNumber, signalCh=signalCh, pnev2load=pnev2load, postNProvided=postNProvided)
         
         postName = os.path.join(os.path.dirname(pnevFileName), 'post_'+os.path.basename(pnevFileName))
         moreName = os.path.join(os.path.dirname(pnevFileName), 'more_'+os.path.basename(pnevFileName))
@@ -387,6 +386,12 @@ for im in range(len(mice)):
             classAccurTMS_inh = np.array([(av_test_data_inh_aligned[:, iday] - av_test_shfl_inh_aligned[:, iday]) for iday in dayinds])
             classAccurTMS_exc = np.array([(av_test_data_exc_aligned[:, iday] - av_test_shfl_exc_aligned[:, iday]) for iday in dayinds])
             classAccurTMS_allExc = np.array([(av_test_data_allExc_aligned[:, iday] - av_test_shfl_allExc_aligned[:, iday]) for iday in dayinds])
+            
+        else:
+           classAccurTMS_inh = [] 
+           classAccurTMS_exc = []
+           classAccurTMS_allExc = []
+        
         
         
     #%% Save vars for each mouse
@@ -395,9 +400,12 @@ for im in range(len(mice)):
         fname = os.path.join(os.path.dirname(os.path.dirname(imfilename)), 'analysis')    
         if not os.path.exists(fname):
             print 'creating folder'
-            os.makedirs(fname)    
-            
-        finame = os.path.join(fname, ('svm_stabilityBehCA_%s.mat' %nowStr))
+            os.makedirs(fname)
+        
+        if trialHistAnalysis==1:
+            finame = os.path.join(fname, ('svm_trialHist_stabilityBehCA_%s.mat' %nowStr))
+        else:
+            finame = os.path.join(fname, ('svm_stabilityBehCA_%s.mat' %nowStr))
     
         scio.savemat(finame,{'behCorr_all':behCorr_all,
                         'behCorrHR_all':behCorrHR_all,

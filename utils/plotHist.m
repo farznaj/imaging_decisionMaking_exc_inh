@@ -1,6 +1,7 @@
-function [fh,bins,ye,yi,x,h1,h2] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth, lineStyles, sp, bins) 
+function [fh,bins,ye,yi,x,h1,h2,hsp] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, nBins, doSmooth, lineStyles, sp, bins) 
     
     % set fh to nan, if you only want bins, ye,yi
+    % set leg to nan, if you dont want to have a legend.
     
     % optional:
     % yy: draw a vertical line at yy
@@ -92,14 +93,16 @@ function [fh,bins,ye,yi,x,h1,h2] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, n
             figure(fh)
         end
 
-        subplot(sp(1)), hold on
+        hsp = subplot(sp(1)); hold on
         h1 = plot(x, ye, 'color', cols{1}, 'linestyle', lineStyles{1});
         h2 = plot(x, yi, 'color', cols{2}, 'linestyle', lineStyles{2});
         xlabel(xlab); ylabel(ylab)  %     xlim([r1,r2])    
         if ~isempty(yy)
             plot([yy yy],[0 max([ye(:);yi(:)])], 'k:')
         end
-        legend([h1,h2], leg)
+        if ~isnumeric(leg)
+            legend([h1,h2], leg)
+        end
         a = gca;
         [h,p] = ttest2(y1(:), y2(:));
     %     title(sprintf('p(ttest2) = %.3f', round(p,3)))
@@ -112,7 +115,9 @@ function [fh,bins,ye,yi,x,h1,h2] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fh, n
         if ~isempty(yy)
             plot([yy yy],[0 1], 'k:')
         end
-        legend([h1,h2], leg)
+        if ~isnumeric(leg)
+            legend([h1,h2], leg)
+        end
         a = [a, gca];
         % show p value
         title(sprintf('p(ttest2) = %.3f', round(p,3)))

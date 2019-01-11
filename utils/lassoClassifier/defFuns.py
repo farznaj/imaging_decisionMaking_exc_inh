@@ -1,7 +1,7 @@
 ## Load commonly used libraries, and define commanly used functions
 
-trialHistAnalysis = 0;
-iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
+#trialHistAnalysis = 0
+#iTiFlg = 2 # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
 
 #%%
 frameLength = 1000/30.9; # sec.  # np.diff(time_aligned_stim)[0];
@@ -71,7 +71,7 @@ else: # wont be used, only not to get error when running setSVMname
 
 #%%
 # LOOKING FOR A DAY: #days.index('151009_1')   # name of this function should change to set_days!
-def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained=1, trialHistAnalysis=0, iTiFlg=1, allDays=1, noZmotionDays=0, noZmotionDays_strict=0, noExtraStimDays=0, loadYtest=0, decodeStimCateg=0):
+def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained=1, trialHistAnalysis=0, iTiFlg=1, allDays=1, noZmotionDays=0, noZmotionDays_strict=0, noExtraStimDays=0, loadYtest=0, decodeStimCateg=0, decodeOutcome=0):
      
     ##%% Define days that you want to analyze
     '''
@@ -92,70 +92,118 @@ def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained=1, trialHistAnalysis=
         noExtraStimDays = np.nan
     '''
         
-    ##%%        
+    #############################       
     if mousename=='fni16':
         # 0817,0818: don't have excInh files
         # 0817,0818,0819: don't have eachFrame, stAl. Also their FOV more superficial that the rest of the days
-        if 'ch_st_goAl' in locals(): # eachFrame analysis
-            if ch_st_goAl[0]==1: # chAl   
-#                if 'corrTrained' in locals() and corrTrained==1: # svm_eachFrame trained only on corr trials: exclude '150824_1-2' (no LR trials)
-                days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
-#                else:
-#                    days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
+
+        if trialHistAnalysis == 0:
             
-            elif ch_st_goAl[1]==1: # stAl           
-                days = ['150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
-    
-        if 'loadInhAllexcEqexc' in locals(): # excInh_eachFrame analysis
-            days = ['150819_1', '150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
+            if decodeOutcome:
+                days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2', '151001_1' : don't analyze!
+                
+            else:
+                if 'ch_st_goAl' in locals(): # eachFrame analysis
+                    if ch_st_goAl[0]==1 or ch_st_goAl[0]==-1: # chAl (if trialHist, it applies to both chAl and stAl)  
+        #                if 'corrTrained' in locals() and corrTrained==1: # svm_eachFrame trained only on corr trials: exclude '150824_1-2' (no LR trials)
+                        days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
+        #                else:
+        #                    days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
+                    
+                    elif ch_st_goAl[1]==1: # stAl           
+                        days = ['150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
+            
+                if 'loadInhAllexcEqexc' in locals(): # excInh_eachFrame analysis
+                    days = ['150819_1', '150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
         
-        if trialHistAnalysis == 1 and iTiFlg == 1:
-            days.remove('151001_1') # this day has only 8 long ITI trials, 1 of which is hr ... so not enough trials for the HR class to train the classifier!
+        
+        else: # for trialHist include day '150824_1-2'
+            
+            days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
+            
+            if ch_st_goAl[0]==1: # chAl  
+                days.remove('150818_1') # too few trials, no svm file
+
+            if iTiFlg == 1:
+                days.remove('151001_1') # this day has only 8 long ITI trials, 1 of which is hr ... so not enough trials for the HR class to train the classifier!
+            
     
     
     
+    #############################
     elif mousename=='fni17': 
-        # '150814_2, '150820_1', '150821_1', '150825_1': dont have enough trials. ('150821_1' and '150825_1' only have the eachFrame, stAl svm file)    
-        # '150814_1', '150817_1', '150818_1': cant be run for eachFrame, stAl
-        # days = ['151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2']     # Done on 6Jan2017: reverse the order, so it is from early days to last days
-        if 'loadYtest' in locals() and loadYtest==1 and ch_st_goAl[0]==1 and 'corrTrained' in locals() and corrTrained==1: # chAl, svm_eachFrame trained only on corr trials: exclude '150818_1', '150819_1-2' (too few HR trials)
-            # '150817_1' and '150824_1' only have 6 trials (when using equal hr and lr)... 
-            days = ['150814_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
-            
-        elif ch_st_goAl[0]==1: # and 'corrTrained' in locals() and corrTrained==1: # chAl, svm_eachFrame trained only on corr trials: exclude '150818_1', '150819_1-2' (too few HR trials)
-            days = ['150814_1', '150817_1', '150824_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
-    #        days = ['151015_1']   # eg class accur
-    #        days = ['151101_1']   # eg svm proj
-            # 150910 : eg exc,inh FRs
-#        else: # all days
-#            days = ['150814_1', '150817_1', '150818_1', '150819_1-2', '150824_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
-    
-    
-    
-    elif mousename=='fni18': # eachFrame, stimAl files couldnt be run for '151211_1', '151214_1-2', '151215_1-2', '151216_1'
-        if allDays:
-            days = ['151209_1', '151210_1', '151211_1', '151214_1-2', '151215_1-2', '151216_1', '151217_1-2'] # alldays
-        elif noZmotionDays:        
-            days = ['151209_1', '151210_1', '151211_1', '151214_1-2'] # following days removed bc of z motion: '151215_1-2', '151216_1', '151217_1-2'
-        elif noZmotionDays_strict:        
-            days = ['151209_1', '151210_1', '151211_1'] # even '151214_1-2' is suspicious about z motion, so remove it!
         
-        if decodeStimCateg:
-            days.remove('151209_1')
+        if trialHistAnalysis == 0:
+            
+            if decodeOutcome: # not enough trials: '150817_1', '150824_1', '150827_1', '150901_1', 
+#                days = ['150814_1', '150826_1', '150828_1', '150831_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
+                # 1012 removed from below, once the job is ready use the above!
+                days = ['150814_1', '150826_1', '150828_1', '150831_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
+
+                
+            else:
+                # '150814_2, '150820_1', '150821_1', '150825_1': dont have enough trials. ('150821_1' and '150825_1' only have the eachFrame, stAl svm file)    
+                # '150814_1', '150817_1', '150818_1': cant be run for eachFrame, stAl
+                # days = ['151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2']     # Done on 6Jan2017: reverse the order, so it is from early days to last days
+                if 'loadYtest' in locals() and loadYtest==1 and ch_st_goAl[0]==1 and 'corrTrained' in locals() and corrTrained==1: # chAl, svm_eachFrame trained only on corr trials: exclude '150818_1', '150819_1-2' (too few HR trials)
+                    # '150817_1' and '150824_1' only have 6 trials (when using equal hr and lr)... 
+                    days = ['150814_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
+                    
+                elif ch_st_goAl[0]==1 or ch_st_goAl[0]==-1: # and 'corrTrained' in locals() and corrTrained==1: # chAl, svm_eachFrame trained only on corr trials: exclude '150818_1', '150819_1-2' (too few HR trials)
+                    days = ['150814_1', '150817_1', '150824_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
+            #        days = ['151015_1']   # eg class accur
+            #        days = ['151101_1']   # eg svm proj
+                    # 150910 : eg exc,inh FRs
+    #        else: # all days
+    #            days = ['150814_1', '150817_1', '150818_1', '150819_1-2', '150824_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
+                
+        
+        else: # for trialHist include 0818 and 0819
+            days = ['150814_1', '150817_1', '150818_1', '150819_1-2', '150824_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];    
+            
     
     
+    
+    #############################
+    elif mousename=='fni18': # eachFrame, stimAl files couldnt be run for '151211_1', '151214_1-2', '151215_1-2', '151216_1'
+        if decodeOutcome:
+            days = ['151210_1', '151211_1', '151214_1-2', '151215_1-2', '151216_1', '151217_1-2'] # '151209_1' not enough trials.
+            
+        else:
+            if allDays:
+                days = ['151209_1', '151210_1', '151211_1', '151214_1-2', '151215_1-2', '151216_1', '151217_1-2'] # alldays
+            elif noZmotionDays:        
+                days = ['151209_1', '151210_1', '151211_1', '151214_1-2'] # following days removed bc of z motion: '151215_1-2', '151216_1', '151217_1-2'
+            elif noZmotionDays_strict:        
+                days = ['151209_1', '151210_1', '151211_1'] # even '151214_1-2' is suspicious about z motion, so remove it!
+            
+            if decodeStimCateg:
+                days.remove('151209_1')
+    
+    
+    
+    
+    
+    #############################
     elif mousename=='fni19':
-        if allDays:
-            if 'ch_st_goAl' in locals() and ch_st_goAl[1]==1:  # eachFrame, stimAL: '150904_1' doesnt have enough trials. taken out from below.       
-                days = ['150901_1', '150903_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
-            else: # chAl
-#                if 'corrTrained' in locals() and corrTrained==1: # svm_eachFrame trained only on corr trials: exclude '150901' (few HR trials)
-                days = ['150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];                            
-#                else:
-#                    days = ['150901_1', '150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
-                            
+        
+        if allDays:            
+            if trialHistAnalysis == 0:
+                if 'ch_st_goAl' in locals() and ch_st_goAl[1]==1:  # eachFrame, stimAL: '150904_1' doesnt have enough trials. taken out from below.       
+                    days = ['150901_1', '150903_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
+                else: # chAl (also for decodeOutcome)
+    #                if 'corrTrained' in locals() and corrTrained==1: # svm_eachFrame trained only on corr trials: exclude '150901' (few HR trials)
+                    days = ['150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];                            
+    #                else:
+    #                    days = ['150901_1', '150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
+            
+            else: # for trialHist include both 0901 and 0903
+                days = ['150901_1', '150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
+                
+                                
         elif noExtraStimDays:
             days = ['151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1']
+            
             
     daysOrig = days
     numDays = len(days)
@@ -752,8 +800,13 @@ def plotTimecourse_avMice(time_al_final, avFRAllMs, daysDim, colors, labs, lab, 
         pp[p<=.05] = yl[1]
         plt.plot(time_al_final, pp, marker='*',color='r', markeredgecolor='r', linestyle='', markersize=3)
     
-    plt.ylabel(lab)        
-    plt.xlabel('Time relative to choice onset')
+    plt.ylabel(lab)
+    if chAl==1:
+        plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
+    elif chAl==0:
+        plt.xlabel('Time relative to stim onset (ms)', fontsize=11)
+    elif chAl==-1:
+        plt.xlabel('Time relative to outcome onset (ms)', fontsize=11)
     plt.title(tlab, position=[.5,1.05])
     plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
     makeNicePlots(plt.gca(),1,0)        
@@ -806,7 +859,12 @@ def plotTimecourse_eachMouse(time_al, avFRs, daysDim, colors, labs, lab, linstyl
         
 
     plt.ylabel(lab)        
-    plt.xlabel('Time relative to choice onset')
+    if chAl==1:
+        plt.xlabel('Time relative to choice onset (ms)', fontsize=11)
+    elif chAl==0:
+        plt.xlabel('Time relative to stim onset (ms)', fontsize=11)
+    elif chAl==-1:
+        plt.xlabel('Time relative to outcome onset (ms)', fontsize=11)
     plt.title(tlab, position=[.5,1.05])
     plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)    
     makeNicePlots(plt.gca(),1,0)        
@@ -1713,37 +1771,54 @@ def colorOrder(nlines=30):
 
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
 
-def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc=[], regressBins=3, useEqualTrNums=1, corrTrained=0, shflTrsEachNeuron=0, shflTrLabs=0):
+def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc=[], regressBins=3, useEqualTrNums=1, corrTrained=0, shflTrsEachNeuron=0, shflTrLabs=0, same_HRLR_acrossDays=0, do_Ctrace=0):
     import glob
     import sys
     
     if len(doInhAllexcEqexc)==4:
-        if doInhAllexcEqexc[3]==-1:
+        
+        if doInhAllexcEqexc[3]==-2:
+            decodeStimCateg = 0
+            addNs_rand = 0
+            addNs_roc = 0
+            corrTrained = 0
+            testIncorr = 0
+            decodeOutcome = 1
+#            print 'Decoding outcome (corr, incorr)'
+            
+        elif doInhAllexcEqexc[3]==-1:
             if shflTrsEachNeuron:
                 testIncorr = 0
             else:
                 testIncorr = 1
             decodeStimCateg = 0
             addNs_rand = 0
-            addNs_roc = 0        
+            addNs_roc = 0
+            decodeOutcome = 0
+            
         elif doInhAllexcEqexc[3]==0:
             decodeStimCateg = 1        
             addNs_rand = 0
             addNs_roc = 0
             corrTrained = 0
             testIncorr = 0
+            decodeOutcome = 0
 #            print 'Decoding stimulus category (HR, LR)'
+            
         elif doInhAllexcEqexc[3]==3:
             addNs_rand = 1        
             addNs_roc = 0
             decodeStimCateg = 0
             testIncorr = 0
+            decodeOutcome = 0
 #            print 'Adding neurons randomly 1 by 1 for SVM analysis'
+            
         else: 
             addNs_roc = 1
             addNs_rand = 0
             decodeStimCateg = 0
             testIncorr = 0
+            decodeOutcome = 0
 #            if doInhAllexcEqexc[3]==1:
 #                print 'Adding neurons 1 by 1 from high to low ROC (choice tuning) for SVM analysis' 
 #            elif doInhAllexcEqexc[3]==2:
@@ -1753,6 +1828,7 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
         addNs_roc = 0
         decodeStimCateg = 0
         testIncorr = 0
+        decodeOutcome = 0
 #        print 'Decoding left, right choice'
  
     
@@ -1768,6 +1844,15 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
     elif decodeStimCateg:
         diffn = 'decodeStimCateg_'
         h2l = ''
+    elif decodeOutcome:
+        diffn = 'decodeOutcome_'
+        h2l = ''
+    elif same_HRLR_acrossDays:
+        diffn = 'sameTrNumAllDays_'
+        h2l = ''
+    elif do_Ctrace:
+        diffn = 'Ctrace_'
+        h2l = ''        
     else:
         diffn = ''
         h2l = ''
@@ -1782,8 +1867,11 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
     
     if chAl==1:
         al = 'chAl'
-    else:
+    elif chAl==0:
         al = 'stAl'
+    elif chAl==-1:
+        al = 'outAl'
+    
     
     if corrTrained:
         o2a = 'corr_'
@@ -1916,12 +2004,12 @@ def setEventIds(postName, chAl, regressBins=3, trialHistAnalysis=0):
         # Load stim-aligned_allTrials traces, frames, frame of event of interest
         if trialHistAnalysis==0:
             Data = scio.loadmat(postName, variable_names=['stimAl_noEarlyDec'],squeeze_me=True,struct_as_record=False)
-#            eventI = Data['stimAl_noEarlyDec'].eventI - 1 # remember difference indexing in matlab and python!
+            eventI = Data['stimAl_noEarlyDec'].eventI - 1 # remember difference indexing in matlab and python!
 #            traces_al_stimAll = Data['stimAl_noEarlyDec'].traces.astype('float')
             time_aligned_stim = Data['stimAl_noEarlyDec'].time.astype('float')        
         else:
             Data = scio.loadmat(postName, variable_names=['stimAl_allTrs'],squeeze_me=True,struct_as_record=False)
-#            eventI = Data['stimAl_allTrs'].eventI - 1 # remember difference indexing in matlab and python!
+            eventI = Data['stimAl_allTrs'].eventI - 1 # remember difference indexing in matlab and python!
 #            traces_al_stimAll = Data['stimAl_allTrs'].traces.astype('float')
             time_aligned_stim = Data['stimAl_allTrs'].time.astype('float')
             # time_aligned_stimAll = Data['stimAl_allTrs'].time.astype('float') # same as time_aligned_stim        
@@ -2046,7 +2134,33 @@ def set_corr_hr_lr(postName, svmName, doIncorr=0):
         return corr_hr, corr_lr
 
 
+
+#%% compute number of correct hr, lr, also incorrect hr, lr trials that were used in the decoder (this is useful for when outcome was decoded.)
+        
+def set_corr_incorr_hr_lr(postName, svmName):
+    # codes above show how to get postName and svmName
+
+    Data = scio.loadmat(postName, variable_names=['allResp_HR_LR', 'outcomes'])    
+    allResp_HR_LR = np.array(Data.pop('allResp_HR_LR')).flatten().astype('float')
+    outcomes = np.array(Data.pop('outcomes')).flatten()
+
+#    svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, [1,0,0], regressBins)[0]   
+    Data = scio.loadmat(svmName, variable_names=['trsExcluded'])
+    trsExcluded = Data.pop('trsExcluded').flatten().astype('bool')
     
+    o = outcomes[~trsExcluded]
+    r = allResp_HR_LR[~trsExcluded]
+    
+    corr_hr = sum(np.logical_and(o==1 , r==1))
+    corr_lr = sum(np.logical_and(o==1 , r==0))
+    
+    incorr_hr = sum(np.logical_and(o==0 , r==1))
+    incorr_lr = sum(np.logical_and(o==0 , r==0))
+    
+    return corr_hr, corr_lr, incorr_hr, incorr_lr
+
+    
+        
 #%% Find number of frames before and after eventI for each day, and the the min numbers across days; 
 # this is to find common eventI (among a number of session)
 
@@ -2523,7 +2637,7 @@ def loadSVM_allN(svmName, doPlots, doIncorr, loadWeights, shflTrLabs=0):
          
 #%% Load exc,inh SVM vars
         
-def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, doPlots, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0, testIncorr=0):
+def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, doPlots, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0, testIncorr=0, same_HRLR_acrossDays=0, do_Ctrace=0):
     # loadWeights: 
     # 0: don't load weights, only load class accur
     # 1 : load weights and class cccur
@@ -2554,10 +2668,14 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
             
     svmName_allN = ''            
     svmName_excInh = []
-    for idi in range(3):
+    for idi in range(3): # idi=0
         
         print '------'
-        doInhAllexcEqexc = np.full((4), 0)        
+        if testIncorr==0 or trialHistAnalysis==1 or do_Ctrace==1:
+            narr = 3
+        else:
+            narr = 4
+        doInhAllexcEqexc = np.full((narr), 0).astype(int)  
         if np.logical_or(testIncorr, shflTrsEachNeuron):
             doInhAllexcEqexc[-1] = -1
         
@@ -2570,10 +2688,10 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
 #            svmName = setSVMname_allN_eachFrame(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, shflTrsEachNeuron, shflTrLabs)[0] # for chAl: the latest file is with soft norm; earlier file is 
             # new svm_excInh_trainDecoder_eachFrame.py computes allN too... 
             doInhAllexcEqexc[idi] = 2
-            svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron, shflTrLabs)[0]
+            svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron, shflTrLabs, same_HRLR_acrossDays, do_Ctrace)[0]
             svmName_allN = svmName
         else:        
-            svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron, shflTrLabs)[0]
+            svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron, shflTrLabs, same_HRLR_acrossDays, do_Ctrace)[0]
             svmName_excInh.append(svmName)
 #        svmName = svmName[0] # use [0] for the latest file; use [-1] for the earliest file
         print os.path.basename(svmName)    
@@ -2773,11 +2891,12 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
 
 #%% Load exc,inh SVM vars
         
-def loadSVM_excInh_decodeStimCateg(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, doPlots, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0):
+def loadSVM_excInh_decodeStimCateg(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, doPlots, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0, decodeOutcome=0):
     # loadWeights: 
     # 0: don't load weights, only load class accur
     # 1 : load weights and class cccur
     # 2 : load only weights and not class accur
+    
     # shflTrLabs=0; loadYtest=0
     
     '''
@@ -2801,13 +2920,18 @@ def loadSVM_excInh_decodeStimCateg(pnevFileName, trialHistAnalysis, chAl, regres
 #            print 'bestc = smallest c whose cv error is less than 1se of min cv error'
 #        else:
 #            print 'bestc = c that gives min cv error'
-            
+    
+    if decodeOutcome:
+        v4 = -2
+    else:
+        v4 = 0
+        
     svmName_allN = ''            
     svmName_excInh = []
-    for idi in range(3):
+    for idi in range(3): # idi=0
         
         doInhAllexcEqexc = np.full((4), 0, dtype=int)
-        doInhAllexcEqexc[-1] = 0
+        doInhAllexcEqexc[-1] = v4
         doInhAllexcEqexc[idi] = 1
         
         ########## set svm file name ##########
@@ -3319,6 +3443,11 @@ def av_se_CA_trsamps_decodeStimCateg(numD, perClassErrorTest_data_inh_all, perCl
     numSamples = np.shape(perClassErrorTest_data_inh_all[0])[0]
     numExcSamples = np.shape(perClassErrorTest_data_exc_all[0])[0]
     
+    if len(perClassErrorTestRemCorr_inh_all[0]) and np.isnan(perClassErrorTestRemCorr_inh_all[0]): # when you decoded outcome and traces were outcome aligned, you sent remCorr and _both vars to nan (instead of those huge matrices), bc anyway you were going to only use the testing data
+        ignore = 1
+    else:
+        ignore = 0
+        
     #### inh
     av_test_data_inh = np.array([100-np.nanmean(perClassErrorTest_data_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
     sd_test_data_inh = np.array([np.nanstd(perClassErrorTest_data_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
@@ -3326,19 +3455,33 @@ def av_se_CA_trsamps_decodeStimCateg(numD, perClassErrorTest_data_inh_all, perCl
     sd_test_shfl_inh = np.array([np.nanstd(perClassErrorTest_shfl_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
     av_test_chance_inh = np.array([100-np.nanmean(perClassErrorTest_chance_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
     sd_test_chance_inh = np.array([np.nanstd(perClassErrorTest_chance_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
-    av_test_remCorr_data_inh = np.array([100-np.nanmean(perClassErrorTestRemCorr_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
-    sd_test_remCorr_data_inh = np.array([np.nanstd(perClassErrorTestRemCorr_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
-    av_test_remCorr_shfl_inh = np.array([100-np.nanmean(perClassErrorTestRemCorr_shfl_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
-    sd_test_remCorr_shfl_inh = np.array([np.nanstd(perClassErrorTestRemCorr_shfl_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
-    av_test_remCorr_chance_inh = np.array([100-np.nanmean(perClassErrorTestRemCorr_chance_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
-    sd_test_remCorr_chance_inh = np.array([np.nanstd(perClassErrorTestRemCorr_chance_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
-    av_test_both_data_inh = np.array([100-np.nanmean(perClassErrorTestBoth_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
-    sd_test_both_data_inh = np.array([np.nanstd(perClassErrorTestBoth_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
-    av_test_both_shfl_inh = np.array([100-np.nanmean(perClassErrorTestBoth_shfl_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
-    sd_test_both_shfl_inh = np.array([np.nanstd(perClassErrorTestBoth_shfl_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
-    av_test_both_chance_inh = np.array([100-np.nanmean(perClassErrorTestBoth_chance_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
-    sd_test_both_chance_inh = np.array([np.nanstd(perClassErrorTestBoth_chance_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
-    
+    if ignore==0:
+        av_test_remCorr_data_inh = np.array([100-np.nanmean(perClassErrorTestRemCorr_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
+        sd_test_remCorr_data_inh = np.array([np.nanstd(perClassErrorTestRemCorr_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
+        av_test_remCorr_shfl_inh = np.array([100-np.nanmean(perClassErrorTestRemCorr_shfl_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
+        sd_test_remCorr_shfl_inh = np.array([np.nanstd(perClassErrorTestRemCorr_shfl_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
+        av_test_remCorr_chance_inh = np.array([100-np.nanmean(perClassErrorTestRemCorr_chance_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
+        sd_test_remCorr_chance_inh = np.array([np.nanstd(perClassErrorTestRemCorr_chance_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+        av_test_both_data_inh = np.array([100-np.nanmean(perClassErrorTestBoth_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
+        sd_test_both_data_inh = np.array([np.nanstd(perClassErrorTestBoth_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
+        av_test_both_shfl_inh = np.array([100-np.nanmean(perClassErrorTestBoth_shfl_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
+        sd_test_both_shfl_inh = np.array([np.nanstd(perClassErrorTestBoth_shfl_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
+        av_test_both_chance_inh = np.array([100-np.nanmean(perClassErrorTestBoth_chance_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
+        sd_test_both_chance_inh = np.array([np.nanstd(perClassErrorTestBoth_chance_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+    else:
+        av_test_remCorr_data_inh = np.nan
+        sd_test_remCorr_data_inh = np.nan
+        av_test_remCorr_shfl_inh = np.nan
+        sd_test_remCorr_shfl_inh = np.nan
+        av_test_remCorr_chance_inh = np.nan
+        sd_test_remCorr_chance_inh = np.nan
+        av_test_both_data_inh = np.nan
+        sd_test_both_data_inh = np.nan
+        av_test_both_shfl_inh = np.nan
+        sd_test_both_shfl_inh = np.nan
+        av_test_both_chance_inh = np.nan
+        sd_test_both_chance_inh = np.nan
+        
     
     #### exc (average across cv samples and exc shuffles)
     if len(perClassErrorTest_data_exc_all[0])>0:
@@ -3348,19 +3491,33 @@ def av_se_CA_trsamps_decodeStimCateg(numD, perClassErrorTest_data_inh_all, perCl
         sd_test_shfl_exc = np.array([np.nanstd(perClassErrorTest_shfl_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples+numExcSamples) for iday in range(numD)])  
         av_test_chance_exc = np.array([100-np.nanmean(perClassErrorTest_chance_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
         sd_test_chance_exc = np.array([np.nanstd(perClassErrorTest_chance_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples+numExcSamples) for iday in range(numD)])  
-        av_test_remCorr_data_exc = np.array([100-np.nanmean(perClassErrorTestRemCorr_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
-        sd_test_remCorr_data_exc = np.array([np.nanstd(perClassErrorTestRemCorr_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples) for iday in range(numD)])      
-        av_test_remCorr_shfl_exc = np.array([100-np.nanmean(perClassErrorTestRemCorr_shfl_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
-        sd_test_remCorr_shfl_exc = np.array([np.nanstd(perClassErrorTestRemCorr_shfl_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples) for iday in range(numD)])      
-        av_test_remCorr_chance_exc = np.array([100-np.nanmean(perClassErrorTestRemCorr_chance_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
-        sd_test_remCorr_chance_exc = np.array([np.nanstd(perClassErrorTestRemCorr_chance_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples) for iday in range(numD)])  
-        av_test_both_data_exc = np.array([100-np.nanmean(perClassErrorTestBoth_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
-        sd_test_both_data_exc = np.array([np.nanstd(perClassErrorTestBoth_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples) for iday in range(numD)])      
-        av_test_both_shfl_exc = np.array([100-np.nanmean(perClassErrorTestBoth_shfl_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
-        sd_test_both_shfl_exc = np.array([np.nanstd(perClassErrorTestBoth_shfl_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples) for iday in range(numD)])      
-        av_test_both_chance_exc = np.array([100-np.nanmean(perClassErrorTestBoth_chance_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
-        sd_test_both_chance_exc = np.array([np.nanstd(perClassErrorTestBoth_chance_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples) for iday in range(numD)])  
-
+        if ignore==0:
+            av_test_remCorr_data_exc = np.array([100-np.nanmean(perClassErrorTestRemCorr_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
+            sd_test_remCorr_data_exc = np.array([np.nanstd(perClassErrorTestRemCorr_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples) for iday in range(numD)])      
+            av_test_remCorr_shfl_exc = np.array([100-np.nanmean(perClassErrorTestRemCorr_shfl_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
+            sd_test_remCorr_shfl_exc = np.array([np.nanstd(perClassErrorTestRemCorr_shfl_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples) for iday in range(numD)])      
+            av_test_remCorr_chance_exc = np.array([100-np.nanmean(perClassErrorTestRemCorr_chance_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
+            sd_test_remCorr_chance_exc = np.array([np.nanstd(perClassErrorTestRemCorr_chance_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples) for iday in range(numD)])  
+            av_test_both_data_exc = np.array([100-np.nanmean(perClassErrorTestBoth_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
+            sd_test_both_data_exc = np.array([np.nanstd(perClassErrorTestBoth_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples) for iday in range(numD)])      
+            av_test_both_shfl_exc = np.array([100-np.nanmean(perClassErrorTestBoth_shfl_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
+            sd_test_both_shfl_exc = np.array([np.nanstd(perClassErrorTestBoth_shfl_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples) for iday in range(numD)])      
+            av_test_both_chance_exc = np.array([100-np.nanmean(perClassErrorTestBoth_chance_exc_all[iday], axis=(0,1)) for iday in range(numD)]) # numDays
+            sd_test_both_chance_exc = np.array([np.nanstd(perClassErrorTestBoth_chance_exc_all[iday], axis=(0,1)) / np.sqrt(numSamples) for iday in range(numD)])  
+        else:
+            av_test_remCorr_data_exc = np.nan
+            sd_test_remCorr_data_exc = np.nan
+            av_test_remCorr_shfl_exc = np.nan
+            sd_test_remCorr_shfl_exc = np.nan
+            av_test_remCorr_chance_exc = np.nan
+            sd_test_remCorr_chance_exc = np.nan
+            av_test_both_data_exc = np.nan
+            sd_test_both_data_exc = np.nan
+            av_test_both_shfl_exc = np.nan
+            sd_test_both_shfl_exc = np.nan
+            av_test_both_chance_exc = np.nan
+            sd_test_both_chance_exc = np.nan
+            
     else:
         av_test_data_exc = []
         sd_test_data_exc = []        
@@ -3388,18 +3545,34 @@ def av_se_CA_trsamps_decodeStimCateg(numD, perClassErrorTest_data_inh_all, perCl
     sd_test_shfl_allExc = np.array([np.nanstd(perClassErrorTest_shfl_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
     av_test_chance_allExc = np.array([100-np.nanmean(perClassErrorTest_chance_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
     sd_test_chance_allExc = np.array([np.nanstd(perClassErrorTest_chance_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
-    av_test_remCorr_data_allExc = np.array([100-np.nanmean(perClassErrorTestRemCorr_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
-    sd_test_remCorr_data_allExc = np.array([np.nanstd(perClassErrorTestRemCorr_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
-    av_test_remCorr_shfl_allExc = np.array([100-np.nanmean(perClassErrorTestRemCorr_shfl_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
-    sd_test_remCorr_shfl_allExc = np.array([np.nanstd(perClassErrorTestRemCorr_shfl_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
-    av_test_remCorr_chance_allExc = np.array([100-np.nanmean(perClassErrorTestRemCorr_chance_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
-    sd_test_remCorr_chance_allExc = np.array([np.nanstd(perClassErrorTestRemCorr_chance_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
-    av_test_both_data_allExc = np.array([100-np.nanmean(perClassErrorTestBoth_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
-    sd_test_both_data_allExc = np.array([np.nanstd(perClassErrorTestBoth_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
-    av_test_both_shfl_allExc = np.array([100-np.nanmean(perClassErrorTestBoth_shfl_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
-    sd_test_both_shfl_allExc = np.array([np.nanstd(perClassErrorTestBoth_shfl_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
-    av_test_both_chance_allExc = np.array([100-np.nanmean(perClassErrorTestBoth_chance_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
-    sd_test_both_chance_allExc = np.array([np.nanstd(perClassErrorTestBoth_chance_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+    if ignore==0:
+        av_test_remCorr_data_allExc = np.array([100-np.nanmean(perClassErrorTestRemCorr_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
+        sd_test_remCorr_data_allExc = np.array([np.nanstd(perClassErrorTestRemCorr_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
+        av_test_remCorr_shfl_allExc = np.array([100-np.nanmean(perClassErrorTestRemCorr_shfl_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
+        sd_test_remCorr_shfl_allExc = np.array([np.nanstd(perClassErrorTestRemCorr_shfl_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
+        av_test_remCorr_chance_allExc = np.array([100-np.nanmean(perClassErrorTestRemCorr_chance_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
+        sd_test_remCorr_chance_allExc = np.array([np.nanstd(perClassErrorTestRemCorr_chance_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+        av_test_both_data_allExc = np.array([100-np.nanmean(perClassErrorTestBoth_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
+        sd_test_both_data_allExc = np.array([np.nanstd(perClassErrorTestBoth_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
+        av_test_both_shfl_allExc = np.array([100-np.nanmean(perClassErrorTestBoth_shfl_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
+        sd_test_both_shfl_allExc = np.array([np.nanstd(perClassErrorTestBoth_shfl_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      
+        av_test_both_chance_allExc = np.array([100-np.nanmean(perClassErrorTestBoth_chance_allExc_all[iday], axis=0) for iday in range(numD)]) # numDays
+        sd_test_both_chance_allExc = np.array([np.nanstd(perClassErrorTestBoth_chance_allExc_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])  
+    else:
+        av_test_remCorr_data_allExc = np.nan
+        sd_test_remCorr_data_allExc = np.nan
+        av_test_remCorr_shfl_allExc = np.nan
+        sd_test_remCorr_shfl_allExc = np.nan
+        av_test_remCorr_chance_allExc = np.nan
+        sd_test_remCorr_chance_allExc = np.nan
+        av_test_both_data_allExc = np.nan
+        sd_test_both_data_allExc = np.nan
+        av_test_both_shfl_allExc = np.nan
+        sd_test_both_shfl_allExc = np.nan
+        av_test_both_chance_allExc = np.nan
+        sd_test_both_chance_allExc = np.nan
+            
+    
     
     return numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, \
         av_test_remCorr_data_inh, sd_test_remCorr_data_inh, av_test_remCorr_shfl_inh, sd_test_remCorr_shfl_inh, av_test_remCorr_chance_inh, sd_test_remCorr_chance_inh, \

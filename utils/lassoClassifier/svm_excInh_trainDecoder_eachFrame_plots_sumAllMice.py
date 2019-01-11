@@ -12,32 +12,34 @@ The later mat file is with equal number of hr and lr trials (subselecting trials
  
 Created on Sun Mar 12 15:12:29 2017
 @author: farznaj
-"""     
+"""
 
 
 #%%
 mice = 'fni16', 'fni17', 'fni18', 'fni19' # if you want to use only one mouse, make sure you put comma at the end; eg. mice = 'fni19',
 
-testIncorr = 0 # load svm file that includes testing corr as well as testing incorr trials.
 do_excInhHalf = 0 # 0: Load vars for inh,exc,allExc, 1: Load exc,inh SVM vars for excInhHalf (ie when the population consists of half exc and half inh) and allExc2inhSize (ie when populatin consists of allExc but same size as 2*inh size)
-decodeStimCateg = 1
-noExtraStimDayAnalysis = 1 # if 1, exclude days with extraStim from analysis
+decodeStimCateg = 0 #1
+noExtraStimDayAnalysis = 0 # 1 # if 1, exclude days with extraStim from analysis
 use_both_remCorr_testing = [1,0,0] # if decodeStimCate = 1, decide which one (testing, remCorr, or Both) you want to use for the rest of this code
 shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
 
 savefigs = 1
 
+ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces.  #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
+trialHistAnalysis = 0 # 0
+testIncorr = 1 # 1 # set to 0 for trialHistoryAnalysis # load svm file that includes testing corr as well as testing incorr trials.
+corrTrained = 1 # 1 # set to 0 for trialHistoryAnalysis 
+
+
 doAllN = 1 # plot allN, instead of allExc
 time2an = -1; # relative to eventI, look at classErr in what time stamp.
 thTrained = 10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis
-corrTrained = 1
 doIncorr = 0
 
-ch_st_goAl = [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces.  #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
 loadWeights = 0
 num2AnInhAllexcEqexc = 3 # if 3, all 3 types (inh, allExc, exc) will be analyzed. If 2, inh and allExc will be analyzed. if 1, inh will be analyzed. # if you have all svm files saved, set it to 3.
-trialHistAnalysis = 0;
-iTiFlg = 2; # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
+iTiFlg = 2 # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.  
 useEqualTrNums = 1
 
 import numpy as np

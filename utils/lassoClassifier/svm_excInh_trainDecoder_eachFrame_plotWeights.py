@@ -85,6 +85,7 @@ if normWeights:
 else:
     binEvery = .001
 smoothVal = 0 #5    
+addErrBar = 1 # for the distributions add error bar or not.
 
 
 #%%  Define function to plot exc, inh distribution of weights, all sessions pooled on 1 subplot, and individual sessions on a different subplot.
@@ -115,7 +116,7 @@ def plotHistErrBarWsEI(we,wi, lab, ylab, doIndivDays=0, fig=np.nan,h1=[],h2=[]):
         gs = gridspec.GridSpec(2, 3)#, width_ratios=[2, 1]) 
         h1 = gs[0,0:2]
         h2 = gs[0,2:3]
-    ax1,_ = histerrbar(h1,h2,a,b,binEvery,p,lab,colors,ylab,lab1,lab2,0,doSmooth=smoothVal)
+    ax1,_ = histerrbar(h1,h2,a,b,binEvery,p,lab,colors,ylab,lab1,lab2,0,doSmooth=smoothVal,addErrBar=addErrBar)
     #plt.xlabel(lab)
 #        ax1.set_xlim([-.05, .05])
     yl = ax1.get_ylim()

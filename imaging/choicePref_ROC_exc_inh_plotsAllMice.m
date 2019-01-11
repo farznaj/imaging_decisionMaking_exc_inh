@@ -37,9 +37,11 @@ end
 fh = figure; hold on
 h1 = boundedline(time_al, nanmean(exc_avDays_eachMouse,2), nanstd(exc_avDays_eachMouse,[],2)/sqrt(size(exc_avDays_eachMouse,2)), 'b', 'alpha');
 h2 = boundedline(time_al, nanmean(inh_avDays_eachMouse,2), nanstd(inh_avDays_eachMouse,[],2)/sqrt(size(inh_avDays_eachMouse,2)), 'r', 'alpha');
+h3 = boundedline(time_al, nanmean(uns_avDays_eachMouse,2), nanstd(uns_avDays_eachMouse,[],2)/sqrt(size(uns_avDays_eachMouse,2)), 'g', 'alpha');
 if doshfl % shfl
     h11 = boundedline(time_al, nanmean(exc_avDays_eachMouse_shfl,2), nanstd(exc_avDays_eachMouse_shfl,[],2)/sqrt(size(exc_avDays_eachMouse_shfl,2)), 'cmap', colss(1,:), 'alpha');
     h12 = boundedline(time_al, nanmean(inh_avDays_eachMouse_shfl,2), nanstd(inh_avDays_eachMouse_shfl,[],2)/sqrt(size(inh_avDays_eachMouse_shfl,2)), 'cmap', colss(2,:), 'alpha');
+    h13 = boundedline(time_al, nanmean(uns_avDays_eachMouse_shfl,2), nanstd(uns_avDays_eachMouse_shfl,[],2)/sqrt(size(uns_avDays_eachMouse_shfl,2)), 'cmap', [.2,.2,.2], 'alpha');
 end
 a = get(gca, 'ylim');    
 plot(time_al, hh0_allm*(a(2)-.05*diff(a)), 'k.')    
@@ -48,7 +50,7 @@ b = get(gca, 'xlim');
 if ~isempty(yy)
     plot(b, [yy,yy],'k:')
 end
-legend([h1,h2], {'Excitatory', 'Inhibitory'}, 'position', [0.1347    0.8177    0.1414    0.0901]);
+legend([h1,h2,h3], {'Excitatory', 'Inhibitory', 'Unsure'}, 'position', [0.1347    0.8177    0.1414    0.0901]);
 xlabel('Time since choice onset (ms)')
 ylab = simpleTokenize(namc, '_'); ylab = ylab{1}; %namc;   
 ylabel(ylab)
@@ -58,7 +60,7 @@ xlim([time_al(1)-50, time_al(end)+50])
 % figs_adj_poster_ax(fh)
 
 if savefigs
-    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_timeCourse_aveSeMice_aveDays_aveNs_', dm0, nowStr));
+    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInhUns_timeCourse_aveSeMice_aveDays_aveNs_', dm0, nowStr));
     savefig(fh, fdn)
     print(fh, '-dpdf', fdn)
 end
@@ -69,9 +71,11 @@ end
 fh = figure; hold on
 h1 = boundedline(time_al, nanmean(exc_allDaysPooled_allMice,2), nanstd(exc_allDaysPooled_allMice,[],2)/sqrt(sum(numDaysGood)), 'b', 'alpha');
 h2 = boundedline(time_al, nanmean(inh_allDaysPooled_allMice,2), nanstd(inh_allDaysPooled_allMice,[],2)/sqrt(sum(numDaysGood)), 'r', 'alpha');
+h3 = boundedline(time_al, nanmean(uns_allDaysPooled_allMice,2), nanstd(uns_allDaysPooled_allMice,[],2)/sqrt(sum(numDaysGood)), 'g', 'alpha');
 if doshfl % shfl
     h11 = boundedline(time_al, nanmean(exc_allDaysPooled_allMice_shfl,2), nanstd(exc_allDaysPooled_allMice_shfl,[],2)/sqrt(sum(numDaysGood)), 'cmap', colss(1,:), 'alpha');
     h12 = boundedline(time_al, nanmean(inh_allDaysPooled_allMice_shfl,2), nanstd(inh_allDaysPooled_allMice_shfl,[],2)/sqrt(sum(numDaysGood)), 'cmap', colss(2,:), 'alpha');
+    h13 = boundedline(time_al, nanmean(uns_allDaysPooled_allMice_shfl,2), nanstd(uns_allDaysPooled_allMice_shfl,[],2)/sqrt(sum(numDaysGood)), 'cmap', [.2,.2,.2], 'alpha');
 end
 a = get(gca, 'ylim');    
 plot(time_al, hh_allm*(a(2)-.05*diff(a)), 'k.')    
@@ -80,7 +84,7 @@ b = get(gca, 'xlim');
 if ~isempty(yy)
     plot(b, [yy,yy],'k:')
 end
-legend([h1,h2], {'Excitatory', 'Inhibitory'}, 'position', [0.1347    0.8177    0.1414    0.0901]);
+legend([h1,h2,h3], {'Excitatory', 'Inhibitory','Unsure'}, 'position', [0.1347    0.8177    0.1414    0.0901]);
 xlabel('Time since choice onset (ms)')
 ylab = simpleTokenize(namc, '_'); ylab = ylab{1}; %namc;   
 ylabel(ylab)
@@ -89,7 +93,7 @@ ylabel(ylab)
 % figs_adj_poster_ax(fh)
 
 if savefigs
-    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_timeCourse_aveSePooledDaysAllMice_aveNs_', dm0, nowStr));
+    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInhUns_timeCourse_aveSePooledDaysAllMice_aveNs_', dm0, nowStr));
     savefig(fh, fdn)
     print(fh, '-dpdf', fdn)
 end
@@ -116,7 +120,9 @@ for ifr = 1:length(time_al)
     
     y1 = exc_allNsDaysMicePooled(ifr,:);
     y2 = inh_allNsDaysMicePooled(ifr,:);
-    bins = plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, ha(ifr), yy, documsum, numBins);
+    y3 = uns_allNsDaysMicePooled(ifr,:);
+    [~,~,~,~,h1,h3] = plotHist_sp(y1,y3,xlab,ylab,leg, {'b','g'}, tit, fign, ha(ifr), yy, documsum, numBins);
+    [bins,~,~,~,~,h2] = plotHist_sp(y1,y2,xlab,ylab,leg, cols, tit, fign, ha(ifr), yy, documsum, numBins);
         
     if doshfl % sfhl
         % average of shfl samples
@@ -127,11 +133,16 @@ for ifr = 1:length(time_al)
         % individual shlf sampls
         y1s = exc_allNsDaysMicePooled_shfl0(ifr,:,:);
         y2s = inh_allNsDaysMicePooled_shfl0(ifr,:,:);
+        y3s = uns_allNsDaysMicePooled_shfl0(ifr,:,:);
         % pool all samples
         y1s = y1s(:);
         y2s = y2s(:);
-        plotHist_sp(y1s,y2s,xlab,ylab,leg, colss, tit, fign, ha(ifr), yy, documsum, numBins, bins)
+        y3s = y3s(:);
+        plotHist_sp(y1s,y3s,xlab,ylab,leg, [0    0.8000    0.8000; .2,.2,.2], tit, fign, ha(ifr), yy, documsum, numBins, bins);
+        plotHist_sp(y1s,y2s,xlab,ylab,leg, colss, tit, fign, ha(ifr), yy, documsum, numBins, bins);
     end
+    
+    legend(ha(1), [h1,h2,h3], {'Exc','Inh','Unsure'})
 
     if ifr==1
         xlabel(ha(ifr), xlab)
@@ -141,7 +152,7 @@ for ifr = 1:length(time_al)
 end
 
 if savefigs        
-    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_dist_eachFr_NsDaysMicePooled_', dm0, nowStr));
+    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInhUns_dist_eachFr_NsDaysMicePooled_', dm0, nowStr));
     savefig(fign, fdn)    
     print(fign, '-dpdf', fdn)
 end   
@@ -164,7 +175,9 @@ fign = figure; % f = nan(1,1); f(1) = axes();
 
 y1 = exc_allNsDaysMicePooled(fr,:);
 y2 = inh_allNsDaysMicePooled(fr,:);
-plotHist(y1,y2,xlab,ylab,leg, cols, yy, fign, nBins, doSmooth)%, lineStyles, sp, bins); 
+y3 = uns_allNsDaysMicePooled(fr,:);
+[~,~,~,~,~,h1,h3,hsp] = plotHist(y1,y3,xlab,ylab,leg, {'b','g'}, yy, fign, nBins, doSmooth); %, lineStyles, sp, bins); 
+[~,~,~,~,~,~,h2,hsp] = plotHist(y1,y2,xlab,ylab,leg, cols, yy, fign, nBins, doSmooth); %, lineStyles, sp, bins); 
 if doshfl % shfl
     % average of shfl samples .... I don't think this is informative...
     % this is showing the dist of mean of shfls but the one below shows the
@@ -177,15 +190,19 @@ if doshfl % shfl
     % individual shlf sampls
     y1s = exc_allNsDaysMicePooled_shfl0(fr,:,:);
     y2s = inh_allNsDaysMicePooled_shfl0(fr,:,:);
+    y3s = uns_allNsDaysMicePooled_shfl0(fr,:,:);
     % pool all samples
     y1s = y1s(:);
     y2s = y2s(:);
+    y3s = y3s(:);
+    plotHist(y1s,y3s,xlab,ylab,leg, colss, yy,fign, nBins, doSmooth);
     plotHist(y1s,y2s,xlab,ylab,leg, colss, yy,fign, nBins, doSmooth);
 end
 
+legend(hsp, [h1,h2,h3], {'Exc','Inh','Unsure'})
 
 if savefigs        
-    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_dist_time-1_NsDaysMicePooled_', dm0, nowStr));
+    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInhUns_dist_time-1_NsDaysMicePooled_', dm0, nowStr));
     savefig(fign, fdn)    
     print(fign, '-dpdf', fdn)
 end 
@@ -217,6 +234,9 @@ ese = exc_seDays_eachMouse(fr,:);
 iav = inh_avDays_eachMouse(fr,:);
 ise = inh_seDays_eachMouse(fr,:);
 
+uav = uns_avDays_eachMouse(fr,:);
+use = uns_seDays_eachMouse(fr,:);
+
 % ttest for each mouse, exc vs inh across days
 pallm_days = nan(length(time_al), length(mice));
 hallm_days = nan(length(time_al), length(mice));
@@ -236,6 +256,9 @@ if doshfl  % shfl
 
     iavs = inh_avDays_eachMouse_shfl(fr,:);
     ises = inh_seDays_eachMouse_shfl(fr,:);
+
+    uavs = uns_avDays_eachMouse_shfl(fr,:);
+    uses = uns_seDays_eachMouse_shfl(fr,:);
 end
 
 
@@ -244,9 +267,11 @@ g = 0;
 fign = figure('position',[60   593   450   320]); 
 
 subplot(121), hold on;
+errorbar(1:length(mice), uav, use, 'g', 'linestyle','none', 'marker','o')
 errorbar(1:length(mice), eav, ese, 'b', 'linestyle','none', 'marker','o')
 errorbar((1:length(mice))+g, iav, ise ,'r', 'linestyle','none', 'marker','o')
 if doshfl % shfl
+    errorbar(1:length(mice), uavs, uses, 'color', [.2,.2,.2], 'linestyle','none', 'marker','o')
     errorbar(1:length(mice), eavs, eses, 'color', colss(1,:), 'linestyle','none', 'marker','o')
     errorbar((1:length(mice))+g, iavs, ises ,'color', colss(2,:), 'linestyle','none', 'marker','o')
 end
@@ -261,7 +286,7 @@ yl = get(gca,'ylim');
 ym = iav + ise + range(yl)/20;
 plot(1:length(mice), hh_days(fr,:).*ym, 'k*')
 title('aveDays,aveNs')
-
+legend('unsure','exc', 'inh')
 
 
 %%%%%%%%%%%%%%%%%%%%%%%% show ave across pooled neurons of all days for each mouse %%%%%%%%%%%%%%%%%%%%%%%%
@@ -269,9 +294,11 @@ title('aveDays,aveNs')
 % number of valid neurons (from all days) for each mouse
 exc_nValidNs = nan(1,length(mice));
 inh_nValidNs = nan(1,length(mice));
+uns_nValidNs = nan(1,length(mice));
 for im=1:length(mice)
     exc_nValidNs(im) = sum(~isnan(exc_allNsDaysPooled_eachMouse{im}(1,:)));
     inh_nValidNs(im) = sum(~isnan(inh_allNsDaysPooled_eachMouse{im}(1,:)));
+    uns_nValidNs(im) = sum(~isnan(uns_allNsDaysPooled_eachMouse{im}(1,:)));
 end
 
 eav = cellfun(@(x)nanmean(x(fr,:),2), exc_allNsDaysPooled_eachMouse);
@@ -280,6 +307,8 @@ ese = cellfun(@(x)nanstd(x(fr,:),[],2), exc_allNsDaysPooled_eachMouse)/sqrt(exc_
 iav = cellfun(@(x)nanmean(x(fr,:),2), inh_allNsDaysPooled_eachMouse);
 ise = cellfun(@(x)nanstd(x(fr,:),[],2), inh_allNsDaysPooled_eachMouse)/sqrt(inh_nValidNs(im));
 
+uav = cellfun(@(x)nanmean(x(fr,:),2), uns_allNsDaysPooled_eachMouse);
+use = cellfun(@(x)nanstd(x(fr,:),[],2), uns_allNsDaysPooled_eachMouse)/sqrt(uns_nValidNs(im));
 
 % ttest for each mouse, exc vs inh across pooled neurons of all days
 pallm_pooledN = nan(length(time_al), length(mice));
@@ -300,6 +329,9 @@ if doshfl  % shfl
 
     iavs = cellfun(@(x)nanmean(x(fr,:),2), inh_allNsDaysPooled_eachMouse_shfl);
     ises = cellfun(@(x)nanstd(x(fr,:),[],2), inh_allNsDaysPooled_eachMouse_shfl)/sqrt(inh_nValidNs(im));
+
+    uavs = cellfun(@(x)nanmean(x(fr,:),2), uns_allNsDaysPooled_eachMouse_shfl);
+    uses = cellfun(@(x)nanstd(x(fr,:),[],2), uns_allNsDaysPooled_eachMouse_shfl)/sqrt(uns_nValidNs(im));
 end
 
 
@@ -308,9 +340,11 @@ g = 0;
 % figure('position',[60   593   239   320]); 
 
 subplot(122), hold on;
+errorbar(1:length(mice), uav, use, 'g', 'linestyle','none', 'marker','o')
 errorbar(1:length(mice), eav, ese, 'b', 'linestyle','none', 'marker','o')
 errorbar((1:length(mice))+g, iav, ise ,'r', 'linestyle','none', 'marker','o')
 if doshfl  % shfl
+    errorbar(1:length(mice), uavs, uses, 'color', [.2,.2,.2], 'linestyle','none', 'marker','o')
     errorbar(1:length(mice), eavs, eses, 'color', colss(1,:), 'linestyle','none', 'marker','o')
     errorbar((1:length(mice))+g, iavs, ises ,'color', colss(2,:), 'linestyle','none', 'marker','o')
 end
@@ -329,7 +363,7 @@ title('avePooledNs')
 
 % save figure
 if savefigs        
-    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInh_aveSe_time-1_eachMouse_', dm0, nowStr));
+    fdn = fullfile(dirn00, strcat(namc,'_','ROC_curr_chAl_excInhUns_aveSe_time-1_eachMouse_', dm0, nowStr));
     savefig(fign, fdn)    
     print(fign, '-dpdf', fdn)
 end 
@@ -351,6 +385,9 @@ exc_fractSigTuned_eachDay_seDays = cellfun(@nanstd, exc_fractSigTuned_eachDay) .
 inh_fractSigTuned_eachDay_avDays = cellfun(@nanmean, inh_fractSigTuned_eachDay);
 inh_fractSigTuned_eachDay_seDays = cellfun(@nanstd, inh_fractSigTuned_eachDay) ./ sqrt(numDaysGood);
 
+uns_fractSigTuned_eachDay_avDays = cellfun(@nanmean, uns_fractSigTuned_eachDay);
+uns_fractSigTuned_eachDay_seDays = cellfun(@nanstd, uns_fractSigTuned_eachDay) ./ sqrt(numDaysGood);
+
 p_allM = nan(1,length(mice));
 for im=1:length(mice)
     [~,p_allM(im)] = ttest2(exc_fractSigTuned_eachDay{im} , inh_fractSigTuned_eachDay{im});
@@ -362,12 +399,13 @@ gp = .1;
 % all preferences (ipsi and contra)
 fign = figure('position', [17   714   207   251]);
 
-y = [exc_fractSigTuned_eachDay_avDays; inh_fractSigTuned_eachDay_avDays]';
-ye = [exc_fractSigTuned_eachDay_seDays; inh_fractSigTuned_eachDay_seDays]';
+y = [exc_fractSigTuned_eachDay_avDays; inh_fractSigTuned_eachDay_avDays; uns_fractSigTuned_eachDay_avDays]';
+ye = [exc_fractSigTuned_eachDay_seDays; inh_fractSigTuned_eachDay_seDays; uns_fractSigTuned_eachDay_seDays]';
 
-b = errorbar([x,x+gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
+b = errorbar([x, x+gp, x+2*gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
 b(1).Color = 'b'; %'b';
 b(2).Color = 'r'; %rgb('lightblue');
+b(3).Color = 'g';
 set(gca,'xtick',x+gp/2)
 set(gca,'xticklabel',x)
 xlabel('Mice')
@@ -380,11 +418,11 @@ hold on
 yl = get(gca,'ylim');
 plot(find(p_allM<=.05)+gp/2, yl(2)-range(diff(yl))/20, 'k*')
 
-legend(b, 'exc', 'inh')
+legend(b, 'exc', 'inh', 'unsure')
 
 % save figure
 if savefigs        
-    fdn = fullfile(dirn00, strcat(namc,'_','fractSigTunedOfAllN_aveSeDays_time-1_ROC_curr_chAl_excInh_', dm0, nowStr));
+    fdn = fullfile(dirn00, strcat(namc,'_','fractSigTunedOfAllN_aveSeDays_time-1_ROC_curr_chAl_excInhUns_', dm0, nowStr));
     savefig(fign, fdn)    
     print(fign, '-dpdf', fdn)
 end 
@@ -392,93 +430,105 @@ end
 
 %% In significantly choice selective neurons, what fraction are ipsi and what fraction are contra, show it separately for exc and inh
 
-% set average and se across days
-exc_fractSigIpsiTuned_eachDay_avDays = cellfun(@nanmean, exc_fractSigIpsiTuned_eachDay);
-exc_fractSigContraTuned_eachDay_avDays = cellfun(@nanmean, exc_fractSigContraTuned_eachDay); % this is 1 - exc_fractSigIpsiTuned_eachDay_avDays
-exc_fractSigIpsiTuned_eachDay_seDays = cellfun(@nanstd, exc_fractSigIpsiTuned_eachDay) ./ sqrt(numDaysGood);
-exc_fractSigContraTuned_eachDay_seDays = cellfun(@nanstd, exc_fractSigContraTuned_eachDay) ./ sqrt(numDaysGood);
+if doChoicePref==0
+    % set average and se across days
+    exc_fractSigIpsiTuned_eachDay_avDays = cellfun(@nanmean, exc_fractSigIpsiTuned_eachDay);
+    exc_fractSigContraTuned_eachDay_avDays = cellfun(@nanmean, exc_fractSigContraTuned_eachDay); % this is 1 - exc_fractSigIpsiTuned_eachDay_avDays
+    exc_fractSigIpsiTuned_eachDay_seDays = cellfun(@nanstd, exc_fractSigIpsiTuned_eachDay) ./ sqrt(numDaysGood);
+    exc_fractSigContraTuned_eachDay_seDays = cellfun(@nanstd, exc_fractSigContraTuned_eachDay) ./ sqrt(numDaysGood);
 
-inh_fractSigIpsiTuned_eachDay_avDays = cellfun(@nanmean, inh_fractSigIpsiTuned_eachDay);
-inh_fractSigContraTuned_eachDay_avDays = cellfun(@nanmean, inh_fractSigContraTuned_eachDay); % this is 1 - inh_fractSigIpsiTuned_eachDay_avDays
-inh_fractSigIpsiTuned_eachDay_seDays = cellfun(@nanstd, inh_fractSigIpsiTuned_eachDay) ./ sqrt(numDaysGood);
-inh_fractSigContraTuned_eachDay_seDays = cellfun(@nanstd, inh_fractSigContraTuned_eachDay) ./ sqrt(numDaysGood);
+    inh_fractSigIpsiTuned_eachDay_avDays = cellfun(@nanmean, inh_fractSigIpsiTuned_eachDay);
+    inh_fractSigContraTuned_eachDay_avDays = cellfun(@nanmean, inh_fractSigContraTuned_eachDay); % this is 1 - inh_fractSigIpsiTuned_eachDay_avDays
+    inh_fractSigIpsiTuned_eachDay_seDays = cellfun(@nanstd, inh_fractSigIpsiTuned_eachDay) ./ sqrt(numDaysGood);
+    inh_fractSigContraTuned_eachDay_seDays = cellfun(@nanstd, inh_fractSigContraTuned_eachDay) ./ sqrt(numDaysGood);
 
-x = (1:length(mice))';
-gp = .25; 
+    uns_fractSigIpsiTuned_eachDay_avDays = cellfun(@nanmean, uns_fractSigIpsiTuned_eachDay);
+    uns_fractSigContraTuned_eachDay_avDays = cellfun(@nanmean, uns_fractSigContraTuned_eachDay); % this is 1 - uns_fractSigIpsiTuned_eachDay_avDays
+    uns_fractSigIpsiTuned_eachDay_seDays = cellfun(@nanstd, uns_fractSigIpsiTuned_eachDay) ./ sqrt(numDaysGood);
+    uns_fractSigContraTuned_eachDay_seDays = cellfun(@nanstd, uns_fractSigContraTuned_eachDay) ./ sqrt(numDaysGood);
 
-fign = figure('position', [41   483   385   470]);
+    x = (1:length(mice))';
+    gp = .25; 
 
-% excitatory neurons
-y = [exc_fractSigIpsiTuned_eachDay_avDays; exc_fractSigContraTuned_eachDay_avDays]';
-ye = [exc_fractSigIpsiTuned_eachDay_seDays; exc_fractSigContraTuned_eachDay_seDays]';
-subplot(222)
-b = errorbar([x,x+gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
-b(1).Color = 'k'; %'b';
-b(2).Color = 'g'; %rgb('lightblue');
-set(gca,'xtick',x+gp/2)
-set(gca,'xticklabel',x)
-xlabel('Mice')
-ylabel('Fraction choice-tuned') % significant
-legend({'Ipsi-pref', 'Contra-pref'})%, 'position', [0.1655    0.7861    0.2786    0.0821])
-set(gca, 'tickdir', 'out', 'box', 'off')
-title('Excitatory')
-xlim([.5,4.5])
+    fign = figure('position', [41   483   385   470]);
 
-% inhibitory neurons
-y = [inh_fractSigIpsiTuned_eachDay_avDays; inh_fractSigContraTuned_eachDay_avDays]';
-ye = [inh_fractSigIpsiTuned_eachDay_seDays; inh_fractSigContraTuned_eachDay_seDays]';
-subplot(224)
-b = errorbar([x,x+gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
-b(1).Color = 'k'; %'r';
-b(2).Color = 'g'; %rgb('lightsalmon');
-set(gca,'xtick',x+gp/2)
-set(gca,'xticklabel',x)
-xlabel('Mice')
-ylabel('Fraction choice-tuned') % significant
-% legend({'Ipsi-pref', 'Contra-pref'}) %, 'position', [0.1655    0.2861    0.2786    0.0821])
-set(gca, 'tickdir', 'out', 'box', 'off')
-title('Inhibitory')
-xlim([.5,4.5])
+    % excitatory neurons
+    y = [exc_fractSigIpsiTuned_eachDay_avDays; exc_fractSigContraTuned_eachDay_avDays]';
+    ye = [exc_fractSigIpsiTuned_eachDay_seDays; exc_fractSigContraTuned_eachDay_seDays]';
+    subplot(222)
+    b = errorbar([x,x+gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
+    b(1).Color = 'k'; %'b';
+    b(2).Color = 'g'; %rgb('lightblue');
+    set(gca,'xtick',x+gp/2)
+    set(gca,'xticklabel',x)
+    xlabel('Mice')
+    ylabel('Fraction choice-tuned') % significant
+    legend({'Ipsi-pref', 'Contra-pref'})%, 'position', [0.1655    0.7861    0.2786    0.0821])
+    set(gca, 'tickdir', 'out', 'box', 'off')
+    title('Excitatory')
+    xlim([.5,4.5])
 
-
-% ipsi-selective
-y = [exc_fractSigIpsiTuned_eachDay_avDays; inh_fractSigIpsiTuned_eachDay_avDays]';
-subplot(221); hold on
-b = errorbar([x,x+gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
-b(1).Color = 'b'; % ipsi
-b(2).Color = 'r'; % ipsi
-set(gca,'xtick',x+gp/2)
-set(gca,'xticklabel',x)
-xlabel('Mice')
-ylabel('Fraction choice-tuned') % significant
-legend({'Exc', 'Inh'})%, 'position', [0.1655    0.2861    0.2786    0.0821])
-set(gca, 'tickdir', 'out', 'box', 'off')
-title('Ipsi-selective')
-xlim([.5,4.5])
+    % inhibitory neurons
+    y = [inh_fractSigIpsiTuned_eachDay_avDays; inh_fractSigContraTuned_eachDay_avDays]';
+    ye = [inh_fractSigIpsiTuned_eachDay_seDays; inh_fractSigContraTuned_eachDay_seDays]';
+    subplot(224)
+    b = errorbar([x,x+gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
+    b(1).Color = 'k'; %'r';
+    b(2).Color = 'g'; %rgb('lightsalmon');
+    set(gca,'xtick',x+gp/2)
+    set(gca,'xticklabel',x)
+    xlabel('Mice')
+    ylabel('Fraction choice-tuned') % significant
+    % legend({'Ipsi-pref', 'Contra-pref'}) %, 'position', [0.1655    0.2861    0.2786    0.0821])
+    set(gca, 'tickdir', 'out', 'box', 'off')
+    title('Inhibitory')
+    xlim([.5,4.5])
 
 
-% contra-selective
-y = [exc_fractSigContraTuned_eachDay_avDays; inh_fractSigContraTuned_eachDay_avDays]';
-subplot(223); hold on
-b = errorbar([x,x+gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
-b(1).Color = 'b'; %rgb('lightblue'); % contra
-b(2).Color = 'r'; %rgb('lightsalmon'); % contra
-set(gca,'xtick',x+gp/2)
-set(gca,'xticklabel',x)
-xlabel('Mice')
-ylabel('Fraction choice-tuned') % significant
-% legend({'Exc', 'Inh'})%, 'position', [0.1655    0.2861    0.2786    0.0821])
-set(gca, 'tickdir', 'out', 'box', 'off')
-title('Contra-selective')
-xlim([.5,4.5])
+    % ipsi-selective
+    y = [exc_fractSigIpsiTuned_eachDay_avDays; inh_fractSigIpsiTuned_eachDay_avDays; uns_fractSigIpsiTuned_eachDay_avDays]';
+    ye = [exc_fractSigIpsiTuned_eachDay_seDays; inh_fractSigIpsiTuned_eachDay_seDays; uns_fractSigIpsiTuned_eachDay_seDays]';
+    subplot(221); hold on
+    b = errorbar([x,x+gp,x+2*gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
+    b(1).Color = 'b'; % ipsi
+    b(2).Color = 'r'; % ipsi
+    b(3).Color = 'g'; % ipsi
+    set(gca,'xtick',x+gp/2)
+    set(gca,'xticklabel',x)
+    xlabel('Mice')
+    ylabel('Fraction choice-tuned') % significant
+    legend({'Exc', 'Inh', 'Unsure'})%, 'position', [0.1655    0.2861    0.2786    0.0821])
+    set(gca, 'tickdir', 'out', 'box', 'off')
+    title('Ipsi-selective')
+    xlim([.5,4.5])
 
 
-% save figure
-if savefigs        
-    fdn = fullfile(dirn00, strcat(namc,'_','fractIpsiContraOfSigTuned_aveSeDays_time-1_ROC_curr_chAl_excInh_', dm0, nowStr));
-    savefig(fign, fdn)    
-    print(fign, '-dpdf', fdn)
-end 
+    % contra-selective
+    y = [exc_fractSigContraTuned_eachDay_avDays; inh_fractSigContraTuned_eachDay_avDays; uns_fractSigContraTuned_eachDay_avDays]';
+    ye = [exc_fractSigContraTuned_eachDay_seDays; inh_fractSigContraTuned_eachDay_seDays; uns_fractSigContraTuned_eachDay_seDays]';
+    subplot(223); hold on
+    b = errorbar([x,x+gp,x+2*gp], y, ye, 'linestyle', 'none', 'marker', '.', 'markersize', 9);
+    b(1).Color = 'b'; %rgb('lightblue'); % contra
+    b(2).Color = 'r'; %rgb('lightsalmon'); % contra
+    b(3).Color = 'g';
+    set(gca,'xtick',x+gp/2)
+    set(gca,'xticklabel',x)
+    xlabel('Mice')
+    ylabel('Fraction choice-tuned') % significant
+    % legend({'Exc', 'Inh'})%, 'position', [0.1655    0.2861    0.2786    0.0821])
+    set(gca, 'tickdir', 'out', 'box', 'off')
+    title('Contra-selective')
+    xlim([.5,4.5])
+
+
+    % save figure
+    if savefigs        
+        fdn = fullfile(dirn00, strcat(namc,'_','fractIpsiContraOfSigTuned_aveSeDays_time-1_ROC_curr_chAl_excInhUns_', dm0, nowStr));
+        savefig(fign, fdn)    
+        print(fign, '-dpdf', fdn)
+    end 
+
+end
 
 
 
@@ -559,6 +609,7 @@ end
 
 fign = figure;
 
+x = 1:length(mice);
 % excitatory neurons
 y = [exc_fractSigIpsiTuned; exc_fractSigContraTuned]';
 subplot(222)
@@ -659,10 +710,14 @@ for im = 1:length(mice)
     
     i = inh_fractSigTuned_eachDay{im};
     i(isnan(i)) = [];
+
+    u = uns_fractSigTuned_eachDay{im};
+    u(isnan(u)) = [];
     
     subplot(2,2,im); hold on
     plot(e, 'b')
     plot(i, 'r')
+    plot(u, 'g')
     xlim([1, length(e)])
     
     set(gca,'tickdir','out', 'box','off')
@@ -674,8 +729,8 @@ for im = 1:length(mice)
 end
 
 if savefigs
-    savefig(gcf, fullfile(dirn00, [namc,'_','ROC_curr_chAl_excInh_trainindDays_fractSigTunedOfAllN_', nowStr,'.fig']))
-    print(gcf, '-dpdf', fullfile(dirn00, [namc,'_','ROC_curr_chAl_excInh_trainingDays_heatmaps_aveNeurs_', nowStr]))
+    savefig(gcf, fullfile(dirn00, [namc,'_','ROC_curr_chAl_excInhUns_trainindDays_fractSigTunedOfAllN_', nowStr,'.fig']))
+    print(gcf, '-dpdf', fullfile(dirn00, [namc,'_','ROC_curr_chAl_excInhUns_trainingDays_heatmaps_aveNeurs_', nowStr]))
 end
     
 

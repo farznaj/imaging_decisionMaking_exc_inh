@@ -13,7 +13,32 @@ Decode choice using:
 
 Created on Fri Feb 10 20:20:08 2017
 @author: farznaj
+
 """
+
+'''
+############ below is the gist of the codes for svm training (done in linearSVM.py) ############
+import sklearn.svm as svm                        
+
+linear_svm = svm.LinearSVC(C = cbest_allExc[12], loss='squared_hinge', penalty='l2', dual=True) # get c for a frame, eg frame 12.
+linear_svm.fit(X_svm[12,:,:].transpose(), np.squeeze(Y_svm)) # x should be in trials x units
+
+linear_svm.predict(XTest)
+linear_svm.coef_
+linear_svm.intercept_
+
+###
+# def perClassError(Y, Yhat):
+#    import numpy as np
+#    perClassEr = np.sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
+#    return perClassEr
+
+# perClassErrorTest = perClassError(YTest, linear_svm.predict(XTest)); 
+
+# summary.model = linear_svm;
+'''
+
+
 ##%%
 ####### NOTE ########
 #print 'Decide which one to load: inhibitRois_pix or inhibitRois!!'
@@ -51,16 +76,20 @@ if 'ipykernel' in sys.modules:
 if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
     
     # Set these variables:
-    mousename = 'fni16' #''fni19' #'fni16' #fni16' #
-    imagingFolder = '150918' #'150818' #'151102' #'151019' #'151006' #'151023' #'151023' #'151001' 
-    mdfFileNumber = [1,2,3,4] #[1] #
+    mousename = 'fni16' #'fni19' #'fni16' #''fni19' #'fni16' #fni16' #
+    imagingFolder = '151007' #'151005' #'150918' #'150818' #'151102' #'151019' #'151006' #'151023' #'151023' #'151001' 
+    mdfFileNumber = [1,2] #[1] #
 
+    do_Ctrace = 1 # if 1, use C trace (denoised fluorescent trace), instead of S (inferred spikes)
+    same_HRLR_acrossDays = 0 # normally 0, but if 1, svm will be trained on n trials, where n is the minimum number of trials across all sessions of a mouse (this variable is already computed and saved in the analysis folder of each mouse) # set to 1 to balance the number of trials across training days to make sure svm performance is not affected by that.    
     cbestKnown = 0 #1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
-    shflTrsEachNeuron = 1  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations in neurons FRs across trials.
-
+    shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations in neurons FRs across trials.
     shflTrLabs = 0 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
-    outcome2ana = 'corr' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        
-    doInhAllexcEqexc = [1,0,0] # [0,0,1,2]  # 
+
+    outcome2ana = 'corr' # 'all' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.            
+    trialHistAnalysis = 0 #0
+    chAl = 1 #1 # If 1, use choice-aligned traces; if 0 use stim-aligned traces for trainign SVM; if -1 use reward and puunishment (outcome) aligned traces!         
+    doInhAllexcEqexc = [0,0,1] # [1,0,0,-2] # [0,0,1,2]  # 
     #    1st element: analyze inhibitory neurons (train SVM for numSamples for each value of C)
     #    2nd element: if 1: analyze all excitatory neurons (train SVM for numSamples for each value of C)   
                     # if 2: analyze all neurons (exc, inh, unsure) ... this is like code svm_eachFrame.py   
@@ -69,30 +98,29 @@ if ('ipykernel' in sys.modules) or any('SPYDER' in name for name in os.environ):
                     # if 3: take lenInh*2 of only exc and run svm. 
     # if there is a 4th element (eg [0,1,0,1]), the following analysis will be done; otherwise we will decode choice. 
         # If 4th element is: 
+        # -2, train svm to decode trial outcome (corr vs incorr)
         # -1, test decoder on incorrect trials (in addition to correct trials.)     
         # 0, train svm to decode stimulus category (HR vs LR) on equal number of corr and incorr trials.
         # 1: add neurons based on their ROC choice tuning : sort from highest to lowest choice tuning. ##(if eqExc, exc ns are first subsampled then they are sorted based on ROC; and then svm is run) 
         # 2: add neurons based on their ROC choice tuning : sort from lowest to highest choice tuning. ##(if eqExc, exc ns are first subsampled then they are sorted based on ROC; and then svm is run)
         # 3: add neurons randomly
-        
-    doPlots = 0 # Whether to make plots or not.
+    
+    
+    doPlots = 0 #1 # Whether to make plots or not.
     saveResults = 0 # save results in mat file.
 
-    chAl = 1 # If 1, use choice-aligned traces; otherwise use stim-aligned traces for trainign SVM.     
     numSamples = 3 #50#100; # number of iterations for finding the best c (inverse of regularization parameter)
     numShufflesExc = 2 #50# we choose 10 sets of n random excitatory neurons.    
     nRandCorrSel = 2
-    
-    softNorm = 1 # if 1, no neurons will be excluded, bc we do soft normalization of FRs, so non-active neurons wont be problematic. if softNorm = 0, NsExcluded will be found
-    useEqualTrNums = 1 # Make sure both classes have the same number of trials when training the classifier
+
+    useEqualTrNums = 1 # Make sure both classes have the same number of trials when training the classifier    
+    softNorm = 1 # if 1, no neurons will be excluded, bc we do soft normalization of FRs, so non-active neurons wont be problematic. if softNorm = 0, NsExcluded will be found    
     winLen = 100 # ms, length of window for downsampling; svm will be trained in non-overlapping windows of size winLen ms.
-    
+
 
     regType = 'l2' # 'l2' : regularization type
-    kfold = 10
-
-    trialHistAnalysis = 0
-    iTiFlg = 1 # Only needed if trialHistAnalysis=1; short ITI, 1: long ITI, 2: all ITIs.
+    kfold = 10    
+    iTiFlg = 2 # Only needed if trialHistAnalysis=1 and outcome2ana = 'corr'; short ITI, 1: long ITI, 2: all ITIs.
 
 #    if trialHistAnalysis==1: # more parameters are specified in popClassifier_trialHistory.m
     #        iTiFlg = 1; # 0: short ITI, 1: long ITI, 2: all ITIs.
@@ -165,8 +193,20 @@ if len(doInhAllexcEqexc)==4:
         decodeStimCateg = 0
         addNs_rand = 0
         addNs_roc = 0
+        decodeOutcome = 0
 #        cbestKnown = 0
         print 'Testing decoder on incorrect trials as well'    
+        
+    elif doInhAllexcEqexc[3]==-2:
+        decodeOutcome = 1
+        decodeStimCateg = 0
+        addNs_rand = 0
+        addNs_roc = 0
+        testIncorr = 0
+        outcome2ana = 'all'
+        cbestKnown = 0
+        print 'Decoding outcome (corr, incorr)'        
+        
     elif doInhAllexcEqexc[3]==0:
         decodeStimCateg = 1        
         addNs_rand = 0
@@ -174,20 +214,25 @@ if len(doInhAllexcEqexc)==4:
         testIncorr = 0
         outcome2ana = 'all'
         cbestKnown = 0
+        decodeOutcome = 0
         print 'Decoding stimulus category (HR, LR)'
+        
     elif doInhAllexcEqexc[3]==3:
         addNs_rand = 1        
         addNs_roc = 0
         decodeStimCateg = 0
         cbestKnown = 0 # set cbest, unless you are repeating the same analysis again for adding Ns 1 by 1 randomly...
         testIncorr = 0
+        decodeOutcome = 0
         print 'Adding neurons randomly 1 by 1 for SVM analysis'
+        
     else: 
         addNs_roc = 1 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.        
         addNs_rand = 0
         decodeStimCateg = 0
         cbestKnown = 0 # set cbest, unless you are repeating the same analysis again for adding Ns 1 by 1 ROC...         
         testIncorr = 0
+        decodeOutcome = 0
         if doInhAllexcEqexc[3]==1:
             print 'Adding neurons 1 by 1 from high to low ROC (choice tuning) for SVM analysis' 
         elif doInhAllexcEqexc[3]==2:
@@ -197,23 +242,27 @@ else:
     addNs_rand = 0
     addNs_roc = 0
     decodeStimCateg = 0
+    decodeOutcome = 0
     print 'Decoding left, right choice'
 
-
-if cbestKnown:
-    print 'Optimum c is already saved'
-else:
-    print 'Setting optimum c'
+if trialHistAnalysis==1:
+    testIncorr = 0
 
 if chAl==1:
     print 'Using choice-aligned traces'
-else:
+elif chAl==0:
     print 'Using stimulus-aligned traces'    
+elif chAl==-1:
+    print 'Using outcome-aligned traces'    
 
+if do_Ctrace:
+    print 'Using C (denoised calcium) traces instead of inferred spikes'
+    
 if trialHistAnalysis==0:
     print 'Training %s outcome trials of strength %s' %(outcome2ana, strength2ana)
-
-print 'trialHistAnalysis = %i' %(trialHistAnalysis)
+else:
+    print 'Analyzing previous trials of %s outcome' %(outcome2ana)
+#print 'trialHistAnalysis = %i' %(trialHistAnalysis)
 
 if trialHistAnalysis==1:
     print 'Analyzing %s ITIs' %(itiName)
@@ -223,13 +272,22 @@ elif 'ep_ms' in locals():
 #print 'windowAvgFlg = %i' %(windowAvgFlg)
 print 'numSamples = %i' %(numSamples)
 
+if cbestKnown:
+    print 'Optimum c is already saved'
+else:
+    print 'Setting optimum c'
+    
+if same_HRLR_acrossDays:
+    print 'Using min number of HR,LR trials across all days to train the SVM'
 
 #%% Set vars
 
 if chAl==1:
     al = 'chAl'
-else:
+elif chAl==0:
     al = 'stAl'
+elif chAl==-1:
+    al = 'outAl'
 
 if outcome2ana == 'corr': # save incorr vars too bc SVM was trained on corr, and tested on icorr.
     o2a = 'corr_'
@@ -503,8 +561,10 @@ if np.logical_and(cbestKnown, doInhAllexcEqexc[1]!=2): # svm is already run on t
         
         if chAl==1:
             al = 'chAl'
-        else:
+        elif chAl==0:
             al = 'stAl'
+        elif chAl==-1:
+            al = 'outAl'
         
         if corrTrained:
             o2a = 'corr_'
@@ -607,8 +667,10 @@ if np.logical_and(cbestKnown, doInhAllexcEqexc[1]==2): # svm is already run on t
         
         if chAl==1:
             al = 'chAl'
-        else:
+        elif chAl==0:
             al = 'stAl'
+        elif chAl==-1:
+            al = 'outAl'
     
         if corrTrained==1: 
             o2a = '_corr'
@@ -778,6 +840,7 @@ if addNs_roc==1:
 # if trialHistAnalysis==0:
 Data = scio.loadmat(postName, variable_names=['outcomes', 'allResp_HR_LR'])
 outcomes = (Data.pop('outcomes').astype('float'))[0,:]
+# outcomes: 1: success, 0: failure, -1: early decision, -2: no decision, -3: wrong initiation, -4: no center commit, -5: no side commit
 # allResp_HR_LR = (Data.pop('allResp_HR_LR').astype('float'))[0,:]
 allResp_HR_LR = np.array(Data.pop('allResp_HR_LR')).flatten().astype('float')
 choiceVecAll = allResp_HR_LR+0;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
@@ -786,18 +849,20 @@ choiceVecAll = allResp_HR_LR+0;  # trials x 1;  1 for HR choice, 0 for LR choice
 
 
 if trialHistAnalysis:
-    # Load trialHistory structure to get choice vector of the previous trial
-    Data = scio.loadmat(postName, variable_names=['trialHistory'],squeeze_me=True,struct_as_record=False)
-    choiceVec0All = Data['trialHistory'].choiceVec0.astype('float')
+    if outcome2ana == 'corr': # Load trialHistory structure to get choice vector of the previous trial
+        Data = scio.loadmat(postName, variable_names=['trialHistory'],squeeze_me=True,struct_as_record=False)
+        choiceVec0All = Data['trialHistory'].choiceVec0.astype('float')
+    elif outcome2ana == 'all':
+        choiceVec0All = np.concatenate(([np.nan], allResp_HR_LR)) # shift allResp_HR_LR by one, to get the choice on the previous trial.
+        choiceVec0All = np.delete(choiceVec0All, -1) # remove the last element so the length of it matches allResp_HR_LR
 
 
+Data = scio.loadmat(postName, variable_names=['stimrate', 'cb'])
+stimrate = np.array(Data.pop('stimrate')).flatten().astype('float')
+cb = np.array(Data.pop('cb')).flatten().astype('float')
     
 ################## Set trials strength and identify trials with stim strength of interest
 if trialHistAnalysis==0:
-    Data = scio.loadmat(postName, variable_names=['stimrate', 'cb'])
-    stimrate = np.array(Data.pop('stimrate')).flatten().astype('float')
-    cb = np.array(Data.pop('cb')).flatten().astype('float')
-
     s = stimrate-cb; # how far is the stimulus rate from the category boundary?
     if strength2ana == 'easy':
         str2ana = (abs(s) >= (max(abs(s)) - thStimStrength));
@@ -892,7 +957,8 @@ if doPlots:
     plt.plot(timeStimOffset - timeStimOnset, 'r', label = 'stimOffset')
     plt.plot(timeStimOffset0 - timeStimOnset, 'k', label = 'stimOffset_1rep')
     plt.plot(time1stSideTry - timeStimOnset, 'm', label = '1stSideTry')
-    plt.plot([1, np.shape(timeCommitCL_CR_Gotone)[0]],[th_stim_dur, th_stim_dur], 'g:', label = 'th_stim_dur')
+    if trialHistAnalysis==0:
+        plt.plot([1, np.shape(timeCommitCL_CR_Gotone)[0]],[th_stim_dur, th_stim_dur], 'g:', label = 'th_stim_dur')
 #    plt.plot([1, np.shape(timeCommitCL_CR_Gotone)[0]],[ep_ms[-1], ep_ms[-1]], 'k:', label = 'epoch end')
     plt.xlabel('Trial')
     plt.ylabel('Time relative to stim onset (ms)')
@@ -938,7 +1004,7 @@ Data = scio.loadmat(moreName, variable_names=['inhibitRois_pix'])
 inhibitRois = Data.pop('inhibitRois_pix')[0,:]    
 print '%d inhibitory, %d excitatory; %d unsure class' %(np.sum(inhibitRois==1), np.sum(inhibitRois==0), np.sum(np.isnan(inhibitRois)))
 
-"""    
+'''
 # Set traces for specific neuron types: inhibitory, excitatory or all neurons
 if neuronType!=2:    
     nt = (inhibitRois==neuronType) # 0: excitatory, 1: inhibitory, 2: all types.
@@ -949,7 +1015,7 @@ if neuronType!=2:
     traces_al_stimAll = traces_al_stimAll[:, nt, :];
 else:
     nt = np.arange(np.shape(traces_al_stim)[1])    
-"""
+'''
 
 
     
@@ -957,9 +1023,12 @@ else:
 #%% Set choiceVec0  (Y: the response vector)
     
 if trialHistAnalysis:
-    choiceVec0 = choiceVec0All[:,iTiFlg] # choice on the previous trial for short (or long or all) ITIs
-    choiceVec0S = choiceVec0All[:,0]
-    choiceVec0L = choiceVec0All[:,1]
+    if outcome2ana=='corr':
+        choiceVec0 = choiceVec0All[:,iTiFlg] # choice on the previous trial for short (or long or all) ITIs
+        choiceVec0S = choiceVec0All[:,0]
+        choiceVec0L = choiceVec0All[:,1]
+    elif outcome2ana=='all':
+        choiceVec0 = choiceVec0All
 else: # set choice for the current trial
     choiceVec0 = allResp_HR_LR;  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
     # choiceVec0 = np.transpose(allResp_HR_LR);  # trials x 1;  1 for HR choice, 0 for LR choice. % choice of the current trial.    
@@ -974,25 +1043,44 @@ else: # set choice for the current trial
 print '%d correct trials; %d incorrect trials' %((outcomes==1).sum(), (outcomes==0).sum())
 
 
-#%% Set Y for incorrect trials
+#%% Set Y for incorrect trials (current trials)
 
 # set Y_incorr: vector of choices for incorrect trials
 Y_incorr0 = choiceVecAll+0
-Y_incorr0[outcomes!=0] = np.nan; # analyze only incorrect trials.
-print '\tincorrect trials: %d HR; %d LR' %((Y_incorr0==1).sum(), (Y_incorr0==0).sum())
+Y_incorr0[outcomes!=0] = np.nan # analyze only incorrect trials.
+
+print '\tCurrent trial: incorrect trials: %d HR; %d LR' %((Y_incorr0==1).sum(), (Y_incorr0==0).sum())
+
+
+#%% print out of correct trials, how many are from each choice.... although these numbers are  not really useful, as we later set trsExcluded, so not all of these trials go into SVM analysis.
+
+Y_corr0 = choiceVecAll+0
+Y_corr0[outcomes!=1] = np.nan # only correct trials.
+
+print '\tCurrent trial: correct trials: %d HR; %d LR' %((Y_corr0==1).sum(), (Y_corr0==0).sum())
 
 
 #%% Load spikes and time traces to set X for training SVM
 
 if chAl==1:    #%% Use choice-aligned traces 
-    # Load 1stSideTry-aligned traces, frames, frame of event of interest
-    # use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
-    Data = scio.loadmat(postName, variable_names=['firstSideTryAl'],squeeze_me=True,struct_as_record=False)
-    traces_al_1stSide = Data['firstSideTryAl'].traces.astype('float')
-    time_aligned_1stSide = Data['firstSideTryAl'].time.astype('float')
-    eventI = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
-    #eventI_ch = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
-    # print(np.shape(traces_al_1stSide))
+    
+    if do_Ctrace: # if 1, use C trace (denoised fluorescent trace), instead of S (inferred spikes)
+        a = os.path.basename(postName)
+        newPostName = os.path.join(dataPath, mousename, 'imaging', imagingFolder, 'post_Ctrace_'+a[5:])
+        Data = scio.loadmat(newPostName, variable_names=['firstSideTryAl'],squeeze_me=True,struct_as_record=False)
+        traces_al_1stSide = Data['firstSideTryAl'].traces.astype('float')
+        time_aligned_1stSide = Data['firstSideTryAl'].time.astype('float')
+        eventI = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+    
+    else:
+        # Load 1stSideTry-aligned traces, frames, frame of event of interest
+        # use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
+        Data = scio.loadmat(postName, variable_names=['firstSideTryAl'],squeeze_me=True,struct_as_record=False)
+        traces_al_1stSide = Data['firstSideTryAl'].traces.astype('float')
+        time_aligned_1stSide = Data['firstSideTryAl'].time.astype('float')
+        eventI = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+        #eventI_ch = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+        # print(np.shape(traces_al_1stSide))
     
     trsExcluded = (np.isnan(np.sum(traces_al_1stSide, axis=(0,1))) + np.isnan(choiceVec0)) != 0
     
@@ -1008,32 +1096,10 @@ if chAl==1:    #%% Use choice-aligned traces
     X_svm_incorr = traces_al_1stSide[:,:,~trsExcluded_incorr]   
     
     
-##%%
-elif goToneAl==1:   # Use go-tone-aligned traces
-    
-    if noStimAft: # only analyze trials that dont have stim after go tone (more conservative)
-        Data = scio.loadmat(postName, variable_names=['goToneAl_noStimAft'],squeeze_me=True,struct_as_record=False)
-        traces_al_goTone = Data['goToneAl_noStimAft'].traces.astype('float')
-        time_aligned_goTone = Data['goToneAl_noStimAft'].time.astype('float')
-        #eventI_ch = Data['goToneAl_noStimAft'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
-        # print(np.shape(traces_al_1stSide))
-        
-        trsExcluded = (np.isnan(np.sum(traces_al_goTone, axis=(0,1))) + np.isnan(choiceVec0)) != 0
-        
-        X_svm = traces_al_goTone[:,:,~trsExcluded]  
-    #    Y_svm = choiceVec0[~trsExcluded];
-    #    print 'frs x units x trials', X_svm.shape
-    #    print Y_svm.shape
-        
-        time_trace = time_aligned_goTone
-
-    else:
-        print 'work on this!'
-
-    
     
 ##%%
-elif stAl==1:   #%% Use stimulus-aligned traces
+elif chAl==0:   #%% Use stimulus-aligned traces
+#    stAl = 1
     
     # Set traces_al_stim that is same as traces_al_stimAll except that in traces_al_stim some trials are set to nan, bc their stim duration is < 
     # th_stim_dur or bc their go tone happens before ep(end) or bc their choice happened before ep(end). 
@@ -1048,15 +1114,16 @@ elif stAl==1:   #%% Use stimulus-aligned traces
         Data = scio.loadmat(postName, variable_names=['stimAl_noEarlyDec'],squeeze_me=True,struct_as_record=False)
         eventI = Data['stimAl_noEarlyDec'].eventI - 1 # remember difference indexing in matlab and python!
         traces_al_stimAll = Data['stimAl_noEarlyDec'].traces.astype('float')
-        time_aligned_stim = Data['stimAl_noEarlyDec'].time.astype('float')
-    
+        time_aligned_stim = Data['stimAl_noEarlyDec'].time.astype('float')    
+        
     else:
         Data = scio.loadmat(postName, variable_names=['stimAl_allTrs'],squeeze_me=True,struct_as_record=False)
         eventI = Data['stimAl_allTrs'].eventI - 1 # remember difference indexing in matlab and python!
         traces_al_stimAll = Data['stimAl_allTrs'].traces.astype('float')
         time_aligned_stim = Data['stimAl_allTrs'].time.astype('float')
         # time_aligned_stimAll = Data['stimAl_allTrs'].time.astype('float') # same as time_aligned_stim
-    
+
+        
     print 'size of stimulus-aligned traces:', np.shape(traces_al_stimAll), '(frames x units x trials)'
     #DataS = Data
     traces_al_stim = traces_al_stimAll
@@ -1116,13 +1183,113 @@ elif stAl==1:   #%% Use stimulus-aligned traces
     
     X_svm = traces_al_stim[:,:,~trsExcluded]  
 
-print 'frs x units x trials', X_svm.shape    
-print 'frs x units x trials (incorrect trials)', X_svm_incorr.shape
+    ## incorrect trials
+#    if trialHistAnalysis==0:        
+    trsExcluded_incorr = (np.isnan(np.sum(traces_al_stim, axis=(0,1))) + np.isnan(Y_incorr0)) != 0
+    X_svm_incorr = traces_al_stim[:,:,~trsExcluded_incorr]  
+#    else:
+#        X_svm_incorr = 0
+    
+
+##%%
+elif chAl==-1:    #%% Use outcome-aligned traces 
+    # Load 1stSideTry-aligned traces, frames, frame of event of interest
+    # use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
+    Data = scio.loadmat(postName, variable_names=['rewardAl'],squeeze_me=True,struct_as_record=False)
+    traces_al_rew = Data['rewardAl'].traces.astype('float')
+    time_aligned_rew = Data['rewardAl'].time.astype('float')
+    eventI_rew = Data['rewardAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+    #eventI_ch = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+    # print(np.shape(traces_al_1stSide))
+     
+    
+    ############ incorr resp aligned
+    Data = scio.loadmat(postName, variable_names=['commitIncorrAl'],squeeze_me=True,struct_as_record=False)
+    traces_al_inc = Data['commitIncorrAl'].traces.astype('float')
+    time_aligned_inc = Data['commitIncorrAl'].time.astype('float')
+    eventI_inc = Data['commitIncorrAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+    #eventI_ch = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+    # print(np.shape(traces_al_1stSide))
+    
+
+    ##### align rew-al and inc-al traces    
+    nbef_min = min(eventI_rew, eventI_inc) # minimum number of frames before the eventI (between rewAl and incAl traces); it will be also the new evnetI on the aligned traces that are set below
+    naft_min = min((len(time_aligned_rew)-1 - eventI_rew) , (len(time_aligned_inc)-1 - eventI_inc)) # minimum number of frames after the eventI (between rewAl and incAl traces)
+
+    # take a chunk of each trace, such that the new eventI will be nbef_min
+    r_rew = np.arange(eventI_rew - nbef_min  ,  eventI_rew + naft_min+1)
+    trace_rew = traces_al_rew[r_rew,:,:]
+    time_aligned_outcome = time_aligned_rew[r_rew] # it is 0 at index nbef_min
+
+    r_inc = np.arange(eventI_inc - nbef_min  ,  eventI_inc + naft_min+1)
+    trace_inc = traces_al_inc[r_inc,:,:]
+#    time_inc = time_aligned_inc[r_inc] # same as time_rew
+    
+    ##### now create a traces matrix that includes both rewAl and incAl traces...
+    traces_al_outcome = np.full((trace_rew.shape), np.nan)
+    traces_al_outcome[:,:,outcomes==1] = trace_rew[:,:,outcomes==1] # trace_rew is nan for outcomes other than 1
+    traces_al_outcome[:,:,outcomes==0] = trace_inc[:,:,outcomes==0] # trace_inc is nan for outcomes other than 0
+#    time_aligned_outcome
+    eventI = nbef_min    
+    
+    
+    ############    
+    trsExcluded = (np.isnan(np.sum(traces_al_outcome, axis=(0,1))) + np.isnan(choiceVec0)) != 0
+    
+    X_svm = traces_al_outcome[:,:,~trsExcluded]  
+#    Y_svm = choiceVec0[~trsExcluded];
+#    print 'frs x units x trials', X_svm.shape
+#    print Y_svm.shape
+    
+    time_trace = time_aligned_outcome
+
+    ## incorrect trials
+#    trsExcluded_incorr = (np.isnan(np.sum(traces_al_outcome, axis=(0,1))) + np.isnan(Y_incorr0)) != 0
+#    X_svm_incorr = traces_al_1stSide[:,:,~trsExcluded_incorr]   
+
+
+##%%
+'''
+elif chAl==2:   # Use go-tone-aligned traces
+    
+    goToneAl=1
+    
+    if noStimAft: # only analyze trials that dont have stim after go tone (more conservative)
+        Data = scio.loadmat(postName, variable_names=['goToneAl_noStimAft'],squeeze_me=True,struct_as_record=False)
+        traces_al_goTone = Data['goToneAl_noStimAft'].traces.astype('float')
+        time_aligned_goTone = Data['goToneAl_noStimAft'].time.astype('float')
+        #eventI_ch = Data['goToneAl_noStimAft'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+        # print(np.shape(traces_al_1stSide))
+        
+        trsExcluded = (np.isnan(np.sum(traces_al_goTone, axis=(0,1))) + np.isnan(choiceVec0)) != 0
+        
+        X_svm = traces_al_goTone[:,:,~trsExcluded]  
+    #    Y_svm = choiceVec0[~trsExcluded];
+    #    print 'frs x units x trials', X_svm.shape
+    #    print Y_svm.shape
+        
+        time_trace = time_aligned_goTone
+
+    else:
+        print 'work on this!'
+'''
+
+print 'Number of excluded trials: %d' %(sum(trsExcluded))
+print 'size of X_svm', X_svm.shape, '(frames x units x trials)'
+if testIncorr:
+    print 'size of X_svm_incorr', X_svm_incorr.shape, '(frames x units x trials)'
+
+
+#%% Save a copy of outcomes, stimrate and allResp_HR_LR before removing trsExcluded
+    
+outcomes0 = outcomes+0    
+stimrate0 = stimrate+0    
+allResp_HR_LR0 = allResp_HR_LR+0
 
 
 #%% Set Y for training SVM   
 
-if decodeStimCateg:
+if decodeStimCateg: # Y is categorized stim rate (HR, LR)
     # Exclude trials with stimrate=cb  (We don't want to use them for training SVM though they should be fine as SVM testing trials (in fact interesting to see if variations in population activity can explain animal's choice))
     trsExcluded[stimrate==cb] = True
 
@@ -1130,43 +1297,78 @@ if decodeStimCateg:
     Y_svm[Y_svm<cb] = 0 # LR stimulus --> 0
     Y_svm[Y_svm>cb] = 1 # HR stimulus --> 1
 #    print '%d high-rate stimuli, and %d low-rate stimuli\n' %(np.sum(Y_svm==1), np.sum(Y_svm==0))
+       
+elif decodeOutcome: # Y is corr, incorr
+    trsExcluded = trsExcluded + ~np.logical_or(outcomes0==1, outcomes0==0) # Exclude trials with outcomes other than 0 or 1 (eg. no side commit trials)
     
-    outcomes0 = outcomes+0    
-    outcomes = outcomes0[~trsExcluded]
-    stimrate0 = stimrate+0    
-    stimrate = stimrate0[~trsExcluded]
+    Y_svm = outcomes0[~trsExcluded]
     
-else:
+else: # Y is choice
     Y_svm = choiceVec0[~trsExcluded]
     print 'Y_svm size: ', Y_svm.shape    
-    ## incorrect trials
-    Y_svm_incorr = Y_incorr0[~trsExcluded_incorr]
-    print 'Y_incorr size: ', Y_svm_incorr.shape
+    
+    if testIncorr: ## incorrect trials
+        Y_svm_incorr = Y_incorr0[~trsExcluded_incorr]
+        print 'Y_incorr size: ', Y_svm_incorr.shape
  
-       
-### print number of hr,lr trials after excluding trials
-numHrLr = (Y_svm==1).sum(), (Y_svm==0).sum()
-if outcome2ana == 'corr':
-    print '\tcorrect trials: %d HR; %d LR' %(numHrLr)
-elif outcome2ana == 'incorr':
-    print '\tincorrect trials: %d HR; %d LR' %(numHrLr)
-else:
-    print '\tall trials: %d HR; %d LR' %(numHrLr)
-        
-if decodeStimCateg==0:
-    print '\tincorrect trials: %d HR; %d LR' %((Y_svm_incorr==1).sum(), (Y_svm_incorr==0).sum())
 
+outcomes = outcomes0[~trsExcluded]
+stimrate = stimrate0[~trsExcluded]
+allResp_HR_LR = allResp_HR_LR0[~trsExcluded]
+
+
+### print number of hr,lr trials ***after excluding trials*** (still before applying equal number of hr and lr trials in the decoder... so not yet the final number of trials in the decoder)
+
+numHrLr = (Y_svm==1).sum(), (Y_svm==0).sum() # if decodeOutcome, this will be number of correct and incorrect trials.
+
+if decodeOutcome==0:    
+    
+    print 'After removing trsExcluded:'
+    if outcome2ana == 'corr':
+        print '\tcorrect trials: %d HR; %d LR' %(numHrLr)
+    elif outcome2ana == 'incorr':
+        print '\tincorrect trials: %d HR; %d LR' %(numHrLr)
+    else:
+        print '\tall trials: %d HR; %d LR' %(numHrLr)
+            
+    if np.logical_and(decodeStimCateg==0, testIncorr==1):
+        print '\tincorrect trials: %d HR; %d LR' %((Y_svm_incorr==1).sum(), (Y_svm_incorr==0).sum())
+    
+    
+    if trialHistAnalysis==0:
+        print '\tcorrect trials: %d HR; %d LR' %(sum(np.logical_and(outcomes==1, Y_svm==1)) , sum(np.logical_and(outcomes==1, Y_svm==0)))
+        print '\tincorrect trials: %d HR; %d LR' %(sum(np.logical_and(outcomes==0, Y_svm==1)) , sum(np.logical_and(outcomes==0, Y_svm==0)))
+
+else: # if decodeOutcome, Y_svm is outcomes
+    print '\tcorrect trials: %d HR; %d LR' %(sum(np.logical_and(Y_svm==1, allResp_HR_LR==1)) , sum(np.logical_and(outcomes==1, allResp_HR_LR==0)))
+    print '\tincorrect trials: %d HR; %d LR' %(sum(np.logical_and(Y_svm==0, allResp_HR_LR==1)) , sum(np.logical_and(Y_svm==0, allResp_HR_LR==0)))
+
+# you will use hr_trs and lr_trs for a plot below... to plot the average of the trials from each class
+# remember if decodeOutcome=1, then hr_trs and lr_trs are in fact corr and incorr trials.... I dont change the names bc these names are only used for a plot below and nowhere else.    
 # Divide data into high-rate (modeled as 1) and low-rate (modeled as 0) trials
 hr_trs = (Y_svm==1)
 lr_trs = (Y_svm==0)
-
-
-#%% I think we need at the very least 3 trials of each class to train SVM. So exit the analysis if this condition is not met!
+    
+    
+#%% We need at the very least 3 trials of each class to train SVM. So exit the analysis if this condition is not met!
 
 if min(numHrLr) < 3:
     sys.exit('Too few trials to do SVM training! HR=%d, LR=%d' %(numHrLr))
+   
     
+if same_HRLR_acrossDays:
+    '''
+    a = os.path.join(dataPath, mousename, 'imaging', 'analysis', 'SVM_minHRLR_acrossDays_choiceDecode_chAl.mat')
+    aa = scio.loadmat(a, variable_names=['mnHRLR_acrossDays'])
+    mnHRLR_acrossDays = int(aa.pop('mnHRLR_acrossDays').flatten())
+    '''
+    mnHRLR_acrossDays = 20
+    if min(numHrLr) < mnHRLR_acrossDays:
+        sys.exit('Too few trials to do SVM training! HR=%d, LR=%d' %(numHrLr))
 
+else:
+    mnHRLR_acrossDays = np.nan
+    
     
 #%% Downsample X: average across multiple times (downsampling, not a moving average. we only average every regressBins points.)
 
@@ -1251,44 +1453,45 @@ if np.isnan(regressBins)==0: # set to nan if you don't want to downsample.
     ################################### x_svm_incorr ###################################
     ##################################################################################
     
-    # set frames before frame0 (not including it)
-    f = (np.arange(eventI - regressBins*np.floor(eventI/float(regressBins)) , eventI)).astype(int) # 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)
-    x = X_svm_incorr[f,:,:] # X_svmo including frames before frame0
-    T1, N1, C1 = x.shape
-    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames before frame0
-    xdb = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames before frame0
-    
-    
-    # set frames after frame0 (including it)
-    f = (np.arange(eventI , eventI + regressBins * np.floor((X_svm_incorr.shape[0] - eventI) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
-    x = X_svm_incorr[f,:,:] # X_svmo including frames after frame0
-    T1, N1, C1 = x.shape
-    tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
-    xda = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames after frame0
-    
-    # set the final downsampled X_svmo: concatenate downsampled X at frames before frame0, with x at frames after (and including) frame0
-    X_svm_d = np.concatenate((xdb, xda))    
-#    print 'trace size--> original:',X_svm.shape, 'downsampled:', X_svm_d.shape
-#    X_svm = X_svm_d
-    
-    ####### 
-    if cbestKnown: #shflTrLabs:
-        if nfrs_cbest+1 == X_svm_d.shape[0]:  # by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
-            lastTimeBinMissed = 1
-            print 'lastTimeBinMissed = 1! so have to set X_svm with lastTimeBinMissed to have its size matches the previously saved variable bestc!'
-            # set frames after frame0 (including it)
-            f = (np.arange(eventI , eventI + regressBins * np.floor((X_svm_incorr.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
-            x = X_svm_incorr[f,:,:] # X_svmo including frames after frame0
-            T1, N1, C1 = x.shape
-            tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
-            xda = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames after frame0
-            
-            # set the final downsampled X_svmo: concatenate downsampled X at frames before frame0, with x at frames after (and including) frame0
-            X_svm_d = np.concatenate((xdb, xda))    
-        else:
-            lastTimeBinMissed = 0
-    print 'trace size--> original:',X_svm_incorr.shape, 'downsampled:', X_svm_d.shape
-    X_svm_incorr = X_svm_d  
+    if testIncorr:
+        # set frames before frame0 (not including it)
+        f = (np.arange(eventI - regressBins*np.floor(eventI/float(regressBins)) , eventI)).astype(int) # 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)
+        x = X_svm_incorr[f,:,:] # X_svmo including frames before frame0
+        T1, N1, C1 = x.shape
+        tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames before frame0
+        xdb = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames before frame0
+        
+        
+        # set frames after frame0 (including it)
+        f = (np.arange(eventI , eventI + regressBins * np.floor((X_svm_incorr.shape[0] - eventI) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+        x = X_svm_incorr[f,:,:] # X_svmo including frames after frame0
+        T1, N1, C1 = x.shape
+        tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
+        xda = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames after frame0
+        
+        # set the final downsampled X_svmo: concatenate downsampled X at frames before frame0, with x at frames after (and including) frame0
+        X_svm_d = np.concatenate((xdb, xda))    
+    #    print 'trace size--> original:',X_svm.shape, 'downsampled:', X_svm_d.shape
+    #    X_svm = X_svm_d
+        
+        ####### 
+        if cbestKnown: #shflTrLabs:
+            if nfrs_cbest+1 == X_svm_d.shape[0]:  # by mistake you subtracted eventI+1 instead of eventI, so x_svm misses the last time bin (3 frames) in most of the days! (analyses done on the week of 10/06/17 and before)
+                lastTimeBinMissed = 1
+                print 'lastTimeBinMissed = 1! so have to set X_svm with lastTimeBinMissed to have its size matches the previously saved variable bestc!'
+                # set frames after frame0 (including it)
+                f = (np.arange(eventI , eventI + regressBins * np.floor((X_svm_incorr.shape[0] - (eventI+1)) / float(regressBins)))).astype(int) # total length is a multiplicaion of regressBins    
+                x = X_svm_incorr[f,:,:] # X_svmo including frames after frame0
+                T1, N1, C1 = x.shape
+                tt = int(np.floor(T1 / float(regressBins))) # number of time points in the downsampled X including frames after frame0
+                xda = np.mean(np.reshape(x, (regressBins, tt, N1, C1), order = 'F'), axis=0) # downsampled X_svmo inclusing frames after frame0
+                
+                # set the final downsampled X_svmo: concatenate downsampled X at frames before frame0, with x at frames after (and including) frame0
+                X_svm_d = np.concatenate((xdb, xda))    
+            else:
+                lastTimeBinMissed = 0
+        print 'trace size--> original:',X_svm_incorr.shape, 'downsampled:', X_svm_d.shape
+        X_svm_incorr = X_svm_d  
 
 
   
@@ -1405,7 +1608,8 @@ print '%d trials; %d neurons' %(numTrials, numNeurons)
 #%% Keep a copy of X_svm before normalization
 
 X_svm00 = X_svm + 0
-X_svm_incorr00 = X_svm_incorr + 0
+if testIncorr:
+    X_svm_incorr00 = X_svm_incorr + 0
 
 
 #%% Center and normalize X: feature normalization and scaling: to remove effects related to scaling and bias of each neuron, we need to zscore data (i.e., make data mean 0 and variance 1 for each neuron) 
@@ -1426,19 +1630,24 @@ X_svm = np.reshape(X_svm_N, (T1, C1, N1), order = 'F').transpose(0 ,2 ,1)
 
 # Normalize each frame separately (do soft normalization)
 X_svm_N = np.full(np.shape(X_svm00), np.nan)
-X_svm_incorr_N = np.full(np.shape(X_svm_incorr00), np.nan)
+if testIncorr:
+    X_svm_incorr_N = np.full(np.shape(X_svm_incorr00), np.nan)
 meanX_fr = []
 stdX_fr = []
 for ifr in range(np.shape(X_svm00)[0]):
     
-    if testIncorr: # use both corr and incorr traces to set mean and std for each neuron
+    if testIncorr: # use both corr and incorr traces to set mean and std for each neuron. Remember X_svm already includes incorr trials if outcome2ana is 'all'.
         xtot = np.concatenate((X_svm00, X_svm_incorr00),axis=2)
         xf = xtot[ifr,:,:]
     else:
         xf = X_svm00[ifr,:,:]    
     
-    m = np.mean(X_svm00[ifr,:,:], axis=1)
-    s = np.std(X_svm00[ifr,:,:], axis=1)   
+    # on 12/05/2018 you noticed that you are using X_svm00 below, while it should be xf. It will make a difference for when training on correct and testing on incorrect.
+#    m = np.mean(X_svm00[ifr,:,:], axis=1)
+#    s = np.std(X_svm00[ifr,:,:], axis=1)   
+    m = np.mean(xf, axis=1)
+    s = np.std(xf, axis=1)   
+    
     meanX_fr.append(m) # frs x neurons
     stdX_fr.append(s)       
     
@@ -1446,13 +1655,16 @@ for ifr in range(np.shape(X_svm00)[0]):
         s = s+thAct     
 
     X_svm_N[ifr,:,:] = ((X_svm00[ifr,:,:].T - m) / s).T
-    X_svm_incorr_N[ifr,:,:] = ((X_svm_incorr00[ifr,:,:].T - m) / s).T  
+    
+    if testIncorr:
+        X_svm_incorr_N[ifr,:,:] = ((X_svm_incorr00[ifr,:,:].T - m) / s).T  
 
 meanX_fr = np.array(meanX_fr) # frames x neurons
 stdX_fr = np.array(stdX_fr) # frames x neurons
 
 X_svm = X_svm_N
-X_svm_incorr = X_svm_incorr_N
+if testIncorr:
+    X_svm_incorr = X_svm_incorr_N
     
 
 
@@ -1569,14 +1781,14 @@ if doPlots:
 #    plt.plot(np.mean(meanX_fr,axis=0)) # average across frames for each neuron
     plt.hist(meanX_fr.reshape(-1,))
     plt.xlabel('meanX \n(mean of trials)')
-    plt.ylabel('frames x neurons')
+    plt.ylabel('# frames x neurons')
     plt.title('min = %.6f' %(np.min(np.mean(meanX_fr,axis=0))))
 
     plt.subplot(2,2,3)
 #    plt.plot(np.mean(stdX_fr,axis=0))
     plt.hist(stdX_fr.reshape(-1,))
     plt.xlabel('stdX \n(std of trials)')
-    plt.ylabel('frames x neurons')
+    plt.ylabel('# frames x neurons')
     plt.title('min = %.6f' %(np.min(np.mean(stdX_fr,axis=0))))
 
     plt.tight_layout() #(pad=0.4, w_pad=0.5, h_pad=1.0)
@@ -1593,6 +1805,11 @@ if doPlots:
 #    hr_trs = (Y_svm==1)
 #    lr_trs = (Y_svm==0)
 
+    if decodeOutcome:
+        labs = 'correct', 'incorrect'
+    else:
+        labs = 'high rate', 'low rate'
+        
     plt.figure()
     plt.subplot(1,2,1)
     
@@ -1610,8 +1827,8 @@ if doPlots:
 #    plt.plot([win[-1], win[-1]], [mn, mx], 'g-.')
     plt.fill_between(time_trace, tr1-tr1_se, tr1+tr1_se, alpha=0.5, edgecolor='b', facecolor='b')
     plt.fill_between(time_trace, tr0-tr0_se, tr0+tr0_se, alpha=0.5, edgecolor='r', facecolor='r')
-    plt.plot(time_trace, tr1, 'b', label = 'high rate')
-    plt.plot(time_trace, tr0, 'r', label = 'low rate')
+    plt.plot(time_trace, tr1, 'b', label = labs[0]) 
+    plt.plot(time_trace, tr0, 'r', label = labs[1])
     # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, lr_trs],  axis = (1, 2)), 'r', label = 'high rate')
     # plt.plot(time_aligned_stim, np.nanmean(Xt[:, :, hr_trs],  axis = (1, 2)), 'b', label = 'low rate')
 #    plt.xlabel('time aligned to stimulus onset (ms)')
@@ -1638,7 +1855,7 @@ for ine in range(allN_hrs_fr0.shape[0]):
 
 #%% Set vars for SVM
 
-useEqualTrNums = 1
+#useEqualTrNums = 1
 smallestC = 0 # if 1: smallest c whose CV error falls below 1 se of min CV error will be used as optimal C; if 0: c that gives min CV error will be used as optimal c.
 shuffleTrs = False # set to 0 so for each iteration of numSamples, all frames are trained and tested on the same trials# If 1 shuffle trials to break any dependencies on the sequence of trails 
 
@@ -1647,7 +1864,15 @@ shuffleTrs = False # set to 0 so for each iteration of numSamples, all frames ar
 # Remember each numSamples will have a different set of training and testing dataset, however for each numSamples, the same set of testing/training dataset
 # will be used for all frames and all values of c (unless shuffleTrs is 1, in which case different frames and c values will have different training/testing datasets.)
 
-def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest=np.nan,fr2an=np.nan, shflTrLabs=0, X_svm_incorr=0, Y_svm_incorr=0):
+def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest=np.nan,fr2an=np.nan, shflTrLabs=0, X_svm_incorr=0, Y_svm_incorr=0, mnHRLR_acrossDays=np.nan):
+#    X = X_svm
+#    Y = Y_svm
+#    cbest=np.nan
+#    fr2an=np.nan
+#    X_svm_incorr=0
+#    Y_svm_incorr=0
+#    mnHRLR_acrossDays=np.nan
+    
     # numSamples = 10; # number of iterations for finding the best c (inverse of regularization parameter)
     # if you don't want to regularize, go with a very high cbest and don't run the section below.
     # cbest = 10**6    
@@ -1662,7 +1887,8 @@ def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNum
     def perClassError(Y, Yhat):
         perClassEr = np.sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
         return perClassEr
-   
+
+
     if type(X_svm_incorr)==int:
         testIncorr = 0
     else:
@@ -1707,19 +1933,25 @@ def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNum
         
     ##############
     hrn = (Y==1).sum()
-    lrn = (Y==0).sum()    
+    lrn = (Y==0).sum()
+
+    if ~np.isnan(mnHRLR_acrossDays): # we will make sure for all days SVM is trained on similar number of trials, ie mnHRLR_acrossDays trials of HR and mnHRLR_acrossDays trials of LR.
+        trsn = mnHRLR_acrossDays        
+        numTrials = 2*mnHRLR_acrossDays 
+        print 'using %d HR and %d LR trials for SVM training, same across all sessions' %(mnHRLR_acrossDays, mnHRLR_acrossDays)
+    else:        
+        if useEqualTrNums and hrn!=lrn: # if the HR and LR trials numbers are not the same, pick equal number of trials of the 2 classes!        
+            trsn = min(lrn,hrn)
+            if hrn > lrn:
+                print 'Subselecting HR trials so both classes have the same number of trials!'
+                numTrials = lrn*2
+            elif lrn > hrn:
+                print 'Subselecting LR trials so both classes have the same number of trials!'
+                numTrials = hrn*2            
+        else:
+            numTrials = X.shape[2]
     
-    if useEqualTrNums and hrn!=lrn: # if the HR and LR trials numbers are not the same, pick equal number of trials of the 2 classes!        
-        trsn = min(lrn,hrn)
-        if hrn > lrn:
-            print 'Subselecting HR trials so both classes have the same number of trials!'
-            numTrials = lrn*2
-        elif lrn > hrn:
-            print 'Subselecting LR trials so both classes have the same number of trials!'
-            numTrials = hrn*2
-        print 'FINAL: %d trials; %d neurons' %(numTrials, X.shape[1])
-    else:
-        numTrials = X.shape[2]
+    print 'FINAL: %d trials; %d neurons' %(numTrials, X.shape[1])
     
     len_test = numTrials - int((kfold-1.)/kfold*numTrials) # length of testing trials   
             
@@ -1754,24 +1986,34 @@ def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNum
         
         
     ########################################## Train SVM numSamples times to get numSamples cross-validated datasets.    
-    for s in range(numSamples):        
+    for s in range(numSamples): # s=0       
         print 'Iteration %d' %(s)
         
         ############ Make sure both classes have the same number of trials when training the classifier
         # set trsnow: # index of trials (out of Y0) after picking random hr (or lr) in order to make sure both classes have the same number in the final Y (on which svm was run)
-        if useEqualTrNums and hrn!=lrn: # if the HR and LR trials numbers are not the same, pick equal number of trials of the 2 classes!                    
-            if hrn > lrn:
-                randtrs = np.argwhere(Y0==1)[rng.permutation(hrn)[0:trsn]].squeeze()
-                trsnow = np.sort(np.concatenate((randtrs , np.argwhere(Y0==0).squeeze()))) # index of trials after picking random hr (or lr) in order to make sure both classes have the same number in the final Y (on which svm was run)
-            elif lrn > hrn:
-                randtrs = np.argwhere(Y0==0)[rng.permutation(lrn)[0:trsn]].squeeze() # random sample of the class with more trials
-                trsnow = np.sort(np.concatenate((randtrs , np.argwhere(Y0==1).squeeze()))) # all trials of the class with fewer trials + the random sample set above for the other class
+        
+        if ~np.isnan(mnHRLR_acrossDays): 
+            randtrs_hr = np.argwhere(Y0==1)[rng.permutation(hrn)[0:trsn]].squeeze() # subselect mnHRLR_acrossDays trials from HR
+            randtrs_lr = np.argwhere(Y0==0)[rng.permutation(lrn)[0:trsn]].squeeze() # subselect mnHRLR_acrossDays trials from LR
+            trsnow = np.sort(np.concatenate((randtrs_hr , randtrs_lr))) # index of trials after picking random hr (or lr) in order to make sure both classes have the same number in the final Y (on which svm was run)
 
             X = X0[:,:,trsnow] # trsnow : index of trials (out of X0 and Y0) that are used to set X and Y
             Y = Y0[trsnow]
-
-        else: # include all trials
-            trsnow = np.arange(0, len(Y0))
+                
+        else:
+            if useEqualTrNums and hrn!=lrn: # if the HR and LR trials numbers are not the same, pick equal number of trials of the 2 classes!
+                if hrn > lrn:
+                    randtrs = np.argwhere(Y0==1)[rng.permutation(hrn)[0:trsn]].squeeze()
+                    trsnow = np.sort(np.concatenate((randtrs , np.argwhere(Y0==0).squeeze()))) # index of trials after picking random hr (or lr) in order to make sure both classes have the same number in the final Y (on which svm was run)
+                elif lrn > hrn:
+                    randtrs = np.argwhere(Y0==0)[rng.permutation(lrn)[0:trsn]].squeeze() # random sample of the class with more trials
+                    trsnow = np.sort(np.concatenate((randtrs , np.argwhere(Y0==1).squeeze()))) # all trials of the class with fewer trials + the random sample set above for the other class
+    
+                X = X0[:,:,trsnow] # trsnow : index of trials (out of X0 and Y0) that are used to set X and Y
+                Y = Y0[trsnow]
+    
+            else: # include all trials
+                trsnow = np.arange(0, len(Y0))
         
         trsnow_allSamps[s,:] = trsnow
 #        numTrials, numNeurons = X.shape[2], X.shape[1]
@@ -1849,7 +2091,29 @@ def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNum
                 elif regType == 'l2':
                     summary,_ =  crossValidateModel(X[ifr,:,:].transpose(), Y, linearSVM, kfold = kfold, l2 = cvect[i], shflTrs = shuffleTrs)
                         
-                            
+                '''
+                ###### below is the gist of the codes for svm training (done in linearSVM.py) ######
+                
+                import sklearn.svm as svm                        
+                
+                linear_svm = svm.LinearSVC(C = cbest_allExc[12], loss='squared_hinge', penalty='l2', dual=True) # get c for a frame, eg frame 12.
+                linear_svm.fit(X_svm[12,:,:].transpose(), np.squeeze(Y_svm)) # x should be in trials x units
+                
+                linear_svm.predict(XTest)
+                linear_svm.coef_
+                linear_svm.intercept_
+                
+                ###
+                # def perClassError(Y, Yhat):
+                #    import numpy as np
+                #    perClassEr = np.sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
+                #    return perClassEr
+                
+                # perClassErrorTest = perClassError(YTest, linear_svm.predict(XTest)); 
+                
+                # summary.model = linear_svm;
+                '''
+                    
                 wAllC[s,i,:,ifr] = np.squeeze(summary.model.coef_); # weights of all neurons for each value of c and each shuffle
                 bAllC[s,i,ifr] = np.squeeze(summary.model.intercept_);
         
@@ -2023,7 +2287,7 @@ def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNum
 
 
 
-#%% Function to run SVM to decoder stimulus category using equal number of correct and incorrect trials (when X is frames x units x trials)
+#%% Function to run SVM to decode stimulus category using equal number of correct and incorrect trials (when X is frames x units x trials)
 # Remember each numSamples will have a different set of training and testing dataset, however for each numSamples, the same set of testing/training dataset
 # will be used for all frames and all values of c (unless shuffleTrs is 1, in which case different frames and c values will have different training/testing datasets.)
 
@@ -2661,6 +2925,623 @@ def setbesc_frs_stimCateg(outcomes, X,Y,regType,kfold,numDataPoints,numSamples,d
 
 
 
+#%% Function to run SVM to decode stimulus outcome (when X is frames x units x trials)
+# we make sure for each outcome (corr, incorr), there are equal HR and LR trials. Also if useEqualTrNums=1, we make sure corr and incorr have the same number of trials.
+
+# Remember each numSamples will have a different set of training and testing dataset, however for each numSamples, the same set of testing/training dataset
+# will be used for all frames and all values of c (unless shuffleTrs is 1, in which case different frames and c values will have different training/testing datasets.)
+
+def setbesc_frs_outcome(allResp_HR_LR, X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest=np.nan,fr2an=np.nan, shflTrLabs=0, nRandCorrSel=nRandCorrSel):
+    
+    # Note: I commented out all parts related to remCorr in this function: we cant use remaining corr when decoding outcome, bc it includes only trials for one of the classes (corr), so remCorr_shfl will be high too... if you want to do this correctly you have use all remaining (corr and incorr) trials... but it takes a lot more memory and time to run the jobs, and having remCorr doesnt seem to add much!    
+
+    '''
+    X = X_svm
+    Y = Y_svm
+    cbest = np.nan
+    fr2an = np.nan
+    shflTrLabs = 0
+    '''
+    # numSamples = 10; # number of iterations for finding the best c (inverse of regularization parameter)
+    # if you don't want to regularize, go with a very high cbest and don't run the section below.
+    # cbest = 10**6    
+    # regType = 'l1'
+    # kfold = 10;
+            
+    import numpy as np
+    import numpy.random as rng
+    from crossValidateModel import crossValidateModel
+    from linearSVM import linearSVM
+    
+    def perClassError(Y, Yhat):
+        perClassEr = np.sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
+        return perClassEr
+   
+#    if type(X_svm_incorr)==int:
+#        testIncorr = 0
+#    else:
+#        testIncorr = 1
+#        
+#    if testIncorr:
+#        len_test_incorr = len(Y_svm_incorr)
+        
+    # frames to do SVM analysis on
+    if np.isnan(fr2an).all(): # run SVM on all frames
+        frs = range(X.shape[0])
+    else:
+        frs = fr2an        
+    
+    
+    # set range of c (regularization parameters) to check    
+    if np.isnan(cbest).all(): # we need to set cbest
+        bestcProvided = False        
+        if regType == 'l1':
+            print '\n-------------- Running l1 svm classification --------------\r' 
+            # cvect = 10**(np.arange(-4, 6,0.2))/numTrials;
+            cvect = 10**(np.arange(-4, 6,0.2))/numDataPoints
+        elif regType == 'l2':
+            print '\n-------------- Running l2 svm classification --------------\r' 
+            cvect = 10**(np.arange(-6, 6,0.2))/numDataPoints          
+        nCvals = len(cvect)
+#        print 'try the following regularization values: \n', cvect
+        # formattedList = ['%.2f' % member for member in cvect]
+        # print 'try the following regularization values = \n', formattedList        
+    else: # bestc is provided and we want to fit svm on shuffled trial labels
+        bestcProvided = True           
+        nCvals = 1 # cbest is already provided
+        
+    
+#    smallestC = 0 # if 1: smallest c whose CV error falls below 1 se of min CV error will be used as optimal C; if 0: c that gives min CV error will be used as optimal c.
+    if smallestC==1:
+        print 'bestc = smallest c whose cv error is less than 1se of min cv error'
+    else:
+        print 'bestc = c that gives min cv error'
+    #I think we should go with min c as the bestc... at least we know it gives the best cv error... and it seems like it has nothing to do with whether the decoder generalizes to other data or not.
+        
+        
+    
+    ##########################################
+    nc = (Y==1).sum() # later we change the value of nc to the same value as numTrials_c (ie equal hr_corr and lr_corr)
+    ni = (Y==0).sum() # later we change the value of ni to the same value as numTrials_i (ie equal hr_incorr and lr_incorr)
+    
+    nc0 = nc; ni0 = ni;
+    
+    trsCorr = np.argwhere(Y==1).squeeze() # indeces out of Y
+    trsIncorr = np.argwhere(Y==0).squeeze()
+
+    hr_c = (allResp_HR_LR[trsCorr]==1).sum()
+    lr_c = (allResp_HR_LR[trsCorr]==0).sum()    
+    hr_i = (allResp_HR_LR[trsIncorr]==1).sum()
+    lr_i = (allResp_HR_LR[trsIncorr]==0).sum()
+
+    print nc, ' correct trials: ', hr_c, ' HR ', lr_c, ' LR'  
+    print ni, ' incorrect trials: ', hr_i, ' HR ', lr_i, ' LR'  
+    
+    if min([hr_c, lr_c, hr_i, lr_i])<2: # 2 of each will give 4 trials per outcome, the minimum we want to train the SVM!
+        sys.exit('Too few trials to do SVM training!')
+        
+    
+    #####################        
+    # Set numTrials in the decoder so you can set len_test
+    #####################
+    
+    # we want to have equal number of each choice for each outcome 
+    # correct
+    if hr_c != lr_c:
+        trsn_c = min(lr_c,hr_c)
+        numTrials_c = trsn_c*2
+#        if hr_c > lr_c:
+#            print 'Correct trials: subselecting HR trials to make HR_corr and LR_corr equal size!'
+#            numTrials_c = lr_c*2
+#        else:
+#            print 'Correct trials: subselecting LR trials to make HR_corr and LR_corr equal size!'
+#            numTrials_c = hr_c*2
+    else:
+        numTrials_c = lr_c*2 # same as nc below
+        
+    
+    # incorrect
+    if hr_i != lr_i:
+        trsn_i = min(lr_i,hr_i)
+        if hr_i > lr_i:
+            print 'Incorrect trials: subselecting HR trials to make HR_incorr and LR_incorr equal size!'        
+            numTrials_i = lr_i*2
+        else:
+            print 'Incorrect trials: subselecting LR trials to make HR_incorr and LR_incorr equal size!'
+            numTrials_i = hr_i*2
+    else:
+        numTrials_i = lr_i*2 # same as ni below
+            
+    
+    if numTrials_c == numTrials_i:
+       useEqualTrNums = 0 # corr and incorr are already equal! (there is a chance that the original nc and ni are not equal but they become equal after HR/LR subselection, we will still set useEqualTrNums to 0, so there wont be a test on remCorr trials.)
+    
+       
+    ###### NOTE: if useEqualTrNums=1, it is either because we don't care about having equal number of corr and incorr (the 2 classes) or because the 2 classes already have equal number of trials, so we dont need to make them equal, or run analysis on remCorr trials.
+
+       
+    ####### Set numTrials
+    if useEqualTrNums: # make sure both classes (corr and incorr) have the same number of trials
+        numTrials = 2 * min(numTrials_i , numTrials_c)
+        len_remCorr = 0
+        # Note: I am commenting below bc for decoding outcome, we cant use remaining corr, bc it includes only trials for one of the classes (corr), so remCorr_shfl will be high too... if you want to do this correctly you have use all remaining (corr and incorr) trials... but it takes a lot more memory and time to run the jobs, and having remCorr doesnt seem to add much!
+        '''
+        if numTrials_i < numTrials_c:
+            len_remCorr = len(trsCorr) - min(numTrials_i , numTrials_c) #nc - len_trsNowCorr # 
+        else:
+            len_remCorr = len(trsIncorr) - min(numTrials_i , numTrials_c) #nc - len_trsNowCorr # 
+        '''
+    else:        
+        numTrials = numTrials_c + numTrials_i
+        len_remCorr = 0
+    
+    
+    len_test = numTrials - int((kfold-1.)/kfold*numTrials) # length of testing trials   
+    
+    len_both = len_test+len_remCorr
+    
+    
+    #####################        
+    #####################        
+    
+    X0 = X + 0
+    Y0 = Y + 0
+    
+    
+    print 'numRandCorrSamples = %i' %(nRandCorrSel)
+        
+    ########################################################################################################################################################################
+    ########################################################################################################################################################################
+    nFrs = np.shape(X)[0]
+    
+    perClassErrorTrain = np.full((numSamples, nCvals, nRandCorrSel, nFrs), np.nan)
+    perClassErrorTest = np.full((numSamples, nCvals, nRandCorrSel, nFrs), np.nan)    
+    perClassErrorTest_shfl = np.full((numSamples, nCvals, nRandCorrSel, nFrs), np.nan)
+    perClassErrorTest_chance = np.full((numSamples, nCvals, nRandCorrSel, nFrs), np.nan)
+    
+    # Note: I am commenting below bc for decoding outcome, we cant use remaining corr, bc it includes only trials for one of the classes (corr), so remCorr_shfl will be high too... if you want to do this correctly you have use all remaining (corr and incorr) trials... but it takes a lot more memory and time to run the jobs, and having remCorr doesnt seem to add much!
+    perClassErrorTestRemCorr = np.nan #np.full((numSamples, nCvals, nRandCorrSel, nFrs), np.nan) 
+    perClassErrorTestRemCorr_shfl = np.nan #np.full((numSamples, nCvals, nRandCorrSel, nFrs), np.nan)
+    perClassErrorTestRemCorr_chance = np.nan #np.full((numSamples, nCvals, nRandCorrSel, nFrs), np.nan)
+    
+    perClassErrorTestBoth = np.nan #np.full((numSamples, nCvals, nRandCorrSel, nFrs), np.nan) 
+    perClassErrorTestBoth_shfl = np.nan #np.full((numSamples, nCvals, nRandCorrSel, nFrs), np.nan)
+    perClassErrorTestBoth_chance = np.nan #np.full((numSamples, nCvals, nRandCorrSel, nFrs), np.nan)
+    
+    bAllC = np.full((numSamples, nCvals, nRandCorrSel, nFrs), np.nan)
+    wAllC = np.full((numSamples, nCvals, X.shape[1], nRandCorrSel, nFrs), np.nan)
+    
+    Ytest_hat_allSampsFrs = np.full((numSamples, nCvals, nRandCorrSel, nFrs, len_test), np.nan)        #    testTrInds_outOfY0_allSamps = np.full((numSamples, len_test), np.nan)
+    Ytest_hat_remCorr_allSampsFrs = np.nan #np.full((numSamples, nCvals, nRandCorrSel, nFrs, len_remCorr), np.nan)
+    Ytest_hat_both_allSampsFrs = np.nan #np.full((numSamples, nCvals, nRandCorrSel, nFrs, len_both), np.nan)
+    
+    trsnow_allSamps = np.full((nRandCorrSel, numTrials), np.nan) 
+    trsRemCorrInds = np.nan #np.full((nRandCorrSel, len_remCorr), np.nan)    
+    
+    Ytest_allSamps = np.full((numSamples, nRandCorrSel, len_test), np.nan)    
+    testTrInds_allSamps = np.full((numSamples, nRandCorrSel, len_test), np.nan)
+    trsTrainedTestedInds = np.full((numSamples, nRandCorrSel, numTrials), np.nan)
+            
+        
+        
+    
+    ########################################## Make sure HR and LR have the same trial number within each class (corr and incorr), also if useEqualTrNums=1, make sure corr and incorr (ie the 2 classes in SVM) have the same trial number ##########################################
+    for sc in range(nRandCorrSel): # sc = 0
+        
+        print '===== Random correct-trial subselect %d =====' %(sc)       
+        
+        ####################################
+        # Make sure each outcome (corr, incorr) has the same number of LR and HR trials when training the classifier
+        ####################################
+        
+        # correct; set trsnow_c: index of trials on Y, correct, half HR, half LR
+        if hr_c != lr_c:
+            if hr_c > lr_c: # subselect HR trials ... for correct trials, take all LR trials and subselect HR trials.
+                randtrs = np.argwhere(np.logical_and(Y0==1 , allResp_HR_LR==1))[rng.permutation(hr_c)[0:trsn_c]].squeeze() # subselect of HR correct trials.
+                trsnow_c = np.sort(np.concatenate((randtrs , np.argwhere(np.logical_and(Y0==1 , allResp_HR_LR==0)).squeeze()))) # index of trials after picking all LR correct trials and a subselect of HR correct trials, to make sure within correct, LR and HR have the same number in the final Y (on which svm was run)
+            elif hr_c < lr_c: # subselect LR trials ... for correct trials, take all HR trials and subselect LR trials.
+                randtrs = np.argwhere(np.logical_and(Y0==1 , allResp_HR_LR==0))[rng.permutation(lr_c)[0:trsn_c]].squeeze() # subselect of LR correct trials.
+                trsnow_c = np.sort(np.concatenate((randtrs , np.argwhere(np.logical_and(Y0==1 , allResp_HR_LR==1)).squeeze()))) # index of trials after picking all HR correct trials and a subselect of LR correct trials, to make sure within correct, LR and HR have the same number in the final Y (on which svm was run)
+            nc = len(trsnow_c)
+        else: # include all correct trials
+            trsnow_c = np.argwhere(Y0==1).squeeze() #np.arange(0, nc)
+
+        
+        # incorrect; set trsnow_i: index of trials on Y, incorrect, half HR, half LR
+        if hr_i != lr_i:
+            if hr_i > lr_i: # subselect HR trials ... for incorrect trials, take all LR trials and subselect HR trials.
+                randtrs = np.argwhere(np.logical_and(Y0==0 , allResp_HR_LR==1))[rng.permutation(hr_i)[0:trsn_i]].squeeze() # subselect of HR incorrect trials.
+                trsnow_i = np.sort(np.concatenate((randtrs , np.argwhere(np.logical_and(Y0==0 , allResp_HR_LR==0)).squeeze()))) # index of trials after picking all LR incorrect trials and a subselect of HR incorrect trials, to make sure within incorrect, LR and HR have the same number in the final Y (on which svm was run)
+            elif hr_i < lr_i: # subselect LR trials ... for incorrect trials, take all HR trials and subselect LR trials.
+                randtrs = np.argwhere(np.logical_and(Y0==0 , allResp_HR_LR==0))[rng.permutation(lr_i)[0:trsn_i]].squeeze() # subselect of LR incorrect trials.
+                trsnow_i = np.sort(np.concatenate((randtrs , np.argwhere(np.logical_and(Y0==0 , allResp_HR_LR==1)).squeeze()))) # index of trials after picking all HR incorrect trials and a subselect of LR incorrect trials, to make sure within incorrect, LR and HR have the same number in the final Y (on which svm was run)
+            ni = len(trsnow_i)
+        else: # include all incorrect trials
+            trsnow_i = np.argwhere(Y0==0).squeeze() #np.arange(0, ni)
+
+           
+        
+        ####################################        
+        # make sure corr and incorr have the same number of trials. We have already made sure that within each outcome, HR and LR have the same trial number. (nc and ni are updated already) 
+        ####################################
+        
+        if useEqualTrNums: # we do this so both classes (corr and incorr) have the same number of trials in the training decoder, otherwise decoder performance even on shuffle trial labels will deviate from chance.
+            if nc > ni: # subselect correct trials to the same number as incorrect trials                
+                # we need to subselect ni/2 trials from HR_corr and LR_corr
+                ntrnow = ni/2
+                # correct; set trsnow_cc: index of trials on Y, correct, half HR, half LR. Each has ni/2 trials.
+                randtrs_hr = np.argwhere(np.logical_and(Y0==1 , allResp_HR_LR==1))[rng.permutation(hr_c)[0:ntrnow]].squeeze() # subselect of HR correct trials to ni/2 trials
+                randtrs_lr = np.argwhere(np.logical_and(Y0==1 , allResp_HR_LR==0))[rng.permutation(lr_c)[0:ntrnow]].squeeze() # subselect of LR correct trials to ni/2 trials
+                    
+                trsnow_cc = np.sort(np.concatenate((randtrs_hr , randtrs_lr))) # index of trials after picking a subselect of LR correct trials (ni/2) and a subselect of HR correct trials (ni/2), to make sure within correct, LR and HR have the same number in the final Y (on which svm was run), also correct and incorrect trials have the same number of trials.
+                    
+                # set the final trsNowAll. trsnow_i has half HR and half LR (we already did it in the section above)
+                trsNowAll = np.sort(np.concatenate((trsnow_cc, trsnow_i))) # this includes half corr, half incorr; also half HR and half LR within each corr and incorr.
+
+            elif nc < ni: # subselect incorrect trials to the same number as correct trials                
+                print '\nVery unusual: there are more incorrect trials than correct trials!!\n'
+                # we need to subselect nc/2 trials from HR_incorr and LR_incorr
+                ntrnow = nc/2
+                # incorrect; set trsnow_ii: index of trials on Y, incorrect, half HR, half LR. Each has nc/2 trials.
+                randtrs_hr = np.argwhere(np.logical_and(Y0==0 , allResp_HR_LR==1))[rng.permutation(hr_i)[0:ntrnow]].squeeze() # subselect of HR incorrect trials to nc/2 trials
+                randtrs_lr = np.argwhere(np.logical_and(Y0==0 , allResp_HR_LR==0))[rng.permutation(lr_i)[0:ntrnow]].squeeze() # subselect of LR incorrect trials to nc/2 trials
+                    
+                trsnow_ii = np.sort(np.concatenate((randtrs_hr , randtrs_lr))) # index of trials after picking a subselect of LR correct trials (nc/2) and a subselect of HR correct trials (nc/2), to make sure within correct, LR and HR have the same number in the final Y (on which svm was run), also correct and incorrect trials have the same number of trials.
+                    
+                # set the final trsNowAll. trsnow_c has half HR and half LR (we already did it in the section above)
+                trsNowAll = np.sort(np.concatenate((trsnow_c, trsnow_ii))) # this includes half corr, half incorr; also half HR and half LR within each corr and incorr.
+
+        else: # we only make sure within each corr and incorr class, there are half HR and half LR trials. We don't care about corr and incorr being equal. This is the minimum we want to have to make sure we can decode outcome correctly (ie within each outcome, there must be equal HR and LR trials).
+            trsNowAll = np.sort(np.concatenate((trsnow_c, trsnow_i))) # this includes half HR and half LR within each corr and incorr subsets. but corr and incorr are not necessarily the same number        
+        
+        trsnow_allSamps[sc,:] = trsNowAll
+        
+        
+        
+        ####################################
+        # Now set X and Y only for trsNowAll trials (half corr, half incorr, half HR, half LR)
+        ####################################
+        
+        X = X0[:,:,trsNowAll] # trsNowAll : index of trials (out of X0 and Y0) that are used to set X and Y
+        Y = Y0[trsNowAll]
+        
+        print 'size of X and Y: ', X.shape, Y.shape
+        
+        allResp_HR_LRn = allResp_HR_LR[trsNowAll]
+        
+        
+        ####################################
+        # Set X and Y for the remaining correct trials (those not in trsNowCorr). We will test on these trials the decoder trained on X and Y ####################             
+        ####################################
+        
+        # Note: I am commenting below bc for decoding outcome, we cant use remaining corr, bc it includes only trials for one of the classes (corr), so remCorr_shfl will be high too... if you want to do this correctly you have use all remaining (corr and incorr) trials... but it takes a lot more memory and time to run the jobs, and having remCorr doesnt seem to add much!
+        if 0: #useEqualTrNums:
+            if nc > ni:
+                trsRemCorr = trsCorr[~np.in1d(trsCorr, trsnow_cc)] # those correct trials (indeces in outcomes) that are not among the random pick for current trsnow_cc
+            elif nc < ni:
+                trsRemCorr = trsIncorr[~np.in1d(trsIncorr, trsnow_ii)] # those incorrect trials (indeces in outcomes) that are not among the random pick for current trsnow_ii
+            
+            trsRemCorrInds[sc,:] = trsRemCorr # (indices are from outcomes array)        
+            
+            X_remCorr = X0[:,:,trsRemCorr]
+            Y_remCorr = Y0[trsRemCorr]
+            print 'size of X_remCorr and Y_remCorr: ', X_remCorr.shape, Y_remCorr.shape
+            
+    
+    
+        ####################################
+        # Checks
+        ####################################
+        hrcn = sum(np.logical_and(Y==1 , allResp_HR_LRn==1))
+        lrcn = sum(np.logical_and(Y==1 , allResp_HR_LRn==0))            
+        hrin = sum(np.logical_and(Y==0 , allResp_HR_LRn==1))
+        lrin = sum(np.logical_and(Y==0 , allResp_HR_LRn==0))
+
+        print 'After attempting to make HR and LR the same number:\n\tHR_corr: %d, LR_corr: %d trials\n\tHR_incorr: %d, LR_incorr: %d trials' %(hrcn, lrcn, hrin, lrin)
+        
+        if useEqualTrNums:
+            print 'After attempting to make corr and incorr the same number:\n\tCorrect: %d, Incorrect: %d trials' %((Y==1).sum(), (Y==0).sum())        
+
+        if ~np.equal(hrcn , lrcn):
+            sys.exit('Error: among corr, HR and LR trial number are different!!')
+
+        if ~np.equal(hrin , lrin):
+            sys.exit('Error: among incorr, HR and LR trial number are different!!')
+            
+        if useEqualTrNums:
+            if ~np.equal(hrcn+lrcn , hrin+lrin):
+                sys.exit('Error: corr and incorr trial number are different!!')
+                
+                
+                
+                
+                
+        ########################################### Permute trials numSamples times to select various sets for training and testing SVM
+        # Train SVM numSamples times to get numSamples cross-validated datasets.    
+        
+        for s in range(numSamples):  # s = 0      
+            print 'Iteration %d' %(s)                
+            
+            ####################################
+            # Set chance Y: same length as Y for testing data, and with equal number of classes 0 and 1.  
+            ####################################
+            permIxs = rng.permutation(len_test) # needed to set perClassErrorTest_shfl   
+        
+            Y_chance = np.zeros(len_test)
+            if rng.rand()>.5:
+                b = rng.permutation(len_test)[0:np.floor(len_test/float(2)).astype(int)]
+            else:
+                b = rng.permutation(len_test)[0:np.ceil(len_test/float(2)).astype(int)]
+            Y_chance[b] = 1
+    
+            
+            # Note: I am commenting below bc for decoding outcome, we cant use remaining corr, bc it includes only trials for one of the classes (corr), so remCorr_shfl will be high too... if you want to do this correctly you have use all remaining (corr and incorr) trials... but it takes a lot more memory and time to run the jobs, and having remCorr doesnt seem to add much!
+            if 0: #nc!=ni: #useEqualTrNums:
+                permIxs_remCorr = rng.permutation(X_remCorr.shape[2]);
+    
+                Y_chance_remCorr = np.zeros(Y_remCorr.shape[0])
+                if rng.rand()>.5: # in case Y_remCorr has odd size, we make sure sometimes we round it up and sometimes down so the number of trials of the 2 classes are balanced in chance data.
+                    b = rng.permutation(Y_remCorr.shape[0])[0:np.floor(Y_remCorr.shape[0]/float(2)).astype(int)]
+                else:
+                    b = rng.permutation(Y_remCorr.shape[0])[0:np.ceil(Y_remCorr.shape[0]/float(2)).astype(int)]
+                Y_chance_remCorr[b] = 1
+     
+
+
+                permIxs_tot = rng.permutation(len_test+X_remCorr.shape[2])
+                
+                Y_chance_tot = np.zeros(permIxs_tot.shape[0])
+                if rng.rand()>.5: 
+                    b = rng.permutation(permIxs_tot.shape[0])[0:np.floor(permIxs_tot.shape[0]/float(2)).astype(int)]
+                else:
+                    b = rng.permutation(permIxs_tot.shape[0])[0:np.ceil(permIxs_tot.shape[0]/float(2)).astype(int)]
+                Y_chance_tot[b] = 1    
+    
+            
+            ####################################
+            # If you want to train SVM on shuffled trial labels, shuffle the Y
+            ####################################
+            if shflTrLabs: # shuffle trial classes in Y
+                Y = np.zeros(numTrials) # Y_chance0
+                if rng.rand()>.5:
+                    b = rng.permutation(numTrials)[0:np.floor(numTrials/float(2)).astype(int)]
+                else:
+                    b = rng.permutation(numTrials)[0:np.ceil(numTrials/float(2)).astype(int)]
+                Y[b] = 1
+    
+            
+            ####################################
+            ######################## Permute trial orders, so the training and testing datasets are different for each numSamples (we only do this if shuffleTrs is 0, so crossValidateModel does not shuffle trials, so we have to do it here, otherwise all numSamples will have the same set of testing and training datasets.)
+            ######################## REMEMBER : YOU ARE CHANGING THE ORDER OF TRIALS HERE!!! ########################
+            ####################################
+            if shuffleTrs==0: # if 0, shuffle trials to break any dependencies on the sequence of trails. Otherwise, do the shuffling inside crossValidateModel. I prefer to do it here to make sure all frames are trained on the same set of trials.
+                
+    #            Ybefshfl = Y            
+                shfl = rng.permutation(np.arange(0, numTrials)) # shfl: new order of trials ... shuffled indeces of Y... the last 1/10th indeces will be testing trials.
+                
+                Y = Y[shfl] 
+                X = X[:,:,shfl]             
+                
+                # Ytest_allSamps[s,:] : Y that will be used as testing trials in this sample
+                Ytest_allSamps[s,sc,:] = Y[np.arange(numTrials-len_test, numTrials)] # the last 1/10th of Y (after applying shfl labels to it)
+                testTrInds = shfl[np.arange(numTrials-len_test, numTrials)] # indeces to be applied on trsnow in order to get the trials (index out of Y0) that were used as testing trs; eg stimrate[trsnow[testTrInds]] is the stimrate of testing trials
+    #            testTrInds_outOfY0 = trsnow[testTrInds] # index of testing trials out of Y0 (not Y!) (that will be used in svm below)
+                 ######## IMPORTANT: Ybefshfl[testTrInds] is same as Y0[trsnow[testTrInds]] and same as Y[np.arange(numTrials-len_test, numTrials)] and same as summary.YTest computed below ########
+    
+                testTrInds_allSamps[s,sc,:] = testTrInds            
+    #            testTrInds_outOfY0_allSamps[s,:] = testTrInds_outOfY0            
+                # keep index of trials that were used for training, cv, and remainedCorr testing.
+                trsTrainedTestedInds[s,sc,:] = trsNowAll[shfl] # first 90% training, last 10% testing (indices are from outcomes array)
+            
+            else:
+                testTrInds_allSamps = np.nan # for now, but to set it correctly: testTrInds will be set in crossValidateModel.py, you just need to output it from crossValidateModel
+                Ytest_allSamps[s,sc,:] = np.nan  
+    
+ 
+            ##################################################################################################################################################################
+            ########################## Start training SVM on each frame ######################################################################################################
+            ##################################################################################################################################################################
+            for ifr in frs: # ifr = 0 # train SVM on each frame
+#                print '\tFrame %d' %(ifr)
+                if bestcProvided:
+                    cvect = [cbest[ifr]]
+            
+                ######################## Loop over different values of regularization
+                for i in range(nCvals): # i = 0 # train SVM using different values of regularization parameter
+                    if regType == 'l1':                               
+                        summary,_ =  crossValidateModel(X[ifr,:,:].transpose(), Y, linearSVM, kfold = kfold, l1 = cvect[i], shflTrs = shuffleTrs)
+                        
+                    elif regType == 'l2':
+                        summary,_ =  crossValidateModel(X[ifr,:,:].transpose(), Y, linearSVM, kfold = kfold, l2 = cvect[i], shflTrs = shuffleTrs)
+                            
+                                
+                    wAllC[s,i,:,sc,ifr] = np.squeeze(summary.model.coef_); # weights of all neurons for each value of c and each shuffle
+                    bAllC[s,i,sc,ifr] = np.squeeze(summary.model.intercept_);
+            
+                    # Classification errors                    
+                    perClassErrorTrain[s,i,sc,ifr] = summary.perClassErrorTrain
+                    perClassErrorTest[s,i,sc,ifr] = summary.perClassErrorTest # perClassError(YTest, linear_svm.predict(XTest));
+                    
+                    # Testing correct shuffled data: 
+                    # same decoder trained on correct trials, but use shuffled trial labels to compute class error
+                    Ytest_hat = summary.model.predict(summary.XTest) # prediction of trial label for each trial
+                    perClassErrorTest_shfl[s,i,sc,ifr] = perClassError(summary.YTest[permIxs], Ytest_hat) # fraction of incorrect predicted trial labels
+                    perClassErrorTest_chance[s,i,sc,ifr] = perClassError(Y_chance, Ytest_hat)
+                    Ytest_hat_allSampsFrs[s,i,sc,ifr,:] = Ytest_hat
+                    
+                    
+                    # Note: I am commenting below bc for decoding outcome, we cant use remaining corr, bc it includes only trials for one of the classes (corr), so remCorr_shfl will be high too... if you want to do this correctly you have use all remaining (corr and incorr) trials... but it takes a lot more memory and time to run the jobs, and having remCorr doesnt seem to add much!
+                    if 0: #nc!=ni: # useEqualTrNums: # 
+                        # Test the decoder on remaining correct trials
+                        if len(trsRemCorr)!=0:
+                            Ytest_hat_remCorr = summary.model.predict(X_remCorr[ifr,:,:].transpose()) # prediction of trial label for each trial
+                            perClassErrorTestRemCorr[s,i,sc,ifr] = perClassError(Y_remCorr, Ytest_hat_remCorr)
+                            perClassErrorTestRemCorr_shfl[s,i,sc,ifr] = perClassError(Y_remCorr[permIxs_remCorr], Ytest_hat_remCorr)
+                            perClassErrorTestRemCorr_chance[s,i,sc,ifr] = perClassError(Y_chance_remCorr, Ytest_hat_remCorr)
+                            Ytest_hat_remCorr_allSampsFrs[s,i,sc,ifr,:] = Ytest_hat_remCorr
+                            
+                        # Pool remCorrect trials and testing trials
+                        x = np.concatenate((summary.XTest, X_remCorr[ifr,:,:].transpose()), axis=0)
+                        y = np.concatenate((summary.YTest, Y_remCorr))
+                        Ytest_hat_both = summary.model.predict(x)
+                        perClassErrorTestBoth[s,i,sc,ifr] = perClassError(y, Ytest_hat_both)
+                        perClassErrorTestBoth_shfl[s,i,sc,ifr] = perClassError(y[permIxs_tot], Ytest_hat_both)
+                        perClassErrorTestBoth_chance[s,i,sc,ifr] = perClassError(Y_chance_tot, Ytest_hat_both)
+                        Ytest_hat_both_allSampsFrs[s,i,sc,ifr,:] = Ytest_hat_both
+                    
+
+
+    ###########################################################################
+    ############## Find bestc for each frame, and plot the c path #############
+    ###########################################################################
+    if bestcProvided: 
+        cbestFrs = cbest
+#        cbestAllFrs = cbest        
+    else:
+        print '--------------- Identifying best c ---------------' 
+        cbestFrs = np.full((X.shape[0]), np.nan)  
+#        cbestAllFrs = np.full((X.shape[0]), np.nan)  
+        cbestFrs_remCorr = np.full((X.shape[0]), np.nan)  
+        cbestFrs_both = np.full((X.shape[0]), np.nan)  
+        
+        for ifr in frs: #range(X.shape[0]):    
+
+            ################  cbest  ################
+            #######%% Compute average of class errors across numSamples and nRandCorrSel      
+            meanPerClassErrorTest = np.mean(perClassErrorTest[:,:,:,ifr], axis = (0,2));
+            semPerClassErrorTest = np.std(perClassErrorTest[:,:,:,ifr], axis = (0,2))/np.sqrt(numSamples);
+
+            #######%% Identify best c                
+            # Use all range of c... it may end up a value at which all weights are 0.
+            ix = np.argmin(meanPerClassErrorTest)
+            if smallestC==1:
+                cbest = cvect[meanPerClassErrorTest <= (meanPerClassErrorTest[ix]+semPerClassErrorTest[ix])];
+                cbest = cbest[0]; # best regularization term based on minError+SE criteria
+                cbestAll = cbest
+            else:
+                cbestAll = cvect[ix]
+            print '\tFrame %d: %f' %(ifr,cbestAll)
+#            cbestAllFrs[ifr] = cbestAll            
+                    
+            cbestFrs[ifr] = cbestAll
+
+                
+            # Note: I am commenting below bc for decoding outcome, we cant use remaining corr, bc it includes only trials for one of the classes (corr), so remCorr_shfl will be high too... if you want to do this correctly you have use all remaining (corr and incorr) trials... but it takes a lot more memory and time to run the jobs, and having remCorr doesnt seem to add much!
+            if 0: #nc!=ni:
+                #######%% Compute average of class errors across numSamples and nRandCorrSel              
+                meanPerClassErrorTestRemCorr = np.mean(perClassErrorTestRemCorr[:,:,:,ifr], axis = (0,2))
+                semPerClassErrorTestRemCorr = np.std(perClassErrorTestRemCorr[:,:,:,ifr], axis = (0,2))/np.sqrt(numSamples)
+                    
+                #######%% Compute average of class errors across numSamples and nRandCorrSel              
+                meanPerClassErrorTestBoth = np.mean(perClassErrorTestBoth[:,:,:,ifr], axis = (0,2))
+                semPerClassErrorTestBoth = np.std(perClassErrorTestBoth[:,:,:,ifr], axis = (0,2))/np.sqrt(numSamples)
+                
+                ################  cbest_remCorr  ################    
+                #######%% Identify best c                
+                # Use all range of c... it may end up a value at which all weights are 0.
+                ix = np.argmin(meanPerClassErrorTestRemCorr)
+                if smallestC==1:
+                    cbest = cvect[meanPerClassErrorTestRemCorr <= (meanPerClassErrorTestRemCorr[ix]+semPerClassErrorTestRemCorr[ix])];
+                    cbest = cbest[0]; # best regularization term based on minError+SE criteria
+                    cbestAll = cbest
+                else:
+                    cbestAll = cvect[ix]
+                print '\tFrame %d: %f' %(ifr,cbestAll)
+    #            cbestAllFrs[ifr] = cbestAll            
+    #            cbest = cbestAll
+                        
+                cbestFrs_remCorr[ifr] = cbestAll
+    
+    
+                ################  cbest_both ################    
+                #######%% Identify best c                
+                # Use all range of c... it may end up a value at which all weights are 0.
+                ix = np.argmin(meanPerClassErrorTestBoth)
+                if smallestC==1:
+                    cbest = cvect[meanPerClassErrorTestBoth <= (meanPerClassErrorTestBoth[ix]+semPerClassErrorTestBoth[ix])];
+                    cbest = cbest[0]; # best regularization term based on minError+SE criteria
+                    cbestAll = cbest
+                else:
+                    cbestAll = cvect[ix]
+                print '\tFrame %d: %f' %(ifr,cbestAll)
+    #            cbestAllFrs[ifr] = cbestAll            
+    #            cbest = cbestAll
+                        
+                cbestFrs_both[ifr] = cbestAll
+                
+                
+            else:
+                cbestFrs_remCorr = cbestFrs
+                cbestFrs_both = cbestFrs
+                
+            
+            ########%% Set the decoder and class errors at best c (for data)
+            """
+            # you don't need to again train classifier on data bc you already got it above when you found bestc. You just need to do it for shuffled. ... [you already have access to test/train error as well as b and w of training SVM with bestc.)]
+            # we just get the values of perClassErrorTrain and perClassErrorTest at cbest (we already computed these values above when training on all values of c)
+            indBestC = np.in1d(cvect, cbest)
+            
+            w_bestc_data = wAllC[:,indBestC,:,ifr].squeeze() # numSamps x neurons
+            b_bestc_data = bAllC[:,indBestC,ifr]
+            
+            classErr_bestC_train_data = perClassErrorTrain[:,indBestC,ifr].squeeze()
+            
+            classErr_bestC_test_data = perClassErrorTest[:,indBestC,ifr].squeeze()
+            classErr_bestC_test_shfl = perClassErrorTest_shfl[:,indBestC,ifr].squeeze()
+            classErr_bestC_test_chance = perClassErrorTest_chance[:,indBestC,ifr].squeeze()
+            """
+            
+            ########### Plot C path    
+            if doPlots:
+                
+                #######%% Compute average of class errors across numSamples        
+                meanPerClassErrorTrain = np.mean(perClassErrorTrain[:,:,:,ifr], axis = (0,2));
+                semPerClassErrorTrain = np.std(perClassErrorTrain[:,:,:,ifr], axis = (0,2))/np.sqrt(numSamples);            
+                meanPerClassErrorTest_shfl = np.mean(perClassErrorTest_shfl[:,:,:,ifr], axis = (0,2));
+#                semPerClassErrorTest_shfl = np.std(perClassErrorTest_shfl[:,:,:,ifr], axis = 0)/np.sqrt(numSamples);            
+#                meanPerClassErrorTest_chance = np.mean(perClassErrorTest_chance[:,:,:,ifr], axis = (0,2));
+#                semPerClassErrorTest_chance = np.std(perClassErrorTest_chance[:,:,:,ifr], axis = 0)/np.sqrt(numSamples);
+
+#                print 'Best c (inverse of regularization parameter) = %.2f' %cbest
+                plt.figure(figsize=(3,3))
+#                plt.subplot(1,2,1)
+                plt.fill_between(cvect, meanPerClassErrorTrain-semPerClassErrorTrain, meanPerClassErrorTrain+ semPerClassErrorTrain, alpha=0.5, edgecolor='k', facecolor='k')
+                plt.fill_between(cvect, meanPerClassErrorTest-semPerClassErrorTest, meanPerClassErrorTest+ semPerClassErrorTest, alpha=0.5, edgecolor='r', facecolor='r')
+#                plt.fill_between(cvect, meanPerClassErrorTestRemCorr-semPerClassErrorTestRemCorr, meanPerClassErrorTestRemCorr+ semPerClassErrorTestRemCorr, alpha=0.5, edgecolor='g', facecolor='g')        
+#                plt.fill_between(cvect, meanPerClassErrorTestBoth-semPerClassErrorTestBoth, meanPerClassErrorTestBoth+ semPerClassErrorTestBoth, alpha=0.5, edgecolor='m', facecolor='m')        
+            #    plt.fill_between(cvect, meanPerClassErrorTest_chance-semPerClassErrorTest_chance, meanPerClassErrorTest_chance+ semPerClassErrorTest_chance, alpha=0.5, edgecolor='b', facecolor='b')        
+            #    plt.fill_between(cvect, meanPerClassErrorTest_shfl-semPerClassErrorTest_shfl, meanPerClassErrorTest_shfl+ semPerClassErrorTest_shfl, alpha=0.5, edgecolor='y', facecolor='y')        
+                
+                plt.plot(cvect, meanPerClassErrorTrain, 'k', label = 'training')
+                plt.plot(cvect, meanPerClassErrorTest, 'r', label = 'testing')
+#                plt.plot(cvect, meanPerClassErrorTest_chance, 'b', label = 'cv-chance')       
+                plt.plot(cvect, meanPerClassErrorTest_shfl, 'y', label = 'shfl')    
+#                plt.plot(cvect, meanPerClassErrorTestRemCorr, 'g', label = 'rem corr')        
+#                plt.plot(cvect, meanPerClassErrorTestBoth, 'm', label = 'test+remCorr')                   
+            
+                plt.plot(cvect[cvect==cbestFrs[ifr]], meanPerClassErrorTest[cvect==cbestFrs[ifr]], 'o', markerfacecolor='r', markeredgecolor='r')
+#                plt.plot(cvect[cvect==cbestFrs_remCorr[ifr]], meanPerClassErrorTestRemCorr[cvect==cbestFrs_remCorr[ifr]], 'o', markerfacecolor='g', markeredgecolor='g')
+#                plt.plot(cvect[cvect==cbestFrs_both[ifr]], meanPerClassErrorTestBoth[cvect==cbestFrs_both[ifr]], 'o', markerfacecolor='m', markeredgecolor='m')
+                
+                plt.xlim([cvect[1], cvect[-1]])
+                plt.xscale('log')
+                plt.xlabel('c (inverse of regularization parameter)')
+                plt.ylabel('classification error (%)')
+                plt.legend(loc='center left', bbox_to_anchor=(1, .7))                
+                plt.title('Frame %d' %(ifr))
+                plt.tight_layout()
+    
+    
+
+    ##############
+    return nRandCorrSel, wAllC, bAllC, cbestFrs, cbestFrs_remCorr, cbestFrs_both, cvect, \
+    perClassErrorTrain, perClassErrorTest, perClassErrorTest_shfl, perClassErrorTest_chance, \
+    perClassErrorTestRemCorr, perClassErrorTestRemCorr_shfl, perClassErrorTestRemCorr_chance, \
+    perClassErrorTestBoth, perClassErrorTestBoth_shfl, perClassErrorTestBoth_chance, \
+    trsnow_allSamps, testTrInds_allSamps, trsTrainedTestedInds, trsRemCorrInds, \
+    Ytest_allSamps, Ytest_hat_allSampsFrs, Ytest_hat_remCorr_allSampsFrs, Ytest_hat_both_allSampsFrs
+
+
 
 #%% Set the subsamples of exc neurons (same size as number of inh) for SVM
    
@@ -2679,7 +3560,8 @@ if doInhAllexcEqexc[2]!=0: # or addNs_roc==0:
                 Xexc = X_svm[:, excNsEachSamp[ii],:]
                 XexcEq.append(Xexc)            
                 excNsEachSamp_indsOutOfExcNs.append(np.argwhere(np.in1d(excI, excNsEachSamp[ii])).squeeze()) # indeces of exc neurons (out of X_svm for exc neurons which includes only exc neurons) used to create XexcEq.
-                XexcEq_incorr.append(X_svm_incorr[:, excNsEachSamp[ii],:])
+                if testIncorr:
+                    XexcEq_incorr.append(X_svm_incorr[:, excNsEachSamp[ii],:])
         else: # set the rand exc subsamps
             excNsEachSamp = [] # numShufflesExc x frs x units x trials
             for ii in range(numShufflesExc):  # select n random exc (n = number of inh)         
@@ -2688,7 +3570,8 @@ if doInhAllexcEqexc[2]!=0: # or addNs_roc==0:
                 XexcEq.append(Xexc)    
                 excNsEachSamp.append(en) # indeces of exc neurons (out of X_svm which includes all neurons) used to create XexcEq.... you need this if you want to get svm projections for a particular exc shfl (eg w_data_exc[nExcShfl,:,:,:])
                 excNsEachSamp_indsOutOfExcNs.append(np.argwhere(np.in1d(excI, en)).squeeze()) # indeces of exc neurons (out of X_svm for exc neurons which includes only exc neurons) used to create XexcEq.
-                XexcEq_incorr.append(X_svm_incorr[:, en,:]) # incorr trials for the randomly selected subsample of exc neurons.   
+                if testIncorr:
+                    XexcEq_incorr.append(X_svm_incorr[:, en,:]) # incorr trials for the randomly selected subsample of exc neurons.   
                 
     # set 2*lenInh population made of all exc neurons; as a control for the population made of half exc, half inh
     elif doInhAllexcEqexc[2] == 3: ###### allExc2inhSize      
@@ -2719,7 +3602,7 @@ if doInhAllexcEqexc[2]!=0: # or addNs_roc==0:
 #### For each population: find bestc ; train SVM ; do cross validation (numSamples times) ; set null distribution (by shuffling trial labels)
 ####################################################################################################################################
 
-if np.all([decodeStimCateg==0, addNs_roc==0, addNs_rand==0]):   # run svm on all neurons (ie not adding neurons one by one!) 
+if np.all([decodeOutcome==0, decodeStimCateg==0, addNs_roc==0, addNs_rand==0]):   # run svm on all neurons (ie not adding neurons one by one!) 
     
     ######################## inh ########################   
     
@@ -2730,9 +3613,11 @@ if np.all([decodeStimCateg==0, addNs_roc==0, addNs_rand==0]):   # run svm on all
             perClassErrorTrain_inh, perClassErrorTest_inh, wAllC_inh, bAllC_inh, cbestAll_inh, cbest_inh, cvect, \
             perClassErrorTestShfl_inh, perClassErrorTestChance_inh, testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh0, trsnow_allSamps, \
             perClassErrorTest_incorr_inh, perClassErrorTest_shfl_incorr_inh, perClassErrorTest_chance_incorr_inh, Ytest_hat_allSampsFrs_incorr_inh \
-            = setbesc_frs(Xinh,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_inh,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=Xinh_incorr, Y_svm_incorr=Y_svm_incorr) # outputs have size the number of shuffles in setbestc (shuffles per c value)
+            = setbesc_frs(Xinh,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_inh,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=Xinh_incorr, Y_svm_incorr=Y_svm_incorr, mnHRLR_acrossDays=mnHRLR_acrossDays) # outputs have size the number of shuffles in setbestc (shuffles per c value)
         else:
-            perClassErrorTrain_inh, perClassErrorTest_inh, wAllC_inh, bAllC_inh, cbestAll_inh, cbest_inh, cvect, perClassErrorTestShfl_inh, perClassErrorTestChance_inh, testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh0, trsnow_allSamps = setbesc_frs(Xinh,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_inh,fr2an=np.nan, shflTrLabs=shflTrLabs) # outputs have size the number of shuffles in setbestc (shuffles per c value)
+            perClassErrorTrain_inh, perClassErrorTest_inh, wAllC_inh, bAllC_inh, cbestAll_inh, cbest_inh, cvect, \
+            perClassErrorTestShfl_inh, perClassErrorTestChance_inh, testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh0, trsnow_allSamps \
+            = setbesc_frs(Xinh,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_inh,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=0, Y_svm_incorr=0, mnHRLR_acrossDays=mnHRLR_acrossDays) # outputs have size the number of shuffles in setbestc (shuffles per c value)
         
         # Set the parameters below at bestc (for all samples):
         perClassErrorTrain_data_inh = np.full((numSamples, nFrs), np.nan)
@@ -2784,9 +3669,11 @@ if np.all([decodeStimCateg==0, addNs_roc==0, addNs_rand==0]):   # run svm on all
             perClassErrorTrain_allExc, perClassErrorTest_allExc, wAllC_allExc, bAllC_allExc, cbestAll_allExc, cbest_allExc, cvect, \
             perClassErrorTestShfl_allExc, perClassErrorTestChance_allExc, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc0, trsnow_allSamps, \
             perClassErrorTest_incorr_allExc, perClassErrorTest_shfl_incorr_allExc, perClassErrorTest_chance_incorr_allExc, Ytest_hat_allSampsFrs_incorr_allExc \
-            = setbesc_frs(XallExc,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_allExc,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=XallExc_incorr, Y_svm_incorr=Y_svm_incorr) # outputs have size the number of shuffles in setbestc (shuffles per c value)
+            = setbesc_frs(XallExc,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_allExc,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=XallExc_incorr, Y_svm_incorr=Y_svm_incorr, mnHRLR_acrossDays=mnHRLR_acrossDays) # outputs have size the number of shuffles in setbestc (shuffles per c value)
         else:
-            perClassErrorTrain_allExc, perClassErrorTest_allExc, wAllC_allExc, bAllC_allExc, cbestAll_allExc, cbest_allExc, cvect, perClassErrorTestShfl_allExc, perClassErrorTestChance_allExc, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc0, trsnow_allSamps = setbesc_frs(XallExc,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_allExc,fr2an=np.nan, shflTrLabs=shflTrLabs) # outputs have size the number of shuffles in setbestc (shuffles per c value)
+            perClassErrorTrain_allExc, perClassErrorTest_allExc, wAllC_allExc, bAllC_allExc, cbestAll_allExc, cbest_allExc, cvect, \
+            perClassErrorTestShfl_allExc, perClassErrorTestChance_allExc, testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc0, trsnow_allSamps \
+            = setbesc_frs(XallExc,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_allExc,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=0, Y_svm_incorr=0, mnHRLR_acrossDays=mnHRLR_acrossDays) # outputs have size the number of shuffles in setbestc (shuffles per c value)
         
         # Take the values at bestc that you computed above (for all samples)
         perClassErrorTrain_data_allExc = np.full((numSamples, nFrs), np.nan)
@@ -2857,9 +3744,11 @@ if np.all([decodeStimCateg==0, addNs_roc==0, addNs_rand==0]):   # run svm on all
                 perClassErrorTrain_exc, perClassErrorTest_exc, wAllC_exc, bAllC_exc, cbestAll_exc0, cbest_exc0, cvect, \
                 perClassErrorTestShfl_exc, perClassErrorTestChance_exc, testTrInds_allSamps_exc00, Ytest_allSamps_exc00, Ytest_hat_allSampsFrs_exc00, trsnow_allSamps00, \
                 perClassErrorTest_incorr_exc, perClassErrorTest_shfl_incorr_exc, perClassErrorTest_chance_incorr_exc, Ytest_hat_allSampsFrs_incorr_exc \
-                = setbesc_frs(Xnow,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_now,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=Xnow_incorr, Y_svm_incorr=Y_svm_incorr) # outputs have size the number of shuffles in setbestc (shuffles per c value)
+                = setbesc_frs(Xnow,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_now,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=Xnow_incorr, Y_svm_incorr=Y_svm_incorr, mnHRLR_acrossDays=mnHRLR_acrossDays) # outputs have size the number of shuffles in setbestc (shuffles per c value)
             else:
-                perClassErrorTrain_exc, perClassErrorTest_exc, wAllC_exc, bAllC_exc, cbestAll_exc0, cbest_exc0, cvect, perClassErrorTestShfl_exc, perClassErrorTestChance_exc, testTrInds_allSamps_exc00, Ytest_allSamps_exc00, Ytest_hat_allSampsFrs_exc00, trsnow_allSamps00 = setbesc_frs(Xnow,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_now,fr2an=np.nan, shflTrLabs=shflTrLabs) # outputs have size the number of shuffles in setbestc (shuffles per c value)
+                perClassErrorTrain_exc, perClassErrorTest_exc, wAllC_exc, bAllC_exc, cbestAll_exc0, cbest_exc0, cvect, \
+                perClassErrorTestShfl_exc, perClassErrorTestChance_exc, testTrInds_allSamps_exc00, Ytest_allSamps_exc00, Ytest_hat_allSampsFrs_exc00, trsnow_allSamps00 \
+                = setbesc_frs(Xnow,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest_now,fr2an=np.nan, shflTrLabs=shflTrLabs, X_svm_incorr=0, Y_svm_incorr=0, mnHRLR_acrossDays=mnHRLR_acrossDays) # outputs have size the number of shuffles in setbestc (shuffles per c value)
         
             # Take the values at bestc that you computed above (for all samples)
             perClassErrorTrain_data_exc0 = np.full((numSamples, nFrs), np.nan)
@@ -3022,8 +3911,6 @@ if np.all([decodeStimCateg==0, addNs_roc==0, addNs_rand==0]):   # run svm on all
             w_data_allExc2inhSize.append(w_data_exc0) # numShufflesExc x numSamples x numNeurons x numFrames
             b_data_allExc2inhSize.append(b_data_exc0)
             
-            
-            
         '''
         # I don't think I need this!
         # transpose so the sizes match _inh and _allExc as well as shuffle vars (below)        
@@ -3032,9 +3919,13 @@ if np.all([decodeStimCateg==0, addNs_roc==0, addNs_rand==0]):   # run svm on all
         w_data_exc = np.transpose(w_data_exc,(1,0,2)) # numSamples x numShufflesExc x numNeur
         b_data_exc = np.transpose(b_data_exc)
         '''    
+'''
+plt.plot(time_trace, 100 - np.mean(perClassErrorTrain_data_allExc, axis=0))
+plt.plot(time_trace, 100 - np.mean(perClassErrorTest_data_allExc, axis=0))
 
-      
-
+plt.plot(time_trace, 100 - np.mean(perClassErrorTrain_data_allExc, axis=(0,1)))
+plt.plot(time_trace, 100 - np.mean(perClassErrorTest_data_allExc, axis=(0,1)))
+'''
 
 ################################################################################################################################
 ################################################################################################################################
@@ -3674,7 +4565,7 @@ if addNs_rand:
 
     
     
-#%% Run SVM to decoder stimulus category
+#%% Run SVM to decode stimulus category
 ####################################################################################################################################
 ####################################################################################################################################
 
@@ -4000,7 +4891,335 @@ if decodeStimCateg:   # run svm on all neurons (ie not adding neurons one by one
             trsnow_allSamps_exc.append(trsnow_allSamps_exc00) # nRandCorrSel x numTrs (test+train)
             trsRemCorrInds_exc.append(trsRemCorrInds_exc00) # nRandCorrSel x numRemCorrTrs     
     
- 
+
+
+#%% Run SVM to decode trial outcome (corr, incorr)
+####################################################################################################################################
+####################################################################################################################################
+
+if decodeOutcome:   # run svm on all neurons (ie not adding neurons one by one!) 
+    
+    cbestBoth = 1
+    cbestCV = 0
+    cbestRemCorr = 0    
+    
+    ######################## inh ########################   
+    if doInhAllexcEqexc[0] == 1:
+        Xinh = X_svm[:, inhRois==1,:]            
+        
+        nRandCorrSel, wAllC_inh, bAllC_inh, cbestFrs_inh, cbestFrs_remCorr_inh, cbestFrs_both_inh, cvect, \
+        perClassErrorTrain_inh0, perClassErrorTest_inh0, perClassErrorTest_shfl_inh0, perClassErrorTest_chance_inh0, \
+        perClassErrorTestRemCorr_inh0, perClassErrorTestRemCorr_shfl_inh0, perClassErrorTestRemCorr_chance_inh0, \
+        perClassErrorTestBoth_inh0, perClassErrorTestBoth_shfl_inh0, perClassErrorTestBoth_chance_inh0, \
+        trsnow_allSamps_inh, testTrInds_allSamps_inh, trsTrainedTestedInds_inh, trsRemCorrInds_inh, \
+        Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh0, Ytest_hat_remCorr_allSampsFrs_inh0, Ytest_hat_both_allSampsFrs_inh0, \
+         = setbesc_frs_outcome(allResp_HR_LR, Xinh, Y_svm, regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,\
+                                 cbest_inh,fr2an=np.nan,shflTrLabs=shflTrLabs)
+    
+                
+        # Set the parameters below at bestc (for all samples):
+        w_data_inh = np.full((numSamples, Xinh.shape[1], nRandCorrSel, nFrs), np.nan)
+        b_data_inh = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTrain_data_inh = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTest_data_inh = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTest_shfl_inh = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTest_chance_inh = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTestRemCorr_inh = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTestRemCorr_shfl_inh = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTestRemCorr_chance_inh = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTestBoth_inh = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTestBoth_shfl_inh = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTestBoth_chance_inh = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)     
+        if nRandCorrSel!=1:
+            Ytest_hat_allSampsFrs_inh = np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_allSampsFrs_inh0.shape[-1]), np.nan).squeeze() # squeeze helps if len_test=1        
+            Ytest_hat_remCorr_allSampsFrs_inh = np.nan #np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_remCorr_allSampsFrs_inh0.shape[-1]), np.nan).squeeze()
+            Ytest_hat_both_allSampsFrs_inh = np.nan #np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_both_allSampsFrs_inh0.shape[-1]), np.nan).squeeze()
+        else:
+            Ytest_hat_allSampsFrs_inh = np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_allSampsFrs_inh0.shape[-1]), np.nan)
+            Ytest_hat_remCorr_allSampsFrs_inh = np.nan #np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_remCorr_allSampsFrs_inh0.shape[-1]), np.nan)
+            Ytest_hat_both_allSampsFrs_inh = np.nan #np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_both_allSampsFrs_inh0.shape[-1]), np.nan)
+        
+        for ifr in range(nFrs):   
+            if cbestKnown:
+                indBestC = 0
+            else:                
+                if cbestCV: # find bestc on the same choice testing dataset               
+                    indBestC = np.in1d(cvect, cbestFrs_inh[ifr])
+                    
+                elif cbestRemCorr: # find bestc on other choice testing dataset                               
+                    indBestC = np.in1d(cvect, cbestFrs_remCorr_inh[ifr])
+                    
+                elif cbestBoth: # Allow bestc to take different values for each testing dataset                             
+                    indBestC = np.in1d(cvect, cbestFrs_both_inh[ifr])
+            
+            if nRandCorrSel!=1:
+                perClassErrorTrain_data_inh[:,:,ifr] = perClassErrorTrain_inh0[:,indBestC,:,ifr].squeeze()
+                perClassErrorTest_data_inh[:,:,ifr] = perClassErrorTest_inh0[:,indBestC,:,ifr].squeeze()
+                perClassErrorTest_shfl_inh[:,:,ifr] = perClassErrorTest_shfl_inh0[:,indBestC,:,ifr].squeeze()
+                perClassErrorTest_chance_inh[:,:,ifr] = perClassErrorTest_chance_inh0[:,indBestC,:,ifr].squeeze()            
+#                perClassErrorTestRemCorr_inh[:,:,ifr] = perClassErrorTestRemCorr_inh0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestRemCorr_shfl_inh[:,:,ifr] = perClassErrorTestRemCorr_shfl_inh0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestRemCorr_chance_inh[:,:,ifr] = perClassErrorTestRemCorr_chance_inh0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestBoth_inh[:,:,ifr] = perClassErrorTestBoth_inh0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestBoth_shfl_inh[:,:,ifr] = perClassErrorTestBoth_shfl_inh0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestBoth_chance_inh[:,:,ifr] = perClassErrorTestBoth_chance_inh0[:,indBestC,:,ifr].squeeze()            
+                b_data_inh[:,:,ifr] = bAllC_inh[:,indBestC,:,ifr].squeeze()                      
+                w_data_inh[:,:,:,ifr] = wAllC_inh[:,indBestC,:,:,ifr].squeeze()
+                Ytest_hat_allSampsFrs_inh[:,:,ifr,:] = Ytest_hat_allSampsFrs_inh0[:,indBestC,:,ifr,:].squeeze()
+#                Ytest_hat_remCorr_allSampsFrs_inh[:,:,ifr,:] = Ytest_hat_remCorr_allSampsFrs_inh0[:,indBestC,:,ifr,:].squeeze()
+#                Ytest_hat_both_allSampsFrs_inh[:,:,ifr,:] = Ytest_hat_both_allSampsFrs_inh0[:,indBestC,:,ifr,:].squeeze()    
+            else:
+                perClassErrorTrain_data_inh[:,0,ifr] = perClassErrorTrain_inh0[:,indBestC,:,ifr].squeeze()
+                perClassErrorTest_data_inh[:,0,ifr] = perClassErrorTest_inh0[:,indBestC,:,ifr].squeeze()
+                perClassErrorTest_shfl_inh[:,0,ifr] = perClassErrorTest_shfl_inh0[:,indBestC,:,ifr].squeeze()
+                perClassErrorTest_chance_inh[:,0,ifr] = perClassErrorTest_chance_inh0[:,indBestC,:,ifr].squeeze()            
+#                perClassErrorTestRemCorr_inh[:,0,ifr] = perClassErrorTestRemCorr_inh0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestRemCorr_shfl_inh[:,0,ifr] = perClassErrorTestRemCorr_shfl_inh0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestRemCorr_chance_inh[:,0,ifr] = perClassErrorTestRemCorr_chance_inh0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestBoth_inh[:,0,ifr] = perClassErrorTestBoth_inh0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestBoth_shfl_inh[:,0,ifr] = perClassErrorTestBoth_shfl_inh0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestBoth_chance_inh[:,0,ifr] = perClassErrorTestBoth_chance_inh0[:,indBestC,:,ifr].squeeze()            
+                b_data_inh[:,0,ifr] = bAllC_inh[:,indBestC,:,ifr].squeeze()                      
+                w_data_inh[:,:,0,ifr] = wAllC_inh[:,indBestC,:,:,ifr].squeeze()
+                Ytest_hat_allSampsFrs_inh[:,0,ifr,:] = Ytest_hat_allSampsFrs_inh0[:,indBestC,:,ifr,:].squeeze()
+#                Ytest_hat_remCorr_allSampsFrs_inh[:,0,ifr,:] = Ytest_hat_remCorr_allSampsFrs_inh0[:,indBestC,:,ifr,:].squeeze()
+#                Ytest_hat_both_allSampsFrs_inh[:,0,ifr,:] = Ytest_hat_both_allSampsFrs_inh0[:,indBestC,:,ifr,:].squeeze()    
+                
+    
+    
+    ######################## allExc (n = num all exc neurons) or allN (all exc, inh, unsure neurons) ########################
+    elif np.logical_or(doInhAllexcEqexc[1] == 1 , doInhAllexcEqexc[1] == 2): 
+        if doInhAllexcEqexc[1] == 1: # allExc
+            XallExc = X_svm[:, inhRois==0,:]
+        elif doInhAllexcEqexc[1] == 2: # allN
+            XallExc = X_svm
+        
+        nRandCorrSel, wAllC_allExc, bAllC_allExc, cbestFrs_allExc, cbestFrs_remCorr_allExc, cbestFrs_both_allExc, cvect, \
+        perClassErrorTrain_allExc0, perClassErrorTest_allExc0, perClassErrorTest_shfl_allExc0, perClassErrorTest_chance_allExc0, \
+        perClassErrorTestRemCorr_allExc0, perClassErrorTestRemCorr_shfl_allExc0, perClassErrorTestRemCorr_chance_allExc0, \
+        perClassErrorTestBoth_allExc0, perClassErrorTestBoth_shfl_allExc0, perClassErrorTestBoth_chance_allExc0, \
+        trsnow_allSamps_allExc, testTrInds_allSamps_allExc, trsTrainedTestedInds_allExc, trsRemCorrInds_allExc, \
+        Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc0, Ytest_hat_remCorr_allSampsFrs_allExc0, Ytest_hat_both_allSampsFrs_allExc0, \
+         = setbesc_frs_outcome(allResp_HR_LR, XallExc, Y_svm, regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,\
+                                 cbest_allExc,fr2an=np.nan,shflTrLabs=shflTrLabs)
+    
+                
+        # Set the parameters below at bestc (for all samples):
+        w_data_allExc = np.full((numSamples, XallExc.shape[1], nRandCorrSel, nFrs), np.nan)
+        b_data_allExc = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTrain_data_allExc = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTest_data_allExc = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTest_shfl_allExc = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTest_chance_allExc = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTestRemCorr_allExc = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTestRemCorr_shfl_allExc = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTestRemCorr_chance_allExc = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTestBoth_allExc = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTestBoth_shfl_allExc = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+        perClassErrorTestBoth_chance_allExc = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)        
+        if nRandCorrSel!=1:
+            Ytest_hat_allSampsFrs_allExc = np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_allSampsFrs_allExc0.shape[-1]), np.nan).squeeze() # squeeze helps if len_test=1        
+            Ytest_hat_remCorr_allSampsFrs_allExc = np.nan #np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_remCorr_allSampsFrs_allExc0.shape[-1]), np.nan).squeeze()
+            Ytest_hat_both_allSampsFrs_allExc = np.nan #np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_both_allSampsFrs_allExc0.shape[-1]), np.nan).squeeze()
+        else:
+            Ytest_hat_allSampsFrs_allExc = np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_allSampsFrs_allExc0.shape[-1]), np.nan)
+            Ytest_hat_remCorr_allSampsFrs_allExc = np.nan #np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_remCorr_allSampsFrs_allExc0.shape[-1]), np.nan)
+            Ytest_hat_both_allSampsFrs_allExc = np.nan #np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_both_allSampsFrs_allExc0.shape[-1]), np.nan)
+
+        
+        for ifr in range(nFrs):   
+            if cbestKnown:
+                indBestC = 0
+            else:                
+                if cbestCV: # find bestc on the same choice testing dataset               
+                    indBestC = np.in1d(cvect, cbestFrs_allExc[ifr])
+                    
+                elif cbestRemCorr: # find bestc on other choice testing dataset                               
+                    indBestC = np.in1d(cvect, cbestFrs_remCorr_allExc[ifr])
+                    
+                elif cbestBoth: # Allow bestc to take different values for each testing dataset                             
+                    indBestC = np.in1d(cvect, cbestFrs_both_allExc[ifr])
+            
+            if nRandCorrSel!=1:
+                perClassErrorTrain_data_allExc[:,:,ifr] = perClassErrorTrain_allExc0[:,indBestC,:,ifr].squeeze()
+                perClassErrorTest_data_allExc[:,:,ifr] = perClassErrorTest_allExc0[:,indBestC,:,ifr].squeeze()
+                perClassErrorTest_shfl_allExc[:,:,ifr] = perClassErrorTest_shfl_allExc0[:,indBestC,:,ifr].squeeze()
+                perClassErrorTest_chance_allExc[:,:,ifr] = perClassErrorTest_chance_allExc0[:,indBestC,:,ifr].squeeze()            
+#                perClassErrorTestRemCorr_allExc[:,:,ifr] = perClassErrorTestRemCorr_allExc0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestRemCorr_shfl_allExc[:,:,ifr] = perClassErrorTestRemCorr_shfl_allExc0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestRemCorr_chance_allExc[:,:,ifr] = perClassErrorTestRemCorr_chance_allExc0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestBoth_allExc[:,:,ifr] = perClassErrorTestBoth_allExc0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestBoth_shfl_allExc[:,:,ifr] = perClassErrorTestBoth_shfl_allExc0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestBoth_chance_allExc[:,:,ifr] = perClassErrorTestBoth_chance_allExc0[:,indBestC,:,ifr].squeeze()            
+                b_data_allExc[:,:,ifr] = bAllC_allExc[:,indBestC,:,ifr].squeeze()                      
+                w_data_allExc[:,:,:,ifr] = wAllC_allExc[:,indBestC,:,:,ifr].squeeze()
+                Ytest_hat_allSampsFrs_allExc[:,:,ifr,:] = Ytest_hat_allSampsFrs_allExc0[:,indBestC,:,ifr,:].squeeze()
+#                Ytest_hat_remCorr_allSampsFrs_allExc[:,:,ifr,:] = Ytest_hat_remCorr_allSampsFrs_allExc0[:,indBestC,:,ifr,:].squeeze()
+#                Ytest_hat_both_allSampsFrs_allExc[:,:,ifr,:] = Ytest_hat_both_allSampsFrs_allExc0[:,indBestC,:,ifr,:].squeeze()    
+            else:
+                perClassErrorTrain_data_allExc[:,0,ifr] = perClassErrorTrain_allExc0[:,indBestC,:,ifr].squeeze()
+                perClassErrorTest_data_allExc[:,0,ifr] = perClassErrorTest_allExc0[:,indBestC,:,ifr].squeeze()
+                perClassErrorTest_shfl_allExc[:,0,ifr] = perClassErrorTest_shfl_allExc0[:,indBestC,:,ifr].squeeze()
+                perClassErrorTest_chance_allExc[:,0,ifr] = perClassErrorTest_chance_allExc0[:,indBestC,:,ifr].squeeze()            
+#                perClassErrorTestRemCorr_allExc[:,0,ifr] = perClassErrorTestRemCorr_allExc0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestRemCorr_shfl_allExc[:,0,ifr] = perClassErrorTestRemCorr_shfl_allExc0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestRemCorr_chance_allExc[:,0,ifr] = perClassErrorTestRemCorr_chance_allExc0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestBoth_allExc[:,0,ifr] = perClassErrorTestBoth_allExc0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestBoth_shfl_allExc[:,0,ifr] = perClassErrorTestBoth_shfl_allExc0[:,indBestC,:,ifr].squeeze()
+#                perClassErrorTestBoth_chance_allExc[:,0,ifr] = perClassErrorTestBoth_chance_allExc0[:,indBestC,:,ifr].squeeze()            
+                b_data_allExc[:,0,ifr] = bAllC_allExc[:,indBestC,:,ifr].squeeze()                      
+                w_data_allExc[:,:,0,ifr] = wAllC_allExc[:,indBestC,:,:,ifr].squeeze()
+                Ytest_hat_allSampsFrs_allExc[:,0,ifr,:] = Ytest_hat_allSampsFrs_allExc0[:,indBestC,:,ifr,:].squeeze()
+#                Ytest_hat_remCorr_allSampsFrs_allExc[:,0,ifr,:] = Ytest_hat_remCorr_allSampsFrs_allExc0[:,indBestC,:,ifr,:].squeeze()
+#                Ytest_hat_both_allSampsFrs_allExc[:,0,ifr,:] = Ytest_hat_both_allSampsFrs_allExc0[:,indBestC,:,ifr,:].squeeze()    
+
+            
+    
+    
+    ######################### n exc (n=lenInh) (pick random sets of n exc neurons (do it numShufflesEx times)) ########################
+    elif doInhAllexcEqexc[2] == 1: 
+        if cbestKnown==False:
+            cbestFrs_exc = []
+            cbestFrs_remCorr_exc = []
+            cbestFrs_both_exc = []
+        perClassErrorTrain_data_exc = []
+        perClassErrorTest_data_exc = []
+        perClassErrorTest_shfl_exc = []
+        perClassErrorTest_chance_exc = []
+        perClassErrorTestRemCorr_exc = []
+        perClassErrorTestRemCorr_shfl_exc = []
+        perClassErrorTestRemCorr_chance_exc = []
+        perClassErrorTestBoth_exc = []
+        perClassErrorTestBoth_shfl_exc = []
+        perClassErrorTestBoth_chance_exc = []
+        b_data_exc = []
+        w_data_exc = []        
+        Ytest_hat_allSampsFrs_exc = []        
+        Ytest_hat_remCorr_allSampsFrs_exc = []
+        Ytest_hat_both_allSampsFrs_exc = []
+        Ytest_allSamps_exc = []
+        trsnow_allSamps_exc = []
+        testTrInds_allSamps_exc = []        
+        trsTrainedTestedInds_exc = []
+        trsRemCorrInds_exc = []
+        
+        
+        for ii in range(numShufflesExc): # ii=0 # loop through exc subsamples   
+            print '\n\n-------- Exc subsample %d --------' %(ii)
+            if cbestKnown:
+                cbest_now = cbest_exc[ii]
+            
+            Xnow = XexcEq[ii]
+            
+            nRandCorrSel, wAllC_exc, bAllC_exc, cbestFrs_exc00, cbestFrs_remCorr_exc00, cbestFrs_both_exc00, cvect, \
+            perClassErrorTrain_exc00, perClassErrorTest_exc00, perClassErrorTest_shfl_exc00, perClassErrorTest_chance_exc00, \
+            perClassErrorTestRemCorr_exc00, perClassErrorTestRemCorr_shfl_exc00, perClassErrorTestRemCorr_chance_exc00, \
+            perClassErrorTestBoth_exc00, perClassErrorTestBoth_shfl_exc00, perClassErrorTestBoth_chance_exc00, \
+            trsnow_allSamps_exc00, testTrInds_allSamps_exc00, trsTrainedTestedInds_exc00, trsRemCorrInds_exc00, \
+            Ytest_allSamps_exc00, Ytest_hat_allSampsFrs_exc00, Ytest_hat_remCorr_allSampsFrs_exc00, Ytest_hat_both_allSampsFrs_exc00, \
+             = setbesc_frs_outcome(allResp_HR_LR, Xnow, Y_svm, regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,\
+                                     cbest_now,fr2an=np.nan,shflTrLabs=shflTrLabs)
+        
+                    
+            # Set the parameters below at bestc (for all samples):
+            w_data_exc0 = np.full((numSamples, Xnow.shape[1], nRandCorrSel, nFrs), np.nan)
+            b_data_exc0 = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+            perClassErrorTrain_data_exc0 = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+            perClassErrorTest_data_exc0 = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+            perClassErrorTest_shfl_exc0 = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+            perClassErrorTest_chance_exc0 = np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+            perClassErrorTestRemCorr_exc0 = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+            perClassErrorTestRemCorr_shfl_exc0 = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+            perClassErrorTestRemCorr_chance_exc0 = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+            perClassErrorTestBoth_exc0 = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+            perClassErrorTestBoth_shfl_exc0 = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)
+            perClassErrorTestBoth_chance_exc0 = np.nan #np.full((numSamples, nRandCorrSel, nFrs), np.nan)    
+            if nRandCorrSel!=1:
+                Ytest_hat_allSampsFrs_exc0 = np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_allSampsFrs_exc00.shape[-1]), np.nan).squeeze() # squeeze helps if len_test=1        
+                Ytest_hat_remCorr_allSampsFrs_exc0 = np.nan #np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_remCorr_allSampsFrs_exc00.shape[-1]), np.nan).squeeze()
+                Ytest_hat_both_allSampsFrs_exc0 = np.nan #np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_both_allSampsFrs_exc00.shape[-1]), np.nan).squeeze()
+            else:
+                Ytest_hat_allSampsFrs_exc0 = np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_allSampsFrs_exc00.shape[-1]), np.nan)
+                Ytest_hat_remCorr_allSampsFrs_exc0 = np.nan #np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_remCorr_allSampsFrs_exc00.shape[-1]), np.nan)
+                Ytest_hat_both_allSampsFrs_exc0 = np.nan #np.full((numSamples, nRandCorrSel, nFrs, Ytest_hat_both_allSampsFrs_exc00.shape[-1]), np.nan)
+
+            
+            for ifr in range(nFrs):   
+                if cbestKnown:
+                    indBestC = 0
+                else:                
+                    if cbestCV: # find bestc on the same choice testing dataset               
+                        indBestC = np.in1d(cvect, cbestFrs_exc00[ifr])
+                        
+                    elif cbestRemCorr: # find bestc on other choice testing dataset                               
+                        indBestC = np.in1d(cvect, cbestFrs_remCorr_exc00[ifr])
+                        
+                    elif cbestBoth: # Allow bestc to take different values for each testing dataset                             
+                        indBestC = np.in1d(cvect, cbestFrs_both_exc00[ifr])
+              
+                if nRandCorrSel!=1:
+                    perClassErrorTrain_data_exc0[:,:,ifr] = perClassErrorTrain_exc00[:,indBestC,:,ifr].squeeze()
+                    perClassErrorTest_data_exc0[:,:,ifr] = perClassErrorTest_exc00[:,indBestC,:,ifr].squeeze()
+                    perClassErrorTest_shfl_exc0[:,:,ifr] = perClassErrorTest_shfl_exc00[:,indBestC,:,ifr].squeeze()
+                    perClassErrorTest_chance_exc0[:,:,ifr] = perClassErrorTest_chance_exc00[:,indBestC,:,ifr].squeeze()            
+#                    perClassErrorTestRemCorr_exc0[:,:,ifr] = perClassErrorTestRemCorr_exc00[:,indBestC,:,ifr].squeeze()
+#                    perClassErrorTestRemCorr_shfl_exc0[:,:,ifr] = perClassErrorTestRemCorr_shfl_exc00[:,indBestC,:,ifr].squeeze()
+#                    perClassErrorTestRemCorr_chance_exc0[:,:,ifr] = perClassErrorTestRemCorr_chance_exc00[:,indBestC,:,ifr].squeeze()
+#                    perClassErrorTestBoth_exc0[:,:,ifr] = perClassErrorTestBoth_exc00[:,indBestC,:,ifr].squeeze()
+#                    perClassErrorTestBoth_shfl_exc0[:,:,ifr] = perClassErrorTestBoth_shfl_exc00[:,indBestC,:,ifr].squeeze()
+#                    perClassErrorTestBoth_chance_exc0[:,:,ifr] = perClassErrorTestBoth_chance_exc00[:,indBestC,:,ifr].squeeze()            
+                    b_data_exc0[:,:,ifr] = bAllC_exc[:,indBestC,:,ifr].squeeze()                      
+                    w_data_exc0[:,:,:,ifr] = wAllC_exc[:,indBestC,:,:,ifr].squeeze()
+                    Ytest_hat_allSampsFrs_exc0[:,:,ifr,:] = Ytest_hat_allSampsFrs_exc00[:,indBestC,:,ifr,:].squeeze()
+#                    Ytest_hat_remCorr_allSampsFrs_exc0[:,:,ifr,:] = Ytest_hat_remCorr_allSampsFrs_exc00[:,indBestC,:,ifr,:].squeeze()
+#                    Ytest_hat_both_allSampsFrs_exc0[:,:,ifr,:] = Ytest_hat_both_allSampsFrs_exc00[:,indBestC,:,ifr,:].squeeze()               
+                else:
+                    perClassErrorTrain_data_exc0[:,0,ifr] = perClassErrorTrain_exc00[:,indBestC,:,ifr].squeeze()
+                    perClassErrorTest_data_exc0[:,0,ifr] = perClassErrorTest_exc00[:,indBestC,:,ifr].squeeze()
+                    perClassErrorTest_shfl_exc0[:,0,ifr] = perClassErrorTest_shfl_exc00[:,indBestC,:,ifr].squeeze()
+                    perClassErrorTest_chance_exc0[:,0,ifr] = perClassErrorTest_chance_exc00[:,indBestC,:,ifr].squeeze()            
+#                    perClassErrorTestRemCorr_exc0[:,0,ifr] = perClassErrorTestRemCorr_exc00[:,indBestC,:,ifr].squeeze()
+#                    perClassErrorTestRemCorr_shfl_exc0[:,0,ifr] = perClassErrorTestRemCorr_shfl_exc00[:,indBestC,:,ifr].squeeze()
+#                    perClassErrorTestRemCorr_chance_exc0[:,0,ifr] = perClassErrorTestRemCorr_chance_exc00[:,indBestC,:,ifr].squeeze()
+#                    perClassErrorTestBoth_exc0[:,0,ifr] = perClassErrorTestBoth_exc00[:,indBestC,:,ifr].squeeze()
+#                    perClassErrorTestBoth_shfl_exc0[:,0,ifr] = perClassErrorTestBoth_shfl_exc00[:,indBestC,:,ifr].squeeze()
+#                    perClassErrorTestBoth_chance_exc0[:,0,ifr] = perClassErrorTestBoth_chance_exc00[:,indBestC,:,ifr].squeeze()            
+                    b_data_exc0[:,0,ifr] = bAllC_exc[:,indBestC,:,ifr].squeeze()                      
+                    w_data_exc0[:,:,0,ifr] = wAllC_exc[:,indBestC,:,:,ifr].squeeze()
+                    Ytest_hat_allSampsFrs_exc0[:,0,ifr,:] = Ytest_hat_allSampsFrs_exc00[:,indBestC,:,ifr,:].squeeze()
+#                    Ytest_hat_remCorr_allSampsFrs_exc0[:,0,ifr,:] = Ytest_hat_remCorr_allSampsFrs_exc00[:,indBestC,:,ifr,:].squeeze()
+#                    Ytest_hat_both_allSampsFrs_exc0[:,0,ifr,:] = Ytest_hat_both_allSampsFrs_exc00[:,indBestC,:,ifr,:].squeeze()               
+
+            
+
+            
+            # Collect values of all exc shuffles (at bestc)   
+            if cbestKnown==False:
+                cbestFrs_exc.append(cbestFrs_exc00)
+                cbestFrs_remCorr_exc.append(cbestFrs_remCorr_exc00)
+                cbestFrs_both_exc.append(cbestFrs_both_exc00)                
+            perClassErrorTrain_data_exc.append(perClassErrorTrain_data_exc0) # numShufflesExc x numSamples x nRandCorrSel x numFrames
+            perClassErrorTest_data_exc.append(perClassErrorTest_data_exc0)
+            perClassErrorTest_shfl_exc.append(perClassErrorTest_shfl_exc0)
+            perClassErrorTest_chance_exc.append(perClassErrorTest_chance_exc0)
+            perClassErrorTestRemCorr_exc.append(perClassErrorTestRemCorr_exc0)
+            perClassErrorTestRemCorr_shfl_exc.append(perClassErrorTestRemCorr_shfl_exc0)
+            perClassErrorTestRemCorr_chance_exc.append(perClassErrorTestRemCorr_chance_exc0)
+            perClassErrorTestBoth_exc.append(perClassErrorTestBoth_exc0)
+            perClassErrorTestBoth_shfl_exc.append(perClassErrorTestBoth_shfl_exc0)
+            perClassErrorTestBoth_chance_exc.append(perClassErrorTestBoth_chance_exc0)            
+            b_data_exc.append(b_data_exc0)
+            w_data_exc.append(w_data_exc0) # numShufflesExc x numSamples x numNeurons x nRandCorrSel x numFrames                        
+            Ytest_hat_allSampsFrs_exc.append(Ytest_hat_allSampsFrs_exc0)            
+            Ytest_hat_remCorr_allSampsFrs_exc.append(Ytest_hat_remCorr_allSampsFrs_exc0)
+            Ytest_hat_both_allSampsFrs_exc.append(Ytest_hat_both_allSampsFrs_exc0)            
+            Ytest_allSamps_exc.append(Ytest_allSamps_exc00) # numShufflesExc x numSamples x nRandCorrSel x numTestTrs            
+            testTrInds_allSamps_exc.append(testTrInds_allSamps_exc00)
+            trsTrainedTestedInds_exc.append(trsTrainedTestedInds_exc00)
+            trsnow_allSamps_exc.append(trsnow_allSamps_exc00) # nRandCorrSel x numTrs (test+train)
+            trsRemCorrInds_exc.append(trsRemCorrInds_exc00) # nRandCorrSel x numRemCorrTrs     
+    
+    
             
 #%% Quick plots
 '''
@@ -4018,8 +5237,20 @@ iexc = 1
 aa = np.mean(perClassErrorTest_data_exc[iexc],axis=0)
 a = np.mean(perClassErrorTest_data_exc_incorr[iexc],axis=0)
 
+aas = np.mean(perClassErrorTest_shfl_inh,axis=0)
+aas = np.mean(perClassErrorTest_shfl_allExc,axis=0)
+aas = np.mean(perClassErrorTest_shfl_exc[iexc],axis=0)
+
+# decodeOutcome
+aa = np.mean(perClassErrorTest_data_exc,axis=(0,1,2))
+aas = np.mean(perClassErrorTest_shfl_exc,axis=(0,1,2))
+
+aa = np.mean(perClassErrorTest_data_inh,axis=(0))
+aas = np.mean(perClassErrorTest_shfl_inh,axis=(0))
+
 plt.figure()
 plt.plot(time_trace, 100-aa, color='k') # corr
+plt.plot(time_trace, 100-aas, color='g') # shfl
 plt.plot(time_trace, 100-a, color='r') # incorr
 
 '''
@@ -4046,9 +5277,19 @@ elif addNs_rand:
 elif decodeStimCateg:
     diffn = 'decodeStimCateg_'
     h2l = ''
+elif decodeOutcome:
+    diffn = 'decodeOutcome_'
+    h2l = ''
+elif same_HRLR_acrossDays:
+    diffn = 'sameTrNumAllDays_'
+    h2l = ''
+elif do_Ctrace:
+    diffn = 'Ctrace_'
+    h2l = ''
 else:
     diffn = ''
     h2l = ''
+    
 if testIncorr:
     inc = 'testIncorr_'
 else:
@@ -4080,7 +5321,7 @@ if saveResults:
     print(svmName)
 
     ################# 
-    if np.all([decodeStimCateg==0, addNs_roc==0, addNs_rand==0]):
+    if np.all([decodeOutcome==0, decodeStimCateg==0, addNs_roc==0, addNs_rand==0]):
 
         if doInhAllexcEqexc[0] == 1: # inh
             if testIncorr:
@@ -4197,10 +5438,10 @@ if saveResults:
     
     
     
-    #############################################################
-    ################# decodes stimulus category #################
-    #############################################################
-    elif decodeStimCateg:
+    ##############################################################################
+    ################# decodes stimulus category or trial outcome #################
+    ##############################################################################
+    elif np.logical_or(decodeOutcome, decodeStimCateg):
         if doInhAllexcEqexc[0] == 1: # inh
             scio.savemat(svmName, {'thAct':thAct, 'numShufflesExc':numShufflesExc, 'numSamples':numSamples, 'softNorm':softNorm, 'meanX_fr':meanX_fr, 'stdX_fr':stdX_fr,
                                    'winLen':winLen, 'trsExcluded':trsExcluded, 'NsExcluded':NsExcluded, 'regType':regType, 'cvect':cvect, 'eventI_ds':eventI_ds, 'hr_shfl_all':hr_shfl_all, 'lr_shfl_all':lr_shfl_all,

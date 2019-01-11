@@ -99,12 +99,15 @@ for im = 1:length(mice)
         choicePref_all_alld_exc = cell(1, length(days));
         choicePref_all_alld_inh = cell(1, length(days));
         choicePref_all_alld_allN = cell(1, length(days));
+        choicePref_all_alld_uns = cell(1, length(days));
         choicePref_all_alld_exc_shfl = cell(1, length(days));
         choicePref_all_alld_inh_shfl = cell(1, length(days));
         choicePref_all_alld_allN_shfl = cell(1, length(days));
+        choicePref_all_alld_uns_shfl = cell(1, length(days));
         choicePref_all_alld_exc_chance = cell(1, length(days));
         choicePref_all_alld_inh_chance = cell(1, length(days));
         choicePref_all_alld_allN_chance = cell(1, length(days));
+        choicePref_all_alld_uns_chance = cell(1, length(days));
     end
 
     corr_ipsi_contra = nan(length(days),2); % number of correct ipsi (left) and contra (right) trials.
@@ -360,7 +363,7 @@ for im = 1:length(mice)
 
             %% Now loop through exc, inh neurons to do ROC analysis
 
-            for nt = 0:2 % neuron type (0:exc ; 1:inh)    
+            for nt = 0:3 % neuron type (0:exc ; 1:inh)    
 
                 if nt==0
                     disp('Analyzing excitatory neurons...')
@@ -368,11 +371,15 @@ for im = 1:length(mice)
                     disp('Analyzing inhibitory neurons...')
                 elseif nt==2
                     disp('Analyzing all neurons...')
+                elseif nt==3
+                    disp('Analyzing unsure neurons...')       
                 end        
 
                 %%% Set the neuron traces
                 if nt==2
                     X_svm_now = X_svm;
+                elseif nt==3
+                    X_svm_now = X_svm(:, isnan(inhibitRois),:);
                 else
                     X_svm_now = X_svm(:,inhibitRois==nt,:);
                 end
@@ -404,7 +411,11 @@ for im = 1:length(mice)
                 elseif nt==2
                     choicePref_all_alld_allN{iday} = choicePref_all; % frames x neurons
                     choicePref_all_alld_allN_shfl{iday} = choicePref_all_shfl; % frames x neurons x samps
-                    choicePref_all_alld_allN_chance{iday} = choicePref_all_chance;                    
+                    choicePref_all_alld_allN_chance{iday} = choicePref_all_chance;      
+                elseif nt==3
+                    choicePref_all_alld_uns{iday} = choicePref_all; % frames x neurons
+                    choicePref_all_alld_uns_shfl{iday} = choicePref_all_shfl; % frames x neurons x samps
+                    choicePref_all_alld_uns_chance{iday} = choicePref_all_chance;                       
                 end        
             end    
         end
@@ -445,7 +456,8 @@ for im = 1:length(mice)
         else
             disp('saving roc vars for exc and inh neurons....')            
 %             save(fullfile(d,namv), 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'choicePref_all_alld_exc', 'choicePref_all_alld_inh', 'choicePref_all_alld_exc_shfl', 'choicePref_all_alld_inh_shfl', 'choicePref_all_alld_exc_chance', 'choicePref_all_alld_inh_chance')        
-            save(fullfile(d,namv), 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'choicePref_all_alld_exc', 'choicePref_all_alld_inh', 'choicePref_all_alld_exc_shfl', 'choicePref_all_alld_inh_shfl', 'choicePref_all_alld_exc_chance', 'choicePref_all_alld_inh_chance', 'choicePref_all_alld_allN', 'choicePref_all_alld_allN_shfl', 'choicePref_all_alld_allN_chance')
+%             save(fullfile(d,namv), 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'choicePref_all_alld_exc', 'choicePref_all_alld_inh', 'choicePref_all_alld_exc_shfl', 'choicePref_all_alld_inh_shfl', 'choicePref_all_alld_exc_chance', 'choicePref_all_alld_inh_chance', 'choicePref_all_alld_allN', 'choicePref_all_alld_allN_shfl', 'choicePref_all_alld_allN_chance')
+            save(fullfile(d,namv), 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'choicePref_all_alld_exc', 'choicePref_all_alld_inh', 'choicePref_all_alld_exc_shfl', 'choicePref_all_alld_inh_shfl', 'choicePref_all_alld_exc_chance', 'choicePref_all_alld_inh_chance', 'choicePref_all_alld_allN', 'choicePref_all_alld_allN_shfl', 'choicePref_all_alld_allN_chance', 'choicePref_all_alld_uns', 'choicePref_all_alld_uns_shfl', 'choicePref_all_alld_uns_chance')
         end
     end
     

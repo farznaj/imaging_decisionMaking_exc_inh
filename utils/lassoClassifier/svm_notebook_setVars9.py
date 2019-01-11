@@ -29,7 +29,9 @@ doInhAllexcEqexc = [0,1,0]
                 # if 2: take half exc, half inh, and run svm
                 # if 3: take lenInh*2 of only exc and run svm.    
 # if there is a 4th element, the following analysis will be done (still we need to specify whether we want to analyze inh or allExc): Ns will be added 1 by 1 based on their ROC choice tuning
- 
+
+#    same_HRLR_acrossDays = 0 # normally 0, but if 1, svm will be trained on n trials, where n is the minimum number of trials across all sessions of a mouse (this variable is already computed and saved in the analysis folder of each mouse) # set to 1 to balance the number of trials across training days to make sure svm performance is not affected by that.
+                
 Created on Fri Oct 28 12:48:43 2016
 @author: farznaj
 """
@@ -37,12 +39,13 @@ Created on Fri Oct 28 12:48:43 2016
 
 #allExc = 0 # use allexc and inh neurons for decoding (but not unsure neurons)                       
 #eqExcInh = 1 # use equal number of exc and inh neurons for decoding... numSamps of these populations will be made.
-def svm_notebook_setVars9(mousename, imagingFolder, mdfFileNumber, chAl, doInhAllexcEqexc, outcome2ana='corr', numSamples=50, numShufflesExc=50, trialHistAnalysis=0, iTiFlg=2):
-    
+def svm_notebook_setVars9(mousename, imagingFolder, mdfFileNumber, chAl, doInhAllexcEqexc, outcome2ana='all', same_HRLR_acrossDays=0, numSamples=50, numShufflesExc=50, trialHistAnalysis=0, iTiFlg=2):
+           
+    do_Ctrace = 1 # if 1, use C trace (denoised fluorescent trace), instead of S (inferred spikes)
     nRandCorrSel = 10
     
     cbestKnown = 0 #1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.
-    shflTrsEachNeuron = 1  # Set to 0 for normal SVM training. # if 1 shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
+    shflTrsEachNeuron = 0  # Set to 0 for normal SVM training. # if 1 shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
     
     shflTrLabs = 0 # svm is already run on the actual data, so now load bestc, and run it on trial-label shuffles.    
 #    outcome2ana = 'corr' # '', 'corr', 'incorr' # trials to use for SVM training (all, correct or incorrect trials) # outcome2ana will be used if trialHistAnalysis is 0. When it is 1, by default we are analyzing past correct trials. If you want to change that, set it in the matlab code.        

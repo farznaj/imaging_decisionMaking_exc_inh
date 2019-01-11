@@ -85,6 +85,13 @@ days = {'150814_1', '150814_2', '150817_1', '150818_1', '150819_1-2'}; % 0813 an
 % '150813_1' : not enough trials
 
 
+% Below is written on 01/09/2019: these
+% days had long mscanLag trials that were not among trs2rmv. I updated
+% trs2rmv in imfilename.
+% mouse = 'fni17';
+% days = {'151010_1'}; 
+
+
 %% fni18
 
 mouse = 'fni18';
@@ -117,6 +124,13 @@ days = {'150901_1', '150903_1', '150904_1', '150914_1', '150915_1', '150916_1', 
     '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', ...
     '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', ...
     '151028_1-2', '151029_1-2-3', '151101_1'};
+
+
+% Below is written on 01/09/2019: these
+% days had long mscanLag trials that were not among trs2rmv. I updated
+% trs2rmv in imfilename.
+% mouse = 'fni19';
+% days = {'150924_1-2', '151005_1-2', '151016_1', '151029_1-2-3'}; 
 
 
 %% Run imaging_postproc for each day

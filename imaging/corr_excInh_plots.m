@@ -109,6 +109,9 @@ fr_inh_contra_timeM1_aveNs = cell(1, length(mice));
 fr_exc_timeM1 = cell(1, length(mice));
 fr_inh_timeM1 = cell(1, length(mice));
 
+roc_exc_timeM1_shfl = cell(1, length(mice));
+roc_inh_timeM1_shfl = cell(1, length(mice));
+
 for im = 1:length(mice)
     roc_exc_timeM1{im} = cell(numDaysAll(im),1);
     roc_inh_timeM1{im} = cell(numDaysAll(im),1);
@@ -122,7 +125,10 @@ for im = 1:length(mice)
             % ROC values (% ROCs at timebin -1 for all neurons, for each day of each mouse)
             roc_exc_timeM1{im}{iday} = choicePref_exc_al_allMice{im}{iday}(fr2an,:); % nNeurons
             roc_inh_timeM1{im}{iday} = choicePref_inh_al_allMice{im}{iday}(fr2an,:);
-
+            
+%             roc_exc_timeM1_shfl{im}{iday} = choicePref_exc_al_allMice_shfl{im}{iday}(fr2an,:); % nNeurons
+%             roc_inh_timeM1_shfl{im}{iday} = choicePref_inh_al_allMice_shfl{im}{iday}(fr2an,:);
+            
             % is neuron ipsi or contra preferred? (if roc==.5, don't assign the neuron to either class)
             % exc_ipsi refers to ipsi-preferring excitatory neurons.
             % Ipsi-preferring is determined based on ROC values right
@@ -322,6 +328,11 @@ r_E_E_shfl = cell(1, length(mice));
 r_I_I_shfl = cell(1, length(mice));
 r_E_I_shfl = cell(1, length(mice));
 
+% roc_exc_timeM1_sameFR = cell(1, length(mice));
+% roc_inh_timeM1_sameFR = cell(1, length(mice));
+% roc_exc_timeM1_sameFR_shfl = cell(1, length(mice));
+% roc_inh_timeM1_sameFR_shfl = cell(1, length(mice));
+
 for im = 1:length(mice)
     for iday = 1:numDaysAll(im)
         if mnTrNum_allMice{im}(iday) >= thMinTrs
@@ -409,8 +420,17 @@ for im = 1:length(mice)
                 end
             end
             
-
-            %%            
+            
+            %% Get ROC values at time -1 only for those exc and inh neurons whose FR is in the same bin (ie they have similiar FRs)
+            
+%             roc_exc_timeM1_sameFR{im}{iday} = roc_exc_timeM1{im}{iday}(ns_e);
+%             roc_inh_timeM1_sameFR{im}{iday} = roc_inh_timeM1{im}{iday}(ns_i);
+%             
+%             roc_exc_timeM1_sameFR_shfl{im}{iday} = roc_exc_timeM1_shfl{im}{iday}(ns_e);
+%             roc_inh_timeM1_sameFR_shfl{im}{iday} = roc_inh_timeM1_shfl{im}{iday}(ns_i);
+            
+            %%        
+            
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %%%%% exc,exc: corr between similarly-tuned neurons
             [r_Ei_Ei{im}{iday}, p_Ei_Ei{im}{iday}] = corr(fr_exc_ipsi_timeM1{im}{iday}(:,trs)'); % ns x ns
@@ -491,6 +511,7 @@ for im = 1:length(mice)
         end
     end
 end
+
 
 
 %% Set the diagonal of Ei_Ei, etc to nan (bc they are symmetric)

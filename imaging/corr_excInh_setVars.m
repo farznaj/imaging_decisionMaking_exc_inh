@@ -7,7 +7,7 @@
 downSampSpikes = 1; %0; %1; % downsample spike traces (non-overalapping moving average of 3 frames).
 
 alFR = 'chAl'; % 'initAl'; % the firing rate traces were aligned on what
-outcome2ana = ''; %'' 'corr';
+outcome2ana = ''; % '' % 'corr';
 
 fni18_rmvDay4 = 0; % if 1, remove 4th day of fni18.
 doChoicePref = 0; %2; 
@@ -113,7 +113,19 @@ for im = 1:length(mice)
     fprintf('%s\n',namatfr)    
     
     clear('X_svm_all_alld_exc', 'X_svm_all_alld_inh', 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'ipsiTrs_allDays', 'contraTrs_allDays')
-    load(fullfile(dirn, namatfr), 'X_svm_all_alld_exc', 'X_svm_all_alld_inh', 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'ipsiTrs_allDays', 'contraTrs_allDays') % each cell is for a day and has size: frs x units x trials
+    load(fullfile(dirn, namatfr), 'X_svm_all_alld_exc', 'X_svm_all_alld_inh') %, 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'ipsiTrs_allDays', 'contraTrs_allDays') % each cell is for a day and has size: frs x units x trials
+    
+    % the _corr mat file doesnt have the following vars saved: 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'ipsiTrs_allDays', 'contraTrs_allDays'
+    % so we get it from the _all mat file. (I'm only doing this so this
+    % script doesnt fail when running it with outcome2ana='corr', which is
+    % what we need when running choicePref_ROC_exc_inh_plotsAllMice_sameFR,
+    % otherwise the vars loaded below have different size from those above
+    % ... so if you use them for corr_excInh_plots, it will fail).
+    namv = sprintf('FR%s%s_curr_%s%s_stimstr%d%s_%s_*.mat', dsn, nmd, alFR,'_allOutcome',thStimStrength,namz,mouse);    
+    a = dir(fullfile(dirn,namv));
+    a = a(end); % use the latest saved file
+    namatfr2 = a.name;    
+    load(fullfile(dirn, namatfr2), 'corr_ipsi_contra', 'eventI_allDays', 'eventI_ds_allDays', 'ipsiTrs_allDays', 'contraTrs_allDays')
     ipsiTrs_allDays_allMice{im} = ipsiTrs_allDays;
     contraTrs_allDays_allMice{im} = contraTrs_allDays;
     
