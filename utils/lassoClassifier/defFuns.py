@@ -71,7 +71,7 @@ else: # wont be used, only not to get error when running setSVMname
 
 #%%
 # LOOKING FOR A DAY: #days.index('151009_1')   # name of this function should change to set_days!
-def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained=1, trialHistAnalysis=0, iTiFlg=1, allDays=1, noZmotionDays=0, noZmotionDays_strict=0, noExtraStimDays=0, loadYtest=0, decodeStimCateg=0, decodeOutcome=0):
+def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained=1, trialHistAnalysis=0, iTiFlg=1, allDays=1, noZmotionDays=0, noZmotionDays_strict=0, noExtraStimDays=0, loadYtest=0, decodeStimCateg=0, decodeOutcome=0, decodeChoiceEqCorrIncorr=0):
      
     ##%% Define days that you want to analyze
     '''
@@ -101,6 +101,15 @@ def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained=1, trialHistAnalysis=
             
             if decodeOutcome:
                 days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2', '151001_1' : don't analyze!
+            
+            elif decodeStimCateg and ch_st_goAl[1]==1: # not enough trials: '150820_1'
+                days = ['150817_1', '150818_1', '150819_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2', '151001_1' : don't analyze!
+            
+            elif decodeChoiceEqCorrIncorr: # remove '151001_1', 
+                days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
+                # temp; once done, go back to above
+#                days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
+                
                 
             else:
                 if 'ch_st_goAl' in locals(): # eachFrame analysis
@@ -117,10 +126,9 @@ def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained=1, trialHistAnalysis=
                     days = ['150819_1', '150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
         
         
-        else: # for trialHist include day '150824_1-2'
-            
+        else: # for trialHist include day '150824_1-2'            
             days = ['150817_1', '150818_1', '150819_1', '150820_1', '150821_1-2', '150824_1-2', '150825_1-2-3', '150826_1', '150827_1', '150828_1-2', '150831_1-2', '150901_1', '150903_1', '150904_1', '150915_1', '150916_1-2', '150917_1', '150918_1-2-3-4', '150921_1', '150922_1', '150923_1', '150924_1', '150925_1-2-3', '150928_1-2', '150929_1-2', '150930_1-2', '151001_1', '151002_1-2', '151005_1-2-3-4', '151006_1-2', '151007_1-2', '151008_1', '151009_1', '151012_1-2', '151013_1', '151014_1-2', '151016_1', '151019_1', '151020_1', '151021_1', '151022_1', '151023_1', '151026_1-2', '151027_1', '151028_1-2', '151029_1-2']; # '150914_1-2' : don't analyze!
-            
+                       
             if ch_st_goAl[0]==1: # chAl  
                 days.remove('150818_1') # too few trials, no svm file
 
@@ -136,10 +144,13 @@ def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained=1, trialHistAnalysis=
         if trialHistAnalysis == 0:
             
             if decodeOutcome: # not enough trials: '150817_1', '150824_1', '150827_1', '150901_1', 
-#                days = ['150814_1', '150826_1', '150828_1', '150831_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
-                # 1012 removed from below, once the job is ready use the above!
-                days = ['150814_1', '150826_1', '150828_1', '150831_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
-
+                days = ['150814_1', '150826_1', '150828_1', '150831_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
+                
+            elif decodeStimCateg and ch_st_goAl[1]==1:
+                days = ['150824_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
+                
+            elif decodeChoiceEqCorrIncorr:
+                days = ['150814_1', '150826_1', '150828_1', '150831_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];
                 
             else:
                 # '150814_2, '150820_1', '150821_1', '150825_1': dont have enough trials. ('150821_1' and '150825_1' only have the eachFrame, stAl svm file)    
@@ -160,14 +171,19 @@ def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained=1, trialHistAnalysis=
         
         else: # for trialHist include 0818 and 0819
             days = ['150814_1', '150817_1', '150818_1', '150819_1-2', '150824_1', '150826_1', '150827_1', '150828_1', '150831_1', '150901_1', '150902_1-2', '150903_1', '150908_1', '150909_1', '150910_1', '150914_1', '150915_1-2', '150916_1', '150917_1-2', '150918_1', '150921_1-2-3', '150922_1-2', '150923_1-2-3', '150924_1-2', '150925_1-2', '150928_1-2', '150930_1-2-3-4', '151001_1', '151002_1-2', '151005_1-2', '151006_1', '151007_1', '151008_1', '151010_1', '151012_1-2-3', '151013_1-2', '151014_1', '151015_1', '151016_1', '151019_1-2', '151020_1-2', '151021_1', '151022_1-2', '151023_1', '151026_1', '151027_2', '151028_1-2-3', '151029_2-3', '151101_1', '151102_1-2'];    
-            
+
     
     
     
     #############################
     elif mousename=='fni18': # eachFrame, stimAl files couldnt be run for '151211_1', '151214_1-2', '151215_1-2', '151216_1'
-        if decodeOutcome:
+        if decodeOutcome or decodeChoiceEqCorrIncorr:
             days = ['151210_1', '151211_1', '151214_1-2', '151215_1-2', '151216_1', '151217_1-2'] # '151209_1' not enough trials.
+#            days = ['151210_1', '151211_1', '151210_1', '151211_1', '151210_1', '151211_1', '151214_1-2']
+            
+        elif decodeStimCateg:
+            days = ['151210_1', '151211_1', '151214_1-2', '151215_1-2', '151216_1', '151217_1-2'] # '151209_1' not enough trials.
+#            days = ['151211_1', '151214_1-2', '151215_1-2', '151216_1', '151217_1-2'] # '151210' has surprisingly high inh CA (similar to allN)           
             
         else:
             if allDays:
@@ -189,13 +205,23 @@ def svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained=1, trialHistAnalysis=
         
         if allDays:            
             if trialHistAnalysis == 0:
-                if 'ch_st_goAl' in locals() and ch_st_goAl[1]==1:  # eachFrame, stimAL: '150904_1' doesnt have enough trials. taken out from below.       
-                    days = ['150901_1', '150903_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
-                else: # chAl (also for decodeOutcome)
-    #                if 'corrTrained' in locals() and corrTrained==1: # svm_eachFrame trained only on corr trials: exclude '150901' (few HR trials)
+                
+                if decodeStimCateg:
+                    days = ['150901_1', '150903_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
+                    
+                elif decodeChoiceEqCorrIncorr:
                     days = ['150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];                            
-    #                else:
-    #                    days = ['150901_1', '150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
+                    # use above once all jobs are done
+#                    days = ['150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151028_1-2', '151029_1-2-3', '151101_1'];                            
+                    
+                else:
+                    if 'ch_st_goAl' in locals() and ch_st_goAl[1]==1:  # stimAL: '150904_1' doesnt have enough trials. taken out from below.       
+                        days = ['150901_1', '150903_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
+                    else: # chAl (also for decodeOutcome)
+        #                if 'corrTrained' in locals() and corrTrained==1: # svm_eachFrame trained only on corr trials: exclude '150901' (few HR trials)
+                        days = ['150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];                            
+        #                else:
+        #                    days = ['150901_1', '150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
             
             else: # for trialHist include both 0901 and 0903
                 days = ['150901_1', '150903_1', '150904_1', '150914_1', '150915_1', '150916_1', '150917_1', '150918_1', '150921_1', '150922_1', '150923_1', '150924_1-2', '150925_1-2', '150928_4', '150929_3', '150930_1', '151001_1', '151002_1', '151005_1-2', '151006_1', '151007_1', '151008_1-2', '151009_1-3', '151012_1-2-3', '151013_1', '151015_2', '151016_1', '151019_1', '151020_1', '151022_1-2', '151023_1', '151026_1-2-3', '151027_1', '151028_1-2', '151029_1-2-3', '151101_1'];
@@ -1772,18 +1798,31 @@ def colorOrder(nlines=30):
 #%% Function to get the latest svm .mat file corresponding to pnevFileName, trialHistAnalysis, ntName, roundi, itiName
 
 def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc=[], regressBins=3, useEqualTrNums=1, corrTrained=0, shflTrsEachNeuron=0, shflTrLabs=0, same_HRLR_acrossDays=0, do_Ctrace=0):
+#    doInhAllexcEqexc = [1,0,0]
+#    shflTrLabs = 0
+    
     import glob
     import sys
     
     if len(doInhAllexcEqexc)==4:
         
-        if doInhAllexcEqexc[3]==-2:
+        if doInhAllexcEqexc[3]==-3:
+            decodeChoiceEqCorrIncorr = 1
+            decodeOutcome = 0
+            decodeStimCateg = 0
+            addNs_rand = 0
+            addNs_roc = 0
+            testIncorr = 0
+#            print 'Decoding choice (using equal number of corr and incorr trials)'   
+        
+        elif doInhAllexcEqexc[3]==-2:
             decodeStimCateg = 0
             addNs_rand = 0
             addNs_roc = 0
             corrTrained = 0
             testIncorr = 0
             decodeOutcome = 1
+            decodeChoiceEqCorrIncorr = 0
 #            print 'Decoding outcome (corr, incorr)'
             
         elif doInhAllexcEqexc[3]==-1:
@@ -1795,6 +1834,7 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
             addNs_rand = 0
             addNs_roc = 0
             decodeOutcome = 0
+            decodeChoiceEqCorrIncorr = 0
             
         elif doInhAllexcEqexc[3]==0:
             decodeStimCateg = 1        
@@ -1803,6 +1843,7 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
             corrTrained = 0
             testIncorr = 0
             decodeOutcome = 0
+            decodeChoiceEqCorrIncorr = 0
 #            print 'Decoding stimulus category (HR, LR)'
             
         elif doInhAllexcEqexc[3]==3:
@@ -1811,6 +1852,7 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
             decodeStimCateg = 0
             testIncorr = 0
             decodeOutcome = 0
+            decodeChoiceEqCorrIncorr = 0
 #            print 'Adding neurons randomly 1 by 1 for SVM analysis'
             
         else: 
@@ -1819,6 +1861,7 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
             decodeStimCateg = 0
             testIncorr = 0
             decodeOutcome = 0
+            decodeChoiceEqCorrIncorr = 0
 #            if doInhAllexcEqexc[3]==1:
 #                print 'Adding neurons 1 by 1 from high to low ROC (choice tuning) for SVM analysis' 
 #            elif doInhAllexcEqexc[3]==2:
@@ -1829,6 +1872,7 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
         decodeStimCateg = 0
         testIncorr = 0
         decodeOutcome = 0
+        decodeChoiceEqCorrIncorr = 0
 #        print 'Decoding left, right choice'
  
     
@@ -1852,6 +1896,9 @@ def setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhA
         h2l = ''
     elif do_Ctrace:
         diffn = 'Ctrace_'
+        h2l = ''       
+    elif decodeChoiceEqCorrIncorr:
+        diffn = 'decodeChoiceEqCorrIncorr_'
         h2l = ''        
     else:
         diffn = ''
@@ -1999,8 +2046,10 @@ def setEventIds(postName, chAl, regressBins=3, trialHistAnalysis=0):
         time_aligned_1stSide = Data['firstSideTryAl'].time.astype('float')
         time_trace = time_aligned_1stSide
         eventI = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+        print(np.shape(time_trace))
+
         
-    else:   #%% Use stimulus-aligned traces           
+    elif chAl==0:   #%% Use stimulus-aligned traces           
         # Load stim-aligned_allTrials traces, frames, frame of event of interest
         if trialHistAnalysis==0:
             Data = scio.loadmat(postName, variable_names=['stimAl_noEarlyDec'],squeeze_me=True,struct_as_record=False)
@@ -2015,8 +2064,54 @@ def setEventIds(postName, chAl, regressBins=3, trialHistAnalysis=0):
             # time_aligned_stimAll = Data['stimAl_allTrs'].time.astype('float') # same as time_aligned_stim        
         
         time_trace = time_aligned_stim        
+        print(np.shape(time_trace))
 
-    print(np.shape(time_trace))
+
+    elif chAl==-1:    #%% Use outcome-aligned traces 
+        # Load 1stSideTry-aligned traces, frames, frame of event of interest
+        # use firstSideTryAl_COM to look at changes-of-mind (mouse made a side lick without committing it)
+        Data = scio.loadmat(postName, variable_names=['rewardAl'],squeeze_me=True,struct_as_record=False)
+        traces_al_rew = Data['rewardAl'].traces.astype('float')
+        time_aligned_rew = Data['rewardAl'].time.astype('float')
+        eventI_rew = Data['rewardAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+        #eventI_ch = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+        # print(np.shape(traces_al_1stSide))
+         
+        
+        ############ incorr resp aligned
+        Data = scio.loadmat(postName, variable_names=['commitIncorrAl'],squeeze_me=True,struct_as_record=False)
+        traces_al_inc = Data['commitIncorrAl'].traces.astype('float')
+        time_aligned_inc = Data['commitIncorrAl'].time.astype('float')
+        eventI_inc = Data['commitIncorrAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+        #eventI_ch = Data['firstSideTryAl'].eventI - 1 # remember to subtract 1! matlab vs python indexing!   
+        # print(np.shape(traces_al_1stSide))
+        
+    
+        ##### align rew-al and inc-al traces    
+        nbef_min = min(eventI_rew, eventI_inc) # minimum number of frames before the eventI (between rewAl and incAl traces); it will be also the new evnetI on the aligned traces that are set below
+        """
+        naft_min = min((len(time_aligned_rew)-1 - eventI_rew) , (len(time_aligned_inc)-1 - eventI_inc)) # minimum number of frames after the eventI (between rewAl and incAl traces)
+    
+        # take a chunk of each trace, such that the new eventI will be nbef_min
+        r_rew = np.arange(eventI_rew - nbef_min  ,  eventI_rew + naft_min+1)
+        trace_rew = traces_al_rew[r_rew,:,:]
+        time_aligned_outcome = time_aligned_rew[r_rew] # it is 0 at index nbef_min
+    
+        r_inc = np.arange(eventI_inc - nbef_min  ,  eventI_inc + naft_min+1)
+        trace_inc = traces_al_inc[r_inc,:,:]
+    #    time_inc = time_aligned_inc[r_inc] # same as time_rew
+        
+        ##### now create a traces matrix that includes both rewAl and incAl traces...
+        traces_al_outcome = np.full((trace_rew.shape), np.nan)
+        traces_al_outcome[:,:,outcomes==1] = trace_rew[:,:,outcomes==1] # trace_rew is nan for outcomes other than 1
+        traces_al_outcome[:,:,outcomes==0] = trace_inc[:,:,outcomes==0] # trace_inc is nan for outcomes other than 0
+    #    time_aligned_outcome
+        """
+        eventI = nbef_min    
+
+
+
+#    print(np.shape(time_trace))
 #    eventI_allDays[iday] = eventI        
     
     
@@ -2111,6 +2206,8 @@ def set_corr_hr_lr(postName, svmName, doIncorr=0):
     Data = scio.loadmat(svmName, variable_names=['trsExcluded'])
     trsExcluded = Data.pop('trsExcluded').flatten().astype('bool')
     
+    # we name the vars below corr, bc trsExcluded includes incorr trials (svm was trained on corr)
+    # if svm was trained on all trials, then the vars below (corr_hr, corr_lr) show the total number of hr and lr trials.
     corr_hr = sum(np.logical_and(allResp_HR_LR==1 , ~trsExcluded)).astype(int)
     corr_lr = sum(np.logical_and(allResp_HR_LR==0 , ~trsExcluded)).astype(int)    
 #    print min(corr_hr, corr_lr) # number of trials of each class used in svm training
@@ -2891,7 +2988,7 @@ def loadSVM_excInh(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrain
 
 #%% Load exc,inh SVM vars
         
-def loadSVM_excInh_decodeStimCateg(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, doPlots, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0, decodeOutcome=0):
+def loadSVM_excInh_decodeStimCateg(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, doPlots, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=0, stimOutcomeChoiceeq=0):
     # loadWeights: 
     # 0: don't load weights, only load class accur
     # 1 : load weights and class cccur
@@ -2921,10 +3018,12 @@ def loadSVM_excInh_decodeStimCateg(pnevFileName, trialHistAnalysis, chAl, regres
 #        else:
 #            print 'bestc = c that gives min cv error'
     
-    if decodeOutcome:
-        v4 = -2
-    else:
+    if stimOutcomeChoiceeq==0: # stimCateg
         v4 = 0
+    elif stimOutcomeChoiceeq==1: # outcome
+        v4 = -2
+    elif stimOutcomeChoiceeq==2: # choice (eq corr, incorr)
+        v4 = -3
         
     svmName_allN = ''            
     svmName_excInh = []
@@ -3436,18 +3535,21 @@ def av_se_CA_trsamps_decodeStimCateg(numD, perClassErrorTest_data_inh_all, perCl
                                      perClassErrorTestBoth_exc_all, perClassErrorTestBoth_shfl_exc_all, perClassErrorTestBoth_chance_exc_all, \
                                      perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all, \
                                      perClassErrorTestRemCorr_allExc_all, perClassErrorTestRemCorr_shfl_allExc_all, perClassErrorTestRemCorr_chance_allExc_all, \
-                                     perClassErrorTestBoth_allExc_all, perClassErrorTestBoth_shfl_allExc_all, perClassErrorTestBoth_chance_allExc_all):
+                                     perClassErrorTestBoth_allExc_all, perClassErrorTestBoth_shfl_allExc_all, perClassErrorTestBoth_chance_allExc_all, decodeOutcome=0):
     
 
 #    numD = len(eventI_allDays)
     numSamples = np.shape(perClassErrorTest_data_inh_all[0])[0]
     numExcSamples = np.shape(perClassErrorTest_data_exc_all[0])[0]
     
-    if len(perClassErrorTestRemCorr_inh_all[0]) and np.isnan(perClassErrorTestRemCorr_inh_all[0]): # when you decoded outcome and traces were outcome aligned, you sent remCorr and _both vars to nan (instead of those huge matrices), bc anyway you were going to only use the testing data
+    # for the new decodeStimCateg files, the vars below will be nan (like decodeOutcome)
+    ignore = 1
+    """
+    if decodeOutcome: #len(perClassErrorTestRemCorr_inh_all[0]) and np.isnan(perClassErrorTestRemCorr_inh_all[0]): # when you decoded outcome and traces were outcome aligned, you sent remCorr and _both vars to nan (instead of those huge matrices), bc anyway you were going to only use the testing data
         ignore = 1
     else:
         ignore = 0
-        
+    """
     #### inh
     av_test_data_inh = np.array([100-np.nanmean(perClassErrorTest_data_inh_all[iday], axis=0) for iday in range(numD)]) # numDays
     sd_test_data_inh = np.array([np.nanstd(perClassErrorTest_data_inh_all[iday], axis=0) / np.sqrt(numSamples) for iday in range(numD)])      

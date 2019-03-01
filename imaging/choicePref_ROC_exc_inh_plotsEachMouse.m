@@ -187,6 +187,49 @@ for im = 1:length(mice)
     end  
 
 
+    
+    %% Plot fraction choice-selective neurons averaged across days
+    
+    % run ttest across days for each frame
+    % ttest: is exc different from inh, in terms of fraction choice selective neurons? Do it for each time bin seperately.
+    [h,p] = ttest2(exc_fractSigTuned_eachDay_allFrs{im}', inh_fractSigTuned_eachDay_allFrs{im}'); % 1 x nFrs
+    hh0f = h;
+    hh0f(h==0) = nan;
+    
+    fh = figure('position',[9   639   372   299]); %[10   556   792   383]);
+
+    %%%%%%%%% Average and se across days; each day is already averaged across neurons; done seperately for each time bin
+    hold on
+    h1 = boundedline(time_aligned, nanmean(exc_fractSigTuned_eachDay_allFrs{im},2), nanstd(exc_fractSigTuned_eachDay_allFrs{im},0,2)/sqrt(numDaysGood(im)), 'b', 'alpha'); % sum(mnTrNum>=thMinTrs)
+    h2 = boundedline(time_aligned, nanmean(inh_fractSigTuned_eachDay_allFrs{im},2), nanstd(inh_fractSigTuned_eachDay_allFrs{im},0,2)/sqrt(numDaysGood(im)), 'r', 'alpha');
+    h3 = boundedline(time_aligned, nanmean(uns_fractSigTuned_eachDay_allFrs{im},2), nanstd(uns_fractSigTuned_eachDay_allFrs{im},0,2)/sqrt(numDaysGood(im)), 'g', 'alpha');
+    if 0 %doshfl % shfl
+        h1 = boundedline(time_aligned, nanmean(aveexc_shfl,2), nanstd(aveexc_shfl,0,2)/sqrt(numDaysGood(im)), 'cmap', colss(1,:), 'alpha'); % sum(mnTrNum>=thMinTrs)
+        h2 = boundedline(time_aligned, nanmean(aveinh_shfl,2), nanstd(aveinh_shfl,0,2)/sqrt(numDaysGood(im)), 'cmap', colss(2,:), 'alpha');    
+    end
+    
+    a = get(gca, 'ylim');    
+    plot(time_aligned, hh0f*(a(2)-.05*diff(a)), 'k.')    
+    plot([0,0],a,'k:')    
+%     b = get(gca, 'xlim');
+%     if ~isempty(yy)
+%         plot(b, [yy,yy],'k:')
+%     end    
+    legend([h1,h2,h3], {'Excitatory', 'Inhibitory', 'Unsure'}, 'position', [0.1347    0.8177    0.1414    0.0901]);
+    xlabel('Time since choice onset (ms)')
+    ylab = 'Fraction choice-Selective Neurons'; %simpleTokenize(namc, '_'); ylab = ylab{1}; %namc;        
+    ylabel(ylab)
+    title('mean+se days (Ns aved per day)')
+    
+    % save figure
+    if savefigs        
+        savefig(fh, fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInhUns_fractSigTunedOfAllN_aveSeDays_', nowStr,'.fig']))
+        print(fh, '-dpdf', fullfile(dirnFig, [namc,'_','ROC_curr_chAl_excInhUns_fractSigTunedOfAllN_aveSeDays_', nowStr]))
+    end  
+
+    
+    
+    
     %% Dist of neuron-averaged ROC, pooled across all frames and days, compare exc and inh
 
     ylab = 'Fraction days*frames';

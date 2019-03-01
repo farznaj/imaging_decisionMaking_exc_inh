@@ -18,40 +18,69 @@ Created on Sun Mar 12 15:12:29 2017
 
 mousename = 'fni16'
 
+decodeChoiceEqCorrIncorr = 1 # if 1, choice was decoded using equal number of corr and incorr trials
 do_Ctrace = 0 # if 1, use C trace (denoised fluorescent trace), instead of S (inferred spikes)
 same_HRLR_acrossDays = 0 # normally 0, but if 1, svm will be trained on n trials, where n is the minimum number of trials across all sessions of a mouse (this variable is already computed and saved in the analysis folder of each mouse) # set to 1 to balance the number of trials across training days to make sure svm performance is not affected by that.
-decodeOutcome = 1
+decodeOutcome = 0
 decodeStimCateg = 0
+trialHistAnalysis = 0
+
+ch_st_goAl = [1,0,0] # [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. #chAl = 1 # If [-1,0,0], analyze SVM output of outcome-aligned traces.
 noExtraStimDayAnalysis = 0 # if 1, exclude days with extraStim from analysis; if 0, include all days
 shflTrsEachNeuron = 0 # 1st set to 1, then to 0 to compare how decoder changes after removing noise corrs. # Set to 0 for normal SVM training. # Shuffle trials in X_svm (for each neuron independently) to break correlations between neurons in each trial.
 addNs_roc = 0 # if 1 do the following analysis: add neurons 1 by 1 to the decoder based on their tuning strength to see how the decoder performance increases.
 h2l = 1 # if 1, load svm file in which neurons were added from high to low AUC. If 0: low to high AUC.
 do_excInhHalf = 0 # 0: Load vars for inh,exc,allExc, 1: Load exc,inh SVM vars for excInhHalf (ie when the population consists of half exc and half inh) and allExc2inhSize (ie when populatin consists of allExc but same size as 2*inh size)
 loadYtest = 0 # get svm performance for different trial strength # to load the svm files that include testTrInds_allSamps, etc vars (ie in addition to percClassError, they include the Y_hat for each trial)
-
-ch_st_goAl = [-1,0,0] # [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. #chAl = 1 # If 1, analyze SVM output of choice-aligned traces, otherwise stim-aligned traces. 
-trialHistAnalysis = 0 # 1 # 
 testIncorr = 1 # 0 # set to 0 for trialHistoryAnalysis  #set it to 1 to load the latest svm file even if you dont want to analyze incorr trials. # load svm file that includes testing corr as well as testing incorr trials.
 corrTrained = 1 # 0 # set to 0 for trialHistoryAnalysis # svm was trained on what trial outcomes: if corr, set to 1; if all outcomes, set to 0)
 
-doAllN = 1 # matters only when do_excInhHalf =0; plot allN, instead of allExc
-savefigs = 0 #1
+savefigs = 1
+thTrained = 10 # number of trials of each class used for svm training, min acceptable value to include a day in analysis; i.e. if a day has <10 hr trials and <10 lr trials, it wont be included in the analysis.
 plotSingleSessions = 1 # plot individual sessions when addNs_roc=0
+doAllN = 1 # matters only when do_excInhHalf =0; plot allN, instead of allExc
+
+
+if decodeChoiceEqCorrIncorr or do_Ctrace or same_HRLR_acrossDays:
+    ch_st_goAl = [1,0,0] # [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. #chAl = 1 # If [-1,0,0], analyze SVM output of outcome-aligned traces.
+    trialHistAnalysis = 0
+    testIncorr = 0
 
 if decodeStimCateg:
-    use_both_remCorr_testing = [1,0,0] # [1,0,0]: use this for decodeStimCateg  # if decodeStimCateg = 1, decide which one (testing, remCorr, or Both) you want to use for the rest of this code
-elif decodeOutcome:
-    use_both_remCorr_testing = [0,0,1] #[0,0,1] #[0,0,1]: use this for decodeOutcome; since remCorr included only correct trials, CA of remCorr is similar for both shfl and data... so we only use the testing data!
-
+    ch_st_goAl = [0,1,0] # [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. #chAl = 1 # If [-1,0,0], analyze SVM output of outcome-aligned traces.
+    trialHistAnalysis = 0
+    thTrained = 5
+    
+if decodeOutcome:
+    ch_st_goAl = [-1,0,0] # [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. #chAl = 1 # If [-1,0,0], analyze SVM output of outcome-aligned traces.
+    trialHistAnalysis = 0    
+    
+if trialHistAnalysis:
+    ch_st_goAl = [0,1,0] # [1,0,0] # whether do analysis on traces aligned on choice, stim or go tone. #chAl = 1 # If [-1,0,0], analyze SVM output of outcome-aligned traces.
+    testIncorr = 0
+    
+if decodeStimCateg or decodeOutcome or decodeChoiceEqCorrIncorr:
+    corrTrained = 0
+    testIncorr = 0
+    
+    
+#if decodeStimCateg or decodeOutcome:
+use_both_remCorr_testing = [0,0,1] # for the new analysis (done on Jan 2019), ran on stim aligned traces, and done correctly (each stimulus has equal number of each choice)
+#    use_both_remCorr_testing = [1,0,0] # [1,0,0]: use this for decodeStimCateg  # if decodeStimCateg = 1, decide which one (testing, remCorr, or Both) you want to use for the rest of this code
+#elif decodeOutcome:
+#    use_both_remCorr_testing = [0,0,1] #[0,0,1] #[0,0,1]: use this for decodeOutcome; since remCorr included only correct trials, CA of remCorr is similar for both shfl and data... so we only use the testing data!
 
 if shflTrsEachNeuron:
     testIncorr = 0 # it was ran in the past, so there is no testIncorr in the file name    
     doAllN = 0 # matters only when do_excInhHalf =0; plot allN, instead of allExc
 
-if do_Ctrace:
-    testIncorr = 0
+if decodeStimCateg:
+    stimOutcomeChoiceeq = 0
+elif decodeOutcome:
+    stimOutcomeChoiceeq = 1
+elif decodeChoiceEqCorrIncorr:
+    stimOutcomeChoiceeq = 2
     
-thTrained = 10  # number of trials of each class used for svm training, min acceptable value to include a day in analysis; i.e. if a day has <10 hr trials and <10 lr trials, it wont be included in the analysis.
 loadWeights = 0
 useEqualTrNums = 1
 doIncorr = 0
@@ -95,8 +124,6 @@ if doAllN==1:
 else:
     labAll = 'allExc'
 
-if decodeStimCateg or decodeOutcome:
-    corrTrained=0
     
 if corrTrained==0:
     corrn = 'allOutcomeTrained_'
@@ -120,9 +147,22 @@ if same_HRLR_acrossDays:
 if do_Ctrace:
     corrn = 'Ctrace_' + corrn
 
+if decodeChoiceEqCorrIncorr:
+    corrn = 'decodeChoiceEqCorrIncorr_' + corrn
+
+
 if mousename=='fni18' and noZmotionDays:
     corrn = corrn + 'noZmotionDays_'
 
+if chAl==1:
+    alN = 'chAl_'
+    print 'Analyzing choice-aligned traces'
+if chAl==-1:
+    alN = 'outAl_'
+    print 'Analyzing outcome-aligned traces'
+if stAl==1:
+    alN = 'stAl_'
+    print 'Analyzing stimulus-aligned traces'
     
 #if loadInhAllexcEqexc==1:
 if addNs_roc:   
@@ -146,7 +186,7 @@ if doAllN==1:
 
 execfile("defFuns.py")
 #execfile("svm_plots_setVars_n.py")  
-days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays, loadYtest, decodeStimCateg, decodeOutcome)
+days, numDays = svm_plots_setVars_n(mousename, ch_st_goAl, corrTrained, trialHistAnalysis, iTiFlg, allDays, noZmotionDays, noZmotionDays_strict, noExtraStimDays, loadYtest, decodeStimCateg, decodeOutcome, decodeChoiceEqCorrIncorr)
 # remove some days if needed:
 #days = np.delete(days, [14])
 
@@ -187,7 +227,7 @@ if (mousename=='fni17' and shflTrsEachNeuron==1 and corrTrained==0):
 
 numInh = np.full(len(days2an), np.nan)
 numAllexc = np.full(len(days2an), np.nan)
-if decodeOutcome:
+if decodeChoiceEqCorrIncorr or decodeOutcome or decodeStimCateg:
     corr_hr_lr = np.full((len(days2an),4), np.nan) # number of hr, lr correct trials, and hr, lr incorrect trials for each day
 else:
     corr_hr_lr = np.full((len(days2an),2), np.nan) # number of hr, lr correct trials for each day
@@ -283,14 +323,41 @@ for iday in days2an: # np.arange(3, len(days)): # range(len(days)): #
 
 
     #%% Get number of hr, lr trials that were used for svm training
+    
+    if decodeChoiceEqCorrIncorr:
+        doInhAllexcEqexc = [1,0,0,-3]
+    elif decodeOutcome:
+        doInhAllexcEqexc = [1,0,0,-2]    
+    elif decodeStimCateg:
+        doInhAllexcEqexc = [1,0,0,0]
+        
+    elif addNs_roc:
+        if h2l:
+            doInhAllexcEqexc = [1,0,0,1]        
+        else: # low to high sorting
+            doInhAllexcEqexc = [1,0,0,2]        
+#        else: # random addition
+#            doInhAllexcEqexc = [1,0,0,3]
+    elif do_Ctrace or same_HRLR_acrossDays: # decodeChoice (done on all trials or correct trials, the regular case)
+        doInhAllexcEqexc = [1,0,0]
+        
+    else: # decodeChoice (done on all trials or correct trials, the regular case)
+        if trialHistAnalysis==0 and testIncorr:
+            doInhAllexcEqexc = [1,0,0,-1]
+        else:
+            doInhAllexcEqexc = [1,0,0]
+        
+#    Set the svm file name that includes svm vars (we need it to load trsExcluded)
+    svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, doInhAllexcEqexc, regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron, shflTrLabs=0, same_HRLR_acrossDays=same_HRLR_acrossDays, do_Ctrace=do_Ctrace)[0]   
+#    svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, 1, [1,0,0], regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]   
+#    print svmName
 
-#    svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, chAl, [1,0,0], regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]   
-    svmName = setSVMname_excInh_trainDecoder(pnevFileName, trialHistAnalysis, 1, [1,0,0], regressBins, useEqualTrNums, corrTrained, shflTrsEachNeuron)[0]   
-
-    if decodeOutcome:
+    # Set the number of hr and lr trials that were used for training
+    if decodeChoiceEqCorrIncorr or decodeOutcome or decodeStimCateg:
         [corr_hr, corr_lr, incorr_hr, incorr_lr] = set_corr_incorr_hr_lr(postName, svmName)
         corr_hr_lr[cntd,:] = [corr_hr, corr_lr, incorr_hr, incorr_lr]
-    else:
+    else:        
+#        i think you should use this only for the regular decode choice case! and for other cases use above! check if svmName is what you expect it to be!        
         corr_hr, corr_lr = set_corr_hr_lr(postName, svmName)
         corr_hr_lr[cntd,:] = [corr_hr, corr_lr]        
     
@@ -318,7 +385,7 @@ for iday in days2an: # np.arange(3, len(days)): # range(len(days)): #
         loadSVM_excInh_excInhHalf(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, loadWeights, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0)
         perClassErrorTest_data_exc = 0; perClassErrorTest_shfl_exc = 0; perClassErrorTest_chance_exc = 0; 
         
-    elif decodeStimCateg or decodeOutcome:
+    elif decodeStimCateg or decodeOutcome or decodeChoiceEqCorrIncorr:
         perClassErrorTest_data_inh, perClassErrorTest_shfl_inh, perClassErrorTest_chance_inh, \
         perClassErrorTestRemCorr_inh, perClassErrorTestRemCorr_shfl_inh, perClassErrorTestRemCorr_chance_inh, \
         perClassErrorTestBoth_inh, perClassErrorTestBoth_shfl_inh, perClassErrorTestBoth_chance_inh, \
@@ -332,7 +399,7 @@ for iday in days2an: # np.arange(3, len(days)): # range(len(days)): #
         testTrInds_allSamps_inh, Ytest_allSamps_inh, Ytest_hat_allSampsFrs_inh, trsnow_allSamps_inh, \
         testTrInds_allSamps_allExc, Ytest_allSamps_allExc, Ytest_hat_allSampsFrs_allExc, trsnow_allSamps_allExc, \
         testTrInds_allSamps_exc, Ytest_allSamps_exc, Ytest_hat_allSampsFrs_exc, trsnow_allSamps_exc, \
-        = loadSVM_excInh_decodeStimCateg(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=loadYtest, decodeOutcome=decodeOutcome)
+        = loadSVM_excInh_decodeStimCateg(pnevFileName, trialHistAnalysis, chAl, regressBins, corrTrained, 0, doIncorr, loadWeights, doAllN, useEqualTrNums, shflTrsEachNeuron, shflTrLabs=0, loadYtest=loadYtest, stimOutcomeChoiceeq=stimOutcomeChoiceeq)
 
         ############################################
         ###### average across nRandCorr samps ######
@@ -405,7 +472,7 @@ for iday in days2an: # np.arange(3, len(days)): # range(len(days)): #
     perClassErrorTest_data_inh_all.append(perClassErrorTest_data_inh) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
     perClassErrorTest_shfl_inh_all.append(perClassErrorTest_shfl_inh)
     perClassErrorTest_chance_inh_all.append(perClassErrorTest_chance_inh)
-    if decodeStimCateg or decodeOutcome:
+    if decodeStimCateg or decodeOutcome or decodeChoiceEqCorrIncorr:
         perClassErrorTestBoth_inh_all.append(perClassErrorTestBoth_inh) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
         perClassErrorTestBoth_shfl_inh_all.append(perClassErrorTestBoth_shfl_inh)
         perClassErrorTestBoth_chance_inh_all.append(perClassErrorTestBoth_chance_inh)
@@ -416,7 +483,7 @@ for iday in days2an: # np.arange(3, len(days)): # range(len(days)): #
     perClassErrorTest_data_allExc_all.append(perClassErrorTest_data_allExc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs
     perClassErrorTest_shfl_allExc_all.append(perClassErrorTest_shfl_allExc)
     perClassErrorTest_chance_allExc_all.append(perClassErrorTest_chance_allExc) 
-    if decodeStimCateg or decodeOutcome:
+    if decodeStimCateg or decodeOutcome or decodeChoiceEqCorrIncorr:
         perClassErrorTestBoth_allExc_all.append(perClassErrorTestBoth_allExc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
         perClassErrorTestBoth_shfl_allExc_all.append(perClassErrorTestBoth_shfl_allExc)
         perClassErrorTestBoth_chance_allExc_all.append(perClassErrorTestBoth_chance_allExc)
@@ -428,7 +495,7 @@ for iday in days2an: # np.arange(3, len(days)): # range(len(days)): #
         perClassErrorTest_data_exc_all.append(perClassErrorTest_data_exc) # each day: numShufflesExc x numSamples x numFrames   # if addNs_roc: # numShufflesExc x number of neurons in the decoder x numSamples x nFrs 
         perClassErrorTest_shfl_exc_all.append(perClassErrorTest_shfl_exc)
         perClassErrorTest_chance_exc_all.append(perClassErrorTest_chance_exc)
-        if decodeStimCateg or decodeOutcome:
+        if decodeStimCateg or decodeOutcome or decodeChoiceEqCorrIncorr:
             perClassErrorTestBoth_exc_all.append(perClassErrorTestBoth_exc) # each day: samps x numFrs    # if addNs_roc : number of neurons in the decoder x nSamps x nFrs    
             perClassErrorTestBoth_shfl_exc_all.append(perClassErrorTestBoth_shfl_exc)
             perClassErrorTestBoth_chance_exc_all.append(perClassErrorTestBoth_chance_exc)
@@ -493,7 +560,7 @@ elif do_excInhHalf:
     numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, av_test_data_allExc, sd_test_data_allExc, av_test_shfl_allExc, sd_test_shfl_allExc, av_test_chance_allExc, sd_test_chance_allExc \
         = av_se_CA_trsamps_excInhHalf(numD, perClassErrorTest_data_inh_all, perClassErrorTest_shfl_inh_all, perClassErrorTest_chance_inh_all, perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all)
 
-elif decodeStimCateg or decodeOutcome:
+elif decodeStimCateg or decodeOutcome or decodeChoiceEqCorrIncorr:
     numSamples, numExcSamples, av_test_data_inh, sd_test_data_inh, av_test_shfl_inh, sd_test_shfl_inh, av_test_chance_inh, sd_test_chance_inh, \
     av_test_remCorr_data_inh, sd_test_remCorr_data_inh, av_test_remCorr_shfl_inh, sd_test_remCorr_shfl_inh, av_test_remCorr_chance_inh, sd_test_remCorr_chance_inh, \
     av_test_both_data_inh, sd_test_both_data_inh, av_test_both_shfl_inh, sd_test_both_shfl_inh, av_test_both_chance_inh, sd_test_both_chance_inh, \
@@ -511,14 +578,18 @@ elif decodeStimCateg or decodeOutcome:
         perClassErrorTestBoth_exc_all, perClassErrorTestBoth_shfl_exc_all, perClassErrorTestBoth_chance_exc_all, \
         perClassErrorTest_data_allExc_all, perClassErrorTest_shfl_allExc_all, perClassErrorTest_chance_allExc_all, \
         perClassErrorTestRemCorr_allExc_all, perClassErrorTestRemCorr_shfl_allExc_all, perClassErrorTestRemCorr_chance_allExc_all, \
-        perClassErrorTestBoth_allExc_all, perClassErrorTestBoth_shfl_allExc_all, perClassErrorTestBoth_chance_allExc_all)
+        perClassErrorTestBoth_allExc_all, perClassErrorTestBoth_shfl_allExc_all, perClassErrorTestBoth_chance_allExc_all, decodeOutcome=decodeOutcome)
 
 
-    if len(perClassErrorTestRemCorr_inh_all[0]) and np.isnan(perClassErrorTestRemCorr_inh_all[0]): # when you decoded outcome and traces were outcome aligned, you sent remCorr and _both vars to nan (instead of those huge matrices), bc anyway you were going to only use the testing data
+    # for the new decodeStimCateg files, the vars below will be nan (like decodeOutcome)
+    ignore = 1
+    """
+    if decodeOutcome: #len(perClassErrorTestRemCorr_inh_all[0]) and np.isnan(perClassErrorTestRemCorr_inh_all[0]): # when you decoded outcome and traces were outcome aligned, you sent remCorr and _both vars to nan (instead of those huge matrices), bc anyway you were going to only use the testing data
         ignore = 1
     else:
         ignore = 0
-
+    """
+    
     # for each day run ttest across samples between data and shfl, to see if classifier performance (in each frame) is significantly different from shuffled case or not.
     ttest_pval_allExc = np.array([stats.ttest_ind(perClassErrorTest_data_allExc_all[iday], perClassErrorTest_shfl_allExc_all[iday], axis=0)[1] for iday in range(numD)])
     ttest_pval_inh = np.array([stats.ttest_ind(perClassErrorTest_data_inh_all[iday], perClassErrorTest_shfl_inh_all[iday], axis=0)[1] for iday in range(numD)])    
@@ -720,6 +791,7 @@ else:
 thTrained = 30 #25; # 1/10 of this will be the testing tr num! and 9/10 was used for training
 thIncorr = 4 #5
 '''
+print corr_hr_lr
 mn_corr = np.min(corr_hr_lr,axis=1) # number of trials of each class. 90% of this was used for training, and 10% for testing.
 if decodeOutcome:
     mn_corr = 2*mn_corr # bc in decodeOutcome, corr_hr_lr shows hr and lr for each class, so the total number of trials per class will be twice the mn_corr.
@@ -734,7 +806,7 @@ print 'Final number of days: %d' %(numDaysGood)
 #days = np.array(days)
 #days = days[days2an]
 mn_corr0 = mn_corr + 0 # will be used for the heatmaps of CA for all days; We need to exclude 151023 from fni16, this day had issues! ...  in the mat file of stabTestTrainTimes, its class accur is very high ... and in the mat file of excInh_trainDecoder_eachFrame it is very low ...ANYWAY I ended up removing it from the heatmap of CA for all days!!! but it is included in other analyses!!
-if (mousename=='fni16' and decodeStimCateg==0 and same_HRLR_acrossDays==0 and decodeOutcome==0): #np.logical_and(mousename=='fni16', corrTrained==1):
+if (mousename=='fni16' and decodeChoiceEqCorrIncorr==0 and decodeStimCateg==0 and same_HRLR_acrossDays==0 and decodeOutcome==0): #np.logical_and(mousename=='fni16', corrTrained==1):
     mn_corr0[days.index('151023_1')] = thTrained - 1 # see it will be excluded from analysis!    
 days2an_heatmap = mn_corr0 >= thTrained     
 
@@ -787,12 +859,12 @@ behCorrLR_all = Data.pop('behCorrLR_all').flatten()[days2an]
 #    classAccurTMS_inh = Data.pop('classAccurTMS_inh') # the following comment is for the above mat file: there was also problem in setting these vars, so you need to reset these 3 vars here
 #    classAccurTMS_exc = Data.pop('classAccurTMS_exc')
 #    classAccurTMS_allExc = Data.pop('classAccurTMS_allExc')
-   
+"""   
 if np.logical_and(decodeStimCateg==1, mousename=='fni18'): # first day ('151209_1') is not included
     behCorr_all = np.delete(behCorr_all, 0)
     behCorrHR_all = np.delete(behCorrHR_all, 0)
     behCorrLR_all = np.delete(behCorrLR_all, 0)
-
+"""
 
 ##################################################################################################
 ##################################################################################################
@@ -849,7 +921,7 @@ if addNs_roc==0:
     av_test_shfl_allExc_aligned = alTrace(av_test_shfl_allExc, eventI_ds_allDays, nPreMin, nPostMin)
     av_test_chance_allExc_aligned = alTrace(av_test_chance_allExc, eventI_ds_allDays, nPreMin, nPostMin)
     
-    if decodeStimCateg or decodeOutcome:
+    if decodeStimCateg or decodeOutcome or decodeChoiceEqCorrIncorr:
         if ignore==0:
             av_test_remCorr_data_inh_aligned = alTrace(av_test_remCorr_data_inh, eventI_ds_allDays, nPreMin, nPostMin)
             av_test_remCorr_shfl_inh_aligned = alTrace(av_test_remCorr_shfl_inh, eventI_ds_allDays, nPreMin, nPostMin)
@@ -895,7 +967,7 @@ if addNs_roc==0:
         ttest_pval_exc_aligned.append(alTrace(ttest_pval_exc[iexc], eventI_ds_allDays, nPreMin, nPostMin))
     ttest_pval_exc_aligned = np.array(ttest_pval_exc_aligned) # excSamps x frs x days
     
-    if decodeStimCateg or decodeOutcome:
+    if decodeStimCateg or decodeOutcome or decodeChoiceEqCorrIncorr:
         if ignore==0:
             ttest_pval_inh_aligned_remCorr = alTrace(ttest_pval_inh_remCorr, eventI_ds_allDays, nPreMin, nPostMin)
             ttest_pval_allExc_aligned_remCorr = alTrace(ttest_pval_allExc_remCorr, eventI_ds_allDays, nPreMin, nPostMin)
@@ -942,7 +1014,7 @@ if addNs_roc==0:
     
     #%% In decodeStimCateg, decide which one (testing, remCorr, or Both) you want to use for the rest of this code
 
-    if decodeStimCateg or decodeOutcome:    
+    if decodeStimCateg or decodeOutcome or decodeChoiceEqCorrIncorr:    
         if use_both_remCorr_testing[0]==1: # use Both
             av_test_data_inh_aligned = av_test_both_data_inh_aligned
             av_test_shfl_inh_aligned = av_test_both_shfl_inh_aligned
@@ -1187,10 +1259,8 @@ if addNs_roc==0:
         
         
         if savefigs:#% Save the figure
-            if chAl==1:
-                dd = 'chAl_' + corrn + 'numNeurons_days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-            else:
-                dd = 'stAl_' + corrn + 'numNeurons_days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' +nowStr
+            
+            dd = alN + corrn + 'numNeurons_days_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                 
             d = os.path.join(svmdir+dnow)
             if not os.path.exists(d):
@@ -1333,10 +1403,8 @@ if addNs_roc==0:
             # _sepColorbar
             d = os.path.join(svmdir+dnow) #,mousename)       
     #            daysnew = (np.array(days))[dayinds]
-            if chAl==1:
-                dd = 'chAl_' + corrn + 'eachDay_heatmap_' + cbn + namp + labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-            else:
-                dd = 'stAl_' + corrn + 'eachDay_heatmap_' + cbn + namp + labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr       
+            dd = alN + corrn + 'eachDay_heatmap_' + cbn + namp + labAll+'_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+
             if not os.path.exists(d):
                 print 'creating folder'
                 os.makedirs(d)            
@@ -1435,10 +1503,8 @@ if addNs_roc==0:
         
         d = os.path.join(svmdir+dnow) #,mousename)       
     #            daysnew = (np.array(days))[dayinds]
-        if chAl==1:
-            dd = 'chAl_' + corrn + 'classAccur_vs_days_loHiBeh_'+'perc'+str(perc_thb)+'_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
-        else:
-            dd = 'stAl_' + corrn + 'classAccur_vs_days_loHiBeh_'+'perc'+str(perc_thb)+'_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+        dd = alN + corrn + 'classAccur_vs_days_loHiBeh_'+'perc'+str(perc_thb)+'_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+
         if not os.path.exists(d):
             print 'creating folder'
             os.makedirs(d)            
@@ -1540,10 +1606,8 @@ if addNs_roc==0:
         
         d = os.path.join(svmdir+dnow) #,mousename)       
     #            daysnew = (np.array(days))[dayinds]
-        if chAl==1:
-            dd = 'chAl_' + corrn + 'classAccur_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
-        else:
-            dd = 'stAl_' + corrn + 'classAccur_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+        dd = alN + corrn + 'classAccur_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+
         if not os.path.exists(d):
             print 'creating folder'
             os.makedirs(d)            
@@ -1660,10 +1724,8 @@ if addNs_roc==0:
     if savefigs:
         d = os.path.join(svmdir+dnow) #,mousename)       
     #            daysnew = (np.array(days))[dayinds]
-        if chAl==1:
-            dd = 'chAl_' + corrn + 'onsetChoice_vs_days_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
-        else:
-            dd = 'stAl_' + corrn + 'onsetChoice_vs_days_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+        dd = alN + corrn + 'onsetChoice_vs_days_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+
         if not os.path.exists(d):
             print 'creating folder'
             os.makedirs(d)            
@@ -1750,10 +1812,8 @@ if addNs_roc==0:
     if savefigs:
         d = os.path.join(svmdir+dnow) #,mousename)       
     #            daysnew = (np.array(days))[dayinds]
-        if chAl==1:
-            dd = 'chAl_' + corrn + 'onsetChoice_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
-        else:
-            dd = 'stAl_' + corrn + 'onsetChoice_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+        dd = alN + corrn + 'onsetChoice_beh_scatter_inhExc'+labAll+'_'  + daysGood[0][0:6] + '-to-' + daysGood[-1][0:6] + '_' + nowStr
+
         if not os.path.exists(d):
             print 'creating folder'
             os.makedirs(d)            
@@ -1859,10 +1919,7 @@ if addNs_roc==0:
     
     ##%% Save the figure    
     if savefigs:
-        if chAl==1:
-            dd = 'chAl_' + corrn + 'allDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-        else:
-            dd = 'stAl_' + corrn + 'allDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+        dd = alN + corrn + 'allDays_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
             
         d = os.path.join(svmdir+dnow)
         if not os.path.exists(d):
@@ -1966,10 +2023,7 @@ if addNs_roc==0:
                 else:
                     n0 = ''
                     
-                if chAl==1:
-                    dd = 'chAl_' + corrn + 'day' + days[iday][0:6] + n0 + '_' + nowStr
-                else:
-                    dd = 'stAl_' + corrn + 'day' + days[iday][0:6] + n0 + '_' + nowStr
+                dd = alN + corrn + 'day' + days[iday][0:6] + n0 + '_' + nowStr
             
                 if superimpose==1:        
                     dd = dd+'_sup'
@@ -1985,15 +2039,15 @@ if addNs_roc==0:
             #    fign = os.path.join(svmdir+dnow, suffn[0:5]+dd+'.'+'svg')
             #    plt.savefig(fign, dpi=300, bbox_inches='tight') # , bbox_extra_artists=(lgd,)
         
-        
+
     
-        
-    #%% Plot the average of aligned traces across all days (exc, inh, allExc superimposed)
+    #%% MAIN FIGURE of this whole analysis!!!: 
+    # Plot the average of aligned traces across all days (exc, inh, allExc superimposed)
+    
 #    superimpose=0
-    # only days with enough svm trained trials are used.
-           
-    plt.figure() #(figsize=(4.5,3))
+    # only days with enough svm trained trials are used.    
     
+    plt.figure() #(figsize=(4.5,3))    
     
     #### testing data
     plt.subplot(221)
@@ -2144,10 +2198,8 @@ if addNs_roc==0:
             sdn = 'aveSdDays_'
         else:
             sdn = 'aveSeDays_'
-        if chAl==1:
-            dd = 'chAl_' + corrn + sdn + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-        else:
-            dd = 'stAl_' + corrn + sdn + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+
+        dd = alN + corrn + sdn + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
     
         if superimpose==1:        
             dd = dd+'_sup'
@@ -2290,11 +2342,7 @@ if addNs_roc==0:
         
         ##%% Save the figure    
         if savefigs:
-            if chAl==1:
-                dd = 'chAl_' + corrn + 'aveSeDays_easyHardMedTrs_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-            else:
-                dd = 'stAl_' + corrn + 'aveSeDays_easyHardMedTrs_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-        
+            dd = allN + corrn + 'aveSeDays_easyHardMedTrs_' + labAll + '_' + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                 
             d = os.path.join(svmdir+dnow)
             if not os.path.exists(d):
@@ -2640,10 +2688,8 @@ if addNs_roc:
                 nc = 'VSshflTrsEachN_'
             else:
                 nc = ''
-            if chAl==1:
-                dd = 'chAl_' + corrn + nc+'avSeDays_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-            else:
-                dd = 'stAl_' + corrn + nc+'avSeDays_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+
+            dd = allN + corrn + nc+'avSeDays_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                 
             d = os.path.join(svmdir+dnow)
             if not os.path.exists(d):
@@ -2689,10 +2735,7 @@ if addNs_roc:
                 else:
                     nN = 'addNs_thDays%d_' %(thds)
 
-                if chAl==1:
-                    dd = 'chAl_' + corrn + 'diff_avSeDays_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-                else:
-                    dd = 'stAl_' + corrn + 'diff_avSeDays_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+                dd = alN + corrn + 'diff_avSeDays_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                     
                 d = os.path.join(svmdir+dnow)
                 if not os.path.exists(d):
@@ -2824,10 +2867,7 @@ if addNs_roc:
             else:
                 spn = 'all_'
             
-            if chAl==1:
-                dd = 'chAl_' + corrn + 'VSshflTrsEachN_avSeDays_CAchange_' + ppn + spn + 'addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-            else:
-                dd = 'stAl_' + corrn + 'VSshflTrsEachN_avSeDays_CAchange_' + ppn + spn + 'addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = alN + corrn + 'VSshflTrsEachN_avSeDays_CAchange_' + ppn + spn + 'addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                 
             d = os.path.join(svmdir+dnow)
             if not os.path.exists(d):
@@ -2892,10 +2932,7 @@ if addNs_roc:
     #    plt.ylim([8, 80])
        
         if savefigs:
-            if chAl==1:
-                dd = 'chAl_' + corrn + 'avSeDays_numNeurPlateau_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-            else:
-                dd = 'stAl_' + corrn + 'avSeDays_numNeurPlateau_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+            dd = alN + corrn + 'avSeDays_numNeurPlateau_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
                 
             d = os.path.join(svmdir+dnow)
             if not os.path.exists(d):
@@ -2991,10 +3028,7 @@ if addNs_roc:
             
     ##%% Save the figure    
     if savefigs:               
-        if chAl==1:
-            dd = 'chAl_' + corrn + 'eachDay_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-        else:
-            dd = 'stAl_' + corrn + 'eachDay_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+        dd = alN + corrn + 'eachDay_addNsROC_' + h2ln +days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
         
         d = os.path.join(svmdir+dnow)
         if not os.path.exists(d):
@@ -3051,10 +3085,8 @@ if addNs_roc:
             nN = 'dropNs_thDays%d_' %(thds)
         else:
             nN = 'addNs_thDays%d_' %(thds)
-        if chAl==1:
-            dd = 'chAl_' + corrn + 'avSeDays_time-1_allNs_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
-        else:
-            dd = 'stAl_' + corrn + 'avSeDays_time-1_allNs_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
+
+        dd = alN + corrn + 'avSeDays_time-1_allNs_'+nN+'addNsROC_' + h2ln + days[0][0:6] + '-to-' + days[-1][0:6] + '_' + nowStr
             
         d = os.path.join(svmdir+dnow)
         if not os.path.exists(d):

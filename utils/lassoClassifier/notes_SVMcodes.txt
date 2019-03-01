@@ -1,0 +1,48 @@
+Main SVM codes to run:
+
+svm_eachFrame.py —> train svm to decode choice_stim_goTone
+	(if you set outcome2ana to 'all', all (corr and incorr) trials will be used for training SVM.)
+	(if you set outcome2ana to 'corr', only correct trials will be used for training SVM, and decoder will be tested on incorr trials)
+	(so run it under both conditions: outcome2ana='all' and 'corr')
+	called by svm_notebook_setVars8(mousename, imagingFolder, mdfFileNumber, ch_st_goAl, numSamples=50, trialHistAnalysis=0, iTiFlg=2)
+	bash file to submit to bnb : run_svm_eachFrame.sh  (called by svm_notebook_setVars8
+	scripts to make plots:
+        svm_eachFrame_plots.py —>  to get plots of class accuracy for all neurons ; also to get distributions of event times
+        (plots get saved in /Dropbox/ChurchlandLab/Farzaneh_Gamal/SVM/classAccurTraces_eachFrame_timeDists)
+		svm_eachFrame_plots_sumAllmice.py —> to get plots of class accuracy in the last time bin for each day.
+		
+		
+svm_excInh_trainDecoder_eachFrame.py —> 
+	- train svm on each frame to decode choice for exc,inh,allExc. 
+	- also we can use it to do SVM on half inh, half exc and compare it with all exc (of 2*inh size).
+	- also we can use it to add neurons 1 by 1 and see how svm performance varies (by the population size). Ns are added based on their absDevAUC choice tuning.
+	called by svm_notebook_setVars9(mousename, imagingFolder, mdfFileNumber, chAl, doInhAllexcEqexc,
+	bash file to submit to bnb : run_svm_excInh_trainDecoder_eachFrame.sh  (called by svm_notebook_setVars9)
+	scripts to make plots:
+		svm_excInh_trainDecoder_eachFrame_plots.py —> to get time-course plots of class accuracy for exc, inh, allExc for ave (& all) days.
+		svm_excInh_trainDecoder_eachFrame_plots_sumAllmice.py —> to get plots of class accuracy in the last time bin for exc, inh, allExc for each day.
+		(plots get saved in /home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/SVM/excInh_trainDecoder_eachFrame)
+		svm_excInh_trainDecoder_eachFrame_plotWeights.py —> to get plots of weight distributions.
+		(plots get saved in /home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/SVM/excInh_trainDecoder_eachFrame_weights)
+		
+		
+svm_diffNumNeurons_eachFrame.py
+	use diff number of neurons for training decoder; train on inh, n exc, all neurons
+	use bash file 	run_svm_diffNumNeurons_eachFrame.sh
+	set vars using  svm_notebook_setVars10(mousename, imagingFolder, mdfFileNumber, ch_st_goAl, doInhAllexcEqexc, numSamples=50, numShufflesExc=50, trialHistAnalysis=0, iTiFlg=2)
+
+
+
+eventTimesDist.py --> 
+	- for each mouse plot the distribution of stim onset, choice, etc relative to stimulus and choice.
+
+
+
+
+
+NOTE: 
+svm_excInh_trainDecoder_eachFrame is great. It just doesnt have incorr trials.
+
+svm_eachFrame is good (well less beautiful than excInh) but it has incorr trials. (doesnt have exc,inh)... in practice you can omit this one and use the excInh script, just use all neurons for training!
+
+svm_diffNumNeurons_eachFrame is good. doesnt have incorr. but has excInh. and is for training svm with diff num neurons.

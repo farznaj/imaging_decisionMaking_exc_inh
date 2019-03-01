@@ -41,7 +41,7 @@ Created on Fri Oct 28 12:48:43 2016
 #eqExcInh = 1 # use equal number of exc and inh neurons for decoding... numSamps of these populations will be made.
 def svm_notebook_setVars9(mousename, imagingFolder, mdfFileNumber, chAl, doInhAllexcEqexc, outcome2ana='all', same_HRLR_acrossDays=0, numSamples=50, numShufflesExc=50, trialHistAnalysis=0, iTiFlg=2):
            
-    do_Ctrace = 1 # if 1, use C trace (denoised fluorescent trace), instead of S (inferred spikes)
+    do_Ctrace = 0 # if 1, use C trace (denoised fluorescent trace), instead of S (inferred spikes)
     nRandCorrSel = 10
     
     cbestKnown = 0 #1 # if cbest is already saved, set this to 1, to load it instead of running svm on multiple c values to find the optimum one.

@@ -9,9 +9,9 @@
 %{
 
 clear; close all
-mouse = 'fni19'; %'fni17';
-imagingFolder = '150929'; %'151015';
-mdfFileNumber = [3]; %[1];      % or tif major
+mouse = 'fni17';
+imagingFolder = '151015';
+mdfFileNumber = [1];      % or tif major
 
 setFrdrops = 1; % set to 1 write after cnmf, so if needed you reran cnmf
 bad_mask_inh = 1; % if 1, badROIs, mask, and inh/exc will be set (ie almost all except for imaging_prep_analysis)

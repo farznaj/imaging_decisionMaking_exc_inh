@@ -1071,7 +1071,6 @@ end
 
 
 
-
 %% Set and save aligned traces (will be used for SVM, etc)
 
 % what traces you want to align and plot: (normally you save alldataSpikesGood)

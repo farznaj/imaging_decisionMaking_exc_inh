@@ -4,6 +4,7 @@
 
 %% Set vars below:
 
+aveAllTimes = -1; % 1; % if 1, average X_avm across all time point; if -1, average it across [-100 300]ms (rel choice); before computing ROC
 outcome2ana = 'corr'; % 'corr'; 'incorr'; '';
 saveVars = 1; % if 1, vars will be saved.
 doshfl = 1; % 1: shuffle trial labels; (you set the following 0 in the roc function: also do the chance version (ieset half of them to 0, other half to 1); 0: dont do either. If 1, in addition to doing roc on actual traces, we shuffle trial labels to get roc values for shuffled case as well.)
@@ -44,6 +45,14 @@ else namz = '';
 end
 
 if normX, nmd = '_norm2max'; else nmd = ''; end
+
+if aveAllTimes==1
+    namav = '_aveAllTimes'; 
+elseif aveAllTimes==-1
+    namav = '_aveSurrChoice';     
+else
+    namav = ''; 
+end
 
 
 %%
@@ -241,7 +250,18 @@ for im = 1:length(mice)
             
             %%%%%%%%%% set downsampled eventI
             eventI_ds = size(xdb,1)+1;
-        
+            
+            
+            %% Average across all time point
+            
+            if aveAllTimes==1 % average across all time points
+                X_svm = mean(X_svm,1); % units x trials
+            elseif aveAllTimes==-1 % average across [-200 300]ms relative to choice
+                frs = eventI_ds-2 : eventI_ds+3;
+                X_svm = mean(X_svm(frs,:,:),1); % units x trials
+            end
+           
+            
             %% After downsampling normalize X_svm so each neuron's max is at 1 (you do this in matlab for S traces before downsampling... so it makes sense to again normalize the traces After downsampling so max peak is at 1)                
 
             if normX
@@ -385,7 +405,11 @@ for im = 1:length(mice)
                 end
                 
 
-                %%  %%%%%%%%%%%%%%% Compute choicePref for each frame % for both actual and shuffled trial labels.
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                %%  %%%%%%%%%%%%%%% DO ROC ANALYSIS %%%%%%%%%%%%%%%
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                
+                % Compute choicePref for each frame % for both actual and shuffled trial labels.
                 % choicePref_all: frames x units. choicePref at each frame for each neuron
                 
                 % here we comute ChoicePref, below we compute auc from choicePref.
@@ -395,8 +419,8 @@ for im = 1:length(mice)
                 % so auc>.5 (choicePref>0) happens when ipsi resp<contra, and auc<.5 (choicePref<0) happens when ipsi>contra.
 
                 doChoicePref = 1; % if 1 we are interested in choicePref values; otherwise we want the AUC values. % otherwise we go with values of auc.                        
-                [choicePref_all, choicePref_all_shfl, choicePref_all_chance] = choicePref_ROC...
-                    (X_svm_now, ipsiTrs, contraTrs, makeplots, eventI_ds, useEqualNumTrs, doChoicePref, doshfl); % frs x neurons
+                [choicePref_all, choicePref_all_shfl, choicePref_all_chance] = ...
+                    choicePref_ROC(X_svm_now, ipsiTrs, contraTrs, makeplots, eventI_ds, useEqualNumTrs, doChoicePref, doshfl); % frs x neurons
 
 
                 %%
@@ -445,9 +469,9 @@ for im = 1:length(mice)
         if setFRsOnly, fnam = sprintf('FR%s%s', dsn, nmd); else fnam = 'ROC'; end
             
         if trialHistAnalysis
-            namv = sprintf('%s_prev_%s%s_stimstr%d%s_%s_%s.mat', fnam, al,o2a,thStimStrength, namz, mouse, nowStr);
+            namv = sprintf('%s_prev_%s%s%s_stimstr%d%s_%s_%s.mat', fnam, al,o2a,namav,thStimStrength, namz, mouse, nowStr);
         else
-            namv = sprintf('%s_curr_%s%s_stimstr%d%s_%s_%s.mat', fnam, al,o2a,thStimStrength, namz, mouse, nowStr);
+            namv = sprintf('%s_curr_%s%s%s_stimstr%d%s_%s_%s.mat', fnam, al,o2a,namav,thStimStrength, namz, mouse, nowStr);
         end
 
         if setFRsOnly

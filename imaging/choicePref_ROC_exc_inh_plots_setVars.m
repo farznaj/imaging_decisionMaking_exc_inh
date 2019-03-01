@@ -8,6 +8,7 @@
 
 %% Load ROC vars and set vars required for plotting for each mouse %%%%%%
 
+aveAllTimes = 0; %-1; % 1; % if 1, average X_avm across all time point; if -1, average it across [-100 300]ms (rel choice); before computing ROC
 outcome2ana = 'corr'; %'corr'; 'incorr'; '';
 % alFR = 'initAl'; % the firing rate traces were aligned on what
 
@@ -80,7 +81,15 @@ if chAl
 elseif initAl==1
     al = 'initAl'; 
 end
-        
+   
+if aveAllTimes==1
+    namav = '_aveAllTimes'; 
+elseif aveAllTimes==-1
+    namav = '_aveSurrChoice';     
+else
+    namav = ''; 
+end
+
 % if normX, nmd = '_norm2max'; else, nmd = ''; end
 
 if strcmp(outcome2ana, 'corr')
@@ -120,6 +129,11 @@ exc_prob_dataROC_from_shflDist = cell(1, length(mice));
 inh_prob_dataROC_from_shflDist = cell(1, length(mice));
 allN_prob_dataROC_from_shflDist = cell(1, length(mice));
 uns_prob_dataROC_from_shflDist = cell(1, length(mice));
+
+exc_prob_dataROC_from_shflDist_allFrs = cell(1, length(mice));
+inh_prob_dataROC_from_shflDist_allFrs = cell(1, length(mice));
+allN_prob_dataROC_from_shflDist_allFrs = cell(1, length(mice));
+uns_prob_dataROC_from_shflDist_allFrs = cell(1, length(mice));
 
 %{
 fr_exc_aligned_allMice = cell(1, length(mice));
@@ -163,7 +177,8 @@ for im = 1:length(mice)
     %% Set dir for loading ROC vars
     
 %     dirn = fullfile(dirn0, mouse);
-    namv = sprintf('ROC_curr_%s%s_stimstr%d%s_%s_*.mat', al,o2a,thStimStrength,namz,mouse);    
+    namv = sprintf('ROC_curr_%s%s%s_stimstr%d%s_%s_*.mat', al,o2a,namav,thStimStrength,namz,mouse);   
+    
     a = dir(fullfile(dirn,namv));
     a = a(end); % use the latest saved file
     namatf = a.name;
@@ -225,59 +240,62 @@ for im = 1:length(mice)
         
     
     %% Prep to align all traces of all days (for each mouse) on common eventI
+    
+    if ~aveAllTimes
+        % run the 1st section of this script
+        % cd /home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/ROC
+        % load('roc_curr.mat')
+        % load('roc_prev.mat')
 
-    % run the 1st section of this script
-    % cd /home/farznaj/Dropbox/ChurchlandLab/Farzaneh_Gamal/ROC
-    % load('roc_curr.mat')
-    % load('roc_prev.mat')
+        nPost = nan(1,length(days));
+        for iday = 1:length(days)
+            nPost(iday) = size(choicePref_all_alld_exc{iday},1) - eventI_ds_allDays(iday);
+        end
+        nPostMin = min(nPost);
 
-    nPost = nan(1,length(days));
-    for iday = 1:length(days)
-        nPost(iday) = size(choicePref_all_alld_exc{iday},1) - eventI_ds_allDays(iday);
+        nPreMin = min(eventI_ds_allDays)-1;
+        disp([nPreMin, nPostMin])
+
+
+        %% Set downsampled time_aligned for the aligned trace for each mouse (assuming that choicePref was computed on downsampled traces).
+
+        totLen = nPreMin + nPostMin +1;
+        eventI = min(eventI_allDays);
+
+        time_trace = frameLength * ((1 : ceil(regressBins*(totLen+1))) - eventI); % time_trace = time_aligned_1stSide
+
+        % set frames before frame0 (not including it)
+        e = eventI-1;
+        f = e - regressBins*floor(e/regressBins) + 1 : e; % 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)
+        x = time_trace(f); % time_trace including frames before frame0
+        T1 = length(x);
+        tt = floor(T1 / regressBins); % number of time points in the downsampled X including frames before frame0
+        xdb = squeeze(mean(reshape(x, [regressBins, tt]), 1)); % downsampled time_trace inclusing frames before frame0
+
+
+        % set frames after frame0 (including it)
+        lenPost = length(time_trace) - (eventI-1);
+    %     lenPost = length(time_trace) - eventI;
+        f = eventI : (eventI-1) + regressBins * floor(lenPost/regressBins); % total length is a multiplicaion of regressBins    
+    %     f = eventI+1 : eventI + regressBins * floor(lenPost/regressBins); % total length is a multiplicaion of regressBins    
+        x = time_trace(f); % time_trace including frames after frame0
+        T1 = length(x);
+        tt = floor(T1 / regressBins); % number of time points in the downsampled X including frames after frame0
+        xda = squeeze(mean(reshape(x, [regressBins, tt]), 1)); % downsampled time_trace inclusing frames after frame0
+
+        % set the final downsampled time_trace: concatenate downsampled X at frames before frame0, with x at frame0, and x at frames after frame0
+        time_trace_d = cat(2, xdb, xda);
+    %     time_trace_d = cat(2, xdb, 0, xda);    
+        time_aligned = time_trace_d(1:totLen);
+        %{
+        a = -frameLength * (0:nPreMin); a = a(end:-1:1);
+        b = frameLength * (1:nPostMin);
+        time_aligned = [a,b];
+        %}
+        size(time_aligned)
+        
     end
-    nPostMin = min(nPost);
-
-    nPreMin = min(eventI_ds_allDays)-1;
-    disp([nPreMin, nPostMin])
-
-
-    %% Set downsampled time_aligned for the aligned trace for each mouse (assuming that choicePref was computed on downsampled traces).
-
-    totLen = nPreMin + nPostMin +1;
-    eventI = min(eventI_allDays);
-
-    time_trace = frameLength * ((1 : ceil(regressBins*(totLen+1))) - eventI); % time_trace = time_aligned_1stSide
-
-    % set frames before frame0 (not including it)
-    e = eventI-1;
-    f = e - regressBins*floor(e/regressBins) + 1 : e; % 1st frame until 1 frame before frame0 (so that the total length is a multiplicaion of regressBins)
-    x = time_trace(f); % time_trace including frames before frame0
-    T1 = length(x);
-    tt = floor(T1 / regressBins); % number of time points in the downsampled X including frames before frame0
-    xdb = squeeze(mean(reshape(x, [regressBins, tt]), 1)); % downsampled time_trace inclusing frames before frame0
-
-
-    % set frames after frame0 (including it)
-    lenPost = length(time_trace) - (eventI-1);
-%     lenPost = length(time_trace) - eventI;
-    f = eventI : (eventI-1) + regressBins * floor(lenPost/regressBins); % total length is a multiplicaion of regressBins    
-%     f = eventI+1 : eventI + regressBins * floor(lenPost/regressBins); % total length is a multiplicaion of regressBins    
-    x = time_trace(f); % time_trace including frames after frame0
-    T1 = length(x);
-    tt = floor(T1 / regressBins); % number of time points in the downsampled X including frames after frame0
-    xda = squeeze(mean(reshape(x, [regressBins, tt]), 1)); % downsampled time_trace inclusing frames after frame0
-
-    % set the final downsampled time_trace: concatenate downsampled X at frames before frame0, with x at frame0, and x at frames after frame0
-    time_trace_d = cat(2, xdb, xda);
-%     time_trace_d = cat(2, xdb, 0, xda);    
-    time_aligned = time_trace_d(1:totLen);
-    %{
-    a = -frameLength * (0:nPreMin); a = a(end:-1:1);
-    b = frameLength * (1:nPostMin);
-    time_aligned = [a,b];
-    %}
-    size(time_aligned)
-            
+    
 
     %% Align FRs of all days on the common eventI; exclude days with too few trials.
     %%% REMEMBER: you are doing this weird thing for convenience: 
@@ -321,8 +339,10 @@ for im = 1:length(mice)
         choicePref_uns_aligned_shfl0 = cell(1,length(days));
         choicePref_uns_aligned_shfl = cell(1,length(days));
     end
+    
     for iday = 1:length(days)
-        if mnTrNum(iday) >= thMinTrs            
+        if mnTrNum(iday) >= thMinTrs        
+            
             if doChoicePref==1  % use choice pref = 2*(auc-.5) % care about ipsi bigger than contra or vice versa
                 % now ipsi is positive bc we do minus, in the original model contra is positive
 %                 namc = 'choicePref';  yy = 0;
@@ -344,7 +364,8 @@ for im = 1:length(mice)
                     choicePref_allN_aligned_shfl{iday} = mean(choicePref_allN_aligned_shfl0{iday},3);
                     choicePref_uns_aligned_shfl{iday} = mean(choicePref_uns_aligned_shfl0{iday},3);
                 end
-                
+            
+            %%
             elseif doChoicePref==2  % Compute abs deviation of AUC from chance (.5); we want to compute
                 % |AUC-.5|, since choice pref = 2*(auc-.5), therefore |auc-.5| = 1/2 * |choice pref|
 %                 namc = 'absDevAUC';   yy = [];                
@@ -390,31 +411,47 @@ for im = 1:length(mice)
                     choicePref_uns_aligned_shfl0{iday} = .5*abs(-choicePref_all_alld_uns_shfl{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :,:));
                 end
                 
+            %%
             elseif doChoicePref==0  % use area under ROC curve  % choice pref = 2*(auc-.5), so  AUC = choice pref/2 + .5 
                 % now ipsi is above 0.5 bc we do minus, in the original model contra is positive
 %                 namc = 'AUC';   yy = .5;
                 
                 % data: frs x ns
-                a = -choicePref_all_alld_exc{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :);
-                choicePref_exc_aligned{iday} = (0.5 + a/2); % now ipsi auc will be above 0.5 bc we do - above
-                a = -choicePref_all_alld_inh{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :);
-                choicePref_inh_aligned{iday} = (0.5 + a/2); % frames x neurons
-                a = -choicePref_all_alld_allN{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :);
-                choicePref_allN_aligned{iday} = (0.5 + a/2); % frames x neurons
-                a = -choicePref_all_alld_uns{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :);
-                choicePref_uns_aligned{iday} = (0.5 + a/2); % frames x neurons
+                if ~aveAllTimes
+                    a = -choicePref_all_alld_exc{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :);
+                    choicePref_exc_aligned{iday} = (0.5 + a/2); % now ipsi auc will be above 0.5 bc we do - above
+                    a = -choicePref_all_alld_inh{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :);
+                    choicePref_inh_aligned{iday} = (0.5 + a/2); % frames x neurons
+                    a = -choicePref_all_alld_allN{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :);
+                    choicePref_allN_aligned{iday} = (0.5 + a/2); % frames x neurons
+                    a = -choicePref_all_alld_uns{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :);
+                    choicePref_uns_aligned{iday} = (0.5 + a/2); % frames x neurons
+                else                    
+                    choicePref_exc_aligned{iday} = (0.5 + -choicePref_all_alld_exc{iday}/2); % now ipsi auc will be above 0.5 bc we do - above
+                    choicePref_inh_aligned{iday} = (0.5 + -choicePref_all_alld_inh{iday}/2); 
+                    choicePref_allN_aligned{iday} = (0.5 + -choicePref_all_alld_allN{iday}/2); 
+                    choicePref_uns_aligned{iday} = (0.5 + -choicePref_all_alld_uns{iday}/2);                     
+                end
                 
                 if doshfl % shfl: frs x ns x samps
                     
-                    a = -choicePref_all_alld_exc_shfl{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :,:);
-                    choicePref_exc_aligned_shfl0{iday} = (0.5 + a/2); % now ipsi auc will be above 0.5 bc we do - above
-                    a = -choicePref_all_alld_inh_shfl{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :,:);
-                    choicePref_inh_aligned_shfl0{iday} = (0.5 + a/2); % frames x neurons                
-                    a = -choicePref_all_alld_allN_shfl{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :,:);
-                    choicePref_allN_aligned_shfl0{iday} = (0.5 + a/2); % frames x neurons                
-                    a = -choicePref_all_alld_uns_shfl{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :,:);
-                    choicePref_uns_aligned_shfl0{iday} = (0.5 + a/2); % frames x neurons                
-
+                    if ~aveAllTimes
+                        a = -choicePref_all_alld_exc_shfl{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :,:);
+                        choicePref_exc_aligned_shfl0{iday} = (0.5 + a/2); % now ipsi auc will be above 0.5 bc we do - above
+                        a = -choicePref_all_alld_inh_shfl{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :,:);
+                        choicePref_inh_aligned_shfl0{iday} = (0.5 + a/2); % frames x neurons                
+                        a = -choicePref_all_alld_allN_shfl{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :,:);
+                        choicePref_allN_aligned_shfl0{iday} = (0.5 + a/2); % frames x neurons                
+                        a = -choicePref_all_alld_uns_shfl{iday}(eventI_ds_allDays(iday) - nPreMin  :  eventI_ds_allDays(iday) + nPostMin, :,:);
+                        choicePref_uns_aligned_shfl0{iday} = (0.5 + a/2); % frames x neurons                
+                    else
+                        nPreMin = 1; % just for the "doshfl" part below 
+                        choicePref_exc_aligned_shfl0{iday} = (0.5 + -choicePref_all_alld_exc_shfl{iday}/2); % now ipsi auc will be above 0.5 bc we do - above
+                        choicePref_inh_aligned_shfl0{iday} = (0.5 + -choicePref_all_alld_inh_shfl{iday}/2);
+                        choicePref_allN_aligned_shfl0{iday} = (0.5 + -choicePref_all_alld_allN_shfl{iday}/2);
+                        choicePref_uns_aligned_shfl0{iday} = (0.5 + -choicePref_all_alld_uns_shfl{iday}/2);
+                    end
+                    
                     % mean across samps: frs x ns
                     choicePref_exc_aligned_shfl{iday} = mean(choicePref_exc_aligned_shfl0{iday},3);
                     choicePref_inh_aligned_shfl{iday} = mean(choicePref_inh_aligned_shfl0{iday},3);
@@ -423,6 +460,7 @@ for im = 1:length(mice)
 
                     
                     %% Set probability of data ROC coming from the same distribution as shuffled (assuming shuffled is a normal distribution with mu and sigma equal to mean and std of shuffled ROC values for each neuron).
+                    
                     %%%%%%%% DONE FOR TIME -1 %%%%%%%%
                     
                     %%%% exc                    
@@ -453,16 +491,63 @@ for im = 1:length(mice)
                     y = normpdf(data, m, s) ./  normpdf(m, m, s); % % 1 x neurons; for each neuron y is the probability of the normal distribution (defined by m and s) to have a value equal to data.                   
                     uns_prob_dataROC_from_shflDist{im}{iday} = y;
                     
+                    
+                    if ~aveAllTimes
+                        %%%%%%%% Do for all time points ... see how the
+                        %%%%%%%% fraction choice-selective neurons changes
+                        %%%%%%%% during the course of the trial
+                        for ifr = 1:size(choicePref_inh_aligned_shfl0{iday},1)
+                            %%%% exc                    
+                            shfl = squeeze(choicePref_exc_aligned_shfl0{iday}(ifr, :,:)); % neurons x samples % take ROC of shuffled and actual data at time -1
+                            data = choicePref_exc_aligned{iday}(ifr, :); % 1 x neurons
+                            [m, s] = normfit(shfl'); % 1 x neurons;  mean and std estimates of normal distribution parameters for each neuron
+                            y = normpdf(data, m, s) ./  normpdf(m, m, s); % % 1 x neurons; for each neuron y is the probability of the normal distribution (defined by m and s) to have a value equal to data.                   
+                            exc_prob_dataROC_from_shflDist_allFrs{im}{iday}(ifr,:) = y;
+
+                            %%%% inh                    
+                            shfl = squeeze(choicePref_inh_aligned_shfl0{iday}(ifr, :,:)); % neurons x samples % take ROC of shuffled and actual data at time -1
+                            data = choicePref_inh_aligned{iday}(ifr, :); % 1 x neurons
+                            [m, s] = normfit(shfl'); % 1 x neurons;  mean and std estimates of normal distribution parameters for each neuron
+                            y = normpdf(data, m, s) ./  normpdf(m, m, s); % % 1 x neurons; for each neuron y is the probability of the normal distribution (defined by m and s) to have a value equal to data.                   
+                            inh_prob_dataROC_from_shflDist_allFrs{im}{iday}(ifr,:) = y;
+
+                            %%%% allN
+                            shfl = squeeze(choicePref_allN_aligned_shfl0{iday}(ifr, :,:)); % neurons x samples % take ROC of shuffled and actual data at time -1
+                            data = choicePref_allN_aligned{iday}(ifr, :); % 1 x neurons
+                            [m, s] = normfit(shfl'); % 1 x neurons;  mean and std estimates of normal distribution parameters for each neuron
+                            y = normpdf(data, m, s) ./  normpdf(m, m, s); % % 1 x neurons; for each neuron y is the probability of the normal distribution (defined by m and s) to have a value equal to data.                   
+                            allN_prob_dataROC_from_shflDist_allFrs{im}{iday}(ifr,:) = y;
+
+                            %%%% unsure
+                            shfl = squeeze(choicePref_uns_aligned_shfl0{iday}(ifr, :,:)); % neurons x samples % take ROC of shuffled and actual data at time -1
+                            data = choicePref_uns_aligned{iday}(ifr, :); % 1 x neurons
+                            [m, s] = normfit(shfl'); % 1 x neurons;  mean and std estimates of normal distribution parameters for each neuron
+                            y = normpdf(data, m, s) ./  normpdf(m, m, s); % % 1 x neurons; for each neuron y is the probability of the normal distribution (defined by m and s) to have a value equal to data.                   
+                            uns_prob_dataROC_from_shflDist_allFrs{im}{iday}(ifr,:) = y;
+                        end
+                    end
+                    
                 end
             end
             
         else
             %%% REMEMBER: you are doing this weird thing for convenience: 
             % for days with few trials, we use nans and arbitrarily 3 neurons!
+            
+            if ismember(aveAllTimes, [-1,1])
+                nPreMin = 0;
+                nPostMin = 0;
+            end
             choicePref_exc_aligned{iday} = nan(nPreMin + nPostMin + 1 , 3); % set to nan so number of neurons doesnt matter... I just picked 3.
             choicePref_inh_aligned{iday} = nan(nPreMin + nPostMin + 1 , 3);
             choicePref_allN_aligned{iday} = nan(nPreMin + nPostMin + 1 , 3);
             choicePref_uns_aligned{iday} = nan(nPreMin + nPostMin + 1 , 3);
+            
+            exc_prob_dataROC_from_shflDist_allFrs{im}{iday} = nan(nPreMin + nPostMin + 1 , 3);
+            inh_prob_dataROC_from_shflDist_allFrs{im}{iday} = nan(nPreMin + nPostMin + 1 , 3);
+            allN_prob_dataROC_from_shflDist_allFrs{im}{iday} = nan(nPreMin + nPostMin + 1 , 3);
+            uns_prob_dataROC_from_shflDist_allFrs{im}{iday} = nan(nPreMin + nPostMin + 1 , 3);
+            
             if doshfl
                 choicePref_exc_aligned_shfl0{iday} = nan(nPreMin + nPostMin + 1 , 3, nsamps);
                 choicePref_inh_aligned_shfl0{iday} = nan(nPreMin + nPostMin + 1 , 3, nsamps);
@@ -482,7 +567,9 @@ for im = 1:length(mice)
     %% Keep vars of all mice
 
     nPreMin_allMice(im) = nPreMin;
-    time_aligned_allMice{im} = time_aligned;
+    if ~aveAllTimes
+        time_aligned_allMice{im} = time_aligned;
+    end
     
     choicePref_exc_aligned_allMice{im} = choicePref_exc_aligned; % days; each day: frs x ns
     choicePref_inh_aligned_allMice{im} = choicePref_inh_aligned;
@@ -503,6 +590,13 @@ for im = 1:length(mice)
     fr_inh_aligned_allMice{im} = fr_inh_aligned;
     %}
 end
+
+
+numDaysAll = cellfun(@length, mnTrNum_allMice);
+numDaysGood = cellfun(@(x)sum(x >= thMinTrs), mnTrNum_allMice);
+
+%%%% jump to line 881 if you want to get the fraction choice selective
+%%%% neurons. And then get the plots in line 385 of _plotsAllMice script.
 
 % no
 
@@ -582,6 +676,10 @@ if doshfl
     aveallN_allMice_shfl = cell(1, length(mice));
     aveuns_allMice_shfl = cell(1, length(mice));
 end
+exc_prob_dataROC_from_shflDist_allFrs_al = cell(1, length(mice));
+inh_prob_dataROC_from_shflDist_allFrs_al = cell(1, length(mice));
+allN_prob_dataROC_from_shflDist_allFrs_al = cell(1, length(mice));
+uns_prob_dataROC_from_shflDist_allFrs_al = cell(1, length(mice));
 
 for im = 1:length(mice)
     
@@ -593,6 +691,13 @@ for im = 1:length(mice)
         choicePref_inh_al_allMice{im}{iday} = choicePref_inh_aligned_allMice{im}{iday}(ev - nPreMin  :  ev + nPostMin, :);
         choicePref_allN_al_allMice{im}{iday} = choicePref_allN_aligned_allMice{im}{iday}(ev - nPreMin  :  ev + nPostMin, :);
         choicePref_uns_al_allMice{im}{iday} = choicePref_uns_aligned_allMice{im}{iday}(ev - nPreMin  :  ev + nPostMin, :);
+        
+        exc_prob_dataROC_from_shflDist_allFrs_al{im}{iday} = exc_prob_dataROC_from_shflDist_allFrs{im}{iday}(ev - nPreMin  :  ev + nPostMin, :);
+        inh_prob_dataROC_from_shflDist_allFrs_al{im}{iday} = inh_prob_dataROC_from_shflDist_allFrs{im}{iday}(ev - nPreMin  :  ev + nPostMin, :);
+        allN_prob_dataROC_from_shflDist_allFrs_al{im}{iday} = allN_prob_dataROC_from_shflDist_allFrs{im}{iday}(ev - nPreMin  :  ev + nPostMin, :);
+        uns_prob_dataROC_from_shflDist_allFrs_al{im}{iday} = uns_prob_dataROC_from_shflDist_allFrs{im}{iday}(ev - nPreMin  :  ev + nPostMin, :);
+        
+        
         if doshfl % shfl
             choicePref_exc_al_allMice_shfl{im}{iday} = choicePref_exc_aligned_allMice_shfl{im}{iday}(ev - nPreMin  :  ev + nPostMin, :); % nAlignedFrs (across mice) x neurons
             choicePref_inh_al_allMice_shfl{im}{iday} = choicePref_inh_aligned_allMice_shfl{im}{iday}(ev - nPreMin  :  ev + nPostMin, :);        
@@ -642,7 +747,7 @@ end
 
 
 %% Number of valid days for each mouse
-
+%{
 numDaysAll = nan(1,length(mice));
 numDaysGood = nan(1,length(mice));
 for im = 1:length(mice)
@@ -651,9 +756,7 @@ for im = 1:length(mice)
 end
 numDaysAll
 numDaysGood
-
-
-
+%}
 
 %%
 %%%%%%%%%%%%%% You will need the vars below for %%%%%%%%%%%%%%
@@ -848,9 +951,15 @@ if doshfl %&& doChoicePref==0
         allN_fractSigTuned_eachDay = cell(1, length(mice));
         uns_fractSigTuned_eachDay = cell(1, length(mice));
         
+        exc_fractSigTuned_eachDay_allFrs = cell(1, length(mice));
+        inh_fractSigTuned_eachDay_allFrs = cell(1, length(mice));
+        allN_fractSigTuned_eachDay_allFrs = cell(1, length(mice));
+        uns_fractSigTuned_eachDay_allFrs = cell(1, length(mice));
+        
         for im = 1:length(mice)    
             mnTrNum = mnTrNum_allMice{im};
-
+            
+            %%%%%% time -1
             exc_fractSigTuned_eachDay{im} = nan(1, numDaysAll(im));
             inh_fractSigTuned_eachDay{im} = nan(1, numDaysAll(im));
             allN_fractSigTuned_eachDay{im} = nan(1, numDaysAll(im));
@@ -864,7 +973,26 @@ if doshfl %&& doChoicePref==0
                     uns_fractSigTuned_eachDay{im}(iday) = mean(uns_prob_dataROC_from_shflDist{im}{iday} <= alpha);
                 end
             end
+            
+            if ~aveAllTimes
+                %%%%%% all times
+                exc_fractSigTuned_eachDay_allFrs{im} = nan(length(time_aligned_allMice{im}), numDaysAll(im)); % frames x sessions
+                inh_fractSigTuned_eachDay_allFrs{im} = nan(length(time_aligned_allMice{im}), numDaysAll(im));
+                allN_fractSigTuned_eachDay_allFrs{im} = nan(length(time_aligned_allMice{im}), numDaysAll(im));
+                uns_fractSigTuned_eachDay_allFrs{im} = nan(length(time_aligned_allMice{im}), numDaysAll(im));
+
+                for iday = 1:numDaysAll(im)
+                    if mnTrNum(iday) >= thMinTrs
+                        exc_fractSigTuned_eachDay_allFrs{im}(:,iday) = mean(exc_prob_dataROC_from_shflDist_allFrs{im}{iday} <= alpha, 2); % fraction of neurons that are significantly tuned (comparing AUC with shuffled AUCs)
+                        inh_fractSigTuned_eachDay_allFrs{im}(:,iday) = mean(inh_prob_dataROC_from_shflDist_allFrs{im}{iday} <= alpha, 2);    
+                        allN_fractSigTuned_eachDay_allFrs{im}(:,iday) = mean(allN_prob_dataROC_from_shflDist_allFrs{im}{iday} <= alpha, 2);
+                        uns_fractSigTuned_eachDay_allFrs{im}(:,iday) = mean(uns_prob_dataROC_from_shflDist_allFrs{im}{iday} <= alpha, 2);
+                    end
+                end            
+            end
+            
         end
+        
     end
 
 

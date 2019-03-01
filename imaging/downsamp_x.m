@@ -32,7 +32,11 @@ x = X_svmo(f,:,:); % X_svmo including frames before frame0
 [T1, N1, C1] = size(x);
 tt = floor(T1 / regressBins); % number of time points in the downsampled X including frames before frame0
 xdb = squeeze(mean(reshape(x, [regressBins, tt, N1, C1]), 1)); % downsampled X_svmo inclusing frames before frame0
-
+a = nan(1,size(xdb,1),size(xdb,2));
+if tt==1
+    a(1,:,:) =  xdb;
+    xdb = a;
+end
 
 %%%%%%%%%%% set frames after frame0 (including it)
 lenPost = size(X_svmo,1) - (eventI-1);
@@ -57,7 +61,12 @@ fprintf('%d x %d x %d : size(downsampled X_svm)\n', size(X_svm))
 
 
 %%%%%%%%%% set downsampled eventI
-eventI_ds = size(xdb,1)+1;
+if size(xda,1)>0
+    eventI_ds = size(xdb,1)+1;
+else
+    eventI_ds = nan;
+    warning('After downsampling, there are not enough post frames (so eventI_ds is set to nan!)')
+end
 
 
 %% After downsampling normalize X_svm so each neuron's max is at 1 (you do this in matlab for S traces before downsampling... so it makes sense to again normalize the traces After downsampling so max peak is at 1)

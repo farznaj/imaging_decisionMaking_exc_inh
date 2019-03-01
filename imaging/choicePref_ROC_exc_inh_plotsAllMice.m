@@ -22,6 +22,11 @@ end
 if doshfl
     dirn00 = fullfile(dirn00, 'shuffled_actual_ROC');
 end
+
+if aveAllTimes
+    dirn00 = fullfile(dirn00, 'aveTimes');
+end
+
 if ~exist(dirn00, 'dir')
     mkdir(dirn00)
 end
@@ -415,9 +420,11 @@ set(gca, 'tickdir', 'out', 'box', 'off')
 xlim([.5,4.5])
 % mark mice with sig diff btwn exc and inh
 hold on
-yl = get(gca,'ylim');
-plot(find(p_allM<=.05)+gp/2, yl(2)-range(diff(yl))/20, 'k*')
-
+xp = find(p_allM<=.05)+gp/2;
+if ~isempty(xp)
+    yl = get(gca,'ylim');
+    plot(xp, yl(2)-range(diff(yl))/20, 'k*')
+end
 legend(b, 'exc', 'inh', 'unsure')
 
 % save figure

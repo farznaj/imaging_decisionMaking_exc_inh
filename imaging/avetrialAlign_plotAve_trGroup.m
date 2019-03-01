@@ -60,24 +60,27 @@ time_all = {'time_aligned_initTone', 'time_aligned_stimOn', 'time_aligned_goTone
 
 numTrials = length(alldata);
 
+load(moreName, 'inhibitRois_pix')
+
+
 %% For the paper: plot heatmap of trial-averaged activity for all neurons of a session across time in the trial (aligned on different trial events).
 
-saveFigs = 0;
-downsample = 0; % downsample the traces ?
-gp = 1;
+% Set downsample to 1 and gp to 0 when running the section related to temporal tuning below.
+downsample = 0; % downsample the traces ? % for the paper you set it to 0 (but for temp tuning you set it to 1)
+gp = 1; % for the paper you set it to 1 (but for temp tuning you set it to 0)
 
 if downsample
-    % eventI_initTone0 = eventI_initTone;
-    % traces_aligned_fut_initTone0 = traces_aligned_fut_initTone;
-    % 
-    % eventI_stimOn0 = eventI_stimOn; 
-    % traces_aligned_fut_stimOn0 = traces_aligned_fut_stimOn;
-    % 
-    % eventI_1stSideTry0 = eventI_1stSideTry;
-    % traces_aligned_fut_1stSideTry0 = traces_aligned_fut_1stSideTry;
-    % 
-    % eventI_reward0 = eventI_reward;
-    % traces_aligned_fut_reward0 = traces_aligned_fut_reward;    
+    eventI_initTone0 = eventI_initTone;
+    traces_aligned_fut_initTone0 = traces_aligned_fut_initTone;
+    
+    eventI_stimOn0 = eventI_stimOn; 
+    traces_aligned_fut_stimOn0 = traces_aligned_fut_stimOn;
+    
+    eventI_1stSideTry0 = eventI_1stSideTry;
+    traces_aligned_fut_1stSideTry0 = traces_aligned_fut_1stSideTry;
+    
+    eventI_reward0 = eventI_reward;
+    traces_aligned_fut_reward0 = traces_aligned_fut_reward;    
     
     normX = 1;
 
@@ -93,6 +96,7 @@ if downsample
     [eventI_reward, traces_aligned_fut_reward, time_aligned_reward] = downsamp_x(eventI_reward0, traces_aligned_fut_reward0, regressBins, normX);
 end
 
+
 % No go tone
 nu = size(traces{1},2);
 traces_aligned_cat = cat(1, ...
@@ -101,6 +105,66 @@ traces_aligned_cat = cat(1, ...
     traces_aligned_fut_1stSideTry, NaN(gp, nu, numTrials), ...
     traces_aligned_fut_reward);
 
+
+
+%% Find the fraction of neurons that have their peak at a given time point in the trial 
+%%%% (tuning for given temporal epochs in the task)
+
+% exc
+a = nanmean(traces_aligned_cat(:, inhibitRois_pix==0, :), 3)'; % units x frames % trial averaged activity
+[aa, ii] = max(a, [], 2); % ii is the frame index of the peak trial-averaged activity
+fractNs_maxInEachFr_exc = nan(1, size(a,2));
+for frn = 1:size(a,2)
+    fractNs_maxInEachFr_exc(frn) = mean(ii==frn); % fraction of neurons with max at each frame
+end
+
+% inh
+a = nanmean(traces_aligned_cat(:, inhibitRois_pix==1, :), 3)'; % units x frames
+[aa, ii] = max(a, [], 2);
+fractNs_maxInEachFr_inh = nan(1, size(a,2));
+for frn = 1:size(a,2)
+    fractNs_maxInEachFr_inh(frn) = mean(ii==frn);
+end
+
+%{
+% Plot to compare temporal epoch tuning of exc and inh during the trial
+figure; hold on
+plot(fractNs_maxInEachFr_exc, 'b')
+plot(fractNs_maxInEachFr_inh, 'r')
+%}
+
+%%% Save the vars related to temporal tuning of neurons
+
+[~,b] = fileparts(postName); 
+fractName = ['tempTuning_', b(6:end)];
+    
+lenTrace_initTone = size(traces_aligned_fut_initTone, 1);
+lenTrace_stimOn = size(traces_aligned_fut_stimOn, 1);
+lenTrace_1stSideTry = size(traces_aligned_fut_1stSideTry, 1);
+lenTrace_reward = size(traces_aligned_fut_reward, 1);
+
+% Once saved, comment below
+%{
+save(fractName, 'fractNs_maxInEachFr_exc', 'fractNs_maxInEachFr_inh',...
+    'eventI_initTone', 'eventI_stimOn', 'eventI_1stSideTry', 'eventI_reward',...
+    'lenTrace_initTone', 'lenTrace_stimOn', 'lenTrace_1stSideTry', 'lenTrace_reward')
+%}
+
+%{
+x = 1:size(a,2);
+figure; 
+for i = 1:size(a,1)
+    boundedline(x, a(i,:), asd(i,:)); 
+    hold on;
+    plot(ii(i), aa(i), 'r*')
+    pause
+    cla
+end
+%}
+
+
+
+%%
 % traces_aligned_all = {'traces_aligned_fut_initTone', 'traces_aligned_fut_stimOn', 'traces_aligned_fut_1stSideTry', 'traces_aligned_fut_reward'};
 % eventI_all = {'eventI_initTone', 'eventI_stimOn', 'eventI_1stSideTry', 'eventI_reward'};
 % time_all = {'time_aligned_initTone', 'time_aligned_stimOn', 'time_aligned_1stSideTry', 'time_aligned_reward'};
@@ -120,17 +184,57 @@ for isec = [1,2,4,5]  % loop over traces aligned on different events
 end
 ttot(end) = [];
 
-%%%%%% Plot heatmap (Ns x times (trial averaged), after sorting neurons based on when in the trial they fire the max
 
-a = nanmean(traces_aligned_cat, 3)';
+
+%% Plot heatmap (Ns x times (trial averaged), after sorting neurons based on when in the trial they fire the max
+
+saveFigs = 0;
+
+% Do it in the regular way, i.e. no cross-validation; simply compute max
+% peak using all trials, and show heatmap for all-trial-averaged activity
+% as well.
+%{
+a = nanmean(traces_aligned_cat, 3)'; % units x frames
 [aa, ii] = max(a, [], 2);
 [s2,si2] = sort(ii);
 top = a(si2,:);
+%}
+
+% Do this in a cross-validated way, i.e. sort the activity on half the
+% dataset, then plot the other half (suggested by reviewer 3 after Neuron submission!):
+niter = 2; %20;
+top_i = nan(size(traces_aligned_cat,2), size(traces_aligned_cat,1), niter);
+for i = 1:niter
+    trainTrs = randperm(size(traces_aligned_cat, 3));
+    trainTrs = trainTrs(1: ceil(length(trainTrs)/2));
+    testTrs = 1:size(traces_aligned_cat,3);
+    testTrs(trainTrs) = [];
+    % take the average across half of the trials (selected randomly). 
+    a = nanmean(traces_aligned_cat(:,:,trainTrs), 3)'; % units x frames 
+    % do sorting of neurons based on the half-trial-averaged activity
+    [aa, ii] = max(a, [], 2);
+    [s2,si2] = sort(ii);
+
+    % show heatmap for all-trial-averaged activity
+%     top = a(si2,:); 
+
+    % show heatmap for test-trial-averaged activity (ie activity averaged over
+    % trials that were not used for sorting)
+    % get the average across the other half of the trials
+
+    top = nanmean(traces_aligned_cat(:, si2, testTrs), 3)'; % units x frames
+
+    top_i(:,:,i) = top;
+end
+% average across above iters 
+top = mean(top_i, 3);
+
 
 %%% identify inh neurons
-load(moreName, 'inhibitRois_pix')
 inhSorted = inhibitRois_pix(si2);
 
+
+%%% Plot
 
 figure('position', [55   464   204   420]); 
 imagesc(top); hold on
@@ -148,6 +252,9 @@ if downsample
 else
     xlabel('Frames')
 end
+set(gca,'tickdir','out')
+box off
+
 
 if saveFigs    
     nowStr = datestr(now, 'yymmdd-HHMMSS');
@@ -164,7 +271,8 @@ if saveFigs
     else
         dsn = '';
     end
-    namv = sprintf('heatmap_S_allN_trAve_allEventsCat%s_%s', dsn, nowStr);
+%     namv = sprintf('heatmap_S_allN_trAve_allEventsCat%s_%s', dsn, nowStr);
+    namv = sprintf('heatmap_S_allN_crossValidated_trAve_allEventsCat%s_%s', dsn, nowStr);
 
     fn = fullfile(d, namv);
     
@@ -172,6 +280,7 @@ if saveFigs
     % print to pdf
     print('-dpdf', fn)
 end    
+
 
 
 
