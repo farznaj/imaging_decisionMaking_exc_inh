@@ -65,7 +65,22 @@ cDate = floor(cDate);
 Files = Files(ind,:); %adjust order of filenames to get it to be chronological
 
 %%
-% start
+% exclude
+pattern = 'Feb01_2019_Session3';
+for i=1:size(Files,1)
+
+    a = strfind(Files(i,:), pattern);
+    if ~isempty(a)
+        break
+    end
+end
+i3 = i;
+
+Files(i3,:) = [];
+
+
+
+% start of TST (tail suspension test)
 pattern = 'Jan30_2019_Session1';
 for i=1:size(Files,1)
 
@@ -76,7 +91,8 @@ for i=1:size(Files,1)
 end
 i1 = i;
 
-% end
+
+% end of TST (tail suspension test)
 pattern = 'Feb21_2019_Session2';
 for i=1:size(Files,1)
 
@@ -88,36 +104,66 @@ end
 i2 = i;
 
 
-% exclude
-pattern = 'Feb05_2019_Session2';
-for i=1:size(Files,1)
 
-    a = strfind(Files(i,:), pattern);
-    if ~isempty(a)
-        break
-    end
-end
-i3 = i;
+% % exclude
+% pattern = 'Feb01_2019_Session3';
+% for i=1:size(Files,1)
+% 
+%     a = strfind(Files(i,:), pattern);
+%     if ~isempty(a)
+%         break
+%     end
+% end
+% i3 = i;
+% 
+% a = 1:i1;
+% a(i3) = [];
 
-a = 1:i1;
-a(i3) = [];
-
+% get only sessions with stress paradigm
+a = i2:i1;
 
 % Files(a,:)
 
-% session 2 data
-sess2 = Files(a(1:2:end),:)
 
-% session 1 data
-sess1 = Files(a(2:2:end),:)
+%% session 1 data (TST sessions, before the stress)
+
+inds = a(2:2:end);
+sess1 = Files(inds,:);
+sess2plot = sess1;
+
+
+%% session 2 data (TST sessions, after the stress)
+
+inds = a(1:2:end);
+sess2 = Files(inds,:);
+sess2plot = sess2;
+
+
+%% all sessions before TST sessions
+
+inds = i1+2 : size(Files,1);
+inds = i1+2 : i1+2+4; % only the last 5 sessions before TST sessions (because in the very early sessions, the mouse is not expert).
+sess2plot = Files(inds,:);
+
+
+%% all sessions after TST sessions
+
+inds = 1: i2-1;
+sess2plot = Files(inds,:);
+
+
+%%
+disp(sess2plot)
 
 
 %% load data
 bhv = []; Cnt = 0;
 
-for iFiles = 1:size(sess2,1)
+for iFiles = 1:size(sess2plot,1)
     
-    load([cPath sess2(iFiles,:)], 'SessionData'); %load current bhv file
+    iFilesnow = sess2plot(iFiles,:);
+    
+    load([cPath iFilesnow], 'SessionData'); %load current bhv file
     if isfield(SessionData,'Rewarded')
         SessionData.Rewarded = logical(SessionData.Rewarded);
     end
@@ -131,8 +177,10 @@ for iFiles = 1:size(sess2,1)
     
     if useData
         Cnt = Cnt+1;
-        DayNr(Cnt) = cDate(iFiles);
-        Performance.fileName{Cnt} = sess2(iFiles,:);
+%         DayNr(Cnt) = cDate(iFiles); % should be: 
+%         for session 2:  aa =
+%         a(1:2:end); aa(iFiles); for session 1:  aa = a(2:2:end); aa(iFiles)
+        Performance.fileName{Cnt} = iFilesnow;
         
         for iMod = 1:3
             %% get some single session performance data
@@ -146,9 +194,13 @@ for iFiles = 1:size(sess2,1)
             lInd = SessionData.CorrectSide == 1; %index for left-choice trials
             Performance.LeftPerformed(iMod,Cnt) = sum(SessionData.Rewarded(ind & lInd))/sum(SessionData.Rewarded(ind & lInd)+SessionData.Punished(ind & lInd));
             Performance.RightPerformed(iMod,Cnt) = sum(SessionData.Rewarded(ind & ~lInd))/sum(SessionData.Rewarded(ind & ~lInd)+SessionData.Punished(ind & ~lInd));
-            Performance.Date{1,Cnt} = datestr(cDate(Cnt));
+            
+%             Performance.Date{1,Cnt} = datestr(cDate(Cnt)); % FN: this needs to change
+            Performance.Date{1,Cnt} = datestr(cDate(inds(Cnt))); 
+            
             
             %% compute discrimination performance and stats
+            
             if ~isnan(Performance.Discrimination(iMod,Cnt))
                 rInd = (SessionData.CorrectSide == 1 & SessionData.Punished) | (SessionData.CorrectSide == 2 & SessionData.Rewarded); %right-choice trials
                 rInd = rInd(ind);
@@ -181,18 +233,25 @@ for iFiles = 1:size(sess2,1)
         end
         %% combine into one larger array
         SessionData.SessionNr = repmat(Cnt,1,SessionData.nTrials); %tag all trials in current dataset with session nr
-        bhv = appendBehavior(bhv,SessionData); %append into larger array
+        bhv = appendBehavior_Simon(bhv,SessionData); %append into larger array
         
         if Cnt >= lSessions
             break;
         end
     end
 end
-disp(['Current subject: ' Animal '; Using ' num2str(Cnt) '/' num2str(size(sess2,1)) ' files']);
+disp(['Current subject: ' Animal '; Using ' num2str(Cnt) '/' num2str(size(sess2plot,1)) ' files']);
 
+
+
+%%
 if Cnt > 0
+    
     %% check for last and high performance sessions
+    
     sessionSelect = 1:Cnt; %all sessions
+%     sessionSelect = a(1:2:end);
+    
     if highDetection > 0
         lowInd = Performance.Detection < highDetection; %find sessions with low detection performance
     else
@@ -202,17 +261,19 @@ if Cnt > 0
     disp(['Rejected ' num2str(sum(lowInd)) '/' num2str(length(lowInd))  ' files for detection performance below ' num2str(highDetection*100) '%.']);
     
     %only use last 'lSessions' days
-    bhv = selectBehavior(bhv,sessionSelect); %only use trials from selecteded sessions
-    Performance = selectBehavior(Performance,sessionSelect); %only use performance from selecteded sessions
+    bhv = selectBehavior_Simon(bhv,sessionSelect); %only use trials from selecteded sessions
+    Performance = selectBehavior_Simon(Performance,sessionSelect); %only use performance from selecteded sessions
     
-    DayNr = DayNr(sessionSelect) - DayNr(end) + 1; %convert Days into relative values, starting at 1 for first training day
-    SessionNr = length(DayNr):-1:1;
+%     DayNr = DayNr(sessionSelect) - DayNr(end) + 1; %convert Days into relative values, starting at 1 for first training day
+%     SessionNr = length(DayNr):-1:1;
     fDay = Performance.Date{end}; %first date in dataset
     lDay = Performance.Date{1}; %last date in dataset
     disp(['First date: ' fDay]);
     disp(['Last date: ' lDay]);
     
+    
     %% compute performance for all data combined
+    
     for iMod = 1 : 3
         ind = ~bhv.DidNotChoose & ~bhv.DidNotLever & logical(bhv.Assisted) & bhv.StimType == modId(iMod); %only use active trials
         allPerf.SelfPerformed(iMod) = sum(bhv.Rewarded(ind))/sum(bhv.Rewarded(ind)+bhv.Punished(ind)); %peformance for self-performed trials
@@ -226,6 +287,7 @@ if Cnt > 0
         allPerf.RightPerformed(iMod) = sum(bhv.Rewarded(ind & ~lInd))/sum(bhv.Rewarded(ind & ~lInd)+bhv.Punished(ind & ~lInd));
         
         %% compute discrimination performance and stats
+        
         if ~isnan(allPerf.Discrimination(iMod))
             rInd = (bhv.CorrectSide == 1 & bhv.Punished) | (bhv.CorrectSide == 2 & bhv.Rewarded); %right-choice trials
             rInd = rInd(ind);
@@ -234,7 +296,7 @@ if Cnt > 0
             eventCnt = zeros(2,sum(ind));
             for iTrials = find(ind)
                 tCnt = tCnt +1;
-                [left, right] = Behavior_getStimEvent(bhv.StimType(iTrials), bhv.stimEvents{iTrials});
+                [left, right] = Behavior_getStimEvent_simon(bhv.StimType(iTrials), bhv.stimEvents{iTrials});
                 eventCnt(1,tCnt) = length(right);
                 eventCnt(2,tCnt) = length(left) + length(right);
             end
@@ -244,7 +306,7 @@ if Cnt > 0
             for iBins = 1:length(nTrials)
                 rightChoice(iBins) = sum(rInd(trialInd == iBins)); %get number of rightward trials for each difficulty
             end
-            [params, h1, ~, cFit] = Behavior_fitPalamedes(distRatio, rightChoice, nTrials, showPlot, true); %complete discrimination parameters
+            [params, h1, ~, cFit] = Behavior_fitPalamedes_simon(distRatio, rightChoice, nTrials, showPlot, true); %complete discrimination parameters
             title(h1.data.Parent,[Animal ' - ' modLabels{iMod} ' - All perf. trials'])
             ylim(h1.data.Parent, [0 1]);
             allPerf.cFit{iMod} = cFit;
@@ -255,7 +317,7 @@ if Cnt > 0
             end
             
             % discrimination only
-            [params, ~, ~, cFit] = Behavior_fitPalamedes(distRatio(2:end-1), rightChoice(2:end-1), nTrials(2:end-1)); %complete discrimination parameters
+            [params, ~, ~, cFit] = Behavior_fitPalamedes_simon(distRatio(2:end-1), rightChoice(2:end-1), nTrials(2:end-1)); %complete discrimination parameters
             allPerf.disc_cFit{iMod} = cFit;
             if showPlot
                 hold(h1.fit.Parent, 'on');
@@ -326,9 +388,12 @@ if Cnt > 0
     end
     
     %% make plots
+    
     if showPlot
         for iMod = 1 : size(Performance.cFit, 1)
+            
             %% Overview figure for psychophysical fits for each modality
+            
             figure('name',[Animal ' - Learning curves; Start date: ' fDay ' ; End date: ' lDay])
             h = subplot(2,2,1); hold on; gca; %plot fits for single sessions
             h.ColorOrder = imresize(colormap('gray'),[length(Performance.cFit) 3]); %ensure plotted lines are different shades of gray
@@ -379,7 +444,9 @@ if Cnt > 0
             xlabel('Stimulus strength'); ylabel('Proportion chose high');
         end
         
+        
         %% combined fits for all modalities
+        
         if isfield(allPerf, 'cFit')
             figure
             subplot(2, 1, 1); hold on;
