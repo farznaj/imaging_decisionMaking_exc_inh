@@ -2016,8 +2016,8 @@ def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNum
             randtrs_lr = np.argwhere(Y0==0)[rng.permutation(lrn)[0:trsn]].squeeze() # subselect mnHRLR_acrossDays trials from LR
             trsnow = np.sort(np.concatenate((randtrs_hr , randtrs_lr))) # index of trials after picking random hr (or lr) in order to make sure both classes have the same number in the final Y (on which svm was run)
 
-            X = X0[:,:,trsnow] # trsnow : index of trials (out of X0 and Y0) that are used to set X and Y
-            Y = Y0[trsnow]
+#            X = X0[:,:,trsnow] # trsnow : index of trials (out of X0 and Y0) that are used to set X and Y
+#            Y = Y0[trsnow]
                 
         else:
             if useEqualTrNums and hrn!=lrn: # if the HR and LR trials numbers are not the same, pick equal number of trials of the 2 classes!
@@ -2028,12 +2028,15 @@ def setbesc_frs(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNum
                     randtrs = np.argwhere(Y0==0)[rng.permutation(lrn)[0:trsn]].squeeze() # random sample of the class with more trials
                     trsnow = np.sort(np.concatenate((randtrs , np.argwhere(Y0==1).squeeze()))) # all trials of the class with fewer trials + the random sample set above for the other class
     
-                X = X0[:,:,trsnow] # trsnow : index of trials (out of X0 and Y0) that are used to set X and Y
-                Y = Y0[trsnow]
+#                X = X0[:,:,trsnow] # trsnow : index of trials (out of X0 and Y0) that are used to set X and Y
+#                Y = Y0[trsnow]
     
             else: # include all trials
                 trsnow = np.arange(0, len(Y0))
         
+        X = X0[:,:,trsnow] # trsnow : index of trials (out of X0 and Y0) that are used to set X and Y
+        Y = Y0[trsnow]
+            
         trsnow_allSamps[s,:] = trsnow
 #        numTrials, numNeurons = X.shape[2], X.shape[1]
 #            print 'FINAL: %d trials; %d neurons' %(numTrials, numNeurons)                        
