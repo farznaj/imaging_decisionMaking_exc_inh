@@ -31,7 +31,6 @@ avetrialAlign_plotAve_trGroup (in imaging_postproc.m, set mouse name, and run th
 farznaj/imaging_decisionMaking_exc_inh/utils/laassoClassifier/excInh_FRs.py
 
 
-
 ### Figure 2
 ### ROC:
 Set vars in:
