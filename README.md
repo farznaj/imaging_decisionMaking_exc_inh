@@ -9,7 +9,8 @@ The data are available at CSHL repository: http://repository.cshl.edu/36980/
 Below, you can find a description of the codes to generate the Figures in the paper.  
 (Note: figure numbers may not match those in the final published paper; however, a description for each figure is provided below, which can help to identify them).
 
-### Fig 1 
+
+### Figure 1 
 ### PMF:  
 farznaj/imaging_decisionMaking_exc_inh/behavior/PMF_allmice.m
 
@@ -30,7 +31,8 @@ avetrialAlign_plotAve_trGroup (in imaging_postproc.m, set mouse name, and run th
 farznaj/imaging_decisionMaking_exc_inh/utils/laassoClassifier/excInh_FRs.py
 
 
-### Fig 2
+
+### Figure 2
 ### ROC:
 Set vars in:
 farznaj/imaging_decisionMaking_exc_inh/imaging/choicePref_ROC_exc_inh_plots_setVars.m
@@ -54,7 +56,6 @@ run choicePref_ROC_exc_inh_plots_setVars.m once with outcome2ana = corr, another
 (which calls choicePref_ROC_exc_inh_plotsEachMouse_corrIncorr)
 
 
-
 ### ROC controlling for FR values of exc and inh:
 run script:
 choicePref_ROC_exc_inh_plotsAllMice_sameFR
@@ -68,7 +69,8 @@ in code choicePref_ROC_exc_inh_plotsEachMouse
 
 
 
-### Fig 3
+
+### Figure 3
 svm_excInh_trainDecoder_eachFrame_plots.py
 
 panel B (example class accuracies): Figure: curr_chAl_day151015_exShfl3_171010-112112_sup.pdf
@@ -86,11 +88,13 @@ Stimulus category decode:
 svm_excInh_trainDecoder_eachFrame_plots.py
 
 
-### Fig 4 (stability):
+
+### Figure 4 (stability):
 svm_excInh_trainDecoder_eachFrame_stabTestTimes_plots.py
 
 
-### Fig 5
+
+### Figure 5
 Panel A: example session: fni16, 151029
 PW correlations:  corr_excInh_plots.m ; read comments on the top of the script for the scripts you need to run beforehand.
 
@@ -102,12 +106,14 @@ Use the following script for the plots of all mice (change in CA after breaking 
 svm_excInh_trainDecoder_eachFrame_addNs1by1ROC_sumAllMice_plots
 
 
-### Fig 6
+
+### Figure 6
 svm_excInh_trainDecoder_eachFrame_plots
 
 
 ### Supp Figs:
-### Running and licking: tracesAlign_wheelRev_lick_classAccur_plots.m
+### Running and licking: 
+tracesAlign_wheelRev_lick_classAccur_plots.m
 Fraction choice selective for early and late days: choicePref_ROC_exc_inh_plotsAllMice.m
 (at the end of the script)
 
@@ -117,7 +123,6 @@ fni17, sessions: 151014 – 151029 – 151022 – 151008 – 151020 - 150903
 (not used, but pretty good: 151026 – 151021 – 151013 – 150918)
 
 
-------
 ### Temporal epoch tuning:
 temporalEpochTuning_allSess.m
 
