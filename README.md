@@ -7,7 +7,7 @@ The data are available at CSHL repository: http://repository.cshl.edu/36980/
 
 ## Codes to generate the Figures in the paper
 Below, you can find a description of the codes to generate the Figures in the paper.  
-(Note: figure numbers may not match those in the final published paper; however, a description for each figure is provided below, which can help to identify them).
+(Note: figure numbers may not match those in the final published paper; however, a description for each figure is provided below to help identify the figures.)
 
 
 ### Figure 1 
